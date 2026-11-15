@@ -172,3 +172,242 @@
 @media (prefers-reduced-motion: reduce) {
     .sidebar-link { transition:none; }
 }
+
+/* Sistema visual común para el resto de las pantallas PRO. */
+:root {
+    --primary: #ff761f;
+    --accent: #ff8b43;
+    --bg: #0d1015;
+    --surface: #151a22;
+    --surface-card: #171d26;
+    --text: #f3f6fa;
+    --text-secondary: #9aa5b5;
+}
+
+body { background:var(--mtb-graphite); color:var(--text); }
+.page:not(#page-map):not(#page-home) {
+    background:radial-gradient(ellipse at 78% -16%,rgba(22,140,255,.12),transparent 42%),var(--mtb-graphite);
+}
+.content-panel {
+    align-items:center;
+    gap:14px;
+    padding:20px 14px calc(82px + env(safe-area-inset-bottom,0px));
+}
+.page-intro {
+    width:min(100%,1040px);
+    padding:9px 2px 4px;
+}
+.page-intro h1 {
+    margin-top:8px;
+    color:#f5f7fa;
+    font-size:clamp(1.55rem,5vw,2.2rem);
+    font-weight:760;
+    letter-spacing:-.05em;
+    line-height:1.08;
+}
+.page-intro p { max-width:640px; margin-top:8px; color:#9ca8b8; font-size:.84rem; line-height:1.5; }
+.content-panel > .card,.content-panel > section.card {
+    width:min(100%,1040px);
+    padding:18px;
+    border:1px solid rgba(255,255,255,.085);
+    border-radius:18px;
+    background:linear-gradient(145deg,rgba(25,31,41,.98),rgba(17,21,28,.98));
+    box-shadow:0 12px 30px rgba(0,0,0,.17);
+}
+#page-routes > .card { padding:18px; }
+.content-panel .card h2 {
+    color:#eff3f8;
+    font-family:inherit;
+    font-size:1rem;
+    font-weight:730;
+    letter-spacing:-.025em;
+}
+.content-panel .card h3,.community-panel h3 { color:#e6ebf2; }
+.hint,.content-panel .hint { color:#98a4b3; line-height:1.55; }
+.content-panel label:not(.setting-toggle) { color:#b3becc; }
+
+.btn,.btn-small,.routes-add-button,.round-arrow {
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:11px;
+    transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.btn {
+    min-height:44px;
+    background:linear-gradient(115deg,#ff761f,#e65b0b);
+    color:#fff;
+    font-weight:750;
+    box-shadow:0 7px 18px rgba(230,91,11,.16);
+}
+.btn.secondary,.btn-small.secondary {
+    border-color:rgba(255,255,255,.1);
+    background:linear-gradient(145deg,#252d38,#1b222c);
+    color:#d8e0e9;
+    box-shadow:none;
+}
+.btn.danger,.btn-small.danger { background:linear-gradient(145deg,#682b35,#48212a); color:#ffdce0; }
+.btn:not(:disabled):hover,.btn-small:not(:disabled):hover { filter:brightness(1.08); }
+.btn:focus-visible,.btn-small:focus-visible,.routes-add-button:focus-visible,.nav-btn:focus-visible { outline:2px solid #42aaff; outline-offset:2px; }
+input[type="file"],input[type="text"],input[type="password"],input[type="number"],input[type="search"],select,textarea {
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:11px;
+    background:#0e131a;
+    color:#edf2f8;
+}
+input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); outline:3px solid rgba(22,140,255,.13); }
+.stat-box,.stats-evolution-period-summary,.community-comment,.group-ranking-category {
+    border:1px solid rgba(255,255,255,.075);
+    border-radius:12px;
+    background:linear-gradient(145deg,#1a2029,#131820);
+}
+.group-ranking-category { padding:12px; }
+.group-ranking-category h3 { margin-bottom:9px; }
+.group-ranking-item,.route-item,.friend-row,.community-route-card,.community-detail-stat,.stats-record,.stats-comparison {
+    border-color:rgba(255,255,255,.085);
+    border-radius:12px;
+    background:linear-gradient(145deg,#1b222c,#141a22);
+}
+.group-ranking-item { color:#dce4ee; }
+.route-group-title,.community-route-title { color:#f1f5fa; }
+.community-route-title:hover,.community-route-title:focus-visible { color:#54b6ff; }
+.community-route-card { padding:14px; }
+.community-route-card p { color:#9ca8b8; }
+.community-detail-actions .btn,.community-route-actions .btn { min-height:40px; }
+.setting-toggle { border-bottom-color:rgba(255,255,255,.075); }
+.setting-toggle strong { color:#e8edf4; }
+.setting-toggle input { accent-color:var(--mtb-blue); }
+.account-avatar { border-color:rgba(22,140,255,.6); background:#17202b; }
+.account-options > summary { color:#c4d0de; }
+.pill-selector,.stats-evolution-controls select { border-color:rgba(255,255,255,.1); background:#0e131a; }
+.pill-btn.active { background:rgba(22,140,255,.2); color:#59baff; }
+.community-panel {
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:20px;
+    background:linear-gradient(145deg,#171d26,#0f141b);
+    box-shadow:0 24px 70px rgba(0,0,0,.48);
+}
+.community-header { border-bottom-color:rgba(255,255,255,.08); }
+.community-tab-panel {
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:15px;
+    background:rgba(13,17,23,.72);
+}
+.community-tab-panel h3 { color:#eef3f8; }
+.community-ranking-item,.community-segment-card { border-color:rgba(255,255,255,.08); background:#171e27; }
+.group-invite-code,.group-admin-summary { color:#ff9a58; }
+.group-shortcut.is-active { border-color:rgba(255,118,31,.65); background:rgba(255,118,31,.13); box-shadow:0 0 18px rgba(255,118,31,.12); }
+.group-shortcut.is-active .group-shortcut-icon { background:#4c2b1d; box-shadow:0 0 14px rgba(255,118,31,.22); }
+.group-shortcut-state,.community-route-title { color:#55b7ff; }
+.routes-divider { background:rgba(255,255,255,.08); }
+.routes-header h2,.routes-section-header h3 { color:#eef3f8; }
+.routes-add-button { border-color:rgba(255,118,31,.5); background:rgba(255,118,31,.12); color:#ff9858; }
+#page-routes .route-summary-card {
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    background:linear-gradient(145deg,#1b222c,#141a22);
+    color:#aeb9c8;
+}
+#page-routes .route-summary-card[aria-pressed="true"] {
+    border-color:rgba(22,140,255,.48);
+    background:linear-gradient(145deg,rgba(22,140,255,.18),rgba(17,27,40,.96));
+    color:#66bdff;
+}
+#page-routes .route-summary-card[aria-pressed="true"] .tab-ico { color:#52b4ff; }
+.route-detail-trigger { color:#f1f5fa; }
+.route-detail-trigger:hover,.route-detail-trigger:focus-visible { color:#55b7ff; }
+.route-card-subtitle,.route-card-metrics span,.route-card-description { color:#9eabba; }
+.route-card-metrics strong { color:#f2f5f9; }
+.route-card-actions .btn-small { min-height:36px; }
+
+/* Estadísticas: superficies, filtros y gráficas coherentes con el dashboard. */
+#page-stats {
+    --primary:#ff761f;
+    --accent:#ff8b43;
+    --bg:#0d1015;
+    --surface:#151a22;
+    --surface-card:#171d26;
+    background:radial-gradient(ellipse at 78% -15%,rgba(22,140,255,.13),transparent 42%),#0d1015;
+}
+.stats-header {
+    padding:15px 16px 12px;
+    border-bottom:1px solid rgba(255,255,255,.075);
+    background:rgba(13,16,21,.96);
+    backdrop-filter:blur(16px);
+}
+.stats-header h2 { font-size:1.25rem; letter-spacing:-.04em; }
+.stats-header h2::before { content:"MTB CAMBOYA PRO · PERFORMANCE"; color:#54b6ff; }
+.stats-period-btn,.stats-tab {
+    border-color:rgba(255,255,255,.1);
+    background:#151b24;
+    color:#aeb9c8;
+}
+.stats-period-btn.active,.stats-tab.active {
+    border-color:rgba(255,118,31,.55);
+    background:rgba(255,118,31,.14);
+    color:#ff9858;
+}
+.stats-slide .card {
+    border-color:rgba(255,255,255,.085);
+    border-radius:17px;
+    background:linear-gradient(145deg,#171d26,#11161e);
+    box-shadow:0 10px 26px rgba(0,0,0,.15);
+}
+.stats-slide .card h3 { color:#edf1f6; font-size:.94rem; letter-spacing:-.02em; }
+.stats-grid .stat-box { border-color:rgba(255,255,255,.07); background:linear-gradient(145deg,#1b222c,#141a22); }
+.stats-grid .stat-box .v { color:#f2f5f9; }
+.stats-grid .stat-box .l { color:#98a4b3; }
+.stats-config output,.stats-profile-point,.stats-unavailable,.stats-comparison,.stats-record,.stats-evolution-period-summary {
+    border-color:rgba(255,255,255,.075);
+    background:#141a22;
+    color:#aab6c5;
+}
+.stats-zone progress::-webkit-progress-value,.stats-zone progress::-moz-progress-bar { background:linear-gradient(90deg,#ff761f,#ff9a55); }
+
+/* Navegación, grabación y mapa: azul eléctrico para orientación; naranja para acción MTB. */
+.nav-btn { color:#8793a3; }
+.nav-btn.active { color:#53b4ff; }
+.nav-btn.active .icon { filter:drop-shadow(0 0 8px rgba(22,140,255,.38)); }
+.metrics-bar,#map-route-profile {
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:16px;
+    background:rgba(13,16,21,.88);
+    box-shadow:0 12px 30px rgba(0,0,0,.3);
+    backdrop-filter:blur(18px) saturate(130%);
+}
+.m-box.active { background:rgba(22,140,255,.17); }
+.m-box.active .m-val { color:#5ab8ff; }
+#map-route-line { stroke:#168cff; }
+#map-route-area { fill:rgba(22,140,255,.18); }
+#map-route-cursor { fill:#fff; stroke:#168cff; }
+.map-zoom-btn,.side-controls .btn-icon-only {
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    background:rgba(18,23,31,.9);
+    color:#eaf2fa;
+    box-shadow:0 7px 20px rgba(0,0,0,.28);
+    backdrop-filter:blur(14px);
+}
+.map-zoom-btn:active,.side-controls .btn-icon-only:active { transform:scale(.96); }
+.map-zoom-btn.orient.route,.side-controls .btn-icon-only.active { border-color:rgba(22,140,255,.62); background:rgba(22,140,255,.25); }
+.controls-overlay .btn-main-action { border:1px solid rgba(255,255,255,.1); background:linear-gradient(115deg,#ff761f,#e65b0b); box-shadow:0 10px 26px rgba(230,91,11,.28); }
+.controls-overlay .btn-main-action.recording { background:linear-gradient(115deg,#dc414b,#a92332); }
+.route-card-map-line { stroke:#168cff; }
+.route-card-map-start { stroke:#168cff; }
+.route-card-map-end { fill:#168cff; }
+
+@media (min-width:720px) {
+    .content-panel { gap:16px; padding:24px 22px 32px; }
+    .content-panel > .card,.content-panel > section.card { padding:22px; border-radius:20px; }
+    .page-intro { padding-top:12px; }
+}
+@media (min-width:1100px) {
+    .content-panel { padding:26px clamp(22px,2vw,36px) 36px; }
+    .page-intro,.content-panel > .card,.content-panel > section.card { width:min(100%,1180px); }
+}
+@media (max-width:719px) {
+    .content-panel { gap:10px; padding:12px 12px calc(82px + env(safe-area-inset-bottom,0px)); }
+    .page-intro { padding:7px 2px 2px; }
+    .page-intro h1 { margin-top:6px; font-size:1.55rem; }
+    .page-intro p { margin-top:6px; font-size:.75rem; }
+    .content-panel > .card,.content-panel > section.card { padding:15px; border-radius:16px; }
+    .stats-header { padding:12px 12px 10px; }
+}
