@@ -65,6 +65,15 @@ Estas propuestas forman parte del alcance de producto. No se deben mostrar como 
 - La ubicación precisa, las fotos y los vídeos serán privados por defecto. Antes de compartir, permitir ocultar coordenadas, elegir imágenes y revisar la tarjeta. Los archivos multimedia deben almacenarse aparte de los registros GPS y con límites de tamaño claros.
 - Si una imagen no tiene coordenadas válidas o el usuario no concede permiso para leerlas, permitir asociarla manualmente sin inventar la ubicación.
 
+### Inteligencia artificial MTB
+
+- Ofrecer un asistente conectado a un servicio propio para explicar estadísticas, comparar actividades, resumir salidas, detectar tendencias y ayudar a planificar entrenamientos o temporadas.
+- Recomendar rutas solo a partir de preferencias y datos disponibles (distancia, desnivel, dificultad física y técnica conocida); explicar por qué se recomienda cada ruta y señalar los datos que faltan.
+- Ayudar a preparar desafíos de grupo como borradores revisables por un administrador. No publicar retos ni modificar clasificaciones automáticamente.
+- Mantener los cálculos deterministas de métricas (por ejemplo, distancia y desnivel) en el motor de la aplicación/servidor. La IA interpreta esos resultados y no debe inventar mediciones, diagnosticar ni presentar estimaciones como hechos.
+- El servicio será independiente del PocketBase original y usará credenciales únicamente en el servidor. Antes de enviar actividades, fotos, ubicación o datos de perfil, informar qué se comparte y pedir consentimiento explícito; permitir usar las funciones locales sin activar el asistente.
+- Diseñar el servicio para responder con cautela cuando el historial sea corto o incompleto y mostrar las actividades/periodo que respaldan cada conclusión.
+
 ## Límites de mapas
 
 No se descargan mosaicos del servidor estándar de OpenStreetMap para uso offline. Su política prohíbe la descarga masiva y el uso offline de ese servicio: [política oficial de teselas de OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/). Para ampliar regiones hay que seleccionar un proveedor y respetar sus condiciones de descarga, atribución y almacenamiento.
