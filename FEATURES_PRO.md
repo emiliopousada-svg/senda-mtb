@@ -57,6 +57,14 @@ Estas propuestas forman parte del alcance de producto. No se deben mostrar como 
 - Route Score deberá explicar sus factores (distancia, ascenso, pendientes y, si existen, datos técnicos), mostrar los datos ausentes y evitar aparentar precisión universal. No sustituye la dificultad técnica local ni una evaluación del sendero.
 - La navegación giro a giro y el recálculo necesitan un proveedor/servicio de rutas compatible. Una línea GPX por sí sola no contiene instrucciones fiables de giro ni permite inferir el terreno.
 
+### Fotografía y diario de aventuras
+
+- Asociar fotografías y vídeos a una actividad o ruta; permitir notas del diario, lugares favoritos y álbumes por salida.
+- Mostrar las fotos geolocalizadas sobre el mapa y generar un resumen visual con mapa, distancia, desnivel, duración y fotografía principal.
+- Crear una tarjeta de actividad para compartir, con vista previa y control explícito de los datos incluidos.
+- La ubicación precisa, las fotos y los vídeos serán privados por defecto. Antes de compartir, permitir ocultar coordenadas, elegir imágenes y revisar la tarjeta. Los archivos multimedia deben almacenarse aparte de los registros GPS y con límites de tamaño claros.
+- Si una imagen no tiene coordenadas válidas o el usuario no concede permiso para leerlas, permitir asociarla manualmente sin inventar la ubicación.
+
 ## Límites de mapas
 
 No se descargan mosaicos del servidor estándar de OpenStreetMap para uso offline. Su política prohíbe la descarga masiva y el uso offline de ese servicio: [política oficial de teselas de OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/). Para ampliar regiones hay que seleccionar un proveedor y respetar sus condiciones de descarga, atribución y almacenamiento.
