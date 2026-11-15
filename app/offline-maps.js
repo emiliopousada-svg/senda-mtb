@@ -886,11 +886,28 @@ $('btn-clear-offline').addEventListener('click', clearOfflineTiles);
 
 const mapStyleSelect = $('map-style-select');
 mapStyleSelect.value = selectedMapStyle();
+function updateQuickMapStyleButton() {
+    const button = $('btn-map-style');
+    if (!button) return;
+    const style = selectedMapStyle();
+    const icon = { ign: '📥', topographic: '⛰️', cyclosm: '🚵', osm: '🗺️', satellite: '🛰️' }[style] || '🗺️';
+    button.textContent = icon;
+    button.title = `Capa: ${MAP_STYLE_NAMES[style]} · pulsa para cambiar`;
+    button.setAttribute('aria-label', `Capa del mapa: ${MAP_STYLE_NAMES[style]}. Cambiar capa`);
+}
 mapStyleSelect.addEventListener('change', () => {
     try { localStorage.setItem(MAP_STYLE_KEY, mapStyleSelect.value); }
     catch (e) { console.warn('No se pudo guardar el mapa elegido:', e); }
     applyMapStyle();
+    updateQuickMapStyleButton();
 });
+$('btn-map-style')?.addEventListener('click', () => {
+    const styles = Object.keys(MAP_STYLE_NAMES);
+    const next = styles[(styles.indexOf(selectedMapStyle()) + 1) % styles.length];
+    mapStyleSelect.value = next;
+    mapStyleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+});
+updateQuickMapStyleButton();
 
 
 // ============================================================

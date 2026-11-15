@@ -4,9 +4,12 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 
 | Función | Estado |
 | --- | --- |
-| Panel de grabación configurable | Implementado: ordenar y mostrar u ocultar métricas; preferencias guardadas en el dispositivo. |
+| Panel de grabación configurable | Implementado: ordenar y mostrar u ocultar métricas (incluye velocidad media, cadencia y potencia); preferencias guardadas en el dispositivo. |
+| Perfil de elevación durante la grabación | Implementado: perfil SVG en directo y altitud reciente cuando hay lecturas GPS válidas. |
+| Objetivo semanal del inicio | Implementado: objetivo de distancia editable y barra de progreso local. |
 | Perfil de elevación interactivo | Disponible: el perfil de ruta permite seleccionar puntos y el mapa sincroniza la posición. |
 | Navegación por voz | Implementadas indicaciones habladas al desviarse y al volver a la ruta mediante síntesis de voz del dispositivo. Aún no ofrece instrucciones giro a giro. |
+| Capas globales del mapa | Disponibles online: topográfica, ciclismo, callejero y satélite; selector rápido dentro del mapa. |
 | Mapas offline por regiones | Disponible para regiones de España y Portugal mediante el proveedor IGN compatible. La cobertura mundial depende de proveedores que autoricen descarga y uso offline. |
 | Comparación de rutas | Implementada: compara perfiles de altitud y métricas de dos rutas guardadas. |
 | Récords y logros | Ya disponible para récords personales y medallas. |

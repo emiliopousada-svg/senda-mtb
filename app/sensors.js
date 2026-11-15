@@ -103,6 +103,7 @@ function updateCadence(value) {
 
 function updatePower(value) {
     currentPower = Number.isFinite(value) ? Math.max(0, Math.round(value)) : null;
+    $('m-power').textContent = currentPower === null ? '--' : String(currentPower);
     if (sensorStates.power.connected) {
         $('sensor-power-status').textContent = currentPower === null
             ? `Conectado${sensorStates.power.deviceName ? ': ' + sensorStates.power.deviceName : ''}`

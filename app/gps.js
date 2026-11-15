@@ -412,6 +412,7 @@ function onPos(pos) {
         currentPower !== null && now - sensorStates.power.lastReadingAt <= 5000 ? currentPower : null
     ];
     points.push(pt);
+    recordingUpdateLiveProfile();
     if (recordedAltitude !== null && Number.isFinite(t)) {
         lastElevationFix = { timestamp: t, altitude: recordedAltitude };
     }

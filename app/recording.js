@@ -350,6 +350,8 @@ function totalSec() {
 function updateTimerDisplay() {
     $('m-moving').textContent = fmtClock(elapsedSec());
     $('m-time').textContent = fmtClock(totalSec());
+    const movingHours = elapsedSec() / 3600;
+    $('m-avg-speed').textContent = movingHours > 0 ? (totalDistance / movingHours).toFixed(1) : '0.0';
 }
 function startTimers() {
     clearInterval(timerInterval);
@@ -376,6 +378,31 @@ function setBtnState(s) {
     icoStart.textContent = s === 'recording' ? '⏸️' : '▶️';
     btnStop.style.display = s === 'idle' ? 'none' : 'flex';
     $('btn-route-photo').hidden = s === 'idle';
+    $('recording-live-profile').hidden = s === 'idle';
+    if (s !== 'idle') recordingUpdateLiveProfile();
+}
+
+function recordingUpdateLiveProfile() {
+    const svgLine = $('recording-live-line');
+    const svgArea = $('recording-live-area');
+    const hint = $('recording-live-hint');
+    if (!svgLine || !svgArea || !hint) return;
+    const samples = points.slice(-240).filter(point => Array.isArray(point) && Number.isFinite(point[2]));
+    const latest = samples.at(-1);
+    $('recording-live-altitude').textContent = latest ? `${Math.round(latest[2])} m` : '-- m';
+    if (samples.length < 2) {
+        svgLine.setAttribute('d', '');
+        svgArea.setAttribute('d', '');
+        hint.textContent = 'Esperando lecturas de altitud';
+        return;
+    }
+    const values = samples.map(point => point[2]);
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = Math.max(1, max - min);
+    const path = values.map((value, index) => `${index ? 'L' : 'M'}${(index / (values.length - 1) * 320).toFixed(1)},${(43 - (value - min) / range * 36).toFixed(1)}`).join(' ');
+    svgLine.setAttribute('d', path);
+    svgArea.setAttribute('d', `${path} L320,48 L0,48 Z`);
+    hint.textContent = `${Math.round(min)}–${Math.round(max)} m · últimas lecturas`;
 }
 
 function autoPauseMovementThreshold(accuracy) {
@@ -812,6 +839,7 @@ function restoreDraft(d) {
         if (index > 0 && p[5] === 1) elev.reset();
         elev.add(p[2]);
     });
+    recordingUpdateLiveProfile();
     segments = buildSegments(points);
     isRecording = true;
     isPaused = true;

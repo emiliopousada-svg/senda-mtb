@@ -62,15 +62,35 @@
                     <div class="m-val" id="m-hr" style="color: #ef5350;">--</div>
                     <div class="m-lbl">BPM</div>
                 </div>
+                <div class="m-box" data-metric="cadence" data-default-visible="false" role="button">
+                    <div class="m-val" id="m-cadence">--</div>
+                    <div class="m-lbl">RPM</div>
+                </div>
+                <div class="m-box" data-metric="power" data-default-visible="false" role="button">
+                    <div class="m-val" id="m-power">--</div>
+                    <div class="m-lbl">VATIOS</div>
+                </div>
+                <div class="m-box" data-metric="avg-speed" data-default-visible="false" role="button">
+                    <div class="m-val" id="m-avg-speed">0.0</div>
+                    <div class="m-lbl">MEDIA KM/H</div>
+                </div>
                 <div class="m-box" data-metric="moving" role="button">
                     <div class="m-val" id="m-moving">00:00</div>
                     <div class="m-lbl">T. MOVIM.</div>
-                    <span id="m-cadence" hidden>--</span>
                 </div>
                 <div class="m-box" data-metric="time" role="button">
                     <div class="m-val" id="m-time">00:00</div>
                     <div class="m-lbl">T. TOTAL</div>
                 </div>
+            </div>
+
+            <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
+                <div><span>PERFIL EN DIRECTO</span><strong id="recording-live-altitude">-- m</strong></div>
+                <svg viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
+                    <path id="recording-live-area"></path>
+                    <path id="recording-live-line"></path>
+                </svg>
+                <small id="recording-live-hint">Esperando lecturas de altitud</small>
             </div>
 
             <div id="ride-status" role="status" aria-live="polite">
@@ -133,6 +153,7 @@
                         <path d="M12 2v3M22 12h-3M12 22v-3M2 12h3"></path>
                     </svg>
                 </button>
+                <button class="btn-icon-only" id="btn-map-style" type="button" title="Cambiar capa del mapa" aria-label="Cambiar capa del mapa">⛰️</button>
             </div>
             <div class="controls-overlay">
                 <button class="btn-main-action" id="btn-start">
@@ -795,6 +816,7 @@
                     <article class="dashboard-panel weekly-panel" id="dashboard-weekly-panel">
                         <div class="panel-heading"><div><span class="eyebrow">CONSTANCIA</span><h2>Tu actividad</h2></div><span class="panel-symbol blue-symbol">◉</span></div>
                         <div class="weekly-summary"><div class="weekly-ring"><span id="home-week-ride-count">0</span><small>salidas</small></div><div><strong id="home-week-activity-km">0 km</strong><span>recorridos esta semana</span><button class="text-link" type="button" data-page="1">Ver estadísticas <span>↗</span></button></div></div>
+                        <div class="weekly-goal"><label for="home-week-goal-input">Objetivo semanal <span>km</span></label><input id="home-week-goal-input" type="number" min="5" max="1000" step="5" inputmode="numeric" aria-label="Objetivo semanal en kilómetros"><progress id="home-week-goal-progress" max="100" value="0" aria-label="Progreso del objetivo semanal"></progress><small id="home-week-goal-caption">0 de 100 km completados</small></div>
                     </article>
                     <article class="dashboard-panel explore-panel" id="dashboard-explore-panel">
                         <div class="panel-heading"><div><span class="eyebrow">SIGUIENTE AVENTURA</span><h2>Explora tus rutas</h2></div><span class="panel-symbol orange-symbol">⌖</span></div>

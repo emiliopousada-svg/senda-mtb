@@ -548,6 +548,18 @@ function statsRenderDashboard() {
     const moving = $('home-week-time');
     const speed = $('home-week-speed');
     if (distance) distance.textContent = `${summary.distanceKm.toFixed(1)} km`;
+    const goalInput = $('home-week-goal-input');
+    let goal = Number(localStorage.getItem('mtb_pro_weekly_goal_km'));
+    if (!Number.isFinite(goal) || goal < 5 || goal > 1000) goal = 100;
+    if (goalInput && document.activeElement !== goalInput) goalInput.value = String(goal);
+    const goalProgress = $('home-week-goal-progress');
+    const goalCaption = $('home-week-goal-caption');
+    if (goalProgress) {
+        goalProgress.max = goal;
+        goalProgress.value = Math.min(goal, summary.distanceKm);
+        goalProgress.setAttribute('aria-label', `${Math.round(summary.distanceKm / goal * 100)} por ciento del objetivo semanal`);
+    }
+    if (goalCaption) goalCaption.textContent = `${summary.distanceKm.toFixed(1)} de ${goal} km${summary.distanceKm >= goal ? ' · objetivo logrado' : ' completados'}`;
     if (ascent) ascent.textContent = summary.ascentSampleCount ? `${Math.round(summary.ascentM)} m` : '0 m';
     if (moving) moving.textContent = summary.movingTimeSec ? fmtDur(summary.movingTimeSec) : '0 h';
     if (speed) speed.textContent = Number.isFinite(summary.averageSpeed) ? `${summary.averageSpeed.toFixed(1)} km/h` : '— km/h';
@@ -1143,6 +1155,12 @@ function initCharts() {
     document.querySelectorAll('[data-stats-slide]').forEach(button =>
         button.addEventListener('click', () => setStatsSlide(button.dataset.statsSlide)));
     $('stats-power-ftp').addEventListener('change', statsSavePreferences);
+    $('home-week-goal-input')?.addEventListener('change', event => {
+        const value = Math.max(5, Math.min(1000, Math.round(Number(event.target.value) || 100)));
+        event.target.value = String(value);
+        localStorage.setItem('mtb_pro_weekly_goal_km', String(value));
+        statsRenderDashboard();
+    });
     $('stats-profile-route').addEventListener('change', () => {
         const route = savedRoutes.find(item => String(item.id) === $('stats-profile-route').value);
         statsRenderProfile(route ? statsAnalyzeRoute(route) : null);

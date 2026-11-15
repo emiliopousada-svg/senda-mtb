@@ -7,6 +7,9 @@ const RECORDING_PANEL_METRICS = [
     { id: 'dist', label: 'Distancia' },
     { id: 'elev', label: 'Desnivel positivo' },
     { id: 'hr', label: 'Frecuencia cardíaca' },
+    { id: 'cadence', label: 'Cadencia' },
+    { id: 'power', label: 'Potencia' },
+    { id: 'avg-speed', label: 'Velocidad media' },
     { id: 'moving', label: 'Tiempo en movimiento' },
     { id: 'time', label: 'Tiempo total' }
 ];
@@ -89,15 +92,19 @@ function renderRecordingPanelSettings() {
 function initRecordingPanelSettings() {
     try { recordingPanelPreferences = normalizeRecordingPanelPreferences(JSON.parse(localStorage.getItem(RECORDING_PANEL_KEY) || 'null')); }
     catch (error) { recordingPanelPreferences = normalizeRecordingPanelPreferences(null); }
-    let visibleMetrics = null;
+    let visibleMetrics = new Set([...document.querySelectorAll('.m-box[data-metric]')]
+        .filter(box => box.dataset.defaultVisible !== 'false').map(box => box.dataset.metric));
     try {
         const saved = JSON.parse(localStorage.getItem(RECORDING_PANEL_VISIBLE_KEY) || 'null');
         if (Array.isArray(saved)) visibleMetrics = new Set(saved);
     } catch (error) {}
-    if (visibleMetrics && !RECORDING_PANEL_METRICS.some(metric => visibleMetrics.has(metric.id))) visibleMetrics = null;
+    if (!RECORDING_PANEL_METRICS.some(metric => visibleMetrics.has(metric.id))) {
+        visibleMetrics = new Set([...document.querySelectorAll('.m-box[data-metric]')]
+            .filter(box => box.dataset.defaultVisible !== 'false').map(box => box.dataset.metric));
+    }
     document.querySelectorAll('.m-box[data-metric]').forEach(box => {
         if (!RECORDING_PANEL_METRICS.some(metric => metric.id === box.dataset.metric)) return;
-        box.dataset.metricVisible = String(!visibleMetrics || visibleMetrics.has(box.dataset.metric));
+        box.dataset.metricVisible = String(visibleMetrics.has(box.dataset.metric));
     });
     renderRecordingPanelSettings();
     applyRecordingPanelPreferences();

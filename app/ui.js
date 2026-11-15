@@ -10,6 +10,9 @@ const METRICS = {
     dist:  { src: 'm-dist',      label: 'Distancia',          unit: 'km' },
     elev:  { src: 'm-elevation', label: 'Desnivel positivo',  unit: 'm' },
     hr:    { src: 'm-hr',        label: 'Pulso',              unit: 'bpm', color: '#ef5350' },
+    cadence: { src: 'm-cadence', label: 'Cadencia', unit: 'rpm', color: '#48c7a0' },
+    power: { src: 'm-power', label: 'Potencia', unit: 'W', color: '#e8c34a' },
+    'avg-speed': { src: 'm-avg-speed', label: 'Velocidad media', unit: 'km/h', color: '#55baff' },
     moving: { src: 'm-moving',   label: 'Tiempo en movimiento', unit: '' },
     time:  { src: 'm-time',      label: 'Tiempo total',       unit: '' }
 };

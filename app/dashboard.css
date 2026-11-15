@@ -86,6 +86,15 @@
 .weekly-summary > div:last-child strong { color:#f1f4f8; font-size:1.1rem; }
 .weekly-summary > div:last-child > span { color:#98a4b2; font-size:.65rem; }
 .weekly-summary .text-link { align-self:flex-start; margin-top:3px; font-size:.65rem; }
+.weekly-goal { display:grid; grid-template-columns:1fr auto; align-items:center; gap:5px 10px; margin:0 16px 15px; padding-top:11px; border-top:1px solid rgba(255,255,255,.07); }
+.weekly-goal label { color:#aab5c4; font-size:.67rem; font-weight:700; }
+.weekly-goal label span { color:#768496; }
+.weekly-goal input { width:70px; min-height:32px; padding:0 8px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:#10151c; color:#f1f5fa; font-size:.72rem; text-align:right; }
+.weekly-goal progress { grid-column:1/-1; width:100%; height:7px; overflow:hidden; border:0; border-radius:99px; background:#262f3a; accent-color:var(--mtb-orange); }
+.weekly-goal progress::-webkit-progress-bar { border-radius:99px; background:#262f3a; }
+.weekly-goal progress::-webkit-progress-value { border-radius:99px; background:linear-gradient(90deg,#ff761f,#ffad57); }
+.weekly-goal progress::-moz-progress-bar { border-radius:99px; background:linear-gradient(90deg,#ff761f,#ffad57); }
+.weekly-goal small { grid-column:1/-1; color:#8996a7; font-size:.61rem; font-variant-numeric:tabular-nums; }
 .explore-panel > p { min-height:34px; padding:0 16px; color:#a5afbc; font-size:.7rem; line-height:1.5; }
 .explore-button { display:flex; width:calc(100% - 32px); min-height:39px; align-items:center; justify-content:space-between; margin:10px 16px 15px; padding:0 12px; border:1px solid rgba(255,118,31,.28); border-radius:10px; background:rgba(255,118,31,.1); color:#ff9a5d; font-size:.7rem; font-weight:750; }
 .explore-button span { font-size:1rem; }
