@@ -1,4 +1,4 @@
-package com.emiliopousada.mtbpro;
+package com.emiliopousada.mtbcamboyapro;
 
 import android.view.Window;
 import android.view.WindowManager;

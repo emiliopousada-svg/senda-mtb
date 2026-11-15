@@ -127,13 +127,13 @@ function statsConfiguredNumber(id, min, max) {
 
 function statsLoadPreferences() {
     try {
-        statsWeightKg = Number(localStorage.getItem('mtbpro_stats_weight'));
+        statsWeightKg = Number(localStorage.getItem('mtb_pro_stats_weight'));
         if (!Number.isFinite(statsWeightKg) || statsWeightKg < 25 || statsWeightKg > 250) statsWeightKg = null;
-        statsAge = Number(localStorage.getItem('mtbpro_stats_age'));
+        statsAge = Number(localStorage.getItem('mtb_pro_stats_age'));
         if (!Number.isFinite(statsAge) || statsAge < 10 || statsAge > 100) statsAge = null;
-        statsHeartRateMax = statsAge === null ? Number(localStorage.getItem('mtbpro_stats_hr_max')) : 220 - statsAge;
+        statsHeartRateMax = statsAge === null ? Number(localStorage.getItem('mtb_pro_stats_hr_max')) : 220 - statsAge;
         if (!Number.isFinite(statsHeartRateMax) || statsHeartRateMax < 100 || statsHeartRateMax > 240) statsHeartRateMax = null;
-        statsPowerFtp = Number(localStorage.getItem('mtbpro_stats_ftp'));
+        statsPowerFtp = Number(localStorage.getItem('mtb_pro_stats_ftp'));
         if (!Number.isFinite(statsPowerFtp) || statsPowerFtp < 50 || statsPowerFtp > 800) statsPowerFtp = null;
     } catch (error) {
         console.warn('No se pudieron leer las preferencias de estadísticas:', error);
@@ -153,14 +153,14 @@ function statsSavePreferences(ageChanged = false) {
     statsPowerFtp = statsConfiguredNumber('stats-power-ftp', 50, 800);
     $('stats-hr-max-config').value = statsHeartRateMax ?? '';
     try {
-        if (statsWeightKg === null) localStorage.removeItem('mtbpro_stats_weight');
-        else localStorage.setItem('mtbpro_stats_weight', String(statsWeightKg));
-        if (statsAge === null) localStorage.removeItem('mtbpro_stats_age');
-        else localStorage.setItem('mtbpro_stats_age', String(statsAge));
-        if (statsHeartRateMax === null) localStorage.removeItem('mtbpro_stats_hr_max');
-        else localStorage.setItem('mtbpro_stats_hr_max', String(statsHeartRateMax));
-        if (statsPowerFtp === null) localStorage.removeItem('mtbpro_stats_ftp');
-        else localStorage.setItem('mtbpro_stats_ftp', String(statsPowerFtp));
+        if (statsWeightKg === null) localStorage.removeItem('mtb_pro_stats_weight');
+        else localStorage.setItem('mtb_pro_stats_weight', String(statsWeightKg));
+        if (statsAge === null) localStorage.removeItem('mtb_pro_stats_age');
+        else localStorage.setItem('mtb_pro_stats_age', String(statsAge));
+        if (statsHeartRateMax === null) localStorage.removeItem('mtb_pro_stats_hr_max');
+        else localStorage.setItem('mtb_pro_stats_hr_max', String(statsHeartRateMax));
+        if (statsPowerFtp === null) localStorage.removeItem('mtb_pro_stats_ftp');
+        else localStorage.setItem('mtb_pro_stats_ftp', String(statsPowerFtp));
     } catch (error) {
         console.warn('No se pudieron guardar las preferencias de estadísticas:', error);
         toast('No se pudieron guardar los valores de peso, frecuencia cardíaca y FTP.');

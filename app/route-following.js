@@ -22,7 +22,7 @@ function unlockOffRouteSound() {
 }
 
 function playRouteSound(frequencies) {
-    if (localStorage.getItem('mtbpro_route_sound') === '0') return;
+    if (localStorage.getItem('mtb_pro_route_sound') === '0') return;
     const ctx = offRouteAudioContext;
     if (!ctx || ctx.state !== 'running') return;
     const start = ctx.currentTime;
@@ -74,7 +74,7 @@ function checkOffRoute(lat, lon, match) {
         offRouteState = true;
         toast(`⚠️ Te has salido de la ruta (${Math.round(min)} m)`, 5000);
         playOffRouteSound();
-        if (navigator.vibrate && localStorage.getItem('mtbpro_route_vibration') !== '0') navigator.vibrate([200, 100, 200]);
+        if (navigator.vibrate && localStorage.getItem('mtb_pro_route_vibration') !== '0') navigator.vibrate([200, 100, 200]);
     } else if (offRouteState && min < BACKONROUTE_M) {
         offRouteState = false;
         toast('✅ De nuevo en la ruta');

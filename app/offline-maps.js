@@ -2,7 +2,7 @@
 
 //  MAPAS OFFLINE (teselas IGN guardadas en IndexedDB)
 // ============================================================
-const OFFLINE_DB = 'mtbpro-offline-maps-v1';
+const OFFLINE_DB = 'mtb_camboya_pro_offline_maps_v1';
 const OFFLINE_STORE = 'tiles';
 const OFFLINE_META_STORE = 'metadata';
 const DOWNLOADED_IGN_STATS_KEY = 'downloadedIgnStats';
@@ -10,6 +10,8 @@ const AUTOMATIC_IGN_STORE = 'automatic-ign-tiles';
 const ONLINE_TILE_STORE = 'online-tiles';
 const MAX_AUTOMATIC_IGN_TILES = 2500;
 const MAX_CACHED_ONLINE_TILES = 2500;
+// Enable persistent offline storage only after the selected provider explicitly permits it.
+const ONLINE_TILE_OFFLINE_CACHE_ENABLED = false;
 const MAX_DOWNLOADED_IGN_TILES = 30000;
 const MAX_TILES_PER_DOWNLOAD = 25000;
 const OFFLINE_STATS_RECONCILE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -21,7 +23,7 @@ const MAP_STYLE_NAMES = {
     osm: 'OpenStreetMap',
     satellite: 'Satélite Esri'
 };
-const MAP_STYLE_KEY = 'mtbpro_map_style';
+const MAP_STYLE_KEY = 'mtb_pro_map_style';
 const DEFAULT_MAP_STYLE = 'topographic';
 const MAP_STYLE_TRANSITION_TIMEOUT_MS = 12000;
 function selectedMapStyle() {
@@ -411,6 +413,7 @@ function createCachedOnlineTileLayer(style, urlTemplate, options) {
                 return null;
             };
             const fallbackToCachedStyle = async () => {
+                if (!ONLINE_TILE_OFFLINE_CACHE_ENABLED) return false;
                 try {
                     const ancestor = await findCachedAncestor((zoom, x, y) =>
                         getCachedOnlineTile(style, zoom, x, y)
@@ -455,17 +458,21 @@ function createCachedOnlineTileLayer(style, urlTemplate, options) {
                 if (!response.ok) throw new Error(`El servidor de mapas respondió ${response.status}`);
                 const blob = await response.blob();
                 if (!blob.size) throw new Error('El servidor de mapas devolvió una tesela vacía');
-                await saveCachedOnlineTile(style, sourceCoords.z, sourceCoords.x, sourceCoords.y, blob).catch(error => {
-                    console.warn(`No se pudo guardar la tesela ${style} en caché:`, error);
-                });
+                if (ONLINE_TILE_OFFLINE_CACHE_ENABLED) {
+                    await saveCachedOnlineTile(style, sourceCoords.z, sourceCoords.x, sourceCoords.y, blob).catch(error => {
+                        console.warn(`No se pudo guardar la tesela ${style} en caché:`, error);
+                    });
+                }
                 return blob;
             };
             (async () => {
                 let cached = null;
-                try {
-                    cached = await getCachedOnlineTile(style, sourceCoords.z, sourceCoords.x, sourceCoords.y);
-                } catch (error) {
-                    console.warn(`No se pudo leer la caché ${style}:`, error);
+                if (ONLINE_TILE_OFFLINE_CACHE_ENABLED) {
+                    try {
+                        cached = await getCachedOnlineTile(style, sourceCoords.z, sourceCoords.x, sourceCoords.y);
+                    } catch (error) {
+                        console.warn(`No se pudo leer la caché ${style}:`, error);
+                    }
                 }
                 if (cached) {
                     showBlob(cached);
@@ -612,7 +619,7 @@ function applyMapStyle() {
             ? `${MAP_STYLE_NAMES.ign} con las teselas descargadas. Cartografía nativa hasta zoom 17; por encima se amplía la imagen.${retinaText}`
             : `Sin conexión: ${MAP_STYLE_NAMES.ign} y teselas guardadas. Cartografía nativa hasta zoom 17; por encima se amplía la imagen.${retinaText}`;
     } else {
-        status.textContent = `${MAP_STYLE_NAMES[style]} guarda automáticamente las zonas visitadas (hasta ${MAX_CACHED_ONLINE_TILES.toLocaleString('es-ES')} teselas). Sin conexión se usa ${MAP_STYLE_NAMES.ign} y las teselas guardadas.${retinaText}`;
+        status.textContent = `${MAP_STYLE_NAMES[style]} se muestra online. Para uso sin conexión se utiliza ${MAP_STYLE_NAMES.ign} y las zonas descargadas desde Mapas offline.${retinaText}`;
     }
 }
 

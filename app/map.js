@@ -9,7 +9,7 @@ function initMap() {
     }
     let center = [13.4125, 103.867];
     try {
-        const lp = JSON.parse(localStorage.getItem('mtbpro_last_pos'));
+        const lp = JSON.parse(localStorage.getItem('mtb_pro_last_pos'));
         if (Array.isArray(lp) && lp.length === 2) center = lp;
     } catch (e) {}
 
@@ -114,7 +114,7 @@ function updateOrientBtn() {
 }
 function setMapRotationMode(enabled) {
     mapRotationEnabled = enabled;
-    localStorage.setItem('mtbpro_map_rotation', enabled ? '1' : '0');
+    localStorage.setItem('mtb_pro_map_rotation', enabled ? '1' : '0');
     const setting = $('setting-map-rotation');
     if (setting) setting.checked = enabled;
     updateOrientBtn();
@@ -128,13 +128,13 @@ updateOrientBtn();
 
 const largeControlsSetting = $('setting-large-controls');
 if (largeControlsSetting) {
-    const enabled = localStorage.getItem('mtbpro_large_controls') === '1';
+    const enabled = localStorage.getItem('mtb_pro_large_controls') === '1';
     document.documentElement.classList.toggle('large-controls', enabled);
     largeControlsSetting.checked = enabled;
     largeControlsSetting.addEventListener('change', () => {
         const isEnabled = largeControlsSetting.checked;
         document.documentElement.classList.toggle('large-controls', isEnabled);
-        localStorage.setItem('mtbpro_large_controls', isEnabled ? '1' : '0');
+        localStorage.setItem('mtb_pro_large_controls', isEnabled ? '1' : '0');
     });
 }
 

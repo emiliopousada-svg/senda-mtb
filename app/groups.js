@@ -129,7 +129,7 @@ function updatePendingLiveLocation(nickname) {
 }
 
 function pendingGroupLeaveKey() {
-    return Cloud.uid ? `mtbpro_pending_group_leave_${encodeURIComponent(Cloud.server)}_${Cloud.uid}` : '';
+    return Cloud.uid ? `mtb_pro_pending_group_leave_${encodeURIComponent(Cloud.server)}_${Cloud.uid}` : '';
 }
 function hasPendingGroupLeave() {
     const key = pendingGroupLeaveKey();
@@ -166,7 +166,7 @@ async function syncPendingGroupLeave() {
     groupJoined = false;
     groupSyncAvailable = false;
     myLiveRecordId = null;
-    localStorage.removeItem('mtbpro_group_joined');
+    localStorage.removeItem('mtb_pro_group_joined');
     await loadMyGroup();
     renderFriends();
     renderAccount();
@@ -255,7 +255,7 @@ async function stopGroup() {
     groupJoined = false;
     groupSyncAvailable = false;
     groupInfo = null;
-    localStorage.removeItem('mtbpro_group_joined');
+    localStorage.removeItem('mtb_pro_group_joined');
     if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
     await removeMyLiveLocation();
     renderGroupState(false);
@@ -282,11 +282,11 @@ async function loadMyGroup() {
     // PocketBase es la fuente de verdad. La marca local solo era una caché y
     // puede desaparecer al actualizar/reinstalar la app aunque siga la membresía.
     groupJoined = Boolean(groupInfo);
-    if (groupJoined) localStorage.setItem('mtbpro_group_joined', activeId);
+    if (groupJoined) localStorage.setItem('mtb_pro_group_joined', activeId);
     groupSyncAvailable = true;
-    if (activeId) localStorage.setItem('mtbpro_group_code', activeId);
-    else localStorage.removeItem('mtbpro_group_code');
-    if (!groupJoined) localStorage.removeItem('mtbpro_group_joined');
+    if (activeId) localStorage.setItem('mtb_pro_group_code', activeId);
+    else localStorage.removeItem('mtb_pro_group_code');
+    if (!groupJoined) localStorage.removeItem('mtb_pro_group_joined');
     renderGroupState(groupJoined);
     if (currentPage === 2) await loadGroupRankings();
     return groupInfo;
@@ -361,7 +361,7 @@ async function selectGroup(groupId) {
         const auth = await cloudApi('/api/collections/users/auth-refresh', 'POST');
         Cloud.setSession(auth.token, auth.record);
         clearPendingGroupLeave(groupId);
-        localStorage.setItem('mtbpro_group_joined', groupId);
+        localStorage.setItem('mtb_pro_group_joined', groupId);
         groupJoined = true;
         groupSyncAvailable = true;
         await loadMyGroup();
@@ -384,8 +384,8 @@ async function restoreGroup() {
             groupSyncAvailable = false;
             try { await clearPendingLiveLocation(); }
             catch (error) { reportPendingLiveLocationStorageError(error); }
-            localStorage.removeItem('mtbpro_group_joined');
-            localStorage.removeItem('mtbpro_group_code');
+            localStorage.removeItem('mtb_pro_group_joined');
+            localStorage.removeItem('mtb_pro_group_code');
             if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
             renderGroupState(false);
             renderFriends();
@@ -395,7 +395,7 @@ async function restoreGroup() {
                     await syncPendingGroupRankingDeletes();
                 }
                 catch (e) {
-                    localStorage.removeItem('mtbpro_group_code');
+                    localStorage.removeItem('mtb_pro_group_code');
                     $('group-status').textContent = 'Has salido en este dispositivo; se completará la salida del servidor al recuperar conexión.';
                     console.warn('Salida del grupo pendiente:', e);
                 }
@@ -404,7 +404,7 @@ async function restoreGroup() {
             }
             return;
         }
-        const savedGroupId = localStorage.getItem('mtbpro_group_joined');
+        const savedGroupId = localStorage.getItem('mtb_pro_group_joined');
         if (!groupJoined && savedGroupId && savedGroupId === groupName()) {
             groupJoined = true;
             groupSyncAvailable = false;
@@ -533,7 +533,7 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
         Cloud.setSession(auth.token, auth.record);
         if (!stillAuthorized) {
             groupJoined = false;
-            localStorage.removeItem('mtbpro_group_joined');
+            localStorage.removeItem('mtb_pro_group_joined');
             await removeMyLiveLocation();
             await loadMyGroup();
             renderFriends();
@@ -832,7 +832,7 @@ $('btn-delete-group').addEventListener('click', async () => {
     } catch (e) { toast('No se pudo eliminar el grupo: ' + e.message, 6000); }
 });
 async function leaveGroupLocally() {
-    const groupId = groupName() || localStorage.getItem('mtbpro_group_joined') || '';
+    const groupId = groupName() || localStorage.getItem('mtb_pro_group_joined') || '';
     const key = pendingGroupLeaveKey();
     if (!groupId || !key) { toast('No hay un grupo activo que cerrar.'); return; }
     localStorage.setItem(key, JSON.stringify({ groupId, uid: Cloud.uid, queuedAt: Date.now() }));
@@ -843,8 +843,8 @@ async function leaveGroupLocally() {
     if (groupInfo && !groupChoices.some(group => group.id === groupId)) groupChoices.push(groupInfo);
     groupInfo = null;
     myLiveRecordId = null;
-    localStorage.removeItem('mtbpro_group_joined');
-    localStorage.removeItem('mtbpro_group_code');
+    localStorage.removeItem('mtb_pro_group_joined');
+    localStorage.removeItem('mtb_pro_group_code');
     if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
     renderGroupState(false);
     renderFriends();
@@ -859,7 +859,7 @@ async function leaveGroupLocally() {
         await syncPendingGroupLeave();
         toast('Has salido del grupo. Conservas el acceso para volver a entrar.');
     } catch (e) {
-        localStorage.removeItem('mtbpro_group_code');
+        localStorage.removeItem('mtb_pro_group_code');
         renderAccount();
         $('group-status').textContent = 'Has salido en este dispositivo; se completará la salida del servidor al recuperar conexión.';
         console.warn('No se pudo confirmar la salida del grupo:', e);

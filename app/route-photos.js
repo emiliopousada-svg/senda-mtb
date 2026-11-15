@@ -106,7 +106,7 @@ async function saveRoutePhotoToPhone(file, routeStartedAt, capturedAt = new Date
     const fileExtension = String(file.name || '').split('.').pop().toLowerCase();
     const extension = knownExtensions[file.type] || (/^[a-z0-9]{2,5}$/.test(fileExtension) ? fileExtension : 'img');
     const suffix = Math.random().toString(36).slice(2, 7);
-    const path = `MTBPro/Rutas/${folder}/foto-${timestamp}-${suffix}.${extension}`;
+    const path = `MTB Camboya PRO/Rutas/${folder}/foto-${timestamp}-${suffix}.${extension}`;
     await filesystem.writeFile({ path, data: base64, directory: 'DOCUMENTS', recursive: true });
     return path;
 }

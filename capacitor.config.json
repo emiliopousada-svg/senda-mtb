@@ -1,6 +1,6 @@
 {
-  "appId": "com.emiliopousada.mtbpro",
-  "appName": "MTBPro",
+  "appId": "com.emiliopousada.mtbcamboyapro",
+  "appName": "MTB Camboya PRO",
   "webDir": "www",
   "server": {
     "androidScheme": "https"

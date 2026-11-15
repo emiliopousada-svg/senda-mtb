@@ -33,37 +33,37 @@ function scheduleCloudSyncRetry(uid, server, generation) {
 
 const Cloud = {
     get server() {
-        const stored = localStorage.getItem('mtbpro_server');
+        const stored = localStorage.getItem('mtb_pro_server');
         return normalizeServer(stored || DEFAULT_CLOUD_SERVER);
     },
     setServer(nextServer) {
         const normalized = normalizeServer(nextServer || DEFAULT_CLOUD_SERVER);
         const current = this.server;
-        localStorage.setItem('mtbpro_server', normalized);
+        localStorage.setItem('mtb_pro_server', normalized);
         if (this.loggedIn() && current && current !== normalized) {
             this.clearSession();
         }
         return normalized;
     },
-    get token()  { return localStorage.getItem('mtbpro_token') || ''; },
-    get uid()    { return localStorage.getItem('mtbpro_uid') || ''; },
-    get email()  { return localStorage.getItem('mtbpro_email') || ''; },
-    get nickname() { return localStorage.getItem('mtbpro_nickname') || ''; },
-    get groupCode() { return localStorage.getItem('mtbpro_group_code') || ''; },
+    get token()  { return localStorage.getItem('mtb_pro_token') || ''; },
+    get uid()    { return localStorage.getItem('mtb_pro_uid') || ''; },
+    get email()  { return localStorage.getItem('mtb_pro_email') || ''; },
+    get nickname() { return localStorage.getItem('mtb_pro_nickname') || ''; },
+    get groupCode() { return localStorage.getItem('mtb_pro_group_code') || ''; },
     loggedIn()   { return !!(this.server && this.token && this.uid); },
     setSession(token, rec) {
-        localStorage.setItem('mtbpro_token', token);
-        localStorage.setItem('mtbpro_uid', rec.id);
-        localStorage.setItem('mtbpro_avatar_last_uid', rec.id);
-        localStorage.setItem('mtbpro_email', rec.email || '');
-        if (rec.nickname) localStorage.setItem('mtbpro_nickname', String(rec.nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
-        else localStorage.removeItem('mtbpro_nickname');
-        localStorage.setItem('mtbpro_group_code', rec.groupCode || '');
+        localStorage.setItem('mtb_pro_token', token);
+        localStorage.setItem('mtb_pro_uid', rec.id);
+        localStorage.setItem('mtb_pro_avatar_last_uid', rec.id);
+        localStorage.setItem('mtb_pro_email', rec.email || '');
+        if (rec.nickname) localStorage.setItem('mtb_pro_nickname', String(rec.nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
+        else localStorage.removeItem('mtb_pro_nickname');
+        localStorage.setItem('mtb_pro_group_code', rec.groupCode || '');
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
     },
     clearSession() {
         cancelCloudSyncRetry();
-        ['mtbpro_token', 'mtbpro_uid', 'mtbpro_email', 'mtbpro_nickname', 'mtbpro_group_code'].forEach(k => localStorage.removeItem(k));
+        ['mtb_pro_token', 'mtb_pro_uid', 'mtb_pro_email', 'mtb_pro_nickname', 'mtb_pro_group_code'].forEach(k => localStorage.removeItem(k));
         if (typeof resetAccountProfileCache === 'function') resetAccountProfileCache();
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
     }
@@ -75,7 +75,7 @@ const ROUTE_FULL_AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ROUTE_SYNC_CURSOR_OVERLAP_MS = 5000;
 
 function cloudSyncStorageKey(name) {
-    return `mtbpro_${name}_${encodeURIComponent(Cloud.server)}_${Cloud.uid}`;
+    return `mtb_pro_${name}_${encodeURIComponent(Cloud.server)}_${Cloud.uid}`;
 }
 
 async function fetchRemoteRoutes(fullAudit, cursor) {
@@ -192,7 +192,7 @@ function normalizeRemoteTrack(raw) {
 }
 
 function routeNicknameStorageKey() {
-    return Cloud.uid ? `mtbpro_route_nickname_${Cloud.uid}` : '';
+    return Cloud.uid ? `mtb_pro_route_nickname_${Cloud.uid}` : '';
 }
 
 function getRouteNickname() {
@@ -311,8 +311,8 @@ function renderAccount() {
         $('acc-account-nickname').value = Cloud.nickname;
         $('acc-nickname-summary').textContent = `Apodo: ${Cloud.nickname}`;
     }
-    const last = localStorage.getItem('mtbpro_lastsync');
-    const syncFailures = Number(localStorage.getItem('mtbpro_sync_failures') || 0);
+    const last = localStorage.getItem('mtb_pro_lastsync');
+    const syncFailures = Number(localStorage.getItem('mtb_pro_sync_failures') || 0);
     $('acc-status').textContent = on
         ? `Conectado como ${Cloud.email}` + (Cloud.groupCode ? ' · grupo asignado' : ' · sin grupo asignado') + (last ? ` · última sincronización: ${new Date(Number(last)).toLocaleString('es-ES')}` : '') + (syncFailures ? ` · sincronización parcial: ${syncFailures} elemento(s) pendiente(s)` : '')
         : 'Sin sesión: tus rutas se guardan solo en este móvil.';
@@ -338,7 +338,7 @@ async function accAuth(register) {
     const age = $('acc-age').value.trim();
     if (weightKg && (!Number.isFinite(Number(weightKg)) || Number(weightKg) < 25 || Number(weightKg) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
-    localStorage.setItem('mtbpro_server', server);
+    localStorage.setItem('mtb_pro_server', server);
     Cloud.clearSession();
     try {
         if (register) {
@@ -727,8 +727,8 @@ async function syncRoutes(manual = false) {
             savedRoutes.sort((a, b) => b.id - a.id);
         }
 
-        localStorage.setItem('mtbpro_lastsync', String(Date.now()));
-        localStorage.setItem('mtbpro_sync_failures', String(syncFailures));
+        localStorage.setItem('mtb_pro_lastsync', String(Date.now()));
+        localStorage.setItem('mtb_pro_sync_failures', String(syncFailures));
         if (syncFailures === 0) {
             try {
                 if (remote.length || fullAudit) {
@@ -771,15 +771,15 @@ function initSettings() {
     const sound = $('setting-route-sound');
     const vibration = $('setting-route-vibration');
     const mapRotation = $('setting-map-rotation');
-    sound.checked = localStorage.getItem('mtbpro_route_sound') !== '0';
-    vibration.checked = localStorage.getItem('mtbpro_route_vibration') !== '0';
-    mapRotationEnabled = localStorage.getItem('mtbpro_map_rotation') !== '0';
+    sound.checked = localStorage.getItem('mtb_pro_route_sound') !== '0';
+    vibration.checked = localStorage.getItem('mtb_pro_route_vibration') !== '0';
+    mapRotationEnabled = localStorage.getItem('mtb_pro_map_rotation') !== '0';
     mapRotation.checked = mapRotationEnabled;
     updateOrientBtn();
     window.addEventListener('online', applyMapStyle);
     window.addEventListener('offline', applyMapStyle);
-    sound.addEventListener('change', () => localStorage.setItem('mtbpro_route_sound', sound.checked ? '1' : '0'));
-    vibration.addEventListener('change', () => localStorage.setItem('mtbpro_route_vibration', vibration.checked ? '1' : '0'));
+    sound.addEventListener('change', () => localStorage.setItem('mtb_pro_route_sound', sound.checked ? '1' : '0'));
+    vibration.addEventListener('change', () => localStorage.setItem('mtb_pro_route_vibration', vibration.checked ? '1' : '0'));
     mapRotation.addEventListener('change', () => setMapRotationMode(mapRotation.checked));
     initSensorConnections();
     $('app-version').textContent = `v${APP_VERSION} (build ${APP_BUILD})`;
@@ -793,12 +793,12 @@ async function syncWhenOnline() {
 
 function initAccount() {
     initAccountAvatar();
-    const savedServer = localStorage.getItem('mtbpro_server');
+    const savedServer = localStorage.getItem('mtb_pro_server');
     try {
-        localStorage.setItem('mtbpro_server', normalizeServer(savedServer || DEFAULT_CLOUD_SERVER));
+        localStorage.setItem('mtb_pro_server', normalizeServer(savedServer || DEFAULT_CLOUD_SERVER));
     } catch (error) {
         console.warn('La dirección de servidor guardada no es válida:', error);
-        localStorage.setItem('mtbpro_server', DEFAULT_CLOUD_SERVER);
+        localStorage.setItem('mtb_pro_server', DEFAULT_CLOUD_SERVER);
         Cloud.clearSession();
         toast('La dirección de servidor guardada no era válida; se ha restaurado el servidor predeterminado.', 6000);
     }

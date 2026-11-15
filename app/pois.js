@@ -3,17 +3,17 @@
 //  FUENTES DE AGUA Y PARADAS EN BARES
 // ============================================================
 let savedFountains = [];
-try { savedFountains = JSON.parse(localStorage.getItem('mtbpro_saved_fountains') || '[]'); } catch (e) {}
+try { savedFountains = JSON.parse(localStorage.getItem('mtb_pro_saved_fountains') || '[]'); } catch (e) {}
 // Elimina los puntos importados (archivo/OSM) de versiones anteriores; la función ya no existe.
 if (savedFountains.some(p => p && p.type === 'imported')) {
     savedFountains = savedFountains.filter(p => !(p && p.type === 'imported'));
-    try { localStorage.setItem('mtbpro_saved_fountains', JSON.stringify(savedFountains)); } catch (e) {}
+    try { localStorage.setItem('mtb_pro_saved_fountains', JSON.stringify(savedFountains)); } catch (e) {}
 }
 let fountainMarkers = [];
 
 function persistFountains() {
     try {
-        localStorage.setItem('mtbpro_saved_fountains', JSON.stringify(savedFountains));
+        localStorage.setItem('mtb_pro_saved_fountains', JSON.stringify(savedFountains));
         return true;
     } catch (e) {
         toast('No se pudo guardar el punto en el dispositivo');
@@ -29,7 +29,7 @@ function newPoiClientId(id) {
 }
 
 function poiSyncStorageKey(name) {
-    return `mtbpro_${name}_${encodeURIComponent(Cloud.server)}_${Cloud.uid}`;
+    return `mtb_pro_${name}_${encodeURIComponent(Cloud.server)}_${Cloud.uid}`;
 }
 
 const POI_TYPES = {

@@ -1,4 +1,4 @@
-# MTBPro
+# MTB Camboya PRO
 
 App de ciclismo de montaña con GPS, registro de actividades, mapas offline, rutas GPX/KML/GeoJSON, estadísticas, sensores Bluetooth y funciones sociales.
 
@@ -6,7 +6,7 @@ Versión indicada en el proyecto: **0.1.0**
 
 ## Identidad y alcance
 
-MTBPro 0.1.0 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtbpro_app_v1` y claves `mtbpro_*`; no importa ni limpia datos de otras apps.
+MTB Camboya PRO 0.1.0 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
 
 ## Desarrollo
 
@@ -25,7 +25,7 @@ La app funciona sin backend y el servidor PocketBase predeterminado está vacío
 
 ## iOS
 
-El proyecto iOS está generado para `com.emiliopousada.mtbpro`, nombre `MTBPro` y despliegue mínimo iOS 15. El acceso a ubicación en uso y en segundo plano y Bluetooth declara sus textos de permiso en `ios/App/App/Info.plist`. Revisa los mensajes y valida el comportamiento en un dispositivo antes de publicar.
+El proyecto iOS está generado para `com.emiliopousada.mtbcamboyapro`, nombre `MTB Camboya PRO` y despliegue mínimo iOS 15. El acceso a ubicación en uso y en segundo plano y Bluetooth declara sus textos de permiso en `ios/App/App/Info.plist`. Revisa los mensajes y valida el comportamiento en un dispositivo antes de publicar.
 
 Para compilarlo se necesita macOS con Xcode 26 o posterior:
 

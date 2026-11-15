@@ -1,6 +1,6 @@
-# PocketBase para MTBPro
+# PocketBase para MTB Camboya PRO
 
-MTBPro funciona con almacenamiento local sin servidor. `DEFAULT_CLOUD_SERVER` permanece vacío; no rellenes la URL hasta desplegar y revisar una instancia independiente. No importes bases de datos, cuentas, ubicaciones, rutas ni rankings del proyecto mtb-camboya.
+MTB Camboya PRO funciona con almacenamiento local sin servidor. `DEFAULT_CLOUD_SERVER` permanece vacío; no rellenes la URL hasta desplegar y revisar una instancia independiente. No importes bases de datos, cuentas, ubicaciones, rutas ni rankings del proyecto mtb-camboya.
 
 ## Colecciones usadas
 

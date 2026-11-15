@@ -1,4 +1,4 @@
-package com.emiliopousada.mtbpro;
+package com.emiliopousada.mtbcamboyapro;
 
 import android.content.Intent;
 import android.content.IntentFilter;

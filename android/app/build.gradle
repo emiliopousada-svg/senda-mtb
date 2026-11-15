@@ -36,10 +36,10 @@ if (configuredSigningValues != 0 && configuredSigningValues != signingEnv.size()
 def useCiSigning = configuredSigningValues == signingEnv.size()
 
 android {
-    namespace = "com.emiliopousada.mtbpro"
+    namespace = "com.emiliopousada.mtbcamboyapro"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.emiliopousada.mtbpro"
+        applicationId "com.emiliopousada.mtbcamboyapro"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode

@@ -7,7 +7,7 @@ const DB = {
     open() {
         return new Promise((res, rej) => {
             if (!window.indexedDB) return rej(new Error('no-idb'));
-            const r = indexedDB.open('mtbpro_app_v1', 2);
+            const r = indexedDB.open('mtb_camboya_pro_db', 2);
             r.onupgradeneeded = event => {
                 const d = r.result;
                 if (!d.objectStoreNames.contains('routes')) d.createObjectStore('routes', { keyPath: 'id' });
@@ -42,7 +42,7 @@ const DB = {
             r.onblocked = () => {
                 console.warn('La actualizaci\u00f3n de IndexedDB est\u00e1 bloqueada por otra pesta\u00f1a.');
                 if (typeof toast === 'function') {
-                    toast('Cierra las otras pesta\u00f1as de MTBPro para terminar la actualizaci\u00f3n.', 7000);
+                    toast('Cierra las otras pesta\u00f1as de MTB Camboya PRO para terminar la actualizaci\u00f3n.', 7000);
                 }
             };
             r.onsuccess = () => {
