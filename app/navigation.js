@@ -6,12 +6,28 @@ let currentPage = 5;
 const pageHistory = [currentPage];
 const swiper = $('swiper');
 const navBtns = document.querySelectorAll('.nav-btn');
-swiper.style.transform = `translateX(-${currentPage * (swiper.children[currentPage]?.getBoundingClientRect().width || window.innerWidth)}px)`;
+
+function setSwiperPosition(index, immediate = false) {
+    const targetPage = swiper.children[index];
+    if (!targetPage) {
+        console.error(`No existe la página ${index} dentro del carrusel.`);
+        swiper.style.transform = 'translate3d(0,0,0)';
+        return;
+    }
+    const pageWidth = targetPage.getBoundingClientRect().width
+        || document.documentElement.clientWidth
+        || window.innerWidth;
+    if (immediate) swiper.style.transition = 'none';
+    swiper.style.transform = `translate3d(-${index * pageWidth}px,0,0)`;
+    if (immediate) requestAnimationFrame(() => { swiper.style.transition = ''; });
+}
+
+setSwiperPosition(currentPage, true);
+requestAnimationFrame(() => setSwiperPosition(currentPage, true));
 
 function renderPage(index) {
     currentPage = index;
-    const pageWidth = swiper.children[index]?.getBoundingClientRect().width || window.innerWidth;
-    swiper.style.transform = `translateX(-${index * pageWidth}px)`;
+    setSwiperPosition(index);
     navBtns.forEach(btn => btn.classList.toggle('active', Number(btn.dataset.page) === index));
     document.body.dataset.currentPage = String(index);
     if (typeof dashboardUpdateNav === 'function') dashboardUpdateNav(index);
@@ -91,11 +107,14 @@ document.addEventListener('touchend', e => {
     }
 }, { passive: true });
 
-window.addEventListener('resize', () => {
-    const pageWidth = swiper.children[currentPage]?.getBoundingClientRect().width || window.innerWidth;
-    swiper.style.transition = 'none';
-    swiper.style.transform = `translateX(-${currentPage * pageWidth}px)`;
-    requestAnimationFrame(() => { swiper.style.transition = ''; });
-}, { passive: true });
+const refreshSwiperPosition = () => requestAnimationFrame(() => setSwiperPosition(currentPage, true));
+window.addEventListener('resize', refreshSwiperPosition, { passive: true });
+window.addEventListener('orientationchange', refreshSwiperPosition, { passive: true });
+window.visualViewport?.addEventListener('resize', refreshSwiperPosition, { passive: true });
+if (typeof ResizeObserver !== 'undefined' && swiper.children[0]) {
+    new ResizeObserver(refreshSwiperPosition).observe(swiper.children[0]);
+}
+
+window.addEventListener('pageshow', refreshSwiperPosition, { passive: true });
 
 // ============================================================

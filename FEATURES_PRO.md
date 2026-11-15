@@ -10,6 +10,14 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 - Mantener las actividades locales disponibles sin conexión y sincronizarlas cuando la red vuelva, sin perder cambios locales.
 - Usar únicamente backend e identidad propios de MTBPro, sin compartir PocketBase, credenciales o datos con MTB Camboya.
 
+## Cockpit MTB de grabación
+
+- Priorizar velocidad como lectura principal y mostrar distancia, tiempo, desnivel positivo y velocidad media como datos grandes y legibles en marcha.
+- Mostrar frecuencia cardíaca, cadencia y potencia solo si llega una lectura válida de un sensor compatible; los datos ausentes deben verse como no disponibles.
+- Mantener el perfil de elevación en directo cuando existan altitudes GPS válidas.
+- Ofrecer pausar, reanudar y finalizar con objetivos táctiles amplios, además de bloqueo de controles contra toques accidentales.
+- Al finalizar, presentar resumen con mapa, métricas y gráficos; sincronización y récords solo cuando existan datos y conexión adecuados.
+
 | Función | Estado |
 | --- | --- |
 | Panel de grabación configurable | Implementado: ordenar y mostrar u ocultar métricas (incluye velocidad media, cadencia y potencia); preferencias guardadas en el dispositivo. |

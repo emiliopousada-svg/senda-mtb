@@ -31,8 +31,8 @@ html, body {
 /* Contenedor Horizontal de Páginas */
 .swiper-wrapper {
     display: flex;
-    width: 600vw;
-    height: calc(100dvh - 60px - env(safe-area-inset-bottom, 0px));
+    width: max-content;
+    height: calc(100dvh - 62px - env(safe-area-inset-bottom, 0px));
     transition: transform 0.25s ease-out;
     will-change: transform;
 }

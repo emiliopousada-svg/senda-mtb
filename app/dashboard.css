@@ -166,7 +166,7 @@
     .sidebar-footer { display:flex; align-items:center; gap:9px; margin-top:auto; padding:14px 8px 1px; border-top:1px solid rgba(255,255,255,.075); color:#b8c2cf; font-size:.68rem; font-weight:780; letter-spacing:.04em; }
     .sidebar-footer small { color:#778394; font-size:.53rem; font-weight:650; }
     .sidebar-status-dot { width:8px; height:8px; border-radius:50%; background:#32d583; box-shadow:0 0 10px rgba(50,213,131,.4); }
-    .swiper-wrapper { width:calc((100vw - 244px) * 7); height:100dvh; margin-left:244px; }
+    .swiper-wrapper { width:max-content; height:100dvh; margin-left:244px; }
     .page { width:calc(100vw - 244px); height:100dvh; }
     .mobile-nav { display:none; }
     .dashboard-content { max-width:1750px; margin:0 auto; padding:22px clamp(22px,2vw,36px) 28px; }
@@ -449,8 +449,8 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 
 /* Navegación, grabación y mapa: azul eléctrico para orientación; naranja para acción MTB. */
 .nav-btn { color:#8793a3; }
-.nav-btn.active { color:#53b4ff; }
-.nav-btn.active .icon { filter:drop-shadow(0 0 8px rgba(22,140,255,.38)); }
+.nav-btn.active { color:#ff9858; }
+.nav-btn.active .icon { filter:drop-shadow(0 0 8px rgba(255,118,31,.28)); }
 .metrics-bar,#map-route-profile {
     border:1px solid rgba(255,255,255,.11);
     border-radius:16px;
@@ -540,3 +540,33 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 @media (prefers-reduced-motion: reduce) {
     .swiper-wrapper,.hero-primary-action,.hero-secondary-action,.m-box { transition:none; }
 }
+
+/* Barra inferior compacta, clara y adaptable en móviles pequeños y grandes. */
+@media (max-width:719px) {
+    .mobile-nav { height:calc(62px + env(safe-area-inset-bottom,0px)); padding:4px 5px calc(4px + env(safe-area-inset-bottom,0px)); border-top:1px solid rgba(255,255,255,.1); background:rgba(13,16,21,.97); box-shadow:0 -8px 24px rgba(0,0,0,.24); backdrop-filter:blur(18px) saturate(135%); }
+    .mobile-nav .nav-btn { min-height:48px; padding:2px 1px; gap:2px; color:#8f9bab; font-size:clamp(.56rem,2.6vw,.66rem); font-weight:650; }
+    .mobile-nav .nav-btn .icon { display:grid; width:42px; height:27px; place-items:center; border-radius:9px; color:inherit; font-size:1.15rem; transition:background .16s ease,color .16s ease; }
+    .mobile-nav .nav-btn .icon svg { display:block; width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .mobile-nav .nav-btn.active { color:#ff9858; }
+    .mobile-nav .nav-btn.active .icon { background:rgba(255,118,31,.14); color:#ff8b43; filter:none; box-shadow:inset 0 0 0 1px rgba(255,118,31,.12); }
+    .mobile-nav .nav-btn:active .icon { transform:scale(.96); }
+    .profile-button:not(.tools-menu-button) { display:none; }
+    .tools-menu-button { display:grid; width:31px; height:31px; flex:0 0 31px; border-radius:10px; }
+}
+@media (max-width:359px) {
+    .mobile-nav .nav-btn .icon { width:36px; }
+    .mobile-nav .nav-btn { font-size:.55rem; }
+    .hero-status { right:8px; gap:3px; }
+    .hero-status .status-chip { padding-inline:5px; }
+}
+@media (prefers-reduced-motion:reduce) {
+    .mobile-nav .nav-btn .icon { transition:none; }
+}
+body.app-immersive .mobile-nav,body.app-immersive .desktop-sidebar { display:none !important; }
+body.app-immersive .swiper-wrapper { width:max-content !important; height:100dvh !important; margin-left:0 !important; }
+body.app-immersive .page { width:100vw !important; height:100dvh !important; }
+body.app-immersive .dashboard-content,body.app-immersive .tools-content { padding-bottom:18px; }
+.fullscreen-toggle { display:grid; width:38px; min-width:38px; place-items:center; padding:0; font-size:1.15rem; }
+#fullscreen-exit { position:fixed; z-index:4000; top:max(10px,env(safe-area-inset-top,0px)); right:max(10px,env(safe-area-inset-right,0px)); min-height:40px; padding:0 12px; border:1px solid rgba(255,255,255,.16); border-radius:11px; background:rgba(13,16,21,.9); color:#f2f5f9; font-size:.75rem; font-weight:720; backdrop-filter:blur(14px); }
+#fullscreen-exit[hidden] { display:none; }
+.fullscreen-toggle:focus-visible,#fullscreen-exit:focus-visible { outline:2px solid #168cff; outline-offset:2px; }
