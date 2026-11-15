@@ -33,37 +33,37 @@ function scheduleCloudSyncRetry(uid, server, generation) {
 
 const Cloud = {
     get server() {
-        const stored = localStorage.getItem('mtb_server');
+        const stored = localStorage.getItem('mtbpro_server');
         return normalizeServer(stored || DEFAULT_CLOUD_SERVER);
     },
     setServer(nextServer) {
         const normalized = normalizeServer(nextServer || DEFAULT_CLOUD_SERVER);
         const current = this.server;
-        localStorage.setItem('mtb_server', normalized);
+        localStorage.setItem('mtbpro_server', normalized);
         if (this.loggedIn() && current && current !== normalized) {
             this.clearSession();
         }
         return normalized;
     },
-    get token()  { return localStorage.getItem('mtb_token') || ''; },
-    get uid()    { return localStorage.getItem('mtb_uid') || ''; },
-    get email()  { return localStorage.getItem('mtb_email') || ''; },
-    get nickname() { return localStorage.getItem('mtb_nickname') || ''; },
-    get groupCode() { return localStorage.getItem('mtb_group_code') || ''; },
+    get token()  { return localStorage.getItem('mtbpro_token') || ''; },
+    get uid()    { return localStorage.getItem('mtbpro_uid') || ''; },
+    get email()  { return localStorage.getItem('mtbpro_email') || ''; },
+    get nickname() { return localStorage.getItem('mtbpro_nickname') || ''; },
+    get groupCode() { return localStorage.getItem('mtbpro_group_code') || ''; },
     loggedIn()   { return !!(this.server && this.token && this.uid); },
     setSession(token, rec) {
-        localStorage.setItem('mtb_token', token);
-        localStorage.setItem('mtb_uid', rec.id);
+        localStorage.setItem('mtbpro_token', token);
+        localStorage.setItem('mtbpro_uid', rec.id);
         localStorage.setItem('mtb_avatar_last_uid', rec.id);
-        localStorage.setItem('mtb_email', rec.email || '');
-        if (rec.nickname) localStorage.setItem('mtb_nickname', String(rec.nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
-        else localStorage.removeItem('mtb_nickname');
-        localStorage.setItem('mtb_group_code', rec.groupCode || '');
+        localStorage.setItem('mtbpro_email', rec.email || '');
+        if (rec.nickname) localStorage.setItem('mtbpro_nickname', String(rec.nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
+        else localStorage.removeItem('mtbpro_nickname');
+        localStorage.setItem('mtbpro_group_code', rec.groupCode || '');
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
     },
     clearSession() {
         cancelCloudSyncRetry();
-        ['mtb_token', 'mtb_uid', 'mtb_email', 'mtb_nickname', 'mtb_group_code'].forEach(k => localStorage.removeItem(k));
+        ['mtbpro_token', 'mtbpro_uid', 'mtbpro_email', 'mtbpro_nickname', 'mtbpro_group_code'].forEach(k => localStorage.removeItem(k));
         if (typeof resetAccountProfileCache === 'function') resetAccountProfileCache();
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
     }
@@ -321,8 +321,8 @@ function renderAccount() {
 function renderAccountServer() {
     const serverInput = $('acc-server');
     if (serverInput) {
-        try { serverInput.textContent = Cloud.server || DEFAULT_CLOUD_SERVER; }
-        catch (error) { serverInput.textContent = DEFAULT_CLOUD_SERVER; }
+        try { serverInput.textContent = Cloud.server || 'Sin servidor configurado'; }
+        catch (error) { serverInput.textContent = 'Sin servidor configurado'; }
     }
 }
 
@@ -338,7 +338,7 @@ async function accAuth(register) {
     const age = $('acc-age').value.trim();
     if (weightKg && (!Number.isFinite(Number(weightKg)) || Number(weightKg) < 25 || Number(weightKg) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
-    localStorage.setItem('mtb_server', server);
+    localStorage.setItem('mtbpro_server', server);
     Cloud.clearSession();
     try {
         if (register) {
@@ -793,12 +793,12 @@ async function syncWhenOnline() {
 
 function initAccount() {
     initAccountAvatar();
-    const savedServer = localStorage.getItem('mtb_server');
+    const savedServer = localStorage.getItem('mtbpro_server');
     try {
-        localStorage.setItem('mtb_server', normalizeServer(savedServer || DEFAULT_CLOUD_SERVER));
+        localStorage.setItem('mtbpro_server', normalizeServer(savedServer || DEFAULT_CLOUD_SERVER));
     } catch (error) {
         console.warn('La dirección de servidor guardada no es válida:', error);
-        localStorage.setItem('mtb_server', DEFAULT_CLOUD_SERVER);
+        localStorage.setItem('mtbpro_server', DEFAULT_CLOUD_SERVER);
         Cloud.clearSession();
         toast('La dirección de servidor guardada no era válida; se ha restaurado el servidor predeterminado.', 6000);
     }

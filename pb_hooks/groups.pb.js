@@ -1,4 +1,4 @@
-// Grupos globales para MTB Camboya. Los helpers viven en groups_utils.js (cada handler se ejecuta aislado).
+// Grupos globales para MTBPro. Los helpers viven en groups_utils.js (cada handler se ejecuta aislado).
 
 routerAdd("POST", "/api/mtb/groups/create", (e) => {
     const { SAFE_INVITE_RE, requireSafeValue, requireNickname, safeMembership } = require(`${__hooks}/groups_utils.js`);

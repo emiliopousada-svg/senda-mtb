@@ -42,7 +42,7 @@ const DB = {
             r.onblocked = () => {
                 console.warn('La actualizaci\u00f3n de IndexedDB est\u00e1 bloqueada por otra pesta\u00f1a.');
                 if (typeof toast === 'function') {
-                    toast('Cierra las otras pesta\u00f1as de MTB CAMBOYA para terminar la actualizaci\u00f3n.', 7000);
+                    toast('Cierra las otras pesta\u00f1as de MTBPro para terminar la actualizaci\u00f3n.', 7000);
                 }
             };
             r.onsuccess = () => {

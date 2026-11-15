@@ -55,7 +55,7 @@ public class MainActivity extends BridgeActivity {
         content.setPadding(padding, padding, padding, 0);
 
         TextView message = new TextView(this);
-        message.setText("¿Quieres salir de MTB CAMBOYA?");
+        message.setText("¿Quieres salir de MTBPro?");
         message.setTextSize(18);
         message.setGravity(Gravity.CENTER);
         content.addView(message, new LinearLayout.LayoutParams(

@@ -2,7 +2,7 @@
 
 //  MAPAS OFFLINE (teselas IGN guardadas en IndexedDB)
 // ============================================================
-const OFFLINE_DB = 'mtb-camboya-mapas-v1';
+const OFFLINE_DB = 'mtbpro-offline-maps-v1';
 const OFFLINE_STORE = 'tiles';
 const OFFLINE_META_STORE = 'metadata';
 const DOWNLOADED_IGN_STATS_KEY = 'downloadedIgnStats';

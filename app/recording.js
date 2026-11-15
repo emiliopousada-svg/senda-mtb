@@ -165,7 +165,7 @@ function notifyBatteryWarning(message) {
         return ln.schedule({
             notifications: [{
                 id: (Date.now() % 2147483647) + 1,
-                title: 'MTB CAMBOYA · Batería',
+                title: 'MTBPro · Batería',
                 body: message,
                 schedule: { at: new Date(Date.now() + 1000) }
             }]
@@ -253,7 +253,7 @@ async function startBgWatcher() {
     try {
         await ensureNotifPermission();
         const id = await bg.addWatcher({
-            backgroundTitle: 'MTB CAMBOYA',
+            backgroundTitle: 'MTBPro',
             backgroundMessage: 'Grabando tu ruta…',
             requestPermissions: true,
             stale: false,
@@ -510,7 +510,7 @@ $('route-photo-input').addEventListener('change', async event => {
         showRoutePoisOnMap([...(followedRoute ? followedRoute.pois : []), ...recordingPois]);
         scheduleDraftSave(0);
         toast(savedCopyPath
-            ? 'Foto añadida y guardada en Documentos/MTB CAMBOYA/Rutas.'
+            ? 'Foto añadida y guardada en Documentos/MTBPro/Rutas.'
             : copyFailed
                 ? 'Foto añadida a la ruta, pero no se pudo copiar a Documentos.'
                 : 'Foto añadida como punto de interés de la ruta.');

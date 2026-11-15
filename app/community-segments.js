@@ -68,7 +68,7 @@ function communityPickSegmentPoint(event) {
     }
     status.classList.remove('error');
     const marker = L.circleMarker(selected.point, {
-        radius: 7, color: '#0b1324', weight: 2, fillColor: '#49ddb5', fillOpacity: 1
+        radius: 7, color: '#101010', weight: 2, fillColor: '#ff6a00', fillOpacity: 1
     }).addTo(communityPreviewMap);
     communitySegmentMarkers.push(marker);
     if (!communitySegmentStart) {
@@ -100,7 +100,7 @@ function communityPickSegmentPoint(event) {
     }
     communitySegmentGeometry = geometry;
     communitySegmentDraftLayer = L.polyline(geometry, {
-        color: '#49ddb5', weight: 8, opacity: 0.9, dashArray: '8 6'
+        color: '#ff6a00', weight: 8, opacity: 0.9, dashArray: '8 6'
     }).addTo(communityPreviewMap);
     communitySegmentSelecting = false;
     communityPreviewMap.getContainer().style.cursor = '';

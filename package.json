@@ -5,8 +5,9 @@
   "description": "MTBPro: rutas, GPS, mapas offline y comunidad",
   "scripts": {
     "prepare-web": "node scripts/prepare-web.js",
-    "build": "node scripts/prepare-web.js && npx cap sync android",
-    "sync": "node scripts/prepare-web.js && npx cap sync android",
+    "build": "node scripts/prepare-web.js && npx cap sync",
+    "sync": "node scripts/prepare-web.js && npx cap sync",
+    "test": "node --test",
     "test:statistics": "node --test tests/statistics-engine.test.js",
     "test:community": "node --test tests/community-performance.test.js"
   },
@@ -18,6 +19,7 @@
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/ios": "^8.6.2",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.3",
     "chart.js": "4.4.1",

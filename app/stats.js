@@ -836,7 +836,7 @@ function statsInitCharts() {
         type: 'bar',
         data: { labels: [], datasets: [{
             label: 'km', data: [],
-            backgroundColor: 'rgba(73,221,181,0.72)', borderColor: '#49ddb5', borderWidth: 1, borderRadius: 5
+            backgroundColor: 'rgba(255,106,0,0.72)', borderColor: '#ff6a00', borderWidth: 1, borderRadius: 5
         }] },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -860,7 +860,7 @@ function statsInitCharts() {
         type: 'line',
         data: { labels: [], datasets: [
             {
-                label: 'Media (km/h)', data: [], borderColor: '#55dce7',
+                label: 'Media (km/h)', data: [], borderColor: '#ff8a00',
                 backgroundColor: 'rgba(85,220,231,0.14)', fill: true, tension: 0.25, pointRadius: 2
             },
             {
@@ -878,7 +878,7 @@ function statsInitCharts() {
         type: 'bar',
         data: { labels: [], datasets: [{
             label: 'Salidas', data: [],
-            backgroundColor: 'rgba(85,220,231,0.68)', borderColor: '#55dce7', borderWidth: 1, borderRadius: 5
+            backgroundColor: 'rgba(255,106,0,0.68)', borderColor: '#ff8a00', borderWidth: 1, borderRadius: 5
         }] },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -890,8 +890,8 @@ function statsInitCharts() {
         type: 'bar',
         data: { labels: [], datasets: [{
             label: 'km/h', data: [],
-            backgroundColor: ['rgba(73,221,181,0.72)', 'rgba(255,173,105,0.72)'],
-            borderColor: ['#49ddb5', '#ffad69'], borderWidth: 1, borderRadius: 5
+            backgroundColor: ['rgba(255,106,0,0.72)', 'rgba(255,173,105,0.72)'],
+            borderColor: ['#ff6a00', '#ffad69'], borderWidth: 1, borderRadius: 5
         }] },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -903,7 +903,7 @@ function statsInitCharts() {
         type: 'bar',
         data: { labels: [], datasets: [{
             label: 'Distancia (km)', data: [],
-            backgroundColor: 'rgba(85,220,231,0.7)', borderColor: '#55dce7', borderWidth: 1, borderRadius: 5
+            backgroundColor: 'rgba(255,106,0,0.7)', borderColor: '#ff8a00', borderWidth: 1, borderRadius: 5
         }] },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -915,8 +915,8 @@ function statsInitCharts() {
         type: 'bar',
         data: { labels: [], datasets: [{
             label: 'Minutos', data: [],
-            backgroundColor: ['rgba(73,221,181,0.72)', 'rgba(255,173,105,0.72)'],
-            borderColor: ['#49ddb5', '#ffad69'], borderWidth: 1, borderRadius: 5
+            backgroundColor: ['rgba(255,106,0,0.72)', 'rgba(255,173,105,0.72)'],
+            borderColor: ['#ff6a00', '#ffad69'], borderWidth: 1, borderRadius: 5
         }] },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -943,7 +943,7 @@ function statsInitCharts() {
             data: [],
             showLine: true,
             spanGaps: false,
-            borderColor: '#55dce7',
+            borderColor: '#ff8a00',
             backgroundColor: 'rgba(85,220,231,0.15)',
             pointRadius: 0,
             pointHitRadius: 10,
@@ -978,7 +978,7 @@ function statsInitCharts() {
     statsEvolutionChart = new Chart($('stats-evolution-chart').getContext('2d'), {
         type: 'line',
         data: { labels: [], datasets: [{
-            label: 'km', data: [], borderColor: '#55dce7', backgroundColor: 'rgba(85,220,231,0.15)',
+            label: 'km', data: [], borderColor: '#ff8a00', backgroundColor: 'rgba(255,106,0,0.15)',
             fill: true, tension: 0.25, pointRadius: 3
         }] },
         options: {

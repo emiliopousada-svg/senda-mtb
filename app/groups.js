@@ -284,8 +284,8 @@ async function loadMyGroup() {
     groupJoined = Boolean(groupInfo);
     if (groupJoined) localStorage.setItem('mtb_group_joined', activeId);
     groupSyncAvailable = true;
-    if (activeId) localStorage.setItem('mtb_group_code', activeId);
-    else localStorage.removeItem('mtb_group_code');
+    if (activeId) localStorage.setItem('mtbpro_group_code', activeId);
+    else localStorage.removeItem('mtbpro_group_code');
     if (!groupJoined) localStorage.removeItem('mtb_group_joined');
     renderGroupState(groupJoined);
     if (currentPage === 2) await loadGroupRankings();
@@ -385,7 +385,7 @@ async function restoreGroup() {
             try { await clearPendingLiveLocation(); }
             catch (error) { reportPendingLiveLocationStorageError(error); }
             localStorage.removeItem('mtb_group_joined');
-            localStorage.removeItem('mtb_group_code');
+            localStorage.removeItem('mtbpro_group_code');
             if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
             renderGroupState(false);
             renderFriends();
@@ -395,7 +395,7 @@ async function restoreGroup() {
                     await syncPendingGroupRankingDeletes();
                 }
                 catch (e) {
-                    localStorage.removeItem('mtb_group_code');
+                    localStorage.removeItem('mtbpro_group_code');
                     $('group-status').textContent = 'Has salido en este dispositivo; se completará la salida del servidor al recuperar conexión.';
                     console.warn('Salida del grupo pendiente:', e);
                 }
@@ -844,7 +844,7 @@ async function leaveGroupLocally() {
     groupInfo = null;
     myLiveRecordId = null;
     localStorage.removeItem('mtb_group_joined');
-    localStorage.removeItem('mtb_group_code');
+    localStorage.removeItem('mtbpro_group_code');
     if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
     renderGroupState(false);
     renderFriends();
@@ -859,7 +859,7 @@ async function leaveGroupLocally() {
         await syncPendingGroupLeave();
         toast('Has salido del grupo. Conservas el acceso para volver a entrar.');
     } catch (e) {
-        localStorage.removeItem('mtb_group_code');
+        localStorage.removeItem('mtbpro_group_code');
         renderAccount();
         $('group-status').textContent = 'Has salido en este dispositivo; se completará la salida del servidor al recuperar conexión.';
         console.warn('No se pudo confirmar la salida del grupo:', e);

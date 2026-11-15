@@ -13,23 +13,18 @@ Report vulnerabilities privately through **Security > Report a vulnerability** i
 
 ## Data access review
 
-The PocketBase collection exports in this repository use owner-scoped rules for
-private `routes`, group-member checks for `live_locations`, and public reads only
-for published community routes and their community interactions. The
-`mtb_groups`, `mtb_group_members`, `mtb_group_rankings`, and
-`mtb_group_ranking_entries` collections have locked rules (`null`); clients must
-use the authenticated `/api/mtb/groups/*` hooks, which perform membership and
-administrator checks.
+This repository contains PocketBase hooks but no collection exports, live
+database rules, or deployed server. Do not treat the hooks or client checks as
+the complete access-control boundary. Configure and verify the rules on a new,
+independent PocketBase instance before enabling sync. The expected collection
+set and access boundaries are documented in [POCKETBASE.md](POCKETBASE.md).
 
-Deleting a user cascades to their community routes and dependent public
-interactions through `community_routes.owner`.
-
-Community route tracks are public data. The PocketBase request hook trims 150 m
-from both ends before storing a track and rejects POIs within 150 m of the
-submitted endpoints. This reduces location exposure but does not guarantee
-anonymity. The client also resizes and re-encodes photos; server-side EXIF
-stripping is not configured by these collection exports, so uploaded image
-metadata is not guaranteed to be sanitized by PocketBase.
+If community routes are enabled, their tracks are public data. The included
+route hook trims 150 m from both ends before storing a track and rejects POIs
+within 150 m of the submitted endpoints. This reduces location exposure but
+does not guarantee anonymity. The client also resizes and re-encodes photos;
+the hook does not strip image metadata, so the server must validate or remove
+EXIF data if that is required.
 
 The API bearer token supports persistent sign-in and is stored in browser
 `localStorage`. JavaScript running in the app origin can access it, so script
@@ -40,9 +35,8 @@ protect against same-origin script execution. A stronger design needs a
 short-lived token behind a server-side session, or platform secure storage for
 the native app.
 
-The collection exports do not include the PocketBase `users` auth collection
-configuration or the live production database rules. Verify those separately:
-profile fields such as email, age, weight, avatar, and `groupCode` must not be
+Profile fields such as email, age, weight, avatar, and `groupCode` must not be
 publicly listable, and only the authenticated owner should be able to update
 their profile. Also verify HTTPS, admin credentials, backups, and PocketBase
-version on the deployed server.
+version on the new server. No server credentials or user data are stored in
+this repository.
