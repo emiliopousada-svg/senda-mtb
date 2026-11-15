@@ -25,6 +25,38 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 | Gráficos interactivos | Chart.js para evolución, perfiles y comparación. |
 | Diseño adaptable y estados de red | Incluye tamaños móvil/tablet/escritorio y mensajes de conexión, error, permisos y datos no disponibles en las áreas correspondientes. |
 
+## Próximas funciones PRO
+
+Estas propuestas forman parte del alcance de producto. No se deben mostrar como funciones operativas hasta que exista la implementación y, cuando corresponda, el soporte del servidor.
+
+### Inteligencia de entrenamiento
+
+- Mantener VAM, zonas de frecuencia cardíaca y zonas de potencia basadas en datos medidos. Las zonas de potencia requieren FTP configurado por el ciclista.
+- Incorporar TSS y las tendencias CTL, ATL y TSB solo con muestras de potencia suficientes, FTP válido, cobertura temporal comprobable e historial adecuado. Indicar la cobertura y el periodo disponible; si faltan datos, mostrar “sin datos suficientes”.
+- No presentar VO₂ como medición. Cualquier estimación futura requerirá un método documentado, datos válidos y una etiqueta explícita de estimación.
+- El entrenador inteligente será descriptivo y prudente: cambios de volumen/desnivel, mejora en un segmento y periodos de menor actividad. No formular diagnósticos ni recomendaciones médicas.
+
+### Competiciones avanzadas
+
+- Extender las ligas privadas con categorías de nivel, copas mensuales, temporadas, equipos, campeonatos, récords históricos y Hall of Fame.
+- Permitir clasificaciones por edad únicamente si el usuario decide compartirla y según su visibilidad configurada. La categoría de bicicleta también será voluntaria y editable.
+- Añadir duelo directo: elegir un miembro y un segmento para comparar mejores tiempos, velocidad, desnivel y evolución. Comparar actividades será otra vista, basada en actividades verificadas y métricas disponibles en ambas.
+- Las clasificaciones oficiales requieren validación en PocketBase, control de duplicados, privacidad por grupo e historial auditable. La interfaz no debe fabricar temporadas, resultados ni puntos cuando falte el esquema del servidor.
+
+### Guardian Mode y seguridad del ciclista
+
+- Diseñar una sesión con contacto(s) de emergencia, duración prevista, confirmación de llegada, ubicación compartida y coordenadas fáciles de comunicar.
+- Hacer visible el último momento de conexión y distinguir pérdida de señal, falta de GPS y emergencia confirmada. La ausencia de señal por sí sola no prueba una caída.
+- Las alertas por demora deben permitir confirmar que todo está bien y cancelar falsos positivos. La detección de caída será opcional, dependiente de sensores compatibles y nunca la única vía de aviso.
+- Mostrar de antemano si la sesión depende de conexión, permisos y seguimiento en segundo plano. No afirmar que un contacto está siguiendo la ruta hasta confirmar el envío y recepción real en un backend independiente.
+
+### Inteligencia y planificación de rutas
+
+- Crear búsqueda con distancia, desnivel, pendientes, circularidad, proximidad, favoritos, listas y rutas recomendadas; permitir comparar alternativas y planificar con varios puntos.
+- Separar siempre dificultad física de dificultad técnica. La técnica y el tipo de terreno solo se puntuarán cuando haya etiquetas o datos de superficie fiables; en otro caso se mostrarán como desconocidos.
+- Route Score deberá explicar sus factores (distancia, ascenso, pendientes y, si existen, datos técnicos), mostrar los datos ausentes y evitar aparentar precisión universal. No sustituye la dificultad técnica local ni una evaluación del sendero.
+- La navegación giro a giro y el recálculo necesitan un proveedor/servicio de rutas compatible. Una línea GPX por sí sola no contiene instrucciones fiables de giro ni permite inferir el terreno.
+
 ## Límites de mapas
 
 No se descargan mosaicos del servidor estándar de OpenStreetMap para uso offline. Su política prohíbe la descarga masiva y el uso offline de ese servicio: [política oficial de teselas de OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/). Para ampliar regiones hay que seleccionar un proveedor y respetar sus condiciones de descarga, atribución y almacenamiento.
