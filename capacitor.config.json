@@ -1,0 +1,12 @@
+{
+  "appId": "com.emiliopousada.mtbpro",
+  "appName": "MTBPro",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#121212",
+    "useLegacyBridge": true
+  }
+}

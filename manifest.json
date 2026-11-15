@@ -1,0 +1,13 @@
+{
+  "name": "MTBPro",
+  "short_name": "MTBPro",
+  "description": "GPS, rutas y mapas offline para MTB",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101010",
+  "theme_color": "#ff6a00",
+  "icons": []
+}

@@ -1,7 +1,15 @@
 # MTBPro
 
-Aplicación de ciclismo de montaña basada en una copia independiente del proyecto MTB Camboya.
+App de ciclismo de montaña con GPS, registro de actividades, mapas offline, rutas GPX/KML/GeoJSON, estadísticas, sensores Bluetooth y funciones sociales.
 
-Identidad visual: negro grafito, naranja eléctrico y verde reservado para estados.
+## Identidad visual
 
-El repositorio original no se modifica. Este repositorio tendrá su propio historial y configuración.
+Negro grafito y naranja eléctrico como color principal; verde reservado para estados e indicadores.
+
+## Desarrollo
+
+- `npm ci`
+- `npm test`
+- `npm run build`
+
+La sincronización en la nube requiere configurar un servidor PocketBase propio. No se incluye el servidor ni credenciales del proyecto de origen.

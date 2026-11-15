@@ -1,0 +1,120 @@
+// Prepara la carpeta www/ que empaqueta Capacitor dentro del APK.
+// Copia la app y sustituye los enlaces a CDN por copias locales,
+// para que el APK no dependa de internet para arrancar.
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '..');
+const www = path.join(root, 'www');
+const nm = path.join(root, 'node_modules');
+const appVersion = require(path.join(root, 'package.json')).version;
+const buildNumber = process.env.GITHUB_RUN_NUMBER || '';
+if (buildNumber && !/^\d+$/.test(buildNumber)) {
+  throw new Error(`Número de build no válido en GITHUB_RUN_NUMBER: ${buildNumber}`);
+}
+const appBuild = buildNumber || 'local';
+
+if (!/^\d+\.\d+\.\d+$/.test(appVersion)) {
+  throw new Error(`Versión de aplicación no válida en package.json: ${appVersion}`);
+}
+
+fs.rmSync(www, { recursive: true, force: true });
+fs.mkdirSync(path.join(www, 'lib', 'leaflet'), { recursive: true });
+
+for (const f of ['index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'estrella-galicia.svg']) {
+  fs.copyFileSync(path.join(root, f), path.join(www, f));
+}
+fs.cpSync(path.join(root, 'app'), path.join(www, 'app'), { recursive: true });
+const appConfig = path.join(www, 'app', 'config.js');
+const configText = fs.readFileSync(appConfig, 'utf8');
+if (!/const APP_VERSION = '[^']*';/.test(configText)) {
+  throw new Error('No se pudo encontrar APP_VERSION en app/config.js');
+}
+if (!/const APP_BUILD = '[^']*';/.test(configText)) {
+  throw new Error('No se pudo encontrar APP_BUILD en app/config.js');
+}
+const versionedConfig = configText.replace(
+  /const APP_VERSION = '[^']*';/,
+  `const APP_VERSION = '${appVersion}';`
+).replace(
+  /const APP_BUILD = '[^']*';/,
+  `const APP_BUILD = '${appBuild}';`
+);
+fs.writeFileSync(appConfig, versionedConfig);
+fs.copyFileSync(path.join(nm, 'leaflet/dist/leaflet.css'), path.join(www, 'lib/leaflet/leaflet.css'));
+fs.copyFileSync(path.join(nm, 'leaflet/dist/leaflet.js'), path.join(www, 'lib/leaflet/leaflet.js'));
+fs.copyFileSync(path.join(root, 'vendor/leaflet-rotate.umd.min.js'), path.join(www, 'lib/leaflet/leaflet-rotate.umd.min.js'));
+fs.cpSync(path.join(nm, 'leaflet/dist/images'), path.join(www, 'lib/leaflet/images'), { recursive: true });
+fs.copyFileSync(path.join(nm, 'chart.js/dist/chart.umd.js'), path.join(www, 'lib/chart.umd.js'));
+
+// El módulo BLE usa imports de npm: se empaqueta como script clásico para Capacitor.
+require('esbuild').buildSync({
+  entryPoints: [path.join(root, 'src', 'ble.js')],
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  target: 'es2019',
+  outfile: path.join(www, 'lib/ble.js')
+});
+
+require('esbuild').buildSync({
+  entryPoints: [path.join(root, 'src', 'fit-parser.mjs')],
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  globalName: 'MTBFit',
+  target: 'es2019',
+  outfile: path.join(www, 'lib/fit.js')
+});
+
+require('esbuild').buildSync({
+  entryPoints: [path.join(root, 'src', 'native-app.mjs')],
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  globalName: 'MTBNativeApp',
+  target: 'es2019',
+  outfile: path.join(www, 'lib/native-app.js')
+});
+
+const file = path.join(www, 'index.html');
+let html = fs.readFileSync(file, 'utf8');
+const versionLabel = /(<strong id="app-version">)v\d+\.\d+\.\d+ \(build [^)]+\)(<\/strong>)/;
+if (!versionLabel.test(html)) {
+  throw new Error('No se pudo encontrar la etiqueta de versión en index.html');
+}
+html = html.replace(versionLabel, `$1v${appVersion} (build ${appBuild})$2`);
+const swaps = [
+  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'lib/leaflet/leaflet.css'],
+  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'lib/leaflet/leaflet.js'],
+  ['https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js', 'lib/leaflet/leaflet-rotate.umd.min.js'],
+  ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js', 'lib/chart.umd.js']
+];
+for (const [from, to] of swaps) {
+  if (!html.includes(from)) throw new Error('No encuentro este enlace en index.html: ' + from);
+  html = html.split(from).join(to);
+}
+fs.writeFileSync(file, html);
+
+// Comprueba que el HTML que se empaquetará no referencia scripts o CSS locales ausentes.
+const localAssets = [
+  ...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi),
+  ...html.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)
+].map(match => match[1]);
+for (const asset of localAssets) {
+  if (/^(?:[a-z]+:|\/\/|#|data:)/i.test(asset)) continue;
+  const assetPath = decodeURIComponent(asset.split(/[?#]/, 1)[0]);
+  if (!fs.existsSync(path.join(www, assetPath))) {
+    throw new Error(`index.html referencia un recurso local que no existe en www/: ${asset}`);
+  }
+}
+
+const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+if (!swSource.includes('__APP_VERSION__')) {
+  throw new Error('No se encontró el marcador de versión de caché en sw.js');
+}
+fs.writeFileSync(
+  path.join(www, 'sw.js'),
+  swSource.replace('__APP_VERSION__', appVersion)
+);
+console.log(`www listo (service worker ${appVersion})`);

@@ -1,0 +1,107 @@
+apply plugin: 'com.android.application'
+
+def appVersion = new groovy.json.JsonSlurper().parse(file('../../package.json')).version
+def versionMatcher = (appVersion =~ /^(\d+)\.(\d+)\.(\d+)$/)
+if (!versionMatcher.matches()) {
+    throw new GradleException("Invalid package.json version: ${appVersion}")
+}
+def versionMajor = versionMatcher[0][1].toLong()
+def versionMinor = versionMatcher[0][2].toLong()
+def versionPatch = versionMatcher[0][3].toLong()
+def buildNumber = project.hasProperty('androidBuildNumber')
+    ? project.property('androidBuildNumber').toString()
+    : '0'
+if (versionMinor > 999 || versionPatch > 999) {
+    throw new GradleException("Version components must be less than 1000: ${appVersion}")
+}
+if (!(buildNumber ==~ /^\d+$/)) {
+    throw new GradleException("Invalid Android build number: ${buildNumber}")
+}
+def appVersionCodeLong = versionMajor * 1000000L + versionMinor * 1000L + versionPatch + buildNumber.toLong()
+if (appVersionCodeLong < 1 || appVersionCodeLong > 2100000000L) {
+    throw new GradleException("Version code is outside Android's supported range: ${appVersion}")
+}
+def appVersionCode = appVersionCodeLong.intValue()
+
+def signingEnv = [
+    storeFile: System.getenv('MTB_SIGNING_STORE_FILE'),
+    storePassword: System.getenv('MTB_SIGNING_STORE_PASSWORD'),
+    keyAlias: System.getenv('MTB_SIGNING_KEY_ALIAS'),
+    keyPassword: System.getenv('MTB_SIGNING_KEY_PASSWORD')
+]
+def configuredSigningValues = signingEnv.values().count { it }
+if (configuredSigningValues != 0 && configuredSigningValues != signingEnv.size()) {
+    throw new GradleException("Incomplete MTB signing configuration; provide all MTB_SIGNING_* environment variables")
+}
+def useCiSigning = configuredSigningValues == signingEnv.size()
+
+android {
+    namespace = "com.emiliopousada.mtbpro"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.emiliopousada.mtbpro"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName appVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    if (useCiSigning) {
+        signingConfigs {
+            ci {
+                storeFile file(signingEnv.storeFile)
+                storePassword signingEnv.storePassword
+                keyAlias signingEnv.keyAlias
+                keyPassword signingEnv.keyPassword
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            if (useCiSigning) {
+                signingConfig signingConfigs.ci
+            }
+        }
+        release {
+            minifyEnabled false
+            if (useCiSigning) {
+                signingConfig signingConfigs.ci
+            }
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
