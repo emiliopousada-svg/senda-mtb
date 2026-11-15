@@ -67,12 +67,23 @@ Estas propuestas forman parte del alcance de producto. No se deben mostrar como 
 
 ### Inteligencia artificial MTB
 
+- El inicio incluye una tarjeta conceptual de CAMBOYA AI; las respuestas son ejemplos y el formulario no envía información mientras el servicio no esté conectado.
 - Ofrecer un asistente conectado a un servicio propio para explicar estadísticas, comparar actividades, resumir salidas, detectar tendencias y ayudar a planificar entrenamientos o temporadas.
 - Recomendar rutas solo a partir de preferencias y datos disponibles (distancia, desnivel, dificultad física y técnica conocida); explicar por qué se recomienda cada ruta y señalar los datos que faltan.
 - Ayudar a preparar desafíos de grupo como borradores revisables por un administrador. No publicar retos ni modificar clasificaciones automáticamente.
 - Mantener los cálculos deterministas de métricas (por ejemplo, distancia y desnivel) en el motor de la aplicación/servidor. La IA interpreta esos resultados y no debe inventar mediciones, diagnosticar ni presentar estimaciones como hechos.
 - El servicio será independiente del PocketBase original y usará credenciales únicamente en el servidor. Antes de enviar actividades, fotos, ubicación o datos de perfil, informar qué se comparte y pedir consentimiento explícito; permitir usar las funciones locales sin activar el asistente.
 - Diseñar el servicio para responder con cautela cuando el historial sea corto o incompleto y mostrar las actividades/periodo que respaldan cada conclusión.
+
+### Ecosistema profesional
+
+- Calendario para planificar salidas; eventos para quedadas y marchas; clubes con administración de varios grupos y mensajería entre miembros.
+- Inventario personal de material y comparador de bicicletas/configuraciones, manteniendo estos datos separados del registro de rendimiento.
+- Exportación avanzada de GPX, FIT y otros formatos solo cuando la estructura pueda validarse y conservarse correctamente.
+- Integración con sensores de potencia, pulso y cadencia según perfiles Bluetooth compatibles, indicando conexión y calidad/disponibilidad de lecturas.
+- Sincronización multidispositivo móvil/web con cuenta y almacenamiento propios; resolver conflictos sin sobrescribir silenciosamente actividades.
+- Panel web para análisis ampliado en ordenador, con las mismas reglas de privacidad y métricas verificables que la aplicación móvil.
+- Eventos, mensajería, sincronización y clubes requieren servicios de backend MTBPro, controles de acceso, retención definida y mecanismos para exportar o borrar los datos del usuario.
 
 ## Límites de mapas
 

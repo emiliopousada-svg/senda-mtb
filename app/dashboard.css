@@ -54,6 +54,24 @@
 
 .dashboard-main-grid,.dashboard-lower-grid { display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; }
 .dashboard-panel { min-width:0; overflow:hidden; border:1px solid rgba(255,255,255,.085); border-radius:18px; background:linear-gradient(145deg,#171d26,#11161e); box-shadow:0 12px 30px rgba(0,0,0,.16); }
+.ai-preview { display:grid; gap:12px; margin-top:14px; padding:14px; }
+.ai-preview-heading { display:flex; align-items:center; gap:9px; }
+.ai-brand-mark { display:grid; width:42px; height:42px; flex:0 0 auto; place-items:center; border-radius:13px; background:linear-gradient(145deg,#ff7924,#f04b17); color:#151a21; font-size:1.35rem; font-weight:900; }
+.ai-brand-copy { display:grid; gap:2px; min-width:0; }
+.ai-brand-copy h2 { margin:0; color:#f5f6f8; font-size:.98rem; }
+.ai-brand-copy span { color:#9ca9b9; font-size:.78rem; }
+.ai-concept-badge { margin-left:auto; padding:5px 9px; border-radius:99px; background:rgba(22,208,104,.1); color:#42dc80; font-size:.7rem; font-weight:750; }
+.ai-conversation { display:grid; gap:8px; }
+.ai-message { max-width:100%; margin:0; padding:11px 12px; border-radius:13px; color:#f3f5f8; font-size:.82rem; line-height:1.5; }
+.ai-message-user { background:#282e39; }
+.ai-message-assistant { background:#1e2927; }
+.ai-preview-form { display:flex; gap:8px; }
+.ai-preview-form input { min-width:0; min-height:42px; flex:1; padding:9px 12px; border:1px solid rgba(255,255,255,.1); border-radius:11px; background:#0d1219; color:#f4f6fa; }
+.ai-send-button { min-width:76px; padding:0 14px; border:0; border-radius:11px; background:var(--mtb-orange); color:#151515; font-weight:800; }
+.ai-preview-footnote { margin:0; color:#91a0b3; font-size:.72rem; line-height:1.45; }
+.ai-preview-footnote[data-state="notice"] { color:#ffc27e; }
+.ai-preview .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media (min-width:900px) { .ai-preview { padding:17px 19px; } .ai-conversation { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 .panel-heading { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px 10px; }
 .panel-heading h2 { margin-top:4px; color:#f0f3f7; font-size:1rem; font-weight:720; letter-spacing:-.025em; }
 .text-link { display:inline-flex; align-items:center; gap:8px; padding:7px 0; border:0; background:none; color:#46b4ff; font-size:.72rem; font-weight:720; white-space:nowrap; }

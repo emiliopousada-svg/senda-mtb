@@ -848,6 +848,26 @@
                         <button class="explore-button" type="button" data-page="3">Ver mis rutas <span>→</span></button>
                     </article>
                 </section>
+
+                <section class="dashboard-panel ai-preview" aria-labelledby="ai-preview-title">
+                    <div class="ai-preview-heading">
+                        <div class="ai-brand-mark" aria-hidden="true">✳</div>
+                        <div class="ai-brand-copy"><h2 id="ai-preview-title">CAMBOYA AI</h2><span>Tu asistente inteligente MTB</span></div>
+                        <span class="ai-concept-badge">Concepto</span>
+                    </div>
+                    <div class="ai-conversation" aria-label="Ejemplo de conversación">
+                        <p class="ai-message ai-message-user">¿Cómo ha sido mi rendimiento este mes?</p>
+                        <p class="ai-message ai-message-assistant">Cuando conectemos el asistente, podrá resumir tu evolución usando tus actividades registradas y señalar qué periodo compara.</p>
+                        <p class="ai-message ai-message-user">Encuéntrame una ruta de 35 km con dificultad media.</p>
+                        <p class="ai-message ai-message-assistant">Podrá buscar rutas con distancia y dificultad disponibles. La dificultad técnica solo aparecerá si tenemos datos fiables.</p>
+                    </div>
+                    <form id="ai-preview-form" class="ai-preview-form">
+                        <label class="sr-only" for="ai-preview-input">Pregunta a Camboya AI</label>
+                        <input id="ai-preview-input" type="text" maxlength="240" placeholder="Pregunta sobre tus rutas o rendimiento…" autocomplete="off">
+                        <button class="ai-send-button" type="submit">Probar</button>
+                    </form>
+                    <p id="ai-preview-status" class="ai-preview-footnote" role="status" aria-live="polite">Ejemplo ilustrativo. El servicio aún no está conectado y no se envían datos.</p>
+                </section>
             </main>
         </div>
 
@@ -980,6 +1000,7 @@
     <script src="app/community-performance.js"></script>
     <script src="app/stats.js"></script>
     <script src="app/dashboard.js"></script>
+    <script src="app/ai-preview.js"></script>
     <script src="app/sensors.js"></script>
     <script src="app/pois.js"></script>
     <script src="app/group-rankings.js"></script>
