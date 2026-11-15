@@ -559,6 +559,10 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     .hero-status { right:8px; gap:3px; }
     .hero-status .status-chip { padding-inline:5px; }
 }
+@media (max-width:719px) {
+    .hero-eyebrow-long { display:none; }
+    .hero-status { top:max(13px,calc(env(safe-area-inset-top,0px) + 7px)); }
+}
 @media (prefers-reduced-motion:reduce) {
     .mobile-nav .nav-btn .icon { transition:none; }
 }
