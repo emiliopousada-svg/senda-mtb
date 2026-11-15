@@ -15,6 +15,8 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 | Récords y logros | Ya disponible para récords personales y medallas. |
 | Panel de sensores Bluetooth | Ya disponible; necesita un sensor BLE compatible y permisos del dispositivo. |
 | Clasificaciones de grupos | Ya disponible cuando se configura un backend PocketBase propio y la cuenta tiene acceso. |
+| Menú Comunidad | Implementado con seis pestañas: Ranking, Segmentos, Desafíos, Mi grupo, Logros y Actividad. |
+| Liga privada de cuatro semanas | Diseño y puntuación base documentados; requiere desplegar colecciones, validadores, temporadas e historial del módulo competitivo en PocketBase antes de habilitar escrituras. |
 | Modo nocturno automático | Pendiente de programación horaria; la interfaz actual mantiene el tema oscuro. |
 | Transiciones entre pantallas | Disponibles en el carrusel de páginas, con soporte de movimiento reducido del sistema. |
 | Vibración de grabación | Implementada al iniciar, pausar, reanudar y finalizar cuando el dispositivo ofrece vibración y la preferencia está activa. |

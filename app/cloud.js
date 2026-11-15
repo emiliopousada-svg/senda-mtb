@@ -69,6 +69,11 @@ const Cloud = {
     }
 };
 
+// Fija la instancia propia de MTBPro y descarta cualquier sesión anterior al cambiar de servidor.
+if (DEFAULT_CLOUD_SERVER && Cloud.server !== normalizeServer(DEFAULT_CLOUD_SERVER)) {
+    Cloud.setServer(DEFAULT_CLOUD_SERVER);
+}
+
 const CLOUD_TIMEOUT_MS = 10000;
 const ROUTE_NICKNAME_LIMIT = 32;
 const ROUTE_FULL_AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000;

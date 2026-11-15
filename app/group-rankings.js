@@ -7,6 +7,7 @@ const GROUP_RANKING_MEDALS = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
 
 function renderGroupMetricRanking(containerId, key, format) {
     const container = $(containerId);
+    if (!container) return;
     container.replaceChildren();
     const entries = groupRankingMembers
         .filter(member => Number.isFinite(Number(member[key])) && Number(member[key]) > 0)
@@ -37,6 +38,16 @@ function renderGroupMetricRanking(containerId, key, format) {
     });
 }
 
+function renderGroupRankingPending(containerId, message) {
+    const container = $(containerId);
+    if (!container) return;
+    container.replaceChildren();
+    const note = document.createElement('p');
+    note.className = 'community-ranking-pending';
+    note.textContent = message;
+    container.appendChild(note);
+}
+
 async function loadGroupRankings() {
     const status = $('group-ranking-status');
     if (!Cloud.loggedIn() || !groupJoined) {
@@ -44,6 +55,8 @@ async function loadGroupRankings() {
         renderGroupMetricRanking('group-ranking-distance', 'maxDistanceKm', () => '');
         renderGroupMetricRanking('group-ranking-speed', 'maxSpeedKmh', () => '');
         renderGroupMetricRanking('group-ranking-time', 'bestMovingTimeSec', () => '');
+        ['group-ranking-ascent', 'group-ranking-segments', 'group-ranking-consistency', 'group-ranking-points']
+            .forEach(id => renderGroupRankingPending(id, 'Se activará con las temporadas de la liga.'));
         status.textContent = 'Inicia sesión y únete a un grupo para consultar sus marcas.';
         return;
     }
@@ -53,6 +66,8 @@ async function loadGroupRankings() {
     renderGroupMetricRanking('group-ranking-distance', 'maxDistanceKm', () => '');
     renderGroupMetricRanking('group-ranking-speed', 'maxSpeedKmh', () => '');
     renderGroupMetricRanking('group-ranking-time', 'bestMovingTimeSec', () => '');
+    ['group-ranking-ascent', 'group-ranking-segments', 'group-ranking-consistency', 'group-ranking-points']
+        .forEach(id => renderGroupRankingPending(id, 'Preparando clasificación…'));
     const requestedGroupId = groupName();
     try {
         const result = await cloudApi('/api/mtb/groups/rankings');
@@ -64,6 +79,8 @@ async function loadGroupRankings() {
         });
         renderGroupMetricRanking('group-ranking-speed', 'maxSpeedKmh', member => `${Number(member.maxSpeedKmh).toFixed(1)} km/h`);
         renderGroupMetricRanking('group-ranking-time', 'bestMovingTimeSec', member => fmtDur(Number(member.bestMovingTimeSec)));
+        ['group-ranking-ascent', 'group-ranking-segments', 'group-ranking-consistency', 'group-ranking-points']
+            .forEach(id => renderGroupRankingPending(id, 'Necesita los datos y reglas de la temporada de cuatro semanas.'));
         status.textContent = `${result.group.name} · marcas de todos los tiempos`;
     } catch (error) {
         console.warn('No se pudo cargar el ranking del grupo:', error);

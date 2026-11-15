@@ -1,6 +1,6 @@
 # PocketBase para MTB Camboya PRO
 
-MTB Camboya PRO funciona con almacenamiento local sin servidor. `DEFAULT_CLOUD_SERVER` permanece vacío; no rellenes la URL hasta desplegar y revisar una instancia independiente. No importes bases de datos, cuentas, ubicaciones, rutas ni rankings del proyecto mtb-camboya.
+La instancia independiente de MTB Camboya PRO está publicada en `https://mtbpro.ddns.net` y es el servidor por defecto de la aplicación. No importes bases de datos, cuentas, ubicaciones, rutas ni rankings del proyecto mtb-camboya.
 
 ## Colecciones usadas
 
@@ -15,6 +15,7 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 | `mtb_groups`, `mtb_group_members`, `mtb_group_rankings`, `mtb_group_ranking_entries` | Grupos, membresías y clasificaciones; gestionados mediante hooks de grupos. |
 | `community_routes`, `community_route_favorites`, `community_route_ratings`, `community_route_comments` | Rutas publicadas e interacciones sociales. |
 | `community_segments`, `community_segment_efforts`, `community_route_efforts`, `community_performance` | Segmentos y esfuerzos usados para el rendimiento de la comunidad. |
+| `mtb_group_competitions`, `mtb_group_competition_entries`, `mtb_group_seasons`, `mtb_group_season_awards` | Colecciones propuestas para desafíos, ligas de cuatro semanas, participación e historial de campeones; requieren instalar el módulo competitivo antes de habilitar su interfaz de escritura. |
 
 ## Límites de acceso recomendados
 
@@ -28,7 +29,7 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 
 ## Hooks del repositorio
 
-`pb_hooks/` incluye hooks para apodos, POIs, grupos, limpieza de posiciones, rutas comunitarias, segmentos, rendimiento e interacciones sociales. Revísalos y pruébalos junto a reglas de colección creadas para la instancia nueva. El código de cliente por sí solo no es una frontera de seguridad.
+`pb_hooks/` incluye hooks para apodos, POIs, grupos, limpieza de posiciones, rutas comunitarias, segmentos, rendimiento e interacciones sociales. Revísalos y pruébalos junto a las reglas de colección de `https://mtbpro.ddns.net`. Las colecciones de temporadas y desafíos siguen pendientes de despliegue; el código de cliente por sí solo no es una frontera de seguridad.
 
 Los tracks comunitarios son datos públicos. El hook de rutas comunitarias recorta 150 m de los extremos y rechaza POIs próximos a esos extremos; reduce la exposición de domicilios pero no garantiza anonimato. Las fotos se procesan en el cliente; la instancia debe validar y limpiar metadatos del lado del servidor.
 

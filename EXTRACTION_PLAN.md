@@ -7,7 +7,7 @@
 - Plataformas: web y Android primero; el scaffold iOS se conserva para una segunda fase.
 - Actividad: exclusivamente MTB.
 - Mapas: cobertura global online; descargas offline solo con proveedores y zonas cuya licencia permita expresamente ese uso.
-- Backend: PocketBase independiente. Hasta desplegarlo, la URL predeterminada permanece vacía y no se incluyen credenciales.
+- Backend: PocketBase independiente en `https://mtbpro.ddns.net`; la aplicación lo usa como servidor predeterminado y no incluye credenciales.
 - Identidad local PRO: IndexedDB `mtb_camboya_pro_db`, claves LocalStorage `mtb_pro_*`, base offline separada y caché Service Worker propia.
 
 ## Trazabilidad inicial
@@ -42,7 +42,7 @@ Capacitor 8, Leaflet, Chart.js, `fit-file-parser`, plugins de geolocalización e
 3. Revisar proveedores de mapas globales, atribución, caché y permisos offline antes de habilitar descargas.
 4. Validar GPX/KML/GeoJSON/FIT, seguimiento, fotos y perfiles.
 5. Consolidar estadísticas y sensores con datos reales.
-6. Desplegar PocketBase independiente y definir reglas por colección antes de conectar comunidad/sync.
+6. Instalar y revisar las colecciones y reglas del PocketBase independiente antes de habilitar nuevas funciones competitivas.
 7. Estabilizar web y Android; pasar a iOS en una segunda fase.
 
 ## Riesgos y límites conocidos

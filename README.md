@@ -21,7 +21,7 @@ gradle -p android assembleDebug
 
 `npm run build` prepara `www/` y sincroniza Capacitor con Android. El APK debug se genera en `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-La app funciona sin backend y el servidor PocketBase predeterminado está vacío. Para desplegar uno independiente, consulta [POCKETBASE.md](POCKETBASE.md). No se incluye servidor, credenciales ni datos del proyecto de origen.
+La aplicación apunta al PocketBase independiente `https://mtbpro.ddns.net`. Consulta [POCKETBASE.md](POCKETBASE.md) para las colecciones y reglas requeridas. No se incluyen credenciales ni datos del proyecto de origen.
 
 ## iOS
 
