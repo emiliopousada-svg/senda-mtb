@@ -2,6 +2,14 @@
 
 Este inventario separa lo que ya funciona en esta versión de lo que depende de servicios, permisos o trabajo posterior.
 
+## Decisiones técnicas
+
+- Mantener JavaScript, HTML y CSS con Capacitor 8, Leaflet y Chart.js durante la primera fase; estabilizar el núcleo antes de valorar una migración de framework.
+- Separar presentación, lógica de dominio y acceso a datos. Reducir dependencias cruzadas entre módulos y documentar sus interfaces.
+- Consolidar servicios comunes para GPS, archivos, permisos, conectividad y sincronización en iteraciones compatibles con la aplicación actual.
+- Mantener las actividades locales disponibles sin conexión y sincronizarlas cuando la red vuelva, sin perder cambios locales.
+- Usar únicamente backend e identidad propios de MTBPro, sin compartir PocketBase, credenciales o datos con MTB Camboya.
+
 | Función | Estado |
 | --- | --- |
 | Panel de grabación configurable | Implementado: ordenar y mostrar u ocultar métricas (incluye velocidad media, cadencia y potencia); preferencias guardadas en el dispositivo. |
@@ -16,6 +24,7 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 | Panel de sensores Bluetooth | Ya disponible; necesita un sensor BLE compatible y permisos del dispositivo. |
 | Clasificaciones de grupos | Ya disponible cuando se configura un backend PocketBase propio y la cuenta tiene acceso. |
 | Menú Comunidad | Implementado con seis pestañas: Ranking, Segmentos, Desafíos, Mi grupo, Logros y Actividad. |
+| Navegación principal | Cinco accesos inferiores (Inicio, Rutas, Mapa, Comunidad y Stats); Seguridad, Garaje, CAMBOYA AI, Calendario, Sensores y Ajustes se reúnen en Más herramientas. Seguridad, Garaje y Calendario son accesos conceptuales hasta que se implementen. |
 | Liga privada de cuatro semanas | Diseño y puntuación base documentados; requiere desplegar colecciones, validadores, temporadas e historial del módulo competitivo en PocketBase antes de habilitar escrituras. |
 | Modo nocturno automático | Pendiente de programación horaria; la interfaz actual mantiene el tema oscuro. |
 | Transiciones entre pantallas | Disponibles en el carrusel de páginas, con soporte de movimiento reducido del sistema. |

@@ -34,8 +34,7 @@
             <button class="sidebar-link sidebar-record" type="button" data-recording><span class="record-ring"></span>Grabación</button>
             <button class="sidebar-link" type="button" data-page="2"><span class="sidebar-icon">◉</span>Comunidad</button>
             <button class="sidebar-link" type="button" data-page="1"><span class="sidebar-icon">▥</span>Estadísticas</button>
-            <button class="sidebar-link" type="button" data-page="1" data-stats-slide="3"><span class="sidebar-icon">✦</span>Logros</button>
-            <button class="sidebar-link" type="button" data-page="4"><span class="sidebar-icon">⚙</span>Ajustes</button>
+            <button class="sidebar-link tools-sidebar-link" type="button" data-page="6"><span class="sidebar-icon">☷</span>Más herramientas</button>
         </nav>
         <div class="sidebar-footer"><span class="sidebar-status-dot"></span><span>MTB PRO <small>· LISTO PARA RODAR</small></span></div>
     </aside>
@@ -670,7 +669,7 @@
                 </select>
                 <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexión se usa el mapa elegido; sin conexión, el IGN descargado.</p>
             </div>
-            <div class="card">
+            <div class="card" id="settings-sensors">
                 <h2>📡 Sensores Bluetooth</h2>
                 <p class="hint">Conecta sensores BLE estándar. Si un sensor de velocidad está conectado, su lectura tiene prioridad sobre la velocidad GPS; el GPS sigue registrando tu posición.</p>
                 <label class="setting-toggle" for="sensor-hr-enabled">
@@ -781,7 +780,7 @@
                     <div class="hero-status">
                         <span id="dashboard-gps-status" class="status-chip"><i></i>GPS · Buscando</span>
                         <span id="dashboard-network-status" class="status-chip"><i></i>En línea</span>
-                        <button class="profile-button" type="button" data-page="4" aria-label="Abrir perfil y ajustes">EP</button>
+                        <button class="profile-button tools-menu-button" type="button" data-page="6" aria-label="Abrir más herramientas">☷</button>
                     </div>
                     <div class="hero-terrain" aria-hidden="true"></div>
                 </header>
@@ -849,6 +848,23 @@
                     </article>
                 </section>
 
+            </main>
+        </div>
+
+        <div class="page tools-page" id="page-tools">
+            <main class="tools-content">
+                <header class="tools-page-heading"><span class="eyebrow">TU CENTRO MTB</span><h1>MTB CAMBOYA PRO</h1><p>Accesos principales en la barra inferior. Tus herramientas, aquí.</p></header>
+                <section class="tools-hub" aria-labelledby="tools-hub-title">
+                    <h2 id="tools-hub-title">Más herramientas</h2>
+                    <div class="tools-grid">
+                        <button class="tool-card" type="button" data-tool="safety"><span aria-hidden="true">⬡</span><strong>Seguridad</strong></button>
+                        <button class="tool-card" type="button" data-tool="garage"><span aria-hidden="true">♧</span><strong>Garaje</strong></button>
+                        <button class="tool-card" type="button" data-tool="ai"><span aria-hidden="true">✳</span><strong>Camboya AI</strong></button>
+                        <button class="tool-card" type="button" data-tool="calendar"><span aria-hidden="true">▦</span><strong>Calendario</strong></button>
+                        <button class="tool-card" type="button" data-tool="sensors"><span aria-hidden="true">♧</span><strong>Sensores</strong></button>
+                        <button class="tool-card" type="button" data-tool="settings"><span aria-hidden="true">⚙</span><strong>Ajustes</strong></button>
+                    </div>
+                </section>
                 <section class="dashboard-panel ai-preview" aria-labelledby="ai-preview-title">
                     <div class="ai-preview-heading">
                         <div class="ai-brand-mark" aria-hidden="true">✳</div>
@@ -882,7 +898,6 @@
         <button class="nav-btn" data-page="0" type="button"><span class="icon">◇</span><span>Mapa</span></button>
         <button class="nav-btn" data-page="2" type="button"><span class="icon">◉</span><span>Comunidad</span></button>
         <button class="nav-btn" data-page="1" type="button"><span class="icon">▥</span><span>Stats</span></button>
-        <button class="nav-btn" data-page="4" type="button"><span class="icon">⚙</span><span>Ajustes</span></button>
     </nav>
 
     <div id="toast" role="status" aria-live="polite"></div>

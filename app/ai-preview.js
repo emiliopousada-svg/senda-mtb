@@ -10,3 +10,23 @@ aiPreviewForm?.addEventListener('submit', event => {
     status.dataset.state = 'notice';
     input.value = '';
 });
+
+document.querySelector('.tools-grid')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-tool]');
+    if (!button) return;
+    switch (button.dataset.tool) {
+        case 'ai':
+            document.getElementById('ai-preview-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('ai-preview-input')?.focus({ preventScroll: true });
+            break;
+        case 'sensors':
+            goToPage(4);
+            window.setTimeout(() => document.getElementById('settings-sensors')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+            break;
+        case 'settings':
+            goToPage(4);
+            break;
+        default:
+            toast('Esta herramienta está en planificación y todavía no está activa.');
+    }
+});
