@@ -3,7 +3,7 @@
 // ============================================================
 //  CONFIGURACIÓN
 // ============================================================
-const APP_VERSION = '1.2.10'; // prepare-web.js la reemplaza por la versión de package.json en el bundle.
+const APP_VERSION = '0.1.0'; // prepare-web.js la reemplaza por la versión de package.json en el bundle.
 const APP_BUILD = 'local'; // prepare-web.js la reemplaza por el número de ejecución de GitHub Actions.
 const DEFAULT_CLOUD_SERVER = '';
 const MIN_STEP_M = 4;        // distancia mínima entre puntos grabados (filtra el ruido parado)
@@ -18,12 +18,7 @@ const ELEV_STEP = 3;         // metros mínimos para contar una subida
 const OFFROUTE_M = 60;       // aviso de desvío
 const BACKONROUTE_M = 30;    // se considera que has vuelto a la ruta
 const ACTIVITY_TYPES = {
-    mtb: { label: 'MTB', icon: '🚵' },
-    road: { label: 'Carretera', icon: '🚴' },
-    hiking: { label: 'Senderismo', icon: '🥾' },
-    running: { label: 'Correr', icon: '🏃' },
-    horse: { label: 'Caballo', icon: '🐎' },
-    walking: { label: 'Paseo', icon: '🚶', legacy: true }
+    mtb: { label: 'MTB', icon: '🚵' }
 };
 
 // ============================================================

@@ -2,11 +2,11 @@
 
 App de ciclismo de montaña con GPS, registro de actividades, mapas offline, rutas GPX/KML/GeoJSON, estadísticas, sensores Bluetooth y funciones sociales.
 
-Versión indicada en el proyecto: **1.2.10**
+Versión indicada en el proyecto: **0.1.0**
 
-## Identidad visual
+## Identidad y alcance
 
-Negro grafito y naranja eléctrico como color principal; verde reservado para estados e indicadores.
+MTBPro 0.1.0 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtbpro_app_v1` y claves `mtbpro_*`; no importa ni limpia datos de otras apps.
 
 ## Desarrollo
 

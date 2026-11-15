@@ -534,7 +534,6 @@ function createRouteCard(route) {
             ['follow', 'Seguir', ''],
             ['edit-details', 'Descripción', 'secondary'],
             ['share', 'Compartir', 'secondary'],
-            ['activity', '🏷️ Actividad', 'secondary'],
             ['rename', '✏️', 'secondary'],
             ['gpx', '⬇️ GPX', 'secondary'],
             ['del', '🗑️', 'danger']
@@ -646,11 +645,9 @@ $('btn-import-route').addEventListener('click', async () => {
         const parsed = /\.fit$/i.test(file.name)
             ? await parseFitTrack(await file.arrayBuffer())
             : parseTrack(await file.text(), file.name);
-        const activityType = await openActivityPicker(preferredActivityType, false, 'import');
-        if (!activityType) return;
         const base = (parsed.name || file.name.replace(/\.[^.]+$/, '') || 'Track importado').trim();
-        route = buildImportedRoute(parsed, `${routeActivityPrefix(activityType)}${base}`);
-        route.activityType = activityType;
+        route = buildImportedRoute(parsed, `${routeActivityPrefix('mtb')}${base}`);
+        route.activityType = 'mtb';
     } catch (e) {
         console.warn('No se pudo importar el track:', e);
         toast(`No se pudo importar el track: ${e.message || e}`);
@@ -679,21 +676,6 @@ $('saved-routes-list').addEventListener('click', async e => {
         await editRouteDetails(r);
     } else if (btn.dataset.act === 'share') {
         await shareSavedRoute(r);
-    } else if (btn.dataset.act === 'activity') {
-        let name = routeNameWithoutActivity(r).trim();
-        if (!name) {
-            name = await promptRequiredRouteName('');
-            if (name === null) return;
-        }
-        const activityType = await openActivityPicker(activityTypeForRoute(r) || preferredActivityType, false, 'classification');
-        if (!activityType) return;
-        r.activityType = activityType;
-        r.name = `${routeActivityPrefix(activityType)}${name}`;
-        if (r.remoteId) r.dirty = true;
-        try { await DB.put(r); }
-        catch (err) { toast('No se pudo guardar la actividad de la ruta'); return; }
-        renderSavedRoutes();
-        syncRoutes();
     } else if (btn.dataset.act === 'rename') {
         const name = await promptRequiredRouteName(routeNameWithoutActivity(r));
         if (name === null) return;

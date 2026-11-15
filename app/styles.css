@@ -31,7 +31,7 @@ html, body {
 /* Contenedor Horizontal de Páginas */
 .swiper-wrapper {
     display: flex;
-    width: 500vw;
+    width: 600vw;
     height: calc(100dvh - 60px - env(safe-area-inset-bottom, 0px));
     transition: transform 0.25s ease-out;
     will-change: transform;
@@ -974,53 +974,6 @@ nav {
 .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
 .modal-actions .btn { margin-top: 8px; }
 
-.activity-picker-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 5100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: rgba(0,0,0,.72);
-}
-.activity-picker-overlay[hidden] { display: none; }
-.activity-picker-box {
-    width: 100%;
-    max-width: 420px;
-    padding: 20px;
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 16px;
-    background: var(--surface-card);
-}
-.activity-picker-box h2 { font-size: 1.15rem; }
-.activity-picker-box > p { margin-top: 7px; color: var(--text-secondary); font-size: .82rem; }
-.activity-options {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 16px;
-}
-.activity-option {
-    min-height: 78px;
-    padding: 8px 4px;
-    border: 1px solid rgba(255,255,255,.15);
-    border-radius: 12px;
-    background: #171717;
-    color: #fff;
-    font-size: .75rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-.activity-option[aria-pressed="true"] {
-    border-color: #ff8a00;
-    background: rgba(46,125,50,.28);
-    box-shadow: inset 0 0 0 1px #ff8a00;
-}
-.activity-option-icon { display: block; margin-bottom: 5px; font-size: 1.6rem; }
-.activity-picker-actions { display: flex; gap: 10px; margin-top: 14px; }
-.activity-picker-actions .btn { margin-top: 0; padding: 12px 8px; }
-
 /* Gestión de mapas sin conexión */
 #offline-panel {
     display: block; width: 100%; max-height: none; overflow: visible;
@@ -1637,10 +1590,6 @@ body {
         radial-gradient(ellipse at 75% 25%, rgba(255, 106, 0, .2), transparent 34%),
         linear-gradient(135deg, #40200d, #191919 54%, #2a190c);
 }
-.route-card-cover[data-activity="road"] { background: linear-gradient(135deg, #252525, #191919 58%, #34200f); }
-.route-card-cover[data-activity="hiking"],
-.route-card-cover[data-activity="walking"] { background: linear-gradient(135deg, #252525, #191919 58%, #34200f); }
-.route-card-cover[data-activity="running"] { background: linear-gradient(135deg, #292020, #222222 58%, #34200f); }
 .route-card-cover > img { position: absolute; width: 100%; height: 100%; inset: 0; object-fit: cover; }
 .route-card-map {
     position: absolute;
@@ -1686,7 +1635,7 @@ body {
 .route-view-button:active { background: #d95500; }
 .route-activity-card .route-actions { padding: 0 12px 12px; }
 
-.btn, .btn-small, .seg-tab, .activity-option,
+.btn, .btn-small, .seg-tab,
 .map-zoom-btn, .btn-icon-only, .btn-main-action {
     transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
 }
@@ -1747,7 +1696,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
 .pill-selector { border-color: rgba(143, 166, 199, .16); background: #191919; }
 .pill-btn.active { color: #211308; }
 
-.route-item, .friend-row, .group-admin-panel, .activity-option,
+.route-item, .friend-row, .group-admin-panel,
 .community-route-card, .community-detail-stat, .stats-profile-point,
 .stats-unavailable, .stats-comparison, .stats-record {
     border: 1px solid rgba(143, 166, 199, .1);
@@ -1816,16 +1765,10 @@ body > nav {
     color: #e2eafa;
     box-shadow: 0 8px 26px rgba(0, 0, 0, .3);
 }
-.modal-box, .activity-picker-box, .community-panel {
+.modal-box, .community-panel {
     border-color: rgba(143, 166, 199, .16);
     background: linear-gradient(145deg, #222222, #191919);
     box-shadow: 0 14px 42px rgba(0, 0, 0, .4);
-}
-.activity-option { color: #dbe5f3; }
-.activity-option[aria-pressed="true"] {
-    border-color: rgba(255, 106, 0, .62);
-    background: rgba(255, 106, 0, .14);
-    box-shadow: inset 0 0 0 1px rgba(255, 106, 0, .18);
 }
 .community-header h2 { color: #ff8a00; }
 .community-close { border: 1px solid rgba(143, 166, 199, .14); background: #191919; color: #dbe5f3; }
@@ -1986,8 +1929,8 @@ html.large-controls .map-zoom-btn:disabled { opacity: .75; }
         backdrop-filter: blur(16px);
     }
 
-    #map-route-line { stroke: #ff762b; }
-    #map-route-area { fill: rgba(255, 118, 43, .18); }
+    #map-route-line { stroke: #168cff; }
+    #map-route-area { fill: rgba(22, 140, 255, .18); }
 
     .map-zoom-btn,
     .side-controls .btn-icon-only {

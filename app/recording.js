@@ -596,8 +596,7 @@ function resumeRecording(automatic = false, position = null) {
 
 btnStart.addEventListener('click', async () => {
     if (!isRecording) {
-        const activityType = await openActivityPicker();
-        if (activityType) startRecording(activityType);
+        startRecording('mtb');
     }
     else if (!isPaused) pauseRecording();
     else resumeRecording();

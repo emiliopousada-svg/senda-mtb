@@ -3,9 +3,9 @@
 const ACCOUNT_AVATAR_MAX_BYTES = 256 * 1024;
 const ACCOUNT_AVATAR_MAX_INPUT_BYTES = 20 * 1024 * 1024;
 const ACCOUNT_AVATAR_FETCH_TIMEOUT_MS = 10000;
-const ACCOUNT_AVATAR_CACHE_PREFIX = 'mtb_avatar_';
-const ACCOUNT_AVATAR_PENDING_PREFIX = 'mtb_avatar_pending_';
-const ACCOUNT_AVATAR_REMOTE_PREFIX = 'mtb_avatar_remote_';
+const ACCOUNT_AVATAR_CACHE_PREFIX = 'mtbpro_avatar_';
+const ACCOUNT_AVATAR_PENDING_PREFIX = 'mtbpro_avatar_pending_';
+const ACCOUNT_AVATAR_REMOTE_PREFIX = 'mtbpro_avatar_remote_';
 let accountAvatarPreviewUrl = '';
 let accountProfileLoadedUid = '';
 
@@ -14,7 +14,7 @@ function accountAvatarPendingKey(uid) { return `${ACCOUNT_AVATAR_PENDING_PREFIX}
 function resetAccountProfileCache() { accountProfileLoadedUid = ''; }
 
 function getAccountAvatarUrl() {
-    const uid = Cloud.uid || localStorage.getItem('mtb_avatar_last_uid') || '';
+    const uid = Cloud.uid || localStorage.getItem('mtbpro_avatar_last_uid') || '';
     if (!uid) return '';
     try { return localStorage.getItem(accountAvatarKey(uid)) || ''; }
     catch (error) { return ''; }
@@ -112,7 +112,7 @@ function renderAccountProfile(record = {}, force = false) {
 async function cacheRemoteAccountAvatar(record) {
     const uid = Cloud.uid;
     if (!uid || !record) return;
-    localStorage.setItem('mtb_avatar_last_uid', uid);
+    localStorage.setItem('mtbpro_avatar_last_uid', uid);
     const remoteName = String(record.avatar || '');
     const remoteKey = `${ACCOUNT_AVATAR_REMOTE_PREFIX}${uid}`;
     if (!remoteName) {
@@ -182,7 +182,7 @@ function initAccountAvatar() {
             const uid = Cloud.uid;
             if (!uid) throw new Error('Inicia sesión para guardar el avatar.');
             if (dataUrl) localStorage.setItem(accountAvatarKey(uid), dataUrl);
-            localStorage.setItem('mtb_avatar_last_uid', uid);
+            localStorage.setItem('mtbpro_avatar_last_uid', uid);
             localStorage.setItem(accountAvatarPendingKey(uid), JSON.stringify({ avatar: dataUrl, weightKg: weight, age }));
             if (typeof statsApplyAccountProfile === 'function') {
                 statsApplyAccountProfile(weight, age);

@@ -7,6 +7,7 @@ let statsEvolutionChart = null;
 let statsAscentChart = null;
 let statsSpeedChart = null;
 let statsActivityChart = null;
+let statsDashboardChart = null;
 let statsMtbSpeedChart = null;
 let statsGradeChart = null;
 let statsClimbTimeChart = null;
@@ -25,7 +26,7 @@ const STATS_PERIOD_LABELS = {
     yearly: 'este año',
     all: 'todo el historial'
 };
-const STATS_MET_VALUES = { mtb: 6.8, road: 7.5, hiking: 5.3, running: 8, walking: 3.5, horse: 5.5 };
+const STATS_MET_VALUES = { mtb: 6.8 };
 const STATS_HR_ZONES = [
     { label: 'Z1', min: 0.50, max: 0.60 },
     { label: 'Z2', min: 0.60, max: 0.70 },
@@ -126,13 +127,13 @@ function statsConfiguredNumber(id, min, max) {
 
 function statsLoadPreferences() {
     try {
-        statsWeightKg = Number(localStorage.getItem('mtb_stats_weight'));
+        statsWeightKg = Number(localStorage.getItem('mtbpro_stats_weight'));
         if (!Number.isFinite(statsWeightKg) || statsWeightKg < 25 || statsWeightKg > 250) statsWeightKg = null;
-        statsAge = Number(localStorage.getItem('mtb_stats_age'));
+        statsAge = Number(localStorage.getItem('mtbpro_stats_age'));
         if (!Number.isFinite(statsAge) || statsAge < 10 || statsAge > 100) statsAge = null;
-        statsHeartRateMax = statsAge === null ? Number(localStorage.getItem('mtb_stats_hr_max')) : 220 - statsAge;
+        statsHeartRateMax = statsAge === null ? Number(localStorage.getItem('mtbpro_stats_hr_max')) : 220 - statsAge;
         if (!Number.isFinite(statsHeartRateMax) || statsHeartRateMax < 100 || statsHeartRateMax > 240) statsHeartRateMax = null;
-        statsPowerFtp = Number(localStorage.getItem('mtb_stats_ftp'));
+        statsPowerFtp = Number(localStorage.getItem('mtbpro_stats_ftp'));
         if (!Number.isFinite(statsPowerFtp) || statsPowerFtp < 50 || statsPowerFtp > 800) statsPowerFtp = null;
     } catch (error) {
         console.warn('No se pudieron leer las preferencias de estadísticas:', error);
@@ -152,14 +153,14 @@ function statsSavePreferences(ageChanged = false) {
     statsPowerFtp = statsConfiguredNumber('stats-power-ftp', 50, 800);
     $('stats-hr-max-config').value = statsHeartRateMax ?? '';
     try {
-        if (statsWeightKg === null) localStorage.removeItem('mtb_stats_weight');
-        else localStorage.setItem('mtb_stats_weight', String(statsWeightKg));
-        if (statsAge === null) localStorage.removeItem('mtb_stats_age');
-        else localStorage.setItem('mtb_stats_age', String(statsAge));
-        if (statsHeartRateMax === null) localStorage.removeItem('mtb_stats_hr_max');
-        else localStorage.setItem('mtb_stats_hr_max', String(statsHeartRateMax));
-        if (statsPowerFtp === null) localStorage.removeItem('mtb_stats_ftp');
-        else localStorage.setItem('mtb_stats_ftp', String(statsPowerFtp));
+        if (statsWeightKg === null) localStorage.removeItem('mtbpro_stats_weight');
+        else localStorage.setItem('mtbpro_stats_weight', String(statsWeightKg));
+        if (statsAge === null) localStorage.removeItem('mtbpro_stats_age');
+        else localStorage.setItem('mtbpro_stats_age', String(statsAge));
+        if (statsHeartRateMax === null) localStorage.removeItem('mtbpro_stats_hr_max');
+        else localStorage.setItem('mtbpro_stats_hr_max', String(statsHeartRateMax));
+        if (statsPowerFtp === null) localStorage.removeItem('mtbpro_stats_ftp');
+        else localStorage.setItem('mtbpro_stats_ftp', String(statsPowerFtp));
     } catch (error) {
         console.warn('No se pudieron guardar las preferencias de estadísticas:', error);
         toast('No se pudieron guardar los valores de peso, frecuencia cardíaca y FTP.');
@@ -471,6 +472,33 @@ function statsRenderOverviewCharts(analyses) {
     }
 }
 
+function statsRenderDashboard() {
+    const rides = statsRangeRides('weekly');
+    const analyses = rides.map(statsAnalyzeRoute);
+    const summary = statsAggregate(analyses);
+    const distance = $('home-week-distance');
+    const ascent = $('home-week-ascent');
+    const moving = $('home-week-time');
+    const speed = $('home-week-speed');
+    if (distance) distance.textContent = `${summary.distanceKm.toFixed(1)} km`;
+    if (ascent) ascent.textContent = summary.ascentSampleCount ? `${Math.round(summary.ascentM)} m` : '0 m';
+    if (moving) moving.textContent = summary.movingTimeSec ? fmtDur(summary.movingTimeSec) : '0 h';
+    if (speed) speed.textContent = Number.isFinite(summary.averageSpeed) ? `${summary.averageSpeed.toFixed(1)} km/h` : '— km/h';
+    const count = $('home-week-rides');
+    const ring = $('home-week-ride-count');
+    const activityKm = $('home-week-activity-km');
+    if (count) count.textContent = String(summary.rideCount);
+    if (ring) ring.textContent = String(summary.rideCount);
+    if (activityKm) activityKm.textContent = `${summary.distanceKm.toFixed(1)} km`;
+    if (statsDashboardChart) {
+        const { labels, buckets } = statsPeriodBuckets('weekly', analyses);
+        statsDashboardChart.data.labels = labels.map(label => ({ L: 'Lun', M: 'Mar', X: 'Mié', J: 'Jue', V: 'Vie', S: 'Sáb', D: 'Dom' })[label] || label);
+        statsDashboardChart.data.datasets[0].data = statsPeriodChartData(buckets, 'distanceKm');
+        statsDashboardChart.update('none');
+    }
+    if (typeof dashboardRender === 'function') dashboardRender();
+}
+
 function statsMetricSummary(analyses) {
     return statsAggregate(analyses);
 }
@@ -776,11 +804,15 @@ function statsRenderRecords() {
 let statsNeedsRefresh = true;
 
 function refreshStats() {
-    if (currentPage !== 1) {
+    if (currentPage !== 1 && currentPage !== 5) {
         statsNeedsRefresh = true;
         return;
     }
     statsNeedsRefresh = false;
+    if (currentPage === 5) {
+        statsRenderDashboard();
+        return;
+    }
     const rides = statsRangeRides(statsPeriod);
     const analyses = rides.map(statsAnalyzeRoute);
     const summary = statsAggregate(analyses);
@@ -793,6 +825,7 @@ function refreshStats() {
     statsRenderEvolutionSummary();
     statsRenderEvolutionChart();
     statsRenderRecords();
+    statsRenderDashboard();
 }
 
 function setStatsPeriod(period) {
@@ -819,6 +852,7 @@ function setStatsSlide(index) {
         if (active) button.setAttribute('aria-current', 'page');
         else button.removeAttribute('aria-current');
     });
+    if (typeof dashboardUpdateNav === 'function') dashboardUpdateNav(currentPage);
     if (activeStatsSlide === 0) {
         [statsChart, statsAscentChart, statsSpeedChart, statsActivityChart].forEach(chart => chart?.resize());
     }
@@ -886,6 +920,29 @@ function statsInitCharts() {
             scales: { x: axis, y: { ...axis, beginAtZero: true, ticks: { ...axis.ticks, precision: 0 } } }
         }
     });
+    const dashboardCanvas = $('home-distance-chart');
+    if (dashboardCanvas) {
+        const context = dashboardCanvas.getContext('2d');
+        const gradient = context.createLinearGradient(0, 0, 0, 250);
+        gradient.addColorStop(0, 'rgba(255,118,31,.34)');
+        gradient.addColorStop(1, 'rgba(255,118,31,0)');
+        statsDashboardChart = new Chart(context, {
+            type: 'line',
+            data: { labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], datasets: [{
+                label: 'Kilómetros', data: [], borderColor: '#ff761f', backgroundColor: gradient,
+                fill: true, tension: .38, borderWidth: 3, pointRadius: 3, pointHoverRadius: 5,
+                pointBackgroundColor: '#ff8a3d', pointBorderColor: '#11161e', pointBorderWidth: 2
+            }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: item => `${Number(item.raw || 0).toFixed(1)} km` } } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#96a2b2', font: { size: 10 } } },
+                    y: { beginAtZero: true, border: { display: false }, grid: { color: 'rgba(145,163,184,.12)' }, ticks: { color: '#8895a6', font: { size: 9 }, maxTicksLimit: 4 } }
+                }
+            }
+        });
+    }
     statsMtbSpeedChart = new Chart($('stats-mtb-speed-chart').getContext('2d'), {
         type: 'bar',
         data: { labels: [], datasets: [{

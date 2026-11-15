@@ -21,7 +21,7 @@ const MAP_STYLE_NAMES = {
     osm: 'OpenStreetMap',
     satellite: 'Satélite Esri'
 };
-const MAP_STYLE_KEY = 'mtb_map_style';
+const MAP_STYLE_KEY = 'mtbpro_map_style';
 const DEFAULT_MAP_STYLE = 'topographic';
 const MAP_STYLE_TRANSITION_TIMEOUT_MS = 12000;
 function selectedMapStyle() {

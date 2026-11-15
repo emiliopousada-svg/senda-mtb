@@ -7,7 +7,7 @@ const DB = {
     open() {
         return new Promise((res, rej) => {
             if (!window.indexedDB) return rej(new Error('no-idb'));
-            const r = indexedDB.open('mtb_app', 2);
+            const r = indexedDB.open('mtbpro_app_v1', 2);
             r.onupgradeneeded = event => {
                 const d = r.result;
                 if (!d.objectStoreNames.contains('routes')) d.createObjectStore('routes', { keyPath: 'id' });

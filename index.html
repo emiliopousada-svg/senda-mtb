@@ -6,7 +6,7 @@
     <title>MTBPro</title>
     <!-- Enlace al manifiesto PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#101010">
+    <meta name="theme-color" content="#111318">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,8 +17,28 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 
     <link rel="stylesheet" href="app/styles.css">
+    <link rel="stylesheet" href="app/dashboard.css">
 </head>
 <body>
+
+    <aside class="desktop-sidebar" aria-label="Navegación principal">
+        <a class="brand-lockup" href="#inicio" onclick="goToPage(5); return false;">
+            <img src="icon.svg" alt="">
+            <span>MTB<span>PRO</span></span>
+        </a>
+        <p class="sidebar-caption">TU CENTRO MTB</p>
+        <nav class="sidebar-nav">
+            <button class="sidebar-link" type="button" data-page="5"><span class="sidebar-icon">⌂</span>Inicio</button>
+            <button class="sidebar-link" type="button" data-page="3"><span class="sidebar-icon">⌁</span>Rutas</button>
+            <button class="sidebar-link" type="button" data-page="0"><span class="sidebar-icon">◇</span>Mapa</button>
+            <button class="sidebar-link sidebar-record" type="button" data-recording><span class="record-ring"></span>Grabación</button>
+            <button class="sidebar-link" type="button" data-page="2"><span class="sidebar-icon">◉</span>Comunidad</button>
+            <button class="sidebar-link" type="button" data-page="1"><span class="sidebar-icon">▥</span>Estadísticas</button>
+            <button class="sidebar-link" type="button" data-page="1" data-stats-slide="3"><span class="sidebar-icon">✦</span>Logros</button>
+            <button class="sidebar-link" type="button" data-page="4"><span class="sidebar-icon">⚙</span>Ajustes</button>
+        </nav>
+        <div class="sidebar-footer"><span class="sidebar-status-dot"></span><span>MTB PRO <small>· LISTO PARA RODAR</small></span></div>
+    </aside>
 
     <!-- CONTENEDOR DESLIZABLE DE PÁGINAS -->
     <div class="swiper-wrapper" id="swiper">
@@ -462,7 +482,7 @@
                     </header>
                 </section>
                 <div id="route-list-controls" hidden>
-                    <p class="hint" id="routes-tab-hint">Solo las rutas que has grabado tú. Usa 🏷️ para cambiar la actividad y ✏️ para el nombre.</p>
+                    <p class="hint" id="routes-tab-hint">Gestiona tus rutas MTB. Usa ✏️ para editar el nombre o importar un track.</p>
                     <div id="routes-import-box" hidden>
                         <input type="file" id="route-file-input" accept=".gpx,.kml,.geojson,.json,.fit,application/vnd.ant.fit" aria-label="Archivo del track a importar">
                         <button class="btn secondary" id="btn-import-route" type="button">📥 Importar track</button>
@@ -470,15 +490,10 @@
                     </div>
                     <div class="routes-filters">
                         <div>
-                            <label for="route-activity-filter" class="hint">Mostrar actividad</label>
-                            <select id="route-activity-filter" aria-label="Filtrar rutas por actividad">
-                                <option value="all">Todas las actividades</option>
+                            <label for="route-activity-filter" class="hint">Tipo de ruta</label>
+                            <select id="route-activity-filter" aria-label="Filtrar rutas MTB">
+                                <option value="all">Todas las rutas</option>
                                 <option value="mtb">🚵 MTB</option>
-                                <option value="road">🚴 Carretera</option>
-                                <option value="hiking">🥾 Senderismo</option>
-                                <option value="running">🏃 Correr</option>
-                                <option value="horse">🐎 Caballo</option>
-                                <option value="walking">🚶 Paseo (guardadas)</option>
                                 <option value="other">📍 Sin clasificar</option>
                             </select>
                         </div>
@@ -665,32 +680,98 @@
             </div>
         </div>
 
+        <!-- INICIO / DASHBOARD MTB PRO -->
+        <div class="page dashboard-page" id="page-home">
+            <main class="dashboard-content">
+                <header class="dashboard-hero">
+                    <div class="hero-copy">
+                        <span class="eyebrow">MTB PRO <i></i> CENTRO DE ACTIVIDAD</span>
+                        <h1>¡Hola, Biker!</h1>
+                        <p>Tu próxima aventura empieza aquí.</p>
+                    </div>
+                    <div class="hero-status">
+                        <span id="dashboard-gps-status" class="status-chip"><i></i>GPS · Buscando</span>
+                        <button class="profile-button" type="button" data-page="4" aria-label="Abrir perfil y ajustes">EP</button>
+                    </div>
+                    <div class="hero-terrain" aria-hidden="true"></div>
+                </header>
+
+                <section class="dashboard-kpis" aria-label="Resumen semanal">
+                    <article class="dashboard-kpi kpi-orange">
+                        <div class="kpi-icon">↗</div><span class="kpi-label">DISTANCIA ESTA SEMANA</span>
+                        <strong id="home-week-distance">0 km</strong><span class="kpi-foot">En tus salidas MTB</span>
+                        <span class="kpi-spark spark-orange" aria-hidden="true"></span>
+                    </article>
+                    <article class="dashboard-kpi kpi-blue">
+                        <div class="kpi-icon">▲</div><span class="kpi-label">DESNIVEL POSITIVO</span>
+                        <strong id="home-week-ascent">0 m</strong><span class="kpi-foot">Acumulado semanal</span>
+                        <span class="kpi-spark spark-blue" aria-hidden="true"></span>
+                    </article>
+                    <article class="dashboard-kpi kpi-green">
+                        <div class="kpi-icon">◷</div><span class="kpi-label">TIEMPO EN MOVIMIENTO</span>
+                        <strong id="home-week-time">0 h</strong><span class="kpi-foot">Tiempo sobre la bici</span>
+                        <span class="kpi-spark spark-green" aria-hidden="true"></span>
+                    </article>
+                    <article class="dashboard-kpi kpi-violet">
+                        <div class="kpi-icon">⌁</div><span class="kpi-label">VELOCIDAD MEDIA</span>
+                        <strong id="home-week-speed">— km/h</strong><span class="kpi-foot">En tus rutas grabadas</span>
+                        <span class="kpi-spark spark-violet" aria-hidden="true"></span>
+                    </article>
+                </section>
+
+                <section class="dashboard-main-grid">
+                    <article class="dashboard-panel dashboard-map-panel">
+                        <div class="panel-heading">
+                            <div><span class="eyebrow">EXPLORACIÓN</span><h2>Tu mapa</h2></div>
+                            <button class="text-link" type="button" data-page="0">Abrir mapa <span>↗</span></button>
+                        </div>
+                        <div id="home-map" role="region" aria-label="Vista previa del mapa de montaña"></div>
+                        <div class="map-preview-footer"><span><i></i><span id="home-map-label">Angkor · Camboya</span></span><span id="home-routes-count">0 rutas guardadas</span></div>
+                    </article>
+                    <article class="dashboard-panel dashboard-performance-panel">
+                        <div class="panel-heading">
+                            <div><span class="eyebrow">ANÁLISIS MTB</span><h2>Tu rendimiento</h2></div>
+                            <span class="period-pill">7 días</span>
+                        </div>
+                        <div class="dashboard-chart-wrap"><canvas id="home-distance-chart" aria-label="Distancia recorrida por día esta semana"></canvas></div>
+                        <div class="performance-foot"><span>Salidas esta semana</span><strong id="home-week-rides">0</strong></div>
+                    </article>
+                </section>
+
+                <section class="dashboard-lower-grid" aria-label="Actividad y rutas">
+                    <article class="dashboard-panel latest-ride-panel">
+                        <div class="panel-heading"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Última salida</h2></div><span class="panel-symbol orange-symbol">↗</span></div>
+                        <div class="latest-ride-content">
+                            <div class="ride-thumb" aria-hidden="true"><span>MTB</span></div>
+                            <div class="ride-copy"><strong id="home-last-route-name">Aún no hay salidas</strong><span id="home-last-route-date">Tu primera ruta te espera</span><div><span id="home-last-route-distance">— km</span><span id="home-last-route-ascent">— m+</span></div></div>
+                            <button class="round-arrow" type="button" data-page="3" aria-label="Ver rutas">›</button>
+                        </div>
+                    </article>
+                    <article class="dashboard-panel weekly-panel">
+                        <div class="panel-heading"><div><span class="eyebrow">CONSTANCIA</span><h2>Tu actividad</h2></div><span class="panel-symbol blue-symbol">◉</span></div>
+                        <div class="weekly-summary"><div class="weekly-ring"><span id="home-week-ride-count">0</span><small>salidas</small></div><div><strong id="home-week-activity-km">0 km</strong><span>recorridos esta semana</span><button class="text-link" type="button" data-page="1">Ver estadísticas <span>↗</span></button></div></div>
+                    </article>
+                    <article class="dashboard-panel explore-panel">
+                        <div class="panel-heading"><div><span class="eyebrow">SIGUIENTE AVENTURA</span><h2>Explora tus rutas</h2></div><span class="panel-symbol orange-symbol">⌖</span></div>
+                        <p id="home-route-prompt">Importa un GPX o descubre una ruta de la comunidad.</p>
+                        <button class="explore-button" type="button" data-page="3">Ver mis rutas <span>→</span></button>
+                    </article>
+                </section>
+            </main>
+        </div>
+
     </div>
 
 
 
     <!-- NAVEGACIÓN DE PESTAÑAS INFERIOR -->
-    <nav>
-        <button class="nav-btn active" onclick="goToPage(0)">
-            <span class="icon">🗺️</span>
-            <span>Mapa</span>
-        </button>
-        <button class="nav-btn" onclick="goToPage(1)">
-            <span class="icon">📊</span>
-            <span>Stats</span>
-        </button>
-        <button class="nav-btn" onclick="goToPage(2)">
-            <span class="icon">📡</span>
-            <span>Grupos Live</span>
-        </button>
-        <button class="nav-btn" onclick="goToPage(3)">
-            <span class="icon">📂</span>
-            <span>Rutas</span>
-        </button>
-        <button class="nav-btn" onclick="goToPage(4)">
-            <span class="icon">⚙️</span>
-            <span>Ajustes</span>
-        </button>
+    <nav class="mobile-nav" aria-label="Navegación principal">
+        <button class="nav-btn active" data-page="5" type="button"><span class="icon">⌂</span><span>Inicio</span></button>
+        <button class="nav-btn" data-page="3" type="button"><span class="icon">⌁</span><span>Rutas</span></button>
+        <button class="nav-btn" data-page="0" type="button"><span class="icon">◇</span><span>Mapa</span></button>
+        <button class="nav-btn" data-page="2" type="button"><span class="icon">◉</span><span>Comunidad</span></button>
+        <button class="nav-btn" data-page="1" type="button"><span class="icon">▥</span><span>Stats</span></button>
+        <button class="nav-btn" data-page="4" type="button"><span class="icon">⚙</span><span>Ajustes</span></button>
     </nav>
 
     <div id="toast" role="status" aria-live="polite"></div>
@@ -785,34 +866,6 @@
         </section>
     </div>
 
-    <div id="activity-picker" class="activity-picker-overlay" role="dialog" aria-modal="true" aria-labelledby="activity-picker-title" hidden>
-        <div class="activity-picker-box">
-            <h2 id="activity-picker-title">¿Qué actividad vas a hacer?</h2>
-            <p>Selecciona el tipo de actividad antes de empezar a grabar.</p>
-            <div class="activity-options" role="group" aria-label="Tipo de actividad">
-                <button class="activity-option" type="button" data-activity="mtb" aria-pressed="false">
-                    <span class="activity-option-icon" aria-hidden="true">🚵</span>MTB
-                </button>
-                <button class="activity-option" type="button" data-activity="road" aria-pressed="false">
-                    <span class="activity-option-icon" aria-hidden="true">🚴</span>Carretera
-                </button>
-                <button class="activity-option" type="button" data-activity="hiking" aria-pressed="false">
-                    <span class="activity-option-icon" aria-hidden="true">🥾</span>Senderismo
-                </button>
-                <button class="activity-option" type="button" data-activity="running" aria-pressed="false">
-                    <span class="activity-option-icon" aria-hidden="true">🏃</span>Correr
-                </button>
-                <button class="activity-option" type="button" data-activity="horse" aria-pressed="false">
-                    <span class="activity-option-icon" aria-hidden="true">🐎</span>Caballo
-                </button>
-            </div>
-            <div class="activity-picker-actions">
-                <button class="btn secondary" id="activity-cancel" type="button">Cancelar</button>
-                <button class="btn" id="activity-confirm" type="button">Empezar ruta</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js"></script>
@@ -834,6 +887,7 @@
     <script src="app/route-files.js"></script>
     <script src="app/community-performance.js"></script>
     <script src="app/stats.js"></script>
+    <script src="app/dashboard.js"></script>
     <script src="app/sensors.js"></script>
     <script src="app/pois.js"></script>
     <script src="app/group-rankings.js"></script>

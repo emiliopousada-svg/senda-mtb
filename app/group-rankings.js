@@ -68,7 +68,7 @@ async function loadGroupRankings() {
     } catch (error) {
         console.warn('No se pudo cargar el ranking del grupo:', error);
         status.textContent = error.status === 404
-            ? 'Falta instalar mtb_group_ranking_entries.json y actualizar groups.pb.js en PocketBase.'
+            ? 'Falta instalar mtbpro_group_ranking_entries.json y actualizar groups.pb.js en PocketBase.'
             : `No se pudo cargar el ranking: ${error.message || 'error de conexión'}`;
         status.classList.add('error');
     }
@@ -171,7 +171,7 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         console.warn('No se pudieron compartir las marcas con el grupo:', error);
         if (automatic) throw error;
         toast(error.status === 404
-            ? 'Falta instalar mtb_group_ranking_entries.json y actualizar groups.pb.js en PocketBase.'
+            ? 'Falta instalar mtbpro_group_ranking_entries.json y actualizar groups.pb.js en PocketBase.'
             : `No se pudieron compartir las marcas: ${error.message || 'error de conexión'}`, 6000);
         return false;
     } finally {

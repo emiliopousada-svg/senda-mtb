@@ -54,7 +54,7 @@ const Cloud = {
     setSession(token, rec) {
         localStorage.setItem('mtbpro_token', token);
         localStorage.setItem('mtbpro_uid', rec.id);
-        localStorage.setItem('mtb_avatar_last_uid', rec.id);
+        localStorage.setItem('mtbpro_avatar_last_uid', rec.id);
         localStorage.setItem('mtbpro_email', rec.email || '');
         if (rec.nickname) localStorage.setItem('mtbpro_nickname', String(rec.nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
         else localStorage.removeItem('mtbpro_nickname');
@@ -75,7 +75,7 @@ const ROUTE_FULL_AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ROUTE_SYNC_CURSOR_OVERLAP_MS = 5000;
 
 function cloudSyncStorageKey(name) {
-    return `mtb_${name}_${encodeURIComponent(Cloud.server)}_${Cloud.uid}`;
+    return `mtbpro_${name}_${encodeURIComponent(Cloud.server)}_${Cloud.uid}`;
 }
 
 async function fetchRemoteRoutes(fullAudit, cursor) {
@@ -192,7 +192,7 @@ function normalizeRemoteTrack(raw) {
 }
 
 function routeNicknameStorageKey() {
-    return Cloud.uid ? `mtb_route_nickname_${Cloud.uid}` : '';
+    return Cloud.uid ? `mtbpro_route_nickname_${Cloud.uid}` : '';
 }
 
 function getRouteNickname() {
@@ -311,8 +311,8 @@ function renderAccount() {
         $('acc-account-nickname').value = Cloud.nickname;
         $('acc-nickname-summary').textContent = `Apodo: ${Cloud.nickname}`;
     }
-    const last = localStorage.getItem('mtb_lastsync');
-    const syncFailures = Number(localStorage.getItem('mtb_sync_failures') || 0);
+    const last = localStorage.getItem('mtbpro_lastsync');
+    const syncFailures = Number(localStorage.getItem('mtbpro_sync_failures') || 0);
     $('acc-status').textContent = on
         ? `Conectado como ${Cloud.email}` + (Cloud.groupCode ? ' · grupo asignado' : ' · sin grupo asignado') + (last ? ` · última sincronización: ${new Date(Number(last)).toLocaleString('es-ES')}` : '') + (syncFailures ? ` · sincronización parcial: ${syncFailures} elemento(s) pendiente(s)` : '')
         : 'Sin sesión: tus rutas se guardan solo en este móvil.';
@@ -727,8 +727,8 @@ async function syncRoutes(manual = false) {
             savedRoutes.sort((a, b) => b.id - a.id);
         }
 
-        localStorage.setItem('mtb_lastsync', String(Date.now()));
-        localStorage.setItem('mtb_sync_failures', String(syncFailures));
+        localStorage.setItem('mtbpro_lastsync', String(Date.now()));
+        localStorage.setItem('mtbpro_sync_failures', String(syncFailures));
         if (syncFailures === 0) {
             try {
                 if (remote.length || fullAudit) {
@@ -771,15 +771,15 @@ function initSettings() {
     const sound = $('setting-route-sound');
     const vibration = $('setting-route-vibration');
     const mapRotation = $('setting-map-rotation');
-    sound.checked = localStorage.getItem('mtb_route_sound') !== '0';
-    vibration.checked = localStorage.getItem('mtb_route_vibration') !== '0';
-    mapRotationEnabled = localStorage.getItem('mtb_map_rotation') !== '0';
+    sound.checked = localStorage.getItem('mtbpro_route_sound') !== '0';
+    vibration.checked = localStorage.getItem('mtbpro_route_vibration') !== '0';
+    mapRotationEnabled = localStorage.getItem('mtbpro_map_rotation') !== '0';
     mapRotation.checked = mapRotationEnabled;
     updateOrientBtn();
     window.addEventListener('online', applyMapStyle);
     window.addEventListener('offline', applyMapStyle);
-    sound.addEventListener('change', () => localStorage.setItem('mtb_route_sound', sound.checked ? '1' : '0'));
-    vibration.addEventListener('change', () => localStorage.setItem('mtb_route_vibration', vibration.checked ? '1' : '0'));
+    sound.addEventListener('change', () => localStorage.setItem('mtbpro_route_sound', sound.checked ? '1' : '0'));
+    vibration.addEventListener('change', () => localStorage.setItem('mtbpro_route_vibration', vibration.checked ? '1' : '0'));
     mapRotation.addEventListener('change', () => setMapRotationMode(mapRotation.checked));
     initSensorConnections();
     $('app-version').textContent = `v${APP_VERSION} (build ${APP_BUILD})`;
@@ -840,47 +840,10 @@ function initAccount() {
     renderAccount();
 }
 
-async function migrateOldRoutes() {
-    let old;
-    try { old = JSON.parse(localStorage.getItem('mtb_saved_routes') || 'null'); } catch (e) { return; }
-    if (!Array.isArray(old) || old.length === 0) return;
-    const migrated = old.map(r => ({
-        id: r.id || Date.now(),
-        kind: 'recorded',
-        name: r.name || 'Ruta MTB',
-        startedAt: new Date(r.id || Date.now()).toISOString(),
-        movingTimeSec: 0,
-        distanceKm: parseFloat(String(r.distance || '0').replace(' km', '')) || 0,
-        elevationGain: 0,
-        hrAvg: null,
-        points: (r.coords || []).map(c => [c[0], c[1], null, null, null])
-    }));
-    try {
-        for (const r of migrated) await DB.put(r);
-        savedRoutes = savedRoutes.concat(migrated).sort((a, b) => b.id - a.id);
-        localStorage.removeItem('mtb_saved_routes'); // solo se borra si todo se copió bien
-    } catch (e) { console.warn('Migración incompleta', e); }
-}
-
-// Limpieza única de lo que dejó la antigua pestaña Camino (ya eliminada).
-// Los tracks que el usuario importó allí (camino-tracks:*) no se tocan.
-async function purgeLegacyCaminoData() {
-    if (localStorage.getItem('mtb_camino_purged') === '1') return;
-    try {
-        ['mtb_camino_guide', 'mtb_camino_guide_paused', 'mtb_camino_active', 'mtb_camino_track',
-         'mtb_camino_saved_track', 'mtb_camino_filters', 'mtb_camino_favorites', 'mtb_albergue_favorites']
-            .forEach(key => localStorage.removeItem(key));
-        const keys = await DB.kvKeys();
-        for (const key of keys) {
-            if (/^camino-(full|pois|dl):/.test(String(key))) await DB.kvDel(key);
-        }
-        localStorage.setItem('mtb_camino_purged', '1');
-    } catch (e) { console.warn('No se pudo limpiar los datos del antiguo Camino:', e); }
-}
-
 async function init() {
     renderAccountServer();
     initMap();
+    dashboardInitMap();
     initCharts();
     initMetricPanel();
     setBtnState('idle');
@@ -890,14 +853,12 @@ async function init() {
     try {
         await DB.open();
         savedRoutes = (await DB.all()).sort((a, b) => b.id - a.id);
-        await migrateOldRoutes();
     } catch (e) {
         console.warn('Sin IndexedDB:', e);
         toast('⚠️ Sin almacenamiento persistente: las rutas se perderán al cerrar la app.', 6000);
     }
-    purgeLegacyCaminoData();
-
     renderSavedRoutes();
+    dashboardRender();
     refreshStats();
     initAccount();
     initSettings();

@@ -7,11 +7,6 @@ function handleAppBack() {
         return true;
     }
 
-    if (activityPickerOpen) {
-        finishActivityPicker(null);
-        return true;
-    }
-
     const modalDialog = $('modal');
     if (modalDialog && modalDialog.classList.contains('show')) {
         $('modal-cancel').click();

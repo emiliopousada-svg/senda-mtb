@@ -303,6 +303,7 @@ function onPos(pos) {
     lastLat = lat;
     lastLon = lon;
     lastAccuracy = accuracy;
+    if (typeof dashboardUpdateGpsStatus === 'function') dashboardUpdateGpsStatus();
     lastPositionAt = Date.now();
     if (isRecording && !isPaused) {
         refreshBatteryStatus();
@@ -344,7 +345,7 @@ function onPos(pos) {
 
     if (Date.now() - lastPosSave > 15000) {
         lastPosSave = Date.now();
-        try { localStorage.setItem('mtb_last_pos', JSON.stringify(ll)); } catch (e) {}
+        try { localStorage.setItem('mtbpro_last_pos', JSON.stringify(ll)); } catch (e) {}
     }
 
     // Velocidad (siempre visible; 0 en pausa o casi parado)

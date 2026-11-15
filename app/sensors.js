@@ -227,7 +227,7 @@ async function disconnectExtraSensor(type) {
 
 function initSensorConnections() {
     const circumference = $('sensor-wheel-circumference');
-    const savedCircumference = Number(localStorage.getItem('mtb_wheel_circumference'));
+    const savedCircumference = Number(localStorage.getItem('mtbpro_wheel_circumference'));
     if (savedCircumference >= 500 && savedCircumference <= 3000) circumference.value = String(savedCircumference);
     circumference.addEventListener('change', () => {
         const value = Number(circumference.value);
@@ -236,7 +236,7 @@ function initSensorConnections() {
             toast('La circunferencia debe estar entre 500 y 3000 mm.');
             return;
         }
-        localStorage.setItem('mtb_wheel_circumference', String(value));
+        localStorage.setItem('mtbpro_wheel_circumference', String(value));
     });
     $('sensor-hr-enabled').addEventListener('change', () => {
         if (isNativeApp()) nativeHrToggle(hrToggle.checked);
@@ -291,7 +291,7 @@ async function nativeHrConnect(id, name, generation) {
     nativeHrConnected = true;
     setHrConnectionState(true, true);
     if (name !== undefined) {
-        try { localStorage.setItem('mtb_hr_device', JSON.stringify({ id, name: name || '' })); } catch (e) {}
+        try { localStorage.setItem('mtbpro_hr_device', JSON.stringify({ id, name: name || '' })); } catch (e) {}
     }
     return true;
 }
@@ -370,7 +370,7 @@ async function nativeHrToggle(shouldConnect = hrToggle.checked) {
 
         // 1) intentar con el último pulsómetro usado
         let saved = null;
-        try { saved = JSON.parse(localStorage.getItem('mtb_hr_device')); } catch (e) {}
+        try { saved = JSON.parse(localStorage.getItem('mtbpro_hr_device')); } catch (e) {}
         if (saved && saved.id) {
             try {
                 toast(`Conectando con ${saved.name || 'el último pulsómetro'}…`);
