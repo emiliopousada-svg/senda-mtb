@@ -8,6 +8,7 @@ let statsAscentChart = null;
 let statsSpeedChart = null;
 let statsActivityChart = null;
 let statsDashboardChart = null;
+let statsRouteComparisonChart = null;
 let statsMtbSpeedChart = null;
 let statsGradeChart = null;
 let statsClimbTimeChart = null;
@@ -310,6 +311,72 @@ function statsRenderMtb(summary, analyses) {
     if (eligible.some(item => String(item.route.id) === selected)) select.value = selected;
     else if (eligible.length) select.value = String(eligible[0].route.id);
     statsRenderProfile(eligible.find(item => String(item.route.id) === select.value) || null);
+    statsRenderRouteComparison(analyses);
+}
+
+function statsRenderRouteComparison(analyses) {
+    const selectA = $('stats-route-compare-a');
+    const selectB = $('stats-route-compare-b');
+    const summary = $('stats-route-compare-summary');
+    if (!selectA || !selectB || !summary) return;
+    const eligible = analyses.filter(item => item.profile.some(point => Number.isFinite(point.y)));
+    const previousA = selectA.value;
+    const previousB = selectB.value;
+    const makeOptions = placeholder => [new Option(placeholder, ''), ...eligible.map(item =>
+        new Option(`${routeNameWithoutActivity(item.route) || item.route.name || 'Ruta MTB'} · ${fmtDate(item.route.startedAt)}`, String(item.route.id)))];
+    selectA.replaceChildren(...makeOptions('Elige la primera ruta'));
+    selectB.replaceChildren(...makeOptions('Elige la segunda ruta'));
+    if (eligible.some(item => String(item.route.id) === previousA)) selectA.value = previousA;
+    else if (eligible.length) selectA.value = String(eligible[0].route.id);
+    if (eligible.some(item => String(item.route.id) === previousB)) selectB.value = previousB;
+    else if (eligible.length > 1) selectB.value = String(eligible[1].route.id);
+    const first = eligible.find(item => String(item.route.id) === selectA.value) || null;
+    const second = eligible.find(item => String(item.route.id) === selectB.value) || null;
+    if (statsRouteComparisonChart) {
+        const items = [first, second];
+        statsRouteComparisonChart.data.datasets.forEach((dataset, index) => {
+            const item = items[index];
+            dataset.label = item ? routeNameWithoutActivity(item.route) || item.route.name || `Ruta ${index + 1}` : `Ruta ${index + 1}`;
+            dataset.data = item ? item.profile.filter(point => Number.isFinite(point.y)).map(point => ({ x: point.x, y: point.y })) : [];
+        });
+        statsRouteComparisonChart.update('none');
+    }
+    summary.replaceChildren();
+    if (!first || !second) {
+        summary.textContent = eligible.length < 2
+            ? 'Necesitas dos rutas con datos de altitud para compararlas.'
+            : 'Selecciona dos rutas distintas para ver sus diferencias.';
+        return;
+    }
+    if (first.route.id === second.route.id) {
+        summary.textContent = 'Selecciona dos rutas diferentes para compararlas.';
+        return;
+    }
+    const metrics = [
+        ['Distancia', item => `${item.distanceKm.toFixed(1)} km`, first.distanceKm, second.distanceKm],
+        ['Desnivel +', item => item.ascentAvailable ? `${Math.round(item.ascentM)} m` : 'Sin datos', first.ascentAvailable ? first.ascentM : NaN, second.ascentAvailable ? second.ascentM : NaN],
+        ['Tiempo', item => item.movingTimeSec ? fmtDur(item.movingTimeSec) : 'Sin datos', first.movingTimeSec, second.movingTimeSec],
+        ['Velocidad media', item => Number.isFinite(item.averageSpeed) ? `${item.averageSpeed.toFixed(1)} km/h` : 'Sin datos', first.averageSpeed, second.averageSpeed]
+    ];
+    metrics.forEach(([label, format, valueA, valueB]) => {
+        const row = document.createElement('div');
+        row.className = 'route-compare-row';
+        const title = document.createElement('span');
+        title.textContent = label;
+        const a = document.createElement('strong');
+        a.className = 'route-compare-value-a';
+        a.textContent = format(first);
+        const b = document.createElement('strong');
+        b.className = 'route-compare-value-b';
+        b.textContent = format(second);
+        const delta = document.createElement('small');
+        const difference = Number.isFinite(valueA) && Number.isFinite(valueB) ? valueA - valueB : NaN;
+        delta.textContent = Number.isFinite(difference)
+            ? `Δ ${difference > 0 ? '+' : ''}${Math.abs(difference) < 10 ? difference.toFixed(1) : Math.round(difference)}`
+            : '—';
+        row.append(title, a, b, delta);
+        summary.appendChild(row);
+    });
 }
 
 function statsRenderMtbCharts(summary, analyses) {
@@ -860,7 +927,10 @@ function setStatsSlide(index) {
         [statsProfileChart, statsMtbSpeedChart, statsGradeChart, statsClimbTimeChart, statsVamChart]
             .forEach(chart => chart?.resize());
     }
-    if (activeStatsSlide === 2) statsEvolutionChart?.resize();
+    if (activeStatsSlide === 2) {
+        statsEvolutionChart?.resize();
+        statsRouteComparisonChart?.resize();
+    }
 }
 
 function statsInitCharts() {
@@ -1044,6 +1114,25 @@ function statsInitCharts() {
             scales: { x: axis, y: { ...axis, beginAtZero: true } }
         }
     });
+    statsRouteComparisonChart = new Chart($('stats-route-compare-chart').getContext('2d'), {
+        type: 'scatter',
+        data: { datasets: [
+            { label: 'Ruta A', data: [], showLine: true, borderColor: '#ff7a00', backgroundColor: '#ff7a00', borderWidth: 3, pointRadius: 0, pointHoverRadius: 5, tension: 0.2 },
+            { label: 'Ruta B', data: [], showLine: true, borderColor: '#12b8ff', backgroundColor: '#12b8ff', borderWidth: 3, pointRadius: 0, pointHoverRadius: 5, tension: 0.2 }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false, parsing: false,
+            interaction: { mode: 'nearest', intersect: false },
+            plugins: {
+                legend: { labels: { color: '#d9e2ef', usePointStyle: true } },
+                tooltip: { callbacks: { label: context => ` ${context.dataset.label} · ${context.parsed.x.toFixed(2)} km · ${Math.round(context.parsed.y)} m` } }
+            },
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'Distancia (km)', color: '#aab8ca' }, ticks: { color: '#aab8ca' }, grid: { color: 'rgba(143,166,199,0.14)' } },
+                y: { title: { display: true, text: 'Altitud (m)', color: '#aab8ca' }, ticks: { color: '#aab8ca' }, grid: { color: 'rgba(143,166,199,0.14)' } }
+            }
+        }
+    });
 }
 
 function initCharts() {
@@ -1058,6 +1147,9 @@ function initCharts() {
         const route = savedRoutes.find(item => String(item.id) === $('stats-profile-route').value);
         statsRenderProfile(route ? statsAnalyzeRoute(route) : null);
     });
+    ['stats-route-compare-a', 'stats-route-compare-b'].forEach(id => $(id)?.addEventListener('change', () => {
+        statsRenderRouteComparison(savedRoutes.map(statsAnalyzeRoute));
+    }));
     $('stats-evolution-period').addEventListener('change', statsRenderEvolutionChart);
     $('stats-evolution-metric').addEventListener('change', statsRenderEvolutionChart);
     refreshStats();

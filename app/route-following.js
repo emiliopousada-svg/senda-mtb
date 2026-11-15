@@ -45,6 +45,22 @@ function playRouteSound(frequencies) {
 function playOffRouteSound() { playRouteSound([880, 660]); }
 function playBackOnRouteSound() { playRouteSound([660, 880, 1040]); }
 
+function announceRouteVoice(message) {
+    if (localStorage.getItem('mtb_pro_route_voice') === '0') return;
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance !== 'function') return;
+    try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.lang = 'es-ES';
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 0.9;
+        window.speechSynthesis.speak(utterance);
+    } catch (error) {
+        console.warn('No se pudo emitir el aviso de navegación por voz:', error);
+    }
+}
+
 function findFollowedRouteMatch(lat, lon) {
     const pts = followedRoute && followedRoute.pts;
     if (!pts || pts.length < 2) return null;
@@ -73,11 +89,13 @@ function checkOffRoute(lat, lon, match) {
     if (!offRouteState && min > OFFROUTE_M) {
         offRouteState = true;
         toast(`⚠️ Te has salido de la ruta (${Math.round(min)} m)`, 5000);
+        announceRouteVoice(`Atención. Estás a unos ${Math.round(min)} metros fuera de la ruta. Comprueba el mapa cuando sea seguro.`);
         playOffRouteSound();
         if (navigator.vibrate && localStorage.getItem('mtb_pro_route_vibration') !== '0') navigator.vibrate([200, 100, 200]);
     } else if (offRouteState && min < BACKONROUTE_M) {
         offRouteState = false;
         toast('✅ De nuevo en la ruta');
+        announceRouteVoice('Has vuelto a la ruta.');
         playBackOnRouteSound();
     }
 }
@@ -183,6 +201,7 @@ function followRoute(r) {
 }
 
 function unfollowRoute() {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     followedRoute = null;
     showRoutePoisOnMap(isRecording ? recordingPois : []);
     routeProfileCoords = [];

@@ -268,6 +268,18 @@
                             <div id="stats-comparisons" class="stats-comparisons"></div>
                         </div>
                         <div class="card">
+                            <h3>Comparación de rutas</h3>
+                            <p class="hint">Superpone los perfiles de dos recorridos y compara sus métricas principales.</p>
+                            <div class="route-compare-selectors">
+                                <label for="stats-route-compare-a">Ruta A</label>
+                                <select id="stats-route-compare-a"></select>
+                                <label for="stats-route-compare-b">Ruta B</label>
+                                <select id="stats-route-compare-b"></select>
+                            </div>
+                            <div class="stats-chart route-compare-chart"><canvas id="stats-route-compare-chart" aria-label="Comparación interactiva de perfiles de altitud de dos rutas"></canvas></div>
+                            <div id="stats-route-compare-summary" class="route-compare-summary" aria-live="polite"></div>
+                        </div>
+                        <div class="card">
                             <h3>Evolución por periodos</h3>
                             <div class="stats-evolution-controls">
                                 <div>
@@ -597,6 +609,11 @@
                 </div>
             </div>
             <div class="card">
+                <h2>🎛️ Panel de grabación</h2>
+                <p class="hint">Elige las métricas visibles y su orden en el mapa durante una salida.</p>
+                <div id="recording-metric-config" class="recording-metric-config" role="group" aria-label="Métricas del panel de grabación"></div>
+            </div>
+            <div class="card">
                 <h2>🗺️ Cartografía del mapa</h2>
                 <label for="map-style-select" class="hint">Mapa con conexión</label>
                 <select id="map-style-select" aria-label="Mapa a usar con conexión">
@@ -634,7 +651,7 @@
 
             <section id="offline-panel" class="card" aria-label="Mapas sin conexión">
     <h2>🗺️ Mapas sin conexión</h2>
-                <p>Descarga el mapa topográfico IGN de una comunidad autónoma peninsular o de Portugal. El mapa online que elijas en Ajustes guarda automáticamente las zonas que vas viendo.</p>
+                <p>Descarga zonas del mapa topográfico IGN de España y Portugal. Los mapas online se consultan con conexión; su almacenamiento offline se habilitará cuando el proveedor autorice ese uso.</p>
     <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
     <select id="offline-region">
         <option value="portugal">Portugal</option>
@@ -680,6 +697,14 @@
                     <input type="checkbox" id="setting-route-vibration">
                     <span><strong>Vibración al desviarte</strong><span class="hint">Vibra cuando te sales de la ruta cargada.</span></span>
                 </label>
+                <label class="setting-toggle" for="setting-route-voice">
+                    <input type="checkbox" id="setting-route-voice">
+                    <span><strong>Indicaciones por voz</strong><span class="hint">Avisos hablados al salir de la ruta y al volver a ella.</span></span>
+                </label>
+                <label class="setting-toggle" for="setting-recording-haptics">
+                    <input type="checkbox" id="setting-recording-haptics">
+                    <span><strong>Respuesta háptica al grabar</strong><span class="hint">Vibración breve al iniciar, pausar, reanudar o finalizar una salida.</span></span>
+                </label>
                 <label class="setting-toggle" for="setting-map-rotation">
                     <input type="checkbox" id="setting-map-rotation">
                     <span><strong>Rotación automática del mapa</strong><span class="hint">Orienta el mapa según tu dirección o la ruta cargada mientras sigues tu posición. Si el GPS no informa velocidad, se calcula el rumbo con el desplazamiento.</span></span>
@@ -703,31 +728,36 @@
                         <span class="eyebrow">MTB PRO <i></i> CENTRO DE ACTIVIDAD</span>
                         <h1>¡Hola, Biker!</h1>
                         <p>Tu próxima aventura empieza aquí.</p>
+                        <div class="hero-actions">
+                            <button class="hero-primary-action" type="button" data-recording>▶ <span>Grabar salida</span></button>
+                            <button id="dashboard-arrange-toggle" class="hero-secondary-action" type="button" aria-pressed="false">↕ <span>Organizar</span></button>
+                        </div>
                     </div>
                     <div class="hero-status">
                         <span id="dashboard-gps-status" class="status-chip"><i></i>GPS · Buscando</span>
+                        <span id="dashboard-network-status" class="status-chip"><i></i>En línea</span>
                         <button class="profile-button" type="button" data-page="4" aria-label="Abrir perfil y ajustes">EP</button>
                     </div>
                     <div class="hero-terrain" aria-hidden="true"></div>
                 </header>
 
                 <section class="dashboard-kpis" aria-label="Resumen semanal">
-                    <article class="dashboard-kpi kpi-orange">
+                    <article class="dashboard-kpi kpi-orange" id="dashboard-distance-kpi">
                         <div class="kpi-icon">↗</div><span class="kpi-label">DISTANCIA ESTA SEMANA</span>
                         <strong id="home-week-distance">0 km</strong><span class="kpi-foot">En tus salidas MTB</span>
                         <span class="kpi-spark spark-orange" aria-hidden="true"></span>
                     </article>
-                    <article class="dashboard-kpi kpi-blue">
+                    <article class="dashboard-kpi kpi-blue" id="dashboard-ascent-kpi">
                         <div class="kpi-icon">▲</div><span class="kpi-label">DESNIVEL POSITIVO</span>
                         <strong id="home-week-ascent">0 m</strong><span class="kpi-foot">Acumulado semanal</span>
                         <span class="kpi-spark spark-blue" aria-hidden="true"></span>
                     </article>
-                    <article class="dashboard-kpi kpi-green">
+                    <article class="dashboard-kpi kpi-green" id="dashboard-time-kpi">
                         <div class="kpi-icon">◷</div><span class="kpi-label">TIEMPO EN MOVIMIENTO</span>
                         <strong id="home-week-time">0 h</strong><span class="kpi-foot">Tiempo sobre la bici</span>
                         <span class="kpi-spark spark-green" aria-hidden="true"></span>
                     </article>
-                    <article class="dashboard-kpi kpi-violet">
+                    <article class="dashboard-kpi kpi-violet" id="dashboard-speed-kpi">
                         <div class="kpi-icon">⌁</div><span class="kpi-label">VELOCIDAD MEDIA</span>
                         <strong id="home-week-speed">— km/h</strong><span class="kpi-foot">En tus rutas grabadas</span>
                         <span class="kpi-spark spark-violet" aria-hidden="true"></span>
@@ -735,7 +765,7 @@
                 </section>
 
                 <section class="dashboard-main-grid">
-                    <article class="dashboard-panel dashboard-map-panel">
+                    <article class="dashboard-panel dashboard-map-panel" id="dashboard-map-panel">
                         <div class="panel-heading">
                             <div><span class="eyebrow">EXPLORACIÓN</span><h2>Tu mapa</h2></div>
                             <button class="text-link" type="button" data-page="0">Abrir mapa <span>↗</span></button>
@@ -743,7 +773,7 @@
                         <div id="home-map" role="region" aria-label="Vista previa del mapa de montaña"></div>
                         <div class="map-preview-footer"><span><i></i><span id="home-map-label">Angkor · Camboya</span></span><span id="home-routes-count">0 rutas guardadas</span></div>
                     </article>
-                    <article class="dashboard-panel dashboard-performance-panel">
+                    <article class="dashboard-panel dashboard-performance-panel" id="dashboard-performance-panel">
                         <div class="panel-heading">
                             <div><span class="eyebrow">ANÁLISIS MTB</span><h2>Tu rendimiento</h2></div>
                             <span class="period-pill">7 días</span>
@@ -754,7 +784,7 @@
                 </section>
 
                 <section class="dashboard-lower-grid" aria-label="Actividad y rutas">
-                    <article class="dashboard-panel latest-ride-panel">
+                    <article class="dashboard-panel latest-ride-panel" id="dashboard-latest-panel">
                         <div class="panel-heading"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Última salida</h2></div><span class="panel-symbol orange-symbol">↗</span></div>
                         <div class="latest-ride-content">
                             <div class="ride-thumb" aria-hidden="true"><span>MTB</span></div>
@@ -762,11 +792,11 @@
                             <button class="round-arrow" type="button" data-page="3" aria-label="Ver rutas">›</button>
                         </div>
                     </article>
-                    <article class="dashboard-panel weekly-panel">
+                    <article class="dashboard-panel weekly-panel" id="dashboard-weekly-panel">
                         <div class="panel-heading"><div><span class="eyebrow">CONSTANCIA</span><h2>Tu actividad</h2></div><span class="panel-symbol blue-symbol">◉</span></div>
                         <div class="weekly-summary"><div class="weekly-ring"><span id="home-week-ride-count">0</span><small>salidas</small></div><div><strong id="home-week-activity-km">0 km</strong><span>recorridos esta semana</span><button class="text-link" type="button" data-page="1">Ver estadísticas <span>↗</span></button></div></div>
                     </article>
-                    <article class="dashboard-panel explore-panel">
+                    <article class="dashboard-panel explore-panel" id="dashboard-explore-panel">
                         <div class="panel-heading"><div><span class="eyebrow">SIGUIENTE AVENTURA</span><h2>Explora tus rutas</h2></div><span class="panel-symbol orange-symbol">⌖</span></div>
                         <p id="home-route-prompt">Importa un GPX o descubre una ruta de la comunidad.</p>
                         <button class="explore-button" type="button" data-page="3">Ver mis rutas <span>→</span></button>
@@ -892,6 +922,7 @@
     <script src="app/state.js"></script>
     <script src="app/offline-maps.js"></script>
     <script src="app/map.js"></script>
+    <script src="app/recording-panel.js"></script>
     <script src="app/route-photos.js"></script>
     <script src="app/account-avatar.js"></script>
     <script src="app/gps.js"></script>

@@ -525,6 +525,7 @@ $('route-photo-input').addEventListener('change', async event => {
 
 function startRecording(activityType) {
     unlockOffRouteSound();
+    if (navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate([45, 35, 65]);
     resetRecordingState();
     batteryWarnings.clear();
     batteryPollAt = 0;
@@ -569,6 +570,7 @@ function pauseRecording(automatic = false) {
     }
     removeMyLiveLocation();
     setBtnState(automatic ? 'auto-paused' : 'paused');
+    if (!automatic && navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate(45);
     $('m-speed').textContent = '0.0';
     scheduleDraftSave(0);
     if (automatic) toast(`Pausa automática: sin movimiento durante ${AUTO_PAUSE_AFTER_MS / 1000} segundos.`);
@@ -586,6 +588,7 @@ function resumeRecording(automatic = false, position = null) {
     autoPauseLastMovementAt = position ? Date.now() : null;
     autoPauseResumeCandidate = null;
     setBtnState('recording');
+    if (!automatic && navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate([40, 30, 55]);
     startTimers();
     startAutoPauseMonitor();
     startRideAdvisories();
@@ -659,6 +662,7 @@ async function finishRecording() {
     }
     isRecording = false;
     isPaused = false;
+    if (navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate([70, 45, 130]);
     refreshGpsMode();
     resetAutoPauseState();
     stopTimers();

@@ -770,9 +770,13 @@ async function syncRoutes(manual = false) {
 function initSettings() {
     const sound = $('setting-route-sound');
     const vibration = $('setting-route-vibration');
+    const voice = $('setting-route-voice');
+    const recordingHaptics = $('setting-recording-haptics');
     const mapRotation = $('setting-map-rotation');
     sound.checked = localStorage.getItem('mtb_pro_route_sound') !== '0';
     vibration.checked = localStorage.getItem('mtb_pro_route_vibration') !== '0';
+    voice.checked = localStorage.getItem('mtb_pro_route_voice') !== '0';
+    recordingHaptics.checked = localStorage.getItem('mtb_pro_recording_haptics') !== '0';
     mapRotationEnabled = localStorage.getItem('mtb_pro_map_rotation') !== '0';
     mapRotation.checked = mapRotationEnabled;
     updateOrientBtn();
@@ -780,7 +784,10 @@ function initSettings() {
     window.addEventListener('offline', applyMapStyle);
     sound.addEventListener('change', () => localStorage.setItem('mtb_pro_route_sound', sound.checked ? '1' : '0'));
     vibration.addEventListener('change', () => localStorage.setItem('mtb_pro_route_vibration', vibration.checked ? '1' : '0'));
+    voice.addEventListener('change', () => localStorage.setItem('mtb_pro_route_voice', voice.checked ? '1' : '0'));
+    recordingHaptics.addEventListener('change', () => localStorage.setItem('mtb_pro_recording_haptics', recordingHaptics.checked ? '1' : '0'));
     mapRotation.addEventListener('change', () => setMapRotationMode(mapRotation.checked));
+    initRecordingPanelSettings();
     initSensorConnections();
     $('app-version').textContent = `v${APP_VERSION} (build ${APP_BUILD})`;
 }
