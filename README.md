@@ -2,11 +2,11 @@
 
 App de ciclismo de montaña con GPS, registro de actividades, mapas offline, rutas GPX/KML/GeoJSON, estadísticas, sensores Bluetooth y funciones sociales.
 
-Versión indicada en el proyecto: **0.1.0**
+Versión indicada en el proyecto: **0.1.1**
 
 ## Identidad y alcance
 
-senda-brava 0.1.0 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
+senda-brava 0.1.1 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
 
 ## Documentación del proyecto
 
@@ -37,7 +37,7 @@ gradle -p android assembleDebug
 
 ### APK en GitHub Actions y Releases
 
-Cada subida a `main` ejecuta **MTBPro checks** y publica el APK de pruebas como artefacto `senda-brava-debug-apk`. Para generar un APK firmado de distribución y adjuntarlo a una GitHub Release, crea y sube una etiqueta `vX.Y.Z` que coincida con la versión de `package.json` (por ejemplo, `v0.1.0`). El workflow **Android signed APK** también conserva el APK firmado como artefacto de Actions; puede ejecutarse manualmente para generar el artefacto sin publicar una Release.
+Cada subida a `main` ejecuta **MTBPro checks** y publica el APK de pruebas como artefacto `senda-brava-debug-apk`. Para generar un APK firmado de distribución y adjuntarlo a una GitHub Release, crea y sube una etiqueta `vX.Y.Z` que coincida con la versión de `package.json`. Después de publicar correctamente la Release, **Android signed APK** incrementa automáticamente la versión patch en `main` para preparar la siguiente (por ejemplo, `0.1.1` a `0.1.2`). El workflow también conserva el APK firmado como artefacto de Actions; puede ejecutarse manualmente para generar el artefacto sin publicar una Release.
 
 El APK firmado requiere estos secretos del repositorio en **Settings > Secrets and variables > Actions**:
 
