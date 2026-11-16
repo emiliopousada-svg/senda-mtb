@@ -94,8 +94,8 @@ jobs:
         run: |
           RELEASE_VERSION="${RELEASE_TAG#v}"
           export RELEASE_VERSION
-          git fetch origin main
-          git checkout -B main origin/main
+          git fetch origin main:refs/remotes/origin/main
+          git checkout -B main refs/remotes/origin/main
           CURRENT_VERSION="$(node -p "require('./package.json').version")"
           if [ "$CURRENT_VERSION" != "$RELEASE_VERSION" ]; then
             echo "::notice::Main is at $CURRENT_VERSION, not $RELEASE_VERSION; skipping automatic version bump."
