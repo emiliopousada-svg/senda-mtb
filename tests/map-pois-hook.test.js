@@ -7,8 +7,20 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 function loadCreateHandler(countRecords) {
-    let createHandler;
+    let createHandlerSource;
     const context = vm.createContext({
+        BadRequestError: class BadRequestError extends Error {},
+        onRecordCreateRequest(handler, name) {
+            if (name === 'map_pois') createHandlerSource = handler.toString();
+        },
+        onRecordUpdateRequest() {}
+    });
+    const hook = fs.readFileSync(
+        path.join(__dirname, '..', 'pb_hooks', 'map_pois.pb.js'),
+        'utf8'
+    );
+    vm.runInContext(hook, context);
+    return vm.runInContext(`(${createHandlerSource})`, vm.createContext({
         BadRequestError: class BadRequestError extends Error {},
         $app: {
             countRecords,
@@ -22,18 +34,8 @@ function loadCreateHandler(countRecords) {
             hashExp(values) {
                 return { kind: 'hash', values };
             }
-        },
-        onRecordCreateRequest(handler, name) {
-            if (name === 'map_pois') createHandler = handler;
-        },
-        onRecordUpdateRequest() {}
-    });
-    const hook = fs.readFileSync(
-        path.join(__dirname, '..', 'pb_hooks', 'map_pois.pb.js'),
-        'utf8'
-    );
-    vm.runInContext(hook, context);
-    return createHandler;
+        }
+    }));
 }
 
 function createEvent() {
@@ -73,23 +75,25 @@ test('map POI create hook counts records with a PocketBase dbx expression', () =
 });
 
 test('map POI update hook replaces a supplied author with the account nickname', () => {
-    let updateHandler;
+    let updateHandlerSource;
     const context = vm.createContext({
-        BadRequestError: class BadRequestError extends Error {},
-        $app: {
-            findRecordById() {
-                return { getString: name => name === 'nickname' ? 'Rider' : '' };
-            }
-        },
         onRecordCreateRequest() {},
         onRecordUpdateRequest(handler, name) {
-            if (name === 'map_pois') updateHandler = handler;
+            if (name === 'map_pois') updateHandlerSource = handler.toString();
         }
     });
     vm.runInContext(
         fs.readFileSync(path.join(__dirname, '..', 'pb_hooks', 'map_pois.pb.js'), 'utf8'),
         context
     );
+    const updateHandler = vm.runInContext(`(${updateHandlerSource})`, vm.createContext({
+        BadRequestError: class BadRequestError extends Error {},
+        $app: {
+            findRecordById() {
+                return { getString: name => name === 'nickname' ? 'Rider' : '' };
+            }
+        }
+    }));
     const event = createEvent();
     event.record.values.createdBy = 'Impersonated';
     updateHandler(event);
