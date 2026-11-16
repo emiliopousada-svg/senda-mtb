@@ -774,17 +774,15 @@
                 <header class="dashboard-hero">
                     <div class="hero-copy">
                         <span class="eyebrow">MTB PRO <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
-                        <h1>¡Hola, Biker!</h1>
+                        <h1 id="home-greeting">¡Hola, Biker!</h1>
                         <p>Tu próxima aventura empieza aquí.</p>
                         <div class="hero-actions">
                             <button class="hero-primary-action" type="button" data-recording>▶ <span>Grabar salida</span></button>
-                            <button id="dashboard-arrange-toggle" class="hero-secondary-action" type="button" aria-pressed="false">↕ <span>Organizar</span></button>
-                            <button id="screen-fullscreen-toggle" class="hero-secondary-action fullscreen-toggle" type="button" aria-label="Activar modo pantalla completa" title="Pantalla completa">⛶</button>
+                            <span id="dashboard-gps-status" class="status-chip" aria-live="polite"><i></i>GPS · Buscando</span>
+                            <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En línea</span>
                         </div>
                     </div>
                     <div class="hero-status">
-                        <span id="dashboard-gps-status" class="status-chip"><i></i>GPS · Buscando</span>
-                        <span id="dashboard-network-status" class="status-chip"><i></i>En línea</span>
                         <button class="profile-button tools-menu-button" type="button" data-page="6" aria-label="Abrir más herramientas">☷</button>
                     </div>
                     <div class="hero-terrain" aria-hidden="true"></div>
@@ -907,7 +905,6 @@
     </nav>
 
     <div id="toast" role="status" aria-live="polite"></div>
-    <button id="fullscreen-exit" type="button" hidden>Salir de pantalla completa</button>
     <button id="screen-dim-overlay" class="screen-dim-overlay" type="button" aria-label="Tocar para activar la pantalla" hidden>
         <span>Toca para activar la pantalla</span>
     </button>
@@ -1022,7 +1019,6 @@
     <script src="app/community-performance.js"></script>
     <script src="app/stats.js"></script>
     <script src="app/dashboard.js"></script>
-    <script src="app/fullscreen.js"></script>
     <script src="app/ai-preview.js"></script>
     <script src="app/sensors.js"></script>
     <script src="app/pois.js"></script>

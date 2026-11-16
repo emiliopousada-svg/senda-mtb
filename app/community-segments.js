@@ -127,6 +127,7 @@ async function communitySubmitSegment() {
             owner: Cloud.uid,
             route: communityDetailRecord.id,
             title,
+            createdBy: Cloud.nickname,
             trackJson: JSON.stringify([communitySegmentGeometry]),
             distanceKm: +(lengthM / 1000).toFixed(3)
         });
@@ -171,7 +172,7 @@ async function communityLoadSegments(record) {
     try {
         const filter = `route = "${record.id}"`;
         const result = await cloudApi(communityRecordCollectionUrl(
-            'community_segments', filter, 'id,owner,route,title,trackJson,distanceKm', '-id'
+            'community_segments', filter, 'id,owner,route,title,createdBy,trackJson,distanceKm', '-id'
         ));
         if (!communityDetailRecord || communityDetailRecord.id !== record.id) return;
         const segments = Array.isArray(result.items) ? result.items : [];
@@ -189,7 +190,7 @@ async function communityLoadSegments(record) {
             const heading = document.createElement('strong');
             heading.textContent = segment.title || 'Segmento';
             const facts = document.createElement('p');
-            facts.textContent = `${(Number(segment.distanceKm) || 0).toFixed(2)} km · creado por ${segment.owner === Cloud.uid ? 'ti' : 'un miembro de la comunidad'}`;
+            facts.textContent = `${(Number(segment.distanceKm) || 0).toFixed(2)} km · creado por ${segment.createdBy || (segment.owner === Cloud.uid ? Cloud.nickname : 'un miembro de la comunidad')}`;
             const ranking = document.createElement('div');
             ranking.className = 'community-ranking-list';
             const widget = document.createElement('div');

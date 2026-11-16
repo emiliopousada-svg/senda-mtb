@@ -1,90 +1,10 @@
 'use strict';
 
-const DASHBOARD_ORDER_KEY = 'mtb_pro_dashboard_card_order_v1';
-let dashboardArrangeMode = false;
-
-function dashboardOrderGroups() {
-    return ['dashboard-kpis', 'dashboard-main-grid', 'dashboard-lower-grid']
-        .map(id => $(id)).filter(Boolean);
-}
-
-function dashboardSaveCardOrder() {
-    const order = Object.fromEntries(dashboardOrderGroups().map(group => [
-        group.id,
-        [...group.children].map(card => card.id).filter(Boolean)
-    ]));
-    try { localStorage.setItem(DASHBOARD_ORDER_KEY, JSON.stringify(order)); }
-    catch (error) { console.warn('No se pudo guardar el orden del dashboard:', error); }
-    if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
-}
-
-function dashboardApplySavedCardOrder() {
-    let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(DASHBOARD_ORDER_KEY) || '{}') || {}; }
-    catch (error) { saved = {}; }
-    dashboardOrderGroups().forEach(group => {
-        const cards = [...group.children];
-        const byId = new Map(cards.map(card => [card.id, card]));
-        const order = [...(Array.isArray(saved[group.id]) ? saved[group.id] : []), ...cards.map(card => card.id)]
-            .filter((id, index, list) => byId.has(id) && list.indexOf(id) === index);
-        order.forEach(id => group.appendChild(byId.get(id)));
-    });
-}
-
-function dashboardRefreshOrderControls() {
-    dashboardOrderGroups().forEach(group => {
-        const cards = [...group.children];
-        cards.forEach((card, index) => {
-            card.classList.toggle('dashboard-card-arranging', dashboardArrangeMode);
-            let controls = card.querySelector('.dashboard-order-controls');
-            if (!controls) {
-                controls = document.createElement('span');
-                controls.className = 'dashboard-order-controls';
-                [['up', 'Subir tarjeta', '↑'], ['down', 'Bajar tarjeta', '↓']].forEach(([direction, label, icon]) => {
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'dashboard-order-button';
-                    button.dataset.dashboardMove = direction;
-                    button.setAttribute('aria-label', label);
-                    button.textContent = icon;
-                    controls.appendChild(button);
-                });
-                const anchor = card.querySelector('.panel-heading') || card;
-                anchor.appendChild(controls);
-            }
-            controls.hidden = !dashboardArrangeMode;
-            const up = controls.querySelector('[data-dashboard-move="up"]');
-            const down = controls.querySelector('[data-dashboard-move="down"]');
-            if (up) up.disabled = index === 0;
-            if (down) down.disabled = index === cards.length - 1;
-        });
-    });
-    const toggle = $('dashboard-arrange-toggle');
-    if (toggle) {
-        toggle.setAttribute('aria-pressed', String(dashboardArrangeMode));
-        toggle.querySelector('span').textContent = dashboardArrangeMode ? 'Listo' : 'Organizar';
-    }
-}
-
-function dashboardInitCardArrangement() {
-    dashboardApplySavedCardOrder();
-    $('dashboard-arrange-toggle')?.addEventListener('click', () => {
-        dashboardArrangeMode = !dashboardArrangeMode;
-        dashboardRefreshOrderControls();
-    });
-    document.addEventListener('click', event => {
-        const button = event.target.closest('[data-dashboard-move]');
-        if (!button || !dashboardArrangeMode) return;
-        const card = button.closest('.dashboard-panel, .dashboard-kpi');
-        const group = card?.parentElement;
-        if (!card || !group) return;
-        const sibling = button.dataset.dashboardMove === 'up' ? card.previousElementSibling : card.nextElementSibling;
-        if (!sibling) return;
-        group.insertBefore(card, button.dataset.dashboardMove === 'up' ? sibling : sibling.nextElementSibling);
-        dashboardSaveCardOrder();
-        dashboardRefreshOrderControls();
-    });
-    dashboardRefreshOrderControls();
+function dashboardUpdateGreeting() {
+    const greeting = $('home-greeting');
+    if (!greeting) return;
+    const nickname = String(Cloud.nickname || '').trim();
+    greeting.textContent = `¡Hola, ${nickname || 'Biker'}!`;
 }
 
 function dashboardUpdateNav(page = currentPage) {
@@ -103,20 +23,29 @@ function dashboardUpdateGpsStatus() {
     const status = $('dashboard-gps-status');
     if (!status) return;
     const accuracy = Number(lastAccuracy);
-    const ready = firstFix && Number.isFinite(accuracy) && accuracy <= MAX_ACC_M;
-    status.classList.toggle('ready', ready);
-    status.innerHTML = ready
-        ? `<i></i>GPS · ${accuracy <= 10 ? 'Excelente' : 'Estable'}`
-        : '<i></i>GPS · Buscando';
+    const quality = !firstFix || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > MAX_ACC_M
+        ? 0
+        : accuracy <= 5 ? 4
+            : accuracy <= 10 ? 3
+                : accuracy <= 20 ? 2 : 1;
+    const labels = ['Buscando', 'Débil', 'Aceptable', 'Buena', 'Excelente'];
+    const bars = Array.from({ length: 4 }, (_, index) =>
+        `<i${index < quality ? ' class="active"' : ''}></i>`
+    ).join('');
+    status.classList.toggle('ready', quality > 0);
+    status.setAttribute('data-gps-quality', String(quality));
+    status.setAttribute('aria-label', `Calidad GPS: ${labels[quality]}${quality ? `, ${quality} de 4 barras` : ''}`);
+    status.innerHTML = `<span class="gps-signal-bars" aria-hidden="true">${bars}</span><span>GPS · ${labels[quality]}</span>`;
 }
 
 function dashboardUpdateNetworkStatus() {
     const status = $('dashboard-network-status');
     if (!status) return;
     const online = navigator.onLine;
+    status.classList.toggle('connected', online);
     status.classList.toggle('offline', !online);
     status.setAttribute('aria-label', online ? 'Conexión a internet disponible' : 'Sin conexión a internet');
-    status.innerHTML = online ? '<i></i>En línea' : '<i></i>Sin conexión';
+    status.innerHTML = online ? '<i></i><span>En línea</span>' : '<i></i><span>Sin conexión</span>';
 }
 
 function dashboardLatestRecordedRoute() {
@@ -149,6 +78,7 @@ function dashboardRenderMapPreview(route) {
 }
 
 function dashboardRender() {
+    dashboardUpdateGreeting();
     const latest = dashboardLatestRecordedRoute();
     const routeCount = Array.isArray(savedRoutes) ? savedRoutes.length : 0;
     const count = $('home-routes-count');
@@ -210,7 +140,7 @@ document.querySelectorAll('[data-recording]').forEach(button => {
 });
 
 dashboardUpdateNav(currentPage);
-dashboardInitCardArrangement();
+dashboardUpdateGreeting();
 dashboardUpdateNetworkStatus();
 window.addEventListener('online', dashboardUpdateNetworkStatus);
 window.addEventListener('offline', dashboardUpdateNetworkStatus);

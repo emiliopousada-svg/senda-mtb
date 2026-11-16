@@ -10,6 +10,13 @@ test('community route create hook trims the track and calculates its bounds', ()
     let createHandler;
     const context = vm.createContext({
         BadRequestError: class BadRequestError extends Error {},
+        $app: {
+            findRecordById(collection, id) {
+                assert.equal(collection, 'users');
+                assert.equal(id, 'user123');
+                return { getString: name => name === 'nickname' ? 'Rider' : '' };
+            }
+        },
         onRecordCreateRequest(handler, name) {
             if (name === 'community_routes') createHandler = handler;
         },
@@ -22,12 +29,14 @@ test('community route create hook trims the track and calculates its bounds', ()
     vm.runInContext(hook, context);
 
     const values = {
+        owner: 'user123',
         trackJson: JSON.stringify([[[0, 0], [0.001, 0.001], [0.5, 0.5]]]),
         poisJson: '[]'
     };
     let nextCalled = false;
     createHandler({
         hasSuperuserAuth: () => false,
+        auth: { id: 'user123' },
         record: {
             getString(name) { return values[name] || ''; },
             get(name) { return values[name]; },
@@ -37,6 +46,7 @@ test('community route create hook trims the track and calculates its bounds', ()
     });
 
     assert.equal(nextCalled, true);
+    assert.equal(values.createdBy, 'Rider');
     const trimmed = JSON.parse(values.trackJson);
     assert.ok(trimmed[0].length >= 2);
     assert.ok(trimmed[0][0][0] > 0);

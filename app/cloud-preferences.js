@@ -12,15 +12,6 @@ const CLOUD_PREFERENCE_RECORDING_METRICS = [
 const CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS = [
     'speed', 'dist', 'elev', 'hr', 'moving', 'time'
 ];
-const CLOUD_PREFERENCE_DASHBOARD_GROUPS = {
-    'dashboard-kpis': [
-        'dashboard-distance-kpi', 'dashboard-ascent-kpi', 'dashboard-time-kpi', 'dashboard-speed-kpi'
-    ],
-    'dashboard-main-grid': ['dashboard-map-panel', 'dashboard-performance-panel'],
-    'dashboard-lower-grid': [
-        'dashboard-latest-panel', 'dashboard-weekly-panel', 'dashboard-explore-panel'
-    ]
-};
 const DEFAULT_CLOUD_PREFERENCES = {
     version: 1,
     routeSound: true,
@@ -35,10 +26,7 @@ const DEFAULT_CLOUD_PREFERENCES = {
     maxHeartRate: null,
     ftpWatts: null,
     recordingMetricOrder: CLOUD_PREFERENCE_RECORDING_METRICS.slice(),
-    recordingVisibleMetrics: CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice(),
-    dashboardCardOrder: Object.fromEntries(
-        Object.entries(CLOUD_PREFERENCE_DASHBOARD_GROUPS).map(([group, ids]) => [group, ids.slice()])
-    )
+    recordingVisibleMetrics: CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice()
 };
 let cloudPreferencesTimer = null;
 let cloudPreferencesSyncPromise = null;
@@ -73,14 +61,6 @@ function cloudPreferencesOrderedIds(value, allowed, fallback) {
         if (!result.includes(id)) result.push(id);
     });
     return result.length ? result : fallback.slice();
-}
-
-function cloudPreferencesDashboardOrder(value) {
-    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    return Object.fromEntries(Object.entries(CLOUD_PREFERENCE_DASHBOARD_GROUPS).map(([group, allowed]) => [
-        group,
-        cloudPreferencesOrderedIds(source[group], allowed, allowed)
-    ]));
 }
 
 function cloudPreferencesOptionalNumber(value, min, max, integer = false) {
@@ -123,8 +103,7 @@ function normalizeCloudPreferences(value) {
             CLOUD_PREFERENCE_RECORDING_METRICS,
             CLOUD_PREFERENCE_RECORDING_METRICS
         ),
-        recordingVisibleMetrics: visible.length ? visible : CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice(),
-        dashboardCardOrder: cloudPreferencesDashboardOrder(source.dashboardCardOrder)
+        recordingVisibleMetrics: visible.length ? visible : CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice()
     };
 }
 
@@ -137,14 +116,6 @@ function readLocalCloudPreferences() {
             .map(box => box.dataset.metric);
         if (!visibleMetrics.length) visibleMetrics = CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS;
     }
-    const dashboardOrder = cloudPreferencesReadJson('mtb_pro_dashboard_card_order_v1')
-        || Object.fromEntries(Object.entries(CLOUD_PREFERENCE_DASHBOARD_GROUPS).map(([group, ids]) => [
-            group,
-            [...(document.getElementById(group)?.children || [])].map(card => card.id).filter(Boolean).length
-                ? [...document.getElementById(group).children].map(card => card.id).filter(Boolean)
-                : ids
-        ]));
-
     return normalizeCloudPreferences({
         routeSound: localStorage.getItem('mtb_pro_route_sound') !== '0',
         routeVibration: localStorage.getItem('mtb_pro_route_vibration') !== '0',
@@ -158,8 +129,7 @@ function readLocalCloudPreferences() {
         maxHeartRate: localStorage.getItem('mtb_pro_stats_hr_max'),
         ftpWatts: localStorage.getItem('mtb_pro_stats_ftp'),
         recordingMetricOrder: cloudPreferencesReadJson('mtb_pro_recording_panel_v1'),
-        recordingVisibleMetrics: visibleMetrics,
-        dashboardCardOrder: dashboardOrder
+        recordingVisibleMetrics: visibleMetrics
     });
 }
 
@@ -199,8 +169,7 @@ function applyCloudPreferences(value) {
             mtb_pro_wheel_circumference: String(preferences.wheelCircumference),
             mtb_pro_weekly_goal_km: String(preferences.weeklyGoalKm),
             mtb_pro_recording_panel_v1: JSON.stringify(preferences.recordingMetricOrder),
-            mtb_pro_recording_panel_visible_v1: JSON.stringify(preferences.recordingVisibleMetrics),
-            mtb_pro_dashboard_card_order_v1: JSON.stringify(preferences.dashboardCardOrder)
+            mtb_pro_recording_panel_visible_v1: JSON.stringify(preferences.recordingVisibleMetrics)
         };
         Object.entries(localValues).forEach(([key, localValue]) => localStorage.setItem(key, localValue));
         if (preferences.maxHeartRate === null) localStorage.removeItem('mtb_pro_stats_hr_max');

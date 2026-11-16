@@ -443,7 +443,13 @@ function renderFriends(items = []) {
     const box = $('friends-list');
     box.textContent = '';
     const now = Date.now();
-    const live = items.filter(x => x.owner !== Cloud.uid && Number.isFinite(Number(x.lat)) && Number.isFinite(Number(x.lon)) && now - Date.parse(x.updated) < FRIEND_STALE_MS);
+    const live = items.filter(x => {
+        const updatedAt = Date.parse(x.updated);
+        return x.owner !== Cloud.uid
+            && Number.isFinite(Number(x.lat)) && Number.isFinite(Number(x.lon))
+            && Number.isFinite(updatedAt) && updatedAt <= now + 30000
+            && now - updatedAt < FRIEND_STALE_MS;
+    });
     liveFriendCount = live.length;
     renderFriendsGroupStatus();
     const ids = new Set(live.map(x => x.id));
@@ -564,6 +570,10 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
         if (!wasSyncAvailable && isRecording && !isPaused) publishMyLocation(true);
     } catch (e) {
         groupSyncAvailable = false;
+        renderFriends();
+        if (groupJoined) {
+            $('friends-list').textContent = 'No se pudo verificar la ubicación en vivo; se retiraron las posiciones anteriores.';
+        }
         renderFriendsGroupStatus();
         console.warn('Posiciones del grupo:', e);
         if ((e.status === 401 || e.status === 403) && retryAuth) {

@@ -57,7 +57,6 @@ test('cloud preferences reject invalid values and fill safe defaults', () => {
         maxHeartRate: 99,
         ftpWatts: 900,
         recordingVisibleMetrics: [],
-        dashboardCardOrder: { 'dashboard-main-grid': ['unknown-panel'] },
         adminToken: 'must not be kept'
     });
 
@@ -68,7 +67,7 @@ test('cloud preferences reject invalid values and fill safe defaults', () => {
     assert.equal(preferences.maxHeartRate, null);
     assert.equal(preferences.ftpWatts, null);
     assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist', 'elev', 'hr', 'moving', 'time']);
-    assert.deepEqual(preferences.dashboardCardOrder['dashboard-main-grid'], ['dashboard-map-panel', 'dashboard-performance-panel']);
+    assert.equal(Object.hasOwn(preferences, 'dashboardCardOrder'), false);
     assert.equal(Object.hasOwn(preferences, 'adminToken'), false);
 });
 
@@ -81,8 +80,7 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
         maxHeartRate: 190,
         ftpWatts: 250,
         recordingMetricOrder: ['power', 'power', 'unknown'],
-        recordingVisibleMetrics: ['power', 'unknown', 'power'],
-        dashboardCardOrder: { 'dashboard-main-grid': ['dashboard-performance-panel'] }
+        recordingVisibleMetrics: ['power', 'unknown', 'power']
     });
 
     assert.equal(preferences.routeSound, false);
@@ -94,7 +92,6 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
     assert.equal(preferences.recordingMetricOrder[0], 'power');
     assert.equal(preferences.recordingMetricOrder.length, 9);
     assert.deepEqual(preferences.recordingVisibleMetrics, ['power']);
-    assert.deepEqual(preferences.dashboardCardOrder['dashboard-main-grid'], ['dashboard-performance-panel', 'dashboard-map-panel']);
 });
 
 test('signed-in sync applies the owner preferences returned by PocketBase', async () => {

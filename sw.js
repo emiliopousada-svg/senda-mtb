@@ -16,7 +16,6 @@ const SHELL_URLS = [
   'app/dashboard.css',
   'app/dashboard.js',
   'app/ai-preview.js',
-  'app/fullscreen.js',
   'app/config.js',
   'app/storage.js',
   'app/navigation.js',

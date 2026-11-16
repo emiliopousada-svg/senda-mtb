@@ -208,7 +208,7 @@ function buildImportedRoute(parsed, routeName) {
         id: Date.now(),
         kind: 'imported',
         name: routeName,
-        createdBy: Cloud.email || 'Usuario local',
+        createdBy: Cloud.nickname || 'Usuario local',
         startedAt: trackStartedAt === null ? null : new Date(trackStartedAt).toISOString(),
         movingTimeSec: 0,
         distanceKm: +km.toFixed(3),

@@ -21,9 +21,24 @@ function persistFountains() {
     }
 }
 
-let poiSyncRunning = false, poiSyncRetryAfter = 0;
+let poiSyncRunning = false, poiSyncRetryAfter = 0, poiSyncLastError = '';
 const POI_FULL_AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const POI_SYNC_CURSOR_OVERLAP_MS = 5000;
+
+function pendingSharedPoiCount() {
+    return savedFountains.filter(poi => poi && !poi.localOnly && !poi.remoteId).length;
+}
+
+function poiSyncPendingMessage() {
+    if (!Cloud.server) return 'Configura el servidor para compartirlo.';
+    if (!Cloud.loggedIn()) return 'Inicia sesión para compartirlo.';
+    if (!navigator.onLine) return 'Se compartirá al recuperar la conexión.';
+    if (!Cloud.nickname) return 'Añade un apodo a tu cuenta para compartirlo.';
+    if (poiSyncRunning) return 'La sincronización sigue en curso.';
+    if (poiSyncLastError) return `No se pudo guardar en PocketBase (${poiSyncLastError}); se reintentará.`;
+    return 'Pulsa «Sincronizar» en Perfil y ajustes para reintentarlo.';
+}
+
 function newPoiClientId(id) {
     return `${id}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -55,9 +70,16 @@ const IMPORTED_POI_CATEGORIES = {
 };
 const poiType = f => (POI_TYPES[f.type] ? f.type : 'fountain'); // las fuentes antiguas no tienen tipo
 
-async function syncSharedPois() {
-    if (!Cloud.server || !Cloud.loggedIn() || !navigator.onLine || poiSyncRunning || Date.now() < poiSyncRetryAfter) return false;
+async function syncSharedPois(manual = false) {
+    if (!Cloud.server || !Cloud.loggedIn() || !navigator.onLine || poiSyncRunning
+        || (!manual && Date.now() < poiSyncRetryAfter)) return false;
+    if (manual) poiSyncRetryAfter = 0;
+    if (!Cloud.nickname && pendingSharedPoiCount()) {
+        poiSyncLastError = 'Falta un apodo en la cuenta.';
+        return false;
+    }
     poiSyncRunning = true;
+    poiSyncLastError = '';
     try {
         const cursorKey = poiSyncStorageKey('shared_pois_cursor');
         const auditKey = poiSyncStorageKey('shared_pois_full_audit_at');
@@ -85,6 +107,7 @@ async function syncSharedPois() {
                     clientId: String(f.clientId || newPoiClientId(f.id)),
                     type: poiType(f),
                     name: f.name || POI_TYPES[poiType(f)].defaultName,
+                    createdBy: Cloud.nickname,
                     lat: Number(f.lat),
                     lng: Number(f.lng)
                 };
@@ -141,6 +164,15 @@ async function syncSharedPois() {
             }
         }
 
+        if (Cloud.nickname) {
+            for (const record of remote) {
+                if (record.owner !== Cloud.uid || record.createdBy === Cloud.nickname) continue;
+                await cloudApi(`/api/collections/map_pois/records/${encodeURIComponent(record.id)}`,
+                    'PATCH', { createdBy: Cloud.nickname });
+                record.createdBy = Cloud.nickname;
+            }
+        }
+
         const localOnly = savedFountains.filter(f => !f.remoteId);
         const sharedById = new Map();
         if (!fullAudit) {
@@ -152,6 +184,7 @@ async function syncSharedPois() {
                 remoteId: f.id,
                 clientId: String(f.clientId || ''),
                 owner: String(f.owner || ''),
+                createdBy: String(f.createdBy || ''),
                 type: POI_TYPES[f.type] ? f.type : 'fountain',
                 name: f.name || POI_TYPES[POI_TYPES[f.type] ? f.type : 'fountain'].defaultName,
                 lat: Number(f.lat),
@@ -173,9 +206,11 @@ async function syncSharedPois() {
         }
         if (fullAudit) localStorage.setItem(auditKey, String(Date.now()));
         poiSyncRetryAfter = 0;
+        poiSyncLastError = '';
         return true;
     } catch (e) {
         console.warn('No se pudieron sincronizar las fuentes y bares:', e);
+        poiSyncLastError = String(e.message || (e.status ? `HTTP ${e.status}` : 'error de conexión')).slice(0, 180);
         poiSyncRetryAfter = Date.now() + (e.status === 404 ? 300000 : 30000);
         return false;
     } finally {
@@ -241,6 +276,11 @@ function loadSavedFountains() {
         const small = document.createElement('small');
         small.textContent = 'Guardada: ' + f.date;
         wrap.append(strong, document.createElement('br'), small);
+        if (f.createdBy) {
+            const author = document.createElement('small');
+            author.textContent = `Añadida por ${f.createdBy}`;
+            wrap.append(document.createElement('br'), author);
+        }
         if (!f.remoteId || (Cloud.loggedIn() && f.owner === Cloud.uid)) {
             const btn = document.createElement('button');
             btn.textContent = 'Eliminar';
@@ -298,7 +338,7 @@ async function addPoi(type) {
 
     const id = Date.now();
     const point = {
-        id, clientId: newPoiClientId(id), type, name, lat, lng,
+        id, clientId: newPoiClientId(id), type, name, createdBy: Cloud.nickname || '', lat, lng,
         date: new Date().toLocaleDateString('es-ES'), pendingShare: true
     };
     savedFountains.push(point);
@@ -309,7 +349,9 @@ async function addPoi(type) {
     if (currentPage !== 0) { goToPage(0); if (map) map.setView([lat, lng], 17); }
     toast(point.remoteId
         ? `${meta.emoji} «${name}» compartido en el mapa para todos.`
-        : `${meta.emoji} «${name}» guardado en este móvil; se compartirá al iniciar sesión y conectar con el servidor.`);
+        : `${meta.emoji} «${name}» guardado en este móvil. ${shared
+            ? 'El servidor no confirmó el punto; vuelve a sincronizar.'
+            : poiSyncPendingMessage()}`);
 }
 
 $('btn-poi-fountain').addEventListener('click', () => addPoi('fountain'));

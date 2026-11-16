@@ -60,6 +60,7 @@ const Cloud = {
         else localStorage.removeItem('mtb_pro_nickname');
         localStorage.setItem('mtb_pro_group_code', rec.groupCode || '');
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
+        if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
     },
     clearSession() {
         cancelCloudSyncRetry();
@@ -67,6 +68,7 @@ const Cloud = {
         ['mtb_pro_token', 'mtb_pro_uid', 'mtb_pro_email', 'mtb_pro_nickname', 'mtb_pro_group_code'].forEach(k => localStorage.removeItem(k));
         if (typeof resetAccountProfileCache === 'function') resetAccountProfileCache();
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
+        if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
     }
 };
 
@@ -197,31 +199,8 @@ function normalizeRemoteTrack(raw) {
     return points.length >= 2 ? points : null;
 }
 
-function routeNicknameStorageKey() {
-    return Cloud.uid ? `mtb_pro_route_nickname_${Cloud.uid}` : '';
-}
-
 function getRouteNickname() {
-    const key = routeNicknameStorageKey();
-    return String(Cloud.nickname || (key && localStorage.getItem(key)) || '').trim().slice(0, ROUTE_NICKNAME_LIMIT);
-}
-
-async function ensureRouteNickname() {
-    const current = getRouteNickname();
-    if (current) return current;
-    const value = await modal({
-        message: 'Elige el apodo que aparecerá como autor de tus rutas sincronizadas:',
-        input: String(Cloud.nickname || '').trim().slice(0, ROUTE_NICKNAME_LIMIT),
-        ok: 'Guardar apodo'
-    });
-    if (value === null) return null;
-    const nickname = String(value).trim().slice(0, ROUTE_NICKNAME_LIMIT);
-    if (!nickname) {
-        toast('Escribe un apodo para sincronizar tus rutas.');
-        return null;
-    }
-    localStorage.setItem(routeNicknameStorageKey(), nickname);
-    return nickname;
+    return String(Cloud.nickname || '').trim().slice(0, ROUTE_NICKNAME_LIMIT);
 }
 
 // body: objeto (JSON), FormData (archivos) o null
@@ -372,7 +351,10 @@ async function accAuth(register) {
         await restoreGroup();
         toast(register ? '✅ Cuenta creada' : '✅ Sesión iniciada');
         if (Cloud.nickname) syncRoutes(true);
-        syncSharedPois();
+        const poisSynced = await syncSharedPois(true);
+        if (!poisSynced && pendingSharedPoiCount()) {
+            toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
+        }
     } catch (e) {
         console.warn('Auth:', e);
         toast(e.status === undefined
@@ -533,11 +515,7 @@ async function syncRoutes(manual = false) {
             }
         }
 
-        const hasRecordedRoutes = savedRoutes.some(route => route.kind !== 'imported');
-        const nickname = hasRecordedRoutes ? await ensureRouteNickname() : '';
-        if (hasRecordedRoutes && !nickname) {
-            toast('Sin apodo, las rutas quedan guardadas en este móvil y pendientes de sincronizar.');
-        }
+        const nickname = String(Cloud.nickname || '').trim().slice(0, ROUTE_NICKNAME_LIMIT);
 
         // 2) borrados pendientes
         let pend = [];
@@ -566,12 +544,8 @@ async function syncRoutes(manual = false) {
         const byRemoteId = new Map(remote.map(x => [x.id, x]));
         const blockedIds = new Set();
         for (const r of [...savedRoutes]) {
-            if (r.kind !== 'imported' && !nickname) {
-                noteSyncFailure(`Ruta «${r.name || 'sin nombre'}» pendiente: falta elegir el apodo del autor.`);
-                continue;
-            }
             const previousCreator = r.createdBy || '';
-            if (r.kind !== 'imported' && nickname) r.createdBy = nickname;
+            r.createdBy = nickname;
             const found = byClient.get(r.id);
             const remoteRecord = r.remoteId && !skip.has(r.remoteId) ? byRemoteId.get(r.remoteId) : null;
             const matched = remoteRecord || (found && !skip.has(found.id) ? found : null)
@@ -602,7 +576,7 @@ async function syncRoutes(manual = false) {
                 r.remoteId = matched.id;
                 const remoteName = matched.name || r.name;
                 const remoteActivity = activityTypeFromName(remoteName) || r.activityType || 'mtb';
-                const remoteCreator = r.kind !== 'imported' && nickname ? nickname : (r.createdBy || matched.createdBy || '');
+                const remoteCreator = nickname;
                 if (remoteCreator && matched.createdBy !== remoteCreator) {
                     try {
                         await cloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', { createdBy: remoteCreator });
@@ -863,6 +837,10 @@ function initAccount() {
         await syncCloudPreferences();
         await syncRoutes(true);
         await restoreGroup();
+        const poisSynced = await syncSharedPois(true);
+        if (!poisSynced && pendingSharedPoiCount()) {
+            toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
+        }
     });
     $('acc-logout').addEventListener('click', logoutCloudAccount);
     $('acc-logout-incomplete').addEventListener('click', logoutCloudAccount);

@@ -35,7 +35,7 @@ async function communityLoadSocial(record) {
 async function communityLoadRatings(route, summary, form, isCurrent) {
     try {
         const filter = `route = "${route.id}"`;
-        const response = await cloudApi(`/api/collections/community_route_ratings/records?page=1&perPage=500&fields=id,owner,rating&filter=${encodeURIComponent(filter)}`);
+        const response = await cloudApi(`/api/collections/community_route_ratings/records?page=1&perPage=500&fields=id,owner,alias,rating&filter=${encodeURIComponent(filter)}`);
         if (!isCurrent()) return;
         const ratings = Array.isArray(response.items) ? response.items.filter(item =>
             Number.isFinite(Number(item.rating)) && Number(item.rating) >= 1 && Number(item.rating) <= 5
@@ -71,10 +71,10 @@ async function communityLoadRatings(route, summary, form, isCurrent) {
             try {
                 if (own) {
                     await cloudApi(`/api/collections/community_route_ratings/records/${encodeURIComponent(own.id)}`,
-                        'PATCH', { rating: Number(select.value) });
+                        'PATCH', { alias: Cloud.nickname, rating: Number(select.value) });
                 } else {
                     await cloudApi('/api/collections/community_route_ratings/records', 'POST', {
-                        owner: Cloud.uid, route: route.id, rating: Number(select.value)
+                        owner: Cloud.uid, route: route.id, alias: Cloud.nickname, rating: Number(select.value)
                     });
                 }
                 await communityLoadRatings(route, summary, form, isCurrent);

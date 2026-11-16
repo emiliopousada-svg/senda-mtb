@@ -232,6 +232,7 @@ function openCommunityDetail(record, lines, options = {}) {
     const movingTimeSec = Number(record.movingTimeSec);
     const activity = ACTIVITY_TYPES[record.activityType]?.label || record.activityType || 'No disponible';
     const values = [...(options.values || [
+        ['Autor', record.createdBy || 'Ciclista'],
         ['Distancia', `${(Number(record.distanceKm) || 0).toFixed(1)} km`],
         ['Desnivel', `+${Math.round(Number(record.elevationGain) || 0)} m`],
         ['Tiempo en movimiento', movingTimeSec > 0 ? fmtDur(movingTimeSec) : 'No disponible'],
@@ -479,6 +480,7 @@ async function submitCommunityRoute() {
         const formData = new FormData();
         const poiData = communityPublicPoiData(route, formData);
         formData.append('owner', Cloud.uid);
+        formData.append('createdBy', Cloud.nickname);
         formData.append('title', String(route.name || 'Ruta MTB').trim().slice(0, 100));
         formData.append('province', autonomousCommunity);
         formData.append('description', String($('community-share-description').value || '').trim().slice(0, 500));
@@ -822,7 +824,8 @@ function renderCommunityRoutes(records) {
         const facts = document.createElement('p');
         const poiCount = communityPoisFromRecord(record).length;
         const difficulty = COMMUNITY_DIFFICULTIES[record.difficulty];
-        facts.textContent = (record.proximityKm != null ? `A ${record.proximityKm.toFixed(1)} km · ` : '') +
+        facts.textContent = (record.createdBy ? `Por ${record.createdBy} · ` : '') +
+            (record.proximityKm != null ? `A ${record.proximityKm.toFixed(1)} km · ` : '') +
             [record.locality, communityAutonomousCommunity(record.province)].filter(Boolean).join(', ') + ' · ' +
             ((Number(record.distanceKm) || 0).toFixed(1)) + ' km · +' +
             (Number(record.elevationGain) || 0) + ' m' +
@@ -912,7 +915,7 @@ async function communityFetchRouteMetadata(page, filter, includeBounds) {
         '&perPage=' + COMMUNITY_PAGE_SIZE + '&sort=-id&fields=' + requestedFields.join(',')
         + '&filter=' + encodeURIComponent(filter);
     try {
-        return await cloudApi(url(['id', 'owner', 'title', 'province', 'performedAt', 'locality', 'difficulty',
+        return await cloudApi(url(['id', 'owner', 'createdBy', 'title', 'province', 'performedAt', 'locality', 'difficulty',
             'activityType', 'distanceKm', 'elevationGain', 'movingTimeSec',
             ...(includeBounds ? ['minLat', 'maxLat', 'minLng', 'maxLng'] : [])]));
     } catch (error) {
@@ -1030,7 +1033,7 @@ async function loadCommunityRoutes() {
         if (minAscent) legacyFilter.push(`elevationGain >= ${minAscent}`);
         const legacyResult = !searchPosition || metadataWithoutBounds
             ? { items: [], totalItems: 0 }
-            : await cloudApi('/api/collections/community_routes/records?page=1&perPage=100&sort=-id&fields=id,owner,title,province,locality,difficulty,activityType,distanceKm,elevationGain,movingTimeSec&filter=' + encodeURIComponent(legacyFilter.join(' && ')));
+            : await cloudApi('/api/collections/community_routes/records?page=1&perPage=100&sort=-id&fields=id,owner,createdBy,title,province,locality,difficulty,activityType,distanceKm,elevationGain,movingTimeSec&filter=' + encodeURIComponent(legacyFilter.join(' && ')));
         const legacyRoutes = (legacyResult.items || []).filter(record => !indexedIds.has(record.id));
         const legacyTruncated = Number(legacyResult.totalItems) > legacyRoutes.length;
 

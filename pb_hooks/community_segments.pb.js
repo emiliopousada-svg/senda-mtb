@@ -10,6 +10,10 @@ const validateCommunitySegment = (e) => {
     if (e.record.getString("owner") !== e.auth.id) {
         throw new BadRequestError("El propietario del segmento no coincide con la sesión.");
     }
+    const user = $app.findRecordById("users", e.auth.id);
+    const nickname = user.getString("nickname").trim();
+    if (!nickname) throw new BadRequestError("Configura un apodo antes de publicar segmentos.");
+    e.record.set("createdBy", nickname);
 
     const MIN_SEGMENT_METERS = 100;
     const MATCH_TOLERANCE_DEG = 0.00001; // ≈1 m; absorbe el redondeo de coordenadas
