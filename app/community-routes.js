@@ -546,7 +546,7 @@ async function submitCommunityRoute() {
         communitySetStatus(error.status === 404
             ? 'Falta instalar la colección community_routes en el servidor. Consulta CONFIGURAR-RUTAS-COMUNIDAD.md.'
             : error.status === 400
-                ? `PocketBase rechazó la ruta: ${error.message || 'solicitud no válida'}. Comprueba los campos poisJson y poiPhotos; consulta CONFIGURAR-RUTAS-COMUNIDAD.md.`
+                ? `PocketBase rechazó la ruta: ${error.message || 'solicitud no válida'}. Revisa el hook community_routes.pb.js y los logs del servidor; consulta CONFIGURAR-RUTAS-COMUNIDAD.md.`
                 : 'No se pudo enviar la ruta: ' + (error.message || 'error de conexión'), true);
         button.disabled = false;
     }

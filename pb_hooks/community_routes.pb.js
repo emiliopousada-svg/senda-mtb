@@ -1,57 +1,57 @@
 // Calcula en PocketBase la caja geográfica que usa el catálogo para filtrar candidatos.
 const COMMUNITY_ROUTE_TRIM_METERS = 150;
 
-function communityRouteDistance(a, b) {
-    const rad = Math.PI / 180;
-    const dLat = (b[0] - a[0]) * rad;
-    const dLng = (b[1] - a[1]) * rad;
-    const sinLat = Math.sin(dLat / 2);
-    const sinLng = Math.sin(dLng / 2);
-    const h = sinLat * sinLat + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * sinLng * sinLng;
-    return 12742000 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-function communityRouteTrimStart(lines, meters) {
-    const result = lines.map(line => line.map(point => point.slice()));
-    let remaining = meters;
-    while (result.length && remaining > 0) {
-        const line = result[0];
-        if (line.length < 2) { result.shift(); continue; }
-        let passed = 0;
-        let index = 1;
-        while (index < line.length) {
-            const length = communityRouteDistance(line[index - 1], line[index]);
-            if (passed + length >= remaining) break;
-            passed += length;
-            index++;
-        }
-        if (index >= line.length) {
-            remaining -= passed;
-            result.shift();
-            continue;
-        }
-        const a = line[index - 1];
-        const b = line[index];
-        const length = communityRouteDistance(a, b) || 1;
-        const fraction = Math.max(0, Math.min(1, (remaining - passed) / length));
-        const cut = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
-        result[0] = [cut].concat(line.slice(index));
-        remaining = 0;
-    }
-    return result.filter(line => line.length > 1);
-}
-
-function communityRouteTrimEnds(lines) {
-    let result = communityRouteTrimStart(lines, COMMUNITY_ROUTE_TRIM_METERS);
-    result = communityRouteTrimStart(
-        result.slice().reverse().map(line => line.slice().reverse()),
-        COMMUNITY_ROUTE_TRIM_METERS
-    ).reverse().map(line => line.slice().reverse());
-    return result;
-}
-
 function indexCommunityRouteBounds(e) {
     if (e.hasSuperuserAuth()) return e.next();
+
+    function communityRouteDistance(a, b) {
+        const rad = Math.PI / 180;
+        const dLat = (b[0] - a[0]) * rad;
+        const dLng = (b[1] - a[1]) * rad;
+        const sinLat = Math.sin(dLat / 2);
+        const sinLng = Math.sin(dLng / 2);
+        const h = sinLat * sinLat + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * sinLng * sinLng;
+        return 12742000 * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    function communityRouteTrimStart(lines, meters) {
+        const result = lines.map(line => line.map(point => point.slice()));
+        let remaining = meters;
+        while (result.length && remaining > 0) {
+            const line = result[0];
+            if (line.length < 2) { result.shift(); continue; }
+            let passed = 0;
+            let index = 1;
+            while (index < line.length) {
+                const length = communityRouteDistance(line[index - 1], line[index]);
+                if (passed + length >= remaining) break;
+                passed += length;
+                index++;
+            }
+            if (index >= line.length) {
+                remaining -= passed;
+                result.shift();
+                continue;
+            }
+            const a = line[index - 1];
+            const b = line[index];
+            const length = communityRouteDistance(a, b) || 1;
+            const fraction = Math.max(0, Math.min(1, (remaining - passed) / length));
+            const cut = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
+            result[0] = [cut].concat(line.slice(index));
+            remaining = 0;
+        }
+        return result.filter(line => line.length > 1);
+    }
+
+    function communityRouteTrimEnds(lines) {
+        let result = communityRouteTrimStart(lines, COMMUNITY_ROUTE_TRIM_METERS);
+        result = communityRouteTrimStart(
+            result.slice().reverse().map(line => line.slice().reverse()),
+            COMMUNITY_ROUTE_TRIM_METERS
+        ).reverse().map(line => line.slice().reverse());
+        return result;
+    }
 
     let lines;
     try { lines = JSON.parse(e.record.getString("trackJson")); }
