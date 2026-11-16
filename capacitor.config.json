@@ -2,6 +2,7 @@
   "appId": "com.emiliopousada.mtbcamboyapro",
   "appName": "MTB Camboya PRO",
   "webDir": "www",
+  "appendUserAgent": "MTBCamboyaPRO (+https://github.com/emiliopousada-svg/MTBPro)",
   "server": {
     "androidScheme": "https"
   },

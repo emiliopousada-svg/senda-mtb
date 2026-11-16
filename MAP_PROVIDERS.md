@@ -34,6 +34,7 @@ MTB Camboya PRO proporciona **cobertura cartográfica global**, adaptada a las n
 1. **OpenStreetMap Estándar (`tile.openstreetmap.org`):**
    * Se utiliza **exclusivamente en streaming en directo** con conectividad activa.
    * La aplicación **bloquea activamente** cualquier intento de volcado offline o precarga masiva sobre este dominio.
+   * La app nativa identifica sus solicitudes con `appendUserAgent` en `capacitor.config.json`; no se debe sustituir por un agente genérico. Un HTTP 403 puede requerir además que OSM desbloquee la IP o red afectada.
 2. **Descargas Offline Autorizadas (IGN España):**
    * La descarga de teselas por cuadrícula geográfica para uso sin conexión se limita a proveedores que lo autoricen expresamente, como el IGN (Instituto Geográfico Nacional de España).
    * Límite de seguridad de almacenamiento: **256 MB** (`MAX_DOWNLOADED_IGN_BYTES = 256 * 1024 * 1024`).
