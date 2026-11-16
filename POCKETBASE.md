@@ -13,9 +13,9 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 | `routes` | Rutas y actividades privadas sincronizadas por propietario. |
 | `map_pois` | Puntos de interés sincronizados por propietario. |
 | `live_locations` | Ubicación temporal de participantes de grupo durante una grabación. |
-| `mtb_groups`, `mtb_group_members`, `mtb_group_rankings`, `mtb_group_ranking_entries` | Grupos, membresías y clasificaciones; gestionados mediante hooks de grupos. |
+| `mtb_groups`, `mtb_group_members`, `mtb_group_ranking_entries` | Grupos, membresías y resultados de clasificación; gestionados mediante hooks de grupos. |
 | `community_routes`, `community_route_favorites`, `community_route_ratings`, `community_route_comments` | Rutas publicadas e interacciones sociales. |
-| `community_segments`, `community_segment_efforts`, `community_route_efforts`, `community_performance` | Segmentos y esfuerzos usados para el rendimiento de la comunidad. |
+| `community_segments`, `community_segment_efforts`, `community_route_efforts` | Segmentos y marcas de rendimiento de la comunidad. |
 | `mtb_group_competitions`, `mtb_group_competition_entries`, `mtb_group_seasons`, `mtb_group_season_awards` | Colecciones propuestas para desafíos, ligas de cuatro semanas, participación e historial de campeones; requieren instalar el módulo competitivo antes de habilitar su interfaz de escritura. |
 
 ## Límites de acceso recomendados
@@ -35,6 +35,10 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 La migración `pb_migrations/1794829123_create_mtb_user_preferences.js` crea `mtb_user_preferences` con reglas que limitan lectura, creación, modificación y borrado al propietario autenticado. Despliega la migración en el directorio de datos de PocketBase y ejecútala con `pocketbase migrate up` (o inicia PocketBase con las migraciones automáticas habilitadas) antes de publicar la versión web que la utiliza.
 
 La migración `pb_migrations/1794830184_add_private_user_profile_fields.js` añade, si faltan, `nickname` (máximo 32 caracteres), `weightKg` (0–250) y `age` (entero, 0–100), además de `avatar` (JPEG, máximo 256 KiB, miniaturas de 96 y 256 px). Cero representa un valor todavía no configurado; la app solo acepta peso de 25–250 kg y edad de 10–100 años. También deja el registro de `users` visible solo para su titular y permite actualizarlo solo al titular sin aceptar cambios de `groupCode`. El archivo de avatar no está protegido y puede descargarse con su URL directa, para que se muestre en grupos. No reemplaza campos ya existentes; comprueba tipos y límites en el panel PocketBase antes de aplicarla.
+
+La migración `pb_migrations/1794835000_create_mtb_app_collections.js` crea las colecciones activas de rutas privadas, POIs, ubicaciones en vivo, grupos, clasificaciones, rutas comunitarias, segmentos, valoraciones, favoritos, comentarios y marcas. Añade `groupCode` a `users` si falta y mantiene cerradas las colecciones internas de grupos; las lecturas públicas se limitan a rutas comunitarias publicadas y sus marcas/interacciones. Crea solo colecciones que no existan y conserva las ya existentes sin corregir sus campos o reglas. No tiene migración de reversión para evitar borrar datos. Haz una copia de seguridad antes de aplicarla.
+
+Las colecciones de retos y temporadas enumeradas arriba son propuestas y no las crea esta migración.
 
 La app conserva estas preferencias localmente y las sincroniza al iniciar sesión y cuando cambian: avisos de ruta, vibración, rotación y estilo del mapa, controles grandes, circunferencia de rueda, objetivo semanal, FTP y FC máxima, orden/visibilidad de métricas y orden de tarjetas del inicio. Si hay cambios simultáneos, prevalece la última escritura sincronizada. Las ubicaciones recientes, los dispositivos Bluetooth y los mapas descargados siguen siendo específicos del dispositivo.
 
