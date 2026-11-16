@@ -161,6 +161,8 @@ migrate((app) => {
             numberField("lat", -90, 90),
             numberField("lon", -180, 180),
             numberField("accuracy", 0, 10000),
+            { name: "created", type: "autodate", onCreate: true, onUpdate: false },
+            { name: "updated", type: "autodate", onCreate: true, onUpdate: true },
         ],
         indexes: [
             "CREATE UNIQUE INDEX idx_live_locations_owner ON live_locations (owner)",

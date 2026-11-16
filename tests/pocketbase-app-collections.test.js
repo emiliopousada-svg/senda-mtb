@@ -97,6 +97,8 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     assert.match(liveLocations.listRule, /@collection\.mtb_group_members\.group \?= groupCode/);
     assert.match(liveLocations.createRule, /@collection\.mtb_group_members\.user \?= @request\.auth\.id/);
     assert.match(liveLocations.updateRule, /@request\.body\.groupCode:changed = false/);
+    assert.equal(liveLocations.fields.getByName('created').type, 'autodate');
+    assert.equal(liveLocations.fields.getByName('updated').type, 'autodate');
 });
 
 test('PocketBase setup migration preserves collections that already exist', () => {
