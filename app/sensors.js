@@ -238,6 +238,7 @@ function initSensorConnections() {
             return;
         }
         localStorage.setItem('mtb_pro_wheel_circumference', String(value));
+        if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
     });
     $('sensor-hr-enabled').addEventListener('change', () => {
         if (isNativeApp()) nativeHrToggle(hrToggle.checked);

@@ -597,6 +597,8 @@
             <div class="card">
                 <h2>☁️ Cuenta y sincronización</h2>
                 <p class="hint" id="acc-status">Sin sesión: tus rutas se guardan solo en este móvil.</p>
+                <p class="hint" id="acc-preferences-status" role="status" aria-live="polite">Inicia sesión para sincronizar tus ajustes entre dispositivos.</p>
+                <p class="hint">Se sincronizan tus preferencias de uso. La ubicación GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
                 <p class="hint">Servidor de sincronización:</p>
                 <code id="acc-server" class="server-address" aria-live="polite">Sin servidor configurado</code>
                 <div id="acc-form">
@@ -697,10 +699,11 @@
                 <p>Descarga zonas del mapa topográfico IGN de España y Portugal. Los mapas online se consultan con conexión; su almacenamiento offline se habilitará cuando el proveedor autorice ese uso.</p>
     <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
     <select id="offline-region">
-        <option value="portugal">Portugal</option>
         <option value="andalucia">Andalucía</option>
         <option value="aragon">Aragón</option>
         <option value="asturias">Principado de Asturias</option>
+        <option value="baleares">Islas Baleares</option>
+        <option value="canarias">Canarias</option>
         <option value="cantabria">Cantabria</option>
         <option value="castilla-la-mancha">Castilla-La Mancha</option>
         <option value="castilla-y-leon">Castilla y León</option>
@@ -713,12 +716,14 @@
         <option value="navarra">Comunidad Foral de Navarra</option>
         <option value="pais-vasco">País Vasco</option>
         <option value="la-rioja">La Rioja</option>
+        <option value="portugal">Portugal (área continental)</option>
     </select>
     <label for="offline-detail" style="font-size:.8rem;color:#ddd;">Nivel de detalle</label>
     <select id="offline-detail">
         <option value="13" selected>Estándar (zoom 7–13)</option>
         <option value="14">Alto (zoom 7–14, ocupa bastante más)</option>
     </select>
+    <div id="offline-estimate-info" class="hint" style="margin: 8px 0; font-size: 0.85rem;"></div>
     <p class="hint">La descarga cubre el área geográfica aproximada de la comunidad y puede incluir zonas limítrofes. Se muestra el número de teselas antes de iniciar.</p>
     <div id="offline-progress"><div id="offline-progress-fill"></div></div>
     <div id="offline-progress-text">Preparado para descargar</div>
@@ -898,6 +903,7 @@
         <button class="nav-btn" data-page="0" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15m6-12v15"></path></svg></span><span>Mapa</span></button>
         <button class="nav-btn" data-page="2" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.4"></circle><path d="M3.5 20v-1.5a5.5 5.5 0 0 1 11 0V20zm12-5a4.5 4.5 0 0 1 5 4.5v.5h-4"></path></svg></span><span>Comunidad</span></button>
         <button class="nav-btn" data-page="1" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l5-5 3 2 6-8"></path><path d="M15 5h4v4"></path></svg></span><span>Stats</span></button>
+        <button class="nav-btn" data-page="4" type="button" aria-label="Perfil y ajustes" title="Perfil y ajustes"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"></circle><path d="M5.5 20v-1.4a6.5 6.5 0 0 1 13 0V20"></path></svg></span><span>Perfil</span></button>
     </nav>
 
     <div id="toast" role="status" aria-live="polite"></div>
@@ -1024,6 +1030,7 @@
     <script src="app/groups.js"></script>
     <script src="app/ui.js"></script>
     <script src="lib/native-app.js"></script>
+    <script src="app/cloud-preferences.js"></script>
     <script src="app/cloud.js"></script>
     <script src="app/community-social.js"></script>
     <script src="app/community-performance-ui.js"></script>

@@ -2,6 +2,17 @@
 
 //  GPS
 // ============================================================
+const GPS_MAX_ACC_M = typeof MAX_ACC_M !== 'undefined' ? MAX_ACC_M : 30;
+const GPS_MIN_STEP_M = typeof MIN_STEP_M !== 'undefined' ? MIN_STEP_M : 4;
+const GPS_MAX_SPEED_MS = typeof MAX_SPEED_MS !== 'undefined' ? MAX_SPEED_MS : 25;
+const geoDist = typeof dist === 'function' ? dist : function(a, b) {
+    const R = 6371000, r = Math.PI / 180;
+    const dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+    const s = Math.sin(dLat / 2) ** 2 +
+              Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+};
+
 const GPS_LOW_POWER_OPTIONS = { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 };
 const GPS_ACTIVE_OPTIONS = { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 };
 const GPS_FOLLOW_OPTIONS = { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 };
@@ -19,20 +30,20 @@ let lastGpsVisualUpdateAt = 0;
 let pendingRouteRenderPoints = [];
 
 function gpsSpeedFromFix(position, timestamp, accuracy) {
-    if (!Number.isFinite(timestamp) || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > MAX_ACC_M) return null;
+    if (!Number.isFinite(timestamp) || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > GPS_MAX_ACC_M) return null;
     const previous = lastGpsSpeedFix;
     if (!previous || timestamp <= previous.timestamp || timestamp - previous.timestamp > 10000) {
         lastGpsSpeedFix = { position, timestamp };
         return 0;
     }
 
-    const distance = dist(previous.position, position);
+    const distance = geoDist(previous.position, position);
     const elapsedSeconds = (timestamp - previous.timestamp) / 1000;
-    if (distance < MIN_STEP_M) return 0; // conserva el origen para acumular desplazamiento sin ruido
+    if (distance < GPS_MIN_STEP_M) return 0; // conserva el origen para acumular desplazamiento sin ruido
 
     lastGpsSpeedFix = { position, timestamp };
     const speedMs = distance / elapsedSeconds;
-    return Number.isFinite(speedMs) && speedMs <= MAX_SPEED_MS ? speedMs * 3.6 : 0;
+    return Number.isFinite(speedMs) && speedMs <= GPS_MAX_SPEED_MS ? speedMs * 3.6 : 0;
 }
 
 function isUsableAltitude(coords, previous, elapsedSeconds) {
@@ -231,14 +242,18 @@ async function resumeGpsAfterForeground() {
     }
 }
 
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-        gpsRecenterPending = true;
-        if (bgActive || !isRecording) clearGpsWatch();
-    }
-    else resumeGpsAfterForeground();
-});
-window.addEventListener('focus', resumeGpsAfterForeground);
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            gpsRecenterPending = true;
+            if (bgActive || !isRecording) clearGpsWatch();
+        }
+        else resumeGpsAfterForeground();
+    });
+}
+if (typeof window !== 'undefined') {
+    window.addEventListener('focus', resumeGpsAfterForeground);
+}
 
 function bearingBetween(from, to) {
     const rad = Math.PI / 180;
@@ -427,3 +442,17 @@ function onPos(pos) {
 }
 
 // ============================================================
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        bearingBetween,
+        isUsableAltitude,
+        gpsSpeedFromFix,
+        resetGpsSpeedFix: () => { lastGpsSpeedFix = null; },
+        GPS_ACTIVE_OPTIONS,
+        GPS_FOLLOW_OPTIONS,
+        GPS_LOW_POWER_OPTIONS,
+        GPS_MAX_ACC_M,
+        GPS_MIN_STEP_M,
+        GPS_MAX_SPEED_MS
+    };
+}

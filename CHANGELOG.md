@@ -1,0 +1,50 @@
+# Changelog
+
+Todas las novedades y cambios relevantes de **MTB Camboya PRO** se documentan en este archivo.  
+El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
+
+---
+
+## [0.1.0] - 2026-11-16
+
+### Añadido
+* **Aislamiento Total de Proyecto:**
+  * Creación del scaffold independiente para MTB Camboya PRO bajo el paquete Android `com.emiliopousada.mtbcamboyapro`.
+  * Base de datos local aislada en IndexedDB (`mtb_camboya_pro_db`, esquema v2) y claves de almacenamiento con prefijo exclusivo `mtb_pro_*`.
+  * Configuración de backend dedicada en `https://mtbpro.ddns.net` con hooks de PocketBase en `pb_hooks/`.
+* **Identidad Visual Premium:**
+  * Paleta oficial de colores: Fondo Negro grafito (`#101318`), Panel oscuro (`#202630`), Naranja deportivo (`#FF7417`) y Azul eléctrico (`#00B8FF`).
+* **Canalización de Build y Empaquetado:**
+  * Script `scripts/prepare-web.js` para generación de `www/` con dependencias 100% locales (Leaflet, Leaflet-Rotate, Chart.js) para funcionamiento offline sin depender de CDNs externas.
+  * Compilación con **esbuild** de módulos ES (`src/ble.js`, `src/fit-parser.mjs`, `src/native-app.mjs`) a formato IIFE autónomo.
+* **Motor Matemático y Estadístico (`app/statistics-engine.js`):**
+  * Cálculo geodésico de distancias con la fórmula de Haversine.
+  * Algoritmos de filtrado de ruido GPS (> 90 km/h) y suavizado altimétrico con umbral mínimo de 3 metros.
+  * Cálculo de VAM (Velocidad Ascensional Media en m/h) y clasificación automática de subidas y descensos.
+  * Distribución del tiempo en 5 zonas de frecuencia cardíaca y 7 zonas de potencia Coggan.
+* **Parser Binario de Ficheros FIT (`src/fit-parser.mjs`):**
+  * Soporte de importación de salidas grabadas con ciclocomputadores Garmin, Wahoo y Bryton.
+* **Telemetría Bluetooth Low Energy (`src/ble.js` y `app/sensors.js`):**
+  * Soporte nativo multiplexado en Android/Capacitor para Pulsómetro (HRM `0x180D`), Sensores de Cadencia y Velocidad (CSC `0x1816`) y Potenciómetros (Cycling Power `0x1818`).
+* **Grabación GPS, Background y Resiliencia de Ciclo de Vida (Fase 2):**
+  * Servicio en primer plano (*Foreground Service*) de tipo `location` en Android mediante `@capacitor-community/background-geolocation` para grabación continua con pantalla apagada.
+  * Persistencia inmediata de borrador en IndexedDB en eventos `visibilitychange: hidden` y `pagehide` para evitar pérdida de datos ante cierres forzados por el sistema operativo o falta de batería.
+  * Reconstrucción limpia de tramos de ruta (`buildSegments`) y marcado de salto (`resumeBreak`) al recuperar grabaciones interrumpidas sin dibujar líneas artificiales a través del vacío.
+  * Filtrado geodésico de precisión GPS (`MAX_ACC_M = 30`), descarte de rebotes en parada (`MIN_STEP_M = 4`) y rechazo de velocidades imposibles (`MAX_SPEED_MS = 25`).
+  * Filtrado barométrico y de altitud vertical (`isUsableAltitude`) con descarte de variaciones verticales anómalas (> 5 m/s).
+* **Consolidación de Mapas Offline y Control de Cuotas (Fase 3):**
+  * Catálogo unificado de 18 regiones con coordenadas geográficas verificadas en `REGION_BOUNDS` (todas las CC.AA. de España, Baleares, Canarias y Portugal continental).
+  * Función de estimación previa de teselas y tamaño (`estimateRegionTileCount`) con aviso en la interfaz en tiempo real antes de descargar.
+  * Protección proactiva contra desbordamiento de cuota: bloqueo preventivo del botón de descarga si una combinación región/zoom supera las 25.000 teselas (`MAX_TILES_PER_DOWNLOAD`).
+  * Aplicación estricta de las políticas de uso de proveedores (`ONLINE_TILE_OFFLINE_CACHE_ENABLED = false` para salvaguardar las directrices de la OpenStreetMap Foundation).
+  * Control transaccional atómico de presupuesto en IndexedDB (256 MiB máximos con reserva de 128 MiB para el dispositivo).
+* **Suite de Pruebas Automatizadas:**
+  * 50 tests unitarios integrados con `node --test` verificando ciclo de vida GPS, telemetría, mapas offline, importación de archivos, resistencia a cierres en IndexedDB y caché del Service Worker.
+* **Documentación Maestra del Proyecto:**
+  * `PRODUCT_SPEC.md`: Especificación funcional completa, pantallas y pilares del producto.
+  * `ARCHITECTURE.md`: Capas del sistema, flujos unidireccionales y módulos de dominio.
+  * `DATA_MODEL.md`: Esquemas de persistencia local en IndexedDB y colecciones remotas en PocketBase.
+  * `MAP_PROVIDERS.md`: Catálogo de capas cartográficas, atribuciones y políticas de uso offline.
+  * `SECURITY_AND_PRIVACY.md`: Política de seguridad, permisos de Android y Guardian Mode.
+  * `TEST_PLAN.md`: Matriz de pruebas por fases del roadmap y criterios de aceptación.
+  * `CHANGELOG.md`: Historial de versiones y cambios.

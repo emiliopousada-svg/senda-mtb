@@ -30,9 +30,10 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 | Comparación de rutas | Implementada: compara perfiles de altitud y métricas de dos rutas guardadas. |
 | Récords y logros | Ya disponible para récords personales y medallas. |
 | Panel de sensores Bluetooth | Ya disponible; necesita un sensor BLE compatible y permisos del dispositivo. |
+| Sincronización de preferencias | Sincronización privada por cuenta para ajustes de mapa, panel, métricas y entrenamiento; requiere aplicar la migración PocketBase `mtb_user_preferences`. |
 | Clasificaciones de grupos | Ya disponible cuando se configura un backend PocketBase propio y la cuenta tiene acceso. |
 | Menú Comunidad | Implementado con seis pestañas: Ranking, Segmentos, Desafíos, Mi grupo, Logros y Actividad. |
-| Navegación principal | Cinco accesos inferiores (Inicio, Rutas, Mapa, Comunidad y Stats); Seguridad, Garaje, CAMBOYA AI, Calendario, Sensores y Ajustes se reúnen en Más herramientas. Seguridad, Garaje y Calendario son accesos conceptuales hasta que se implementen. |
+| Navegación principal | Seis accesos inferiores (Inicio, Rutas, Mapa, Comunidad, Stats y Perfil/Ajustes); Seguridad, Garaje, CAMBOYA AI, Calendario y Sensores se reúnen en Más herramientas. Seguridad, Garaje y Calendario son accesos conceptuales hasta que se implementen. |
 | Liga privada de cuatro semanas | Diseño y puntuación base documentados; requiere desplegar colecciones, validadores, temporadas e historial del módulo competitivo en PocketBase antes de habilitar escrituras. |
 | Modo nocturno automático | Pendiente de programación horaria; la interfaz actual mantiene el tema oscuro. |
 | Transiciones entre pantallas | Disponibles en el carrusel de páginas, con soporte de movimiento reducido del sistema. |

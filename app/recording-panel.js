@@ -46,6 +46,7 @@ function applyRecordingPanelPreferences() {
 function saveRecordingPanelPreferences() {
     try { localStorage.setItem(RECORDING_PANEL_KEY, JSON.stringify(recordingPanelPreferences)); }
     catch (error) { console.warn('No se pudo guardar el orden de las métricas:', error); }
+    if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
 }
 
 function saveRecordingPanelVisibility() {
@@ -54,6 +55,7 @@ function saveRecordingPanelVisibility() {
         .map(box => box.dataset.metric);
     try { localStorage.setItem(RECORDING_PANEL_VISIBLE_KEY, JSON.stringify(visible)); }
     catch (error) { console.warn('No se pudo guardar la visibilidad de las métricas:', error); }
+    if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
 }
 
 function renderRecordingPanelSettings() {

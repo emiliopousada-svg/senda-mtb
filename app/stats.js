@@ -148,7 +148,7 @@ function statsLoadPreferences() {
     $('stats-power-ftp').value = statsPowerFtp ?? '';
 }
 
-function statsSavePreferences(ageChanged = false) {
+function statsSavePreferences(ageChanged = false, syncCloud = true) {
     if (statsAge !== null) statsHeartRateMax = 220 - statsAge;
     else if (ageChanged) statsHeartRateMax = null;
     statsPowerFtp = statsConfiguredNumber('stats-power-ftp', 50, 800);
@@ -166,6 +166,7 @@ function statsSavePreferences(ageChanged = false) {
         console.warn('No se pudieron guardar las preferencias de estadísticas:', error);
         toast('No se pudieron guardar los valores de peso, frecuencia cardíaca y FTP.');
     }
+    if (syncCloud && typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
     statsAnalysisCache = new WeakMap();
     refreshStats();
 }
@@ -180,7 +181,7 @@ function statsApplyAccountProfile(weightKg, age) {
     if (validAge) statsAge = years;
     $('stats-weight').textContent = statsWeightKg === null ? 'Sin configurar' : `${statsWeightKg} kg`;
     $('stats-age').textContent = statsAge === null ? 'Sin configurar' : `${statsAge} años`;
-    statsSavePreferences(validAge);
+    statsSavePreferences(validAge, false);
 }
 
 function statsRenderPerformance(summary, analyses) {
@@ -1159,6 +1160,7 @@ function initCharts() {
         const value = Math.max(5, Math.min(1000, Math.round(Number(event.target.value) || 100)));
         event.target.value = String(value);
         localStorage.setItem('mtb_pro_weekly_goal_km', String(value));
+        if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
         statsRenderDashboard();
     });
     $('stats-profile-route').addEventListener('change', () => {

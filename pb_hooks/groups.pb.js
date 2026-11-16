@@ -222,7 +222,7 @@ routerAdd("GET", "/api/mtb/groups/live", (e) => {
 }, $apis.requireAuth("users"));
 
 routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
-    const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries, getSeasonInfo } = require(`${__hooks}/groups_utils.js`);
     try {
         const user = $app.findRecordById("users", e.auth.id);
         const groupId = user.getString("groupCode");
@@ -232,6 +232,7 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
             return e.json(403, { message: "Ya no tienes autorización para consultar este grupo." });
         }
 
+        const season = getSeasonInfo(Date.now());
         const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "");
         const entries = findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + safeGroupId + '"', "");
         const rankingsByUser = groupRankingSummaryFromEntries(entries);
@@ -245,12 +246,16 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
                 isMe: userId === user.id,
                 maxDistanceKm: ranking.maxDistanceKm ?? null,
                 distanceMovingTimeSec: ranking.distanceMovingTimeSec ?? null,
+                maxElevationGainM: ranking.maxElevationGainM ?? null,
                 bestMovingTimeSec: ranking.bestMovingTimeSec ?? null,
-                maxSpeedKmh: ranking.maxSpeedKmh ?? null
+                maxSpeedKmh: ranking.maxSpeedKmh ?? null,
+                activityCount: ranking.activityCount ?? 0,
+                leaguePoints: ranking.leaguePoints ?? 0
             };
         });
         return e.json(200, {
             group: { id: safeGroupId, name: $app.findRecordById("mtb_groups", safeGroupId).getString("name") },
+            season,
             members
         });
     } catch (err) {
@@ -261,16 +266,18 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
 routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
     const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries } = require(`${__hooks}/groups_utils.js`);
     try {
-        const body = new DynamicModel({ clientId: 0, distanceKm: 0.1, movingTimeSec: 0.1, maxSpeedKmh: 0.1 });
+        const body = new DynamicModel({ clientId: 0, distanceKm: 0.1, movingTimeSec: 0.1, maxSpeedKmh: 0.1, elevationGain: 0.1 });
         e.bindBody(body);
         const clientId = Number(body.clientId);
         const distanceKm = Number(body.distanceKm);
         const movingTimeSec = Number(body.movingTimeSec);
         const maxSpeedKmh = Number(body.maxSpeedKmh);
+        const elevationGain = Number(body.elevationGain) || 0;
         if (!Number.isFinite(clientId) || clientId <= 0 || Math.floor(clientId) !== clientId || clientId > 9007199254740991
             || !Number.isFinite(distanceKm) || distanceKm < 0 || distanceKm > 1000
             || !Number.isFinite(movingTimeSec) || movingTimeSec < 0 || movingTimeSec > 604800
             || !Number.isFinite(maxSpeedKmh) || maxSpeedKmh < 0 || maxSpeedKmh > 150
+            || !Number.isFinite(elevationGain) || elevationGain < 0 || elevationGain > 10000
             || (distanceKm === 0 && maxSpeedKmh === 0)) {
             return e.json(400, { message: "Las marcas de la actividad no son válidas." });
         }
@@ -291,8 +298,11 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         const existingEntries = findAllRecordsByFilter("mtb_group_ranking_entries", filter, "");
         const previousRanking = groupRankingSummaryFromEntries(existingEntries)[user.id] || {
             maxDistanceKm: 0,
+            maxElevationGainM: 0,
             bestMovingTimeSec: 0,
-            maxSpeedKmh: 0
+            maxSpeedKmh: 0,
+            activityCount: 0,
+            leaguePoints: 0
         };
         const existing = $app.findRecordsByFilter(
             "mtb_group_ranking_entries",
@@ -309,6 +319,7 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         entry.set("distanceKm", distanceKm);
         entry.set("movingTimeSec", movingTimeSec);
         entry.set("maxSpeedKmh", maxSpeedKmh);
+        entry.set("elevationGain", elevationGain);
         $app.save(entry);
 
         const entriesAfter = existingEntries.filter(item => item.getFloat("clientId") !== clientId);
@@ -317,9 +328,13 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         return e.json(200, {
             maxDistanceKm: ranking.maxDistanceKm,
             distanceMovingTimeSec: ranking.distanceMovingTimeSec,
+            maxElevationGainM: ranking.maxElevationGainM,
             bestMovingTimeSec: ranking.bestMovingTimeSec,
             maxSpeedKmh: ranking.maxSpeedKmh,
+            activityCount: ranking.activityCount,
+            leaguePoints: ranking.leaguePoints,
             newDistanceRecord: distanceKm > previousRanking.maxDistanceKm,
+            newAscentRecord: elevationGain > (previousRanking.maxElevationGainM || 0),
             newTimeRecord: movingTimeSec > previousRanking.bestMovingTimeSec,
             newSpeedRecord: maxSpeedKmh > previousRanking.maxSpeedKmh
         });

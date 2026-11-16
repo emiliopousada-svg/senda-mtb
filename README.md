@@ -8,6 +8,20 @@ Versión indicada en el proyecto: **0.1.0**
 
 MTB Camboya PRO 0.1.0 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
 
+## Documentación del proyecto
+
+El proyecto cuenta con especificaciones completas para cada área técnica y de producto:
+
+- [Especificación de Producto (PRODUCT_SPEC.md)](PRODUCT_SPEC.md): Visión, pilares, mapa de pantallas, reglas funcionales y de negocio.
+- [Arquitectura del Sistema (ARCHITECTURE.md)](ARCHITECTURE.md): Capas modulares, motores de dominio, flujo unidireccional y build.
+- [Modelo de Datos (DATA_MODEL.md)](DATA_MODEL.md): Entidades y esquemas de IndexedDB y colecciones remotas de PocketBase.
+- [Proveedores de Mapas y Política Offline (MAP_PROVIDERS.md)](MAP_PROVIDERS.md): Capas, condiciones de uso de teselas y límites offline.
+- [Seguridad y Privacidad (SECURITY_AND_PRIVACY.md)](SECURITY_AND_PRIVACY.md): Aislamiento, permisos Android, Guardian Mode y protección de ubicación.
+- [Plan de Pruebas (TEST_PLAN.md)](TEST_PLAN.md): Pruebas automatizadas, de hardware y criterios de aceptación por fase.
+- [Historial de Cambios (CHANGELOG.md)](CHANGELOG.md): Registro de versiones y cambios del proyecto.
+- [Plan de Extracción (EXTRACTION_PLAN.md)](EXTRACTION_PLAN.md): Trazabilidad de código y aislamiento respecto al repositorio original.
+- [Guía de PocketBase (POCKETBASE.md)](POCKETBASE.md): Configuración de colecciones y hooks en el servidor independiente.
+
 ## Desarrollo
 
 Requisitos: Node.js 22; para Android, JDK 21, Android SDK 36 y Gradle 8.13.

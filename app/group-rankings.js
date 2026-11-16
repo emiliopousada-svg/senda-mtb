@@ -53,10 +53,12 @@ async function loadGroupRankings() {
     if (!Cloud.loggedIn() || !groupJoined) {
         groupRankingMembers = [];
         renderGroupMetricRanking('group-ranking-distance', 'maxDistanceKm', () => '');
+        renderGroupMetricRanking('group-ranking-ascent', 'maxElevationGainM', () => '');
         renderGroupMetricRanking('group-ranking-speed', 'maxSpeedKmh', () => '');
         renderGroupMetricRanking('group-ranking-time', 'bestMovingTimeSec', () => '');
-        ['group-ranking-ascent', 'group-ranking-segments', 'group-ranking-consistency', 'group-ranking-points']
-            .forEach(id => renderGroupRankingPending(id, 'Se activará con las temporadas de la liga.'));
+        renderGroupMetricRanking('group-ranking-consistency', 'activityCount', () => '');
+        renderGroupMetricRanking('group-ranking-points', 'leaguePoints', () => '');
+        renderGroupRankingPending('group-ranking-segments', 'Se activará al unirte a un grupo.');
         status.textContent = 'Inicia sesión y únete a un grupo para consultar sus marcas.';
         return;
     }
@@ -64,10 +66,12 @@ async function loadGroupRankings() {
     status.textContent = 'Cargando marcas del grupo…';
     groupRankingMembers = [];
     renderGroupMetricRanking('group-ranking-distance', 'maxDistanceKm', () => '');
+    renderGroupMetricRanking('group-ranking-ascent', 'maxElevationGainM', () => '');
     renderGroupMetricRanking('group-ranking-speed', 'maxSpeedKmh', () => '');
     renderGroupMetricRanking('group-ranking-time', 'bestMovingTimeSec', () => '');
-    ['group-ranking-ascent', 'group-ranking-segments', 'group-ranking-consistency', 'group-ranking-points']
-        .forEach(id => renderGroupRankingPending(id, 'Preparando clasificación…'));
+    renderGroupMetricRanking('group-ranking-consistency', 'activityCount', () => '');
+    renderGroupMetricRanking('group-ranking-points', 'leaguePoints', () => '');
+    renderGroupRankingPending('group-ranking-segments', 'Cargando segmentos…');
     const requestedGroupId = groupName();
     try {
         const result = await cloudApi('/api/mtb/groups/rankings');
@@ -77,11 +81,17 @@ async function loadGroupRankings() {
             const duration = Number(member.distanceMovingTimeSec);
             return `${Number(member.maxDistanceKm).toFixed(1)} km${duration > 0 ? ` · ${fmtDur(duration)}` : ''}`;
         });
+        renderGroupMetricRanking('group-ranking-ascent', 'maxElevationGainM', member => `+${Math.round(Number(member.maxElevationGainM))} m`);
         renderGroupMetricRanking('group-ranking-speed', 'maxSpeedKmh', member => `${Number(member.maxSpeedKmh).toFixed(1)} km/h`);
         renderGroupMetricRanking('group-ranking-time', 'bestMovingTimeSec', member => fmtDur(Number(member.bestMovingTimeSec)));
-        ['group-ranking-ascent', 'group-ranking-segments', 'group-ranking-consistency', 'group-ranking-points']
-            .forEach(id => renderGroupRankingPending(id, 'Necesita los datos y reglas de la temporada de cuatro semanas.'));
-        status.textContent = `${result.group.name} · marcas de todos los tiempos`;
+        renderGroupMetricRanking('group-ranking-consistency', 'activityCount', member => `${member.activityCount} ${member.activityCount === 1 ? 'salida' : 'salidas'}`);
+        renderGroupMetricRanking('group-ranking-points', 'leaguePoints', member => `${Math.round(Number(member.leaguePoints))} pts`);
+        renderGroupRankingPending('group-ranking-segments', 'Crea segmentos comunitarios para registrar los tiempos del grupo.');
+
+        const seasonText = result.season
+            ? ` · Temporada ${result.season.seasonNumber} (Semana ${result.season.currentWeek}/4)`
+            : ' · clasificación del grupo';
+        status.textContent = `${result.group.name}${seasonText}`;
     } catch (error) {
         console.warn('No se pudo cargar el ranking del grupo:', error);
         status.textContent = error.status === 404
@@ -118,6 +128,9 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         ? analysis.movingTimeSec
         : Number(route.movingTimeSec) || 0;
     const maxSpeedKmh = analysis && Number.isFinite(analysis.maxSpeed) ? analysis.maxSpeed : 0;
+    const elevationGain = analysis && Number.isFinite(analysis.elevationGain)
+        ? analysis.elevationGain
+        : Number(route.elevationGain) || 0;
     if (distanceKm <= 0 && maxSpeedKmh <= 0) {
         const error = new Error('Esta actividad no tiene marcas válidas para compartir.');
         if (automatic) throw error;
@@ -126,6 +139,7 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
     }
     const details = [];
     if (distanceKm > 0) details.push(`Distancia: ${distanceKm.toFixed(1)} km`);
+    if (elevationGain > 0) details.push(`Desnivel positivo: +${Math.round(elevationGain)} m`);
     if (movingTimeSec > 0) details.push(`Tiempo en movimiento: ${fmtDur(movingTimeSec)}`);
     if (maxSpeedKmh > 0) details.push(`Velocidad punta: ${maxSpeedKmh.toFixed(1)} km/h`);
     if (button) button.disabled = true;
@@ -162,7 +176,8 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
             clientId,
             distanceKm,
             movingTimeSec,
-            maxSpeedKmh
+            maxSpeedKmh,
+            elevationGain
         });
         const previousRankingGroupId = route.groupRankingGroupId;
         route.groupRankingGroupId = activeGroupId;
@@ -177,6 +192,7 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         }
         const records = [];
         if (result.newDistanceRecord) records.push('nueva actividad más larga');
+        if (result.newAscentRecord) records.push('mayor desnivel');
         if (result.newTimeRecord) records.push('mayor tiempo en movimiento');
         if (result.newSpeedRecord) records.push('nueva velocidad punta');
         toast(automatic

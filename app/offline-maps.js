@@ -14,6 +14,12 @@ const MAX_CACHED_ONLINE_TILES = 2500;
 const ONLINE_TILE_OFFLINE_CACHE_ENABLED = false;
 const MAX_DOWNLOADED_IGN_TILES = 30000;
 const MAX_TILES_PER_DOWNLOAD = 25000;
+const OFFLINE_BYTE_LIMIT = typeof MAX_DOWNLOADED_IGN_BYTES !== 'undefined'
+    ? MAX_DOWNLOADED_IGN_BYTES
+    : 256 * 1024 * 1024;
+const OFFLINE_RESERVE_LIMIT = typeof OFFLINE_STORAGE_RESERVE_BYTES !== 'undefined'
+    ? OFFLINE_STORAGE_RESERVE_BYTES
+    : 128 * 1024 * 1024;
 const OFFLINE_STATS_RECONCILE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 const IGN_TILE_URL = 'https://tms-mapa-raster.ign.es/1.0.0/mapa-raster/{z}/{x}/{ty}.jpeg';
 const MAP_STYLE_NAMES = {
@@ -28,10 +34,10 @@ const DEFAULT_MAP_STYLE = 'topographic';
 const MAP_STYLE_TRANSITION_TIMEOUT_MS = 12000;
 function selectedMapStyle() {
     let value = null;
-    try { value = localStorage.getItem(MAP_STYLE_KEY); } catch (e) {}
+    try { value = typeof localStorage !== 'undefined' ? localStorage.getItem(MAP_STYLE_KEY) : null; } catch (e) {}
     return Object.prototype.hasOwnProperty.call(MAP_STYLE_NAMES, value) ? value : DEFAULT_MAP_STYLE;
 }
-const MAP_RETINA = window.devicePixelRatio >= 2;
+const MAP_RETINA = typeof window !== 'undefined' && window.devicePixelRatio >= 2;
 const MAP_TILE_ZOOM_OFFSET = MAP_RETINA ? 1 : 0;
 const MAP_TILE_SIZE = MAP_RETINA ? 128 : 256;
 const MAP_MAX_ZOOM = 20;
@@ -80,7 +86,7 @@ async function getOfflineTile(z, x, y) {
     });
     return await read(OFFLINE_STORE) || await read(AUTOMATIC_IGN_STORE);
 }
-async function saveOfflineTile(z, x, y, blob, automatic = false, downloadedByteLimit = MAX_DOWNLOADED_IGN_BYTES) {
+async function saveOfflineTile(z, x, y, blob, automatic = false, downloadedByteLimit = OFFLINE_BYTE_LIMIT) {
     const db = await openOfflineDb();
     return new Promise((resolve, reject) => {
         const storeName = automatic ? AUTOMATIC_IGN_STORE : OFFLINE_STORE;
@@ -273,7 +279,7 @@ async function countCachedOnlineTiles() {
     });
 }
 function ignTileUrl(z, x, y) { const tmsY = Math.pow(2, z) - 1 - y; return IGN_TILE_URL.replace('{z}', z).replace('{x}', x).replace('{ty}', tmsY); }
-async function fetchAndStoreTile(z, x, y, automatic = false, downloadedByteLimit = MAX_DOWNLOADED_IGN_BYTES) {
+async function fetchAndStoreTile(z, x, y, automatic = false, downloadedByteLimit = OFFLINE_BYTE_LIMIT) {
     const key = tileKey(z, x, y);
     const db = await openOfflineDb();
     const manual = await new Promise((resolve, reject) => {
@@ -623,26 +629,47 @@ function applyMapStyle() {
     }
 }
 
-// Rectángulos aproximados para descargar una comunidad cada vez.
+// Rectángulos geográficos para descargar mapas offline por comunidad o región.
+const REGION_BOUNDS = {
+    andalucia: [{ west: -7.55, east: -1.60, south: 35.90, north: 38.75 }],
+    aragon: [{ west: -1.80, east: 0.80, south: 39.80, north: 42.95 }],
+    asturias: [{ west: -7.20, east: -4.50, south: 43.10, north: 43.70 }],
+    baleares: [{ west: 1.15, east: 4.35, south: 38.60, north: 40.10 }],
+    canarias: [{ west: -18.20, east: -13.30, south: 27.60, north: 29.50 }],
+    cantabria: [{ west: -4.90, east: -3.10, south: 43.00, north: 43.65 }],
+    'castilla-la-mancha': [{ west: -5.40, east: -1.30, south: 38.00, north: 41.35 }],
+    'castilla-y-leon': [{ west: -7.10, east: -1.75, south: 40.00, north: 43.30 }],
+    cataluna: [{ west: 0.15, east: 3.35, south: 40.50, north: 42.90 }],
+    'comunidad-valenciana': [{ west: -1.55, east: 0.55, south: 37.80, north: 40.80 }],
+    extremadura: [{ west: -7.55, east: -4.50, south: 37.90, north: 40.50 }],
+    galicia: [{ west: -9.30, east: -6.70, south: 41.80, north: 43.85 }],
+    madrid: [{ west: -4.60, east: -3.00, south: 39.90, north: 41.20 }],
+    murcia: [{ west: -2.40, east: -0.50, south: 37.35, north: 38.80 }],
+    navarra: [{ west: -2.60, east: -0.70, south: 41.90, north: 43.30 }],
+    'pais-vasco': [{ west: -3.50, east: -1.70, south: 42.40, north: 43.50 }],
+    'la-rioja': [{ west: -3.20, east: -1.60, south: 41.90, north: 42.70 }],
+    portugal: [{ west: -9.55, east: -6.18, south: 36.95, north: 42.15 }]
+};
+
+function estimateRegionTileCount(region, maxZoom) {
+    const areas = REGION_BOUNDS[region];
+    if (!areas) return null;
+    const xt = (lon, z) => Math.floor((lon + 180) / 360 * Math.pow(2, z));
+    const yt = (lat, z) => Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+    const out = new Set();
+    for (let z = 7; z <= maxZoom; z++) {
+        for (const { west, east, south, north } of areas) {
+            const x1 = xt(west, z), x2 = xt(east, z), y1 = yt(north, z), y2 = yt(south, z);
+            for (let x = x1; x <= x2; x++) {
+                for (let y = y1; y <= y2; y++) out.add(`${z}/${x}/${y}`);
+            }
+        }
+    }
+    return out.size;
+}
+
 function regionTiles(region, maxZoom) {
-    const bounds = {
-        andalucia: [{ west: -7.55, east: -1.60, south: 35.90, north: 38.75 }],
-        aragon: [{ west: -1.80, east: 0.80, south: 39.80, north: 42.95 }],
-        asturias: [{ west: -7.20, east: -4.50, south: 43.10, north: 43.70 }],
-        cantabria: [{ west: -4.90, east: -3.10, south: 43.00, north: 43.65 }],
-        'castilla-la-mancha': [{ west: -5.40, east: -1.30, south: 38.00, north: 41.35 }],
-        'castilla-y-leon': [{ west: -7.10, east: -1.75, south: 40.00, north: 43.30 }],
-        cataluna: [{ west: 0.15, east: 3.35, south: 40.50, north: 42.90 }],
-        'comunidad-valenciana': [{ west: -1.55, east: 0.55, south: 37.80, north: 40.80 }],
-        extremadura: [{ west: -7.55, east: -4.50, south: 37.90, north: 40.50 }],
-        galicia: [{ west: -9.30, east: -6.70, south: 41.80, north: 43.85 }],
-        madrid: [{ west: -4.60, east: -3.00, south: 39.90, north: 41.20 }],
-        murcia: [{ west: -2.40, east: -0.50, south: 37.35, north: 38.80 }],
-        navarra: [{ west: -2.60, east: -0.70, south: 41.90, north: 43.30 }],
-        'pais-vasco': [{ west: -3.50, east: -1.70, south: 42.40, north: 43.50 }],
-        'la-rioja': [{ west: -3.20, east: -1.60, south: 41.90, north: 42.70 }]
-    };
-    const areas = bounds[region];
+    const areas = REGION_BOUNDS[region];
     if (!areas) throw new Error('La comunidad seleccionada no tiene un área de descarga definida.');
     const out = new Map();
     const xt = (lon, z) => Math.floor((lon + 180) / 360 * Math.pow(2, z));
@@ -650,12 +677,13 @@ function regionTiles(region, maxZoom) {
     for (let z = 7; z <= maxZoom; z++) {
         for (const { west, east, south, north } of areas) {
             const x1 = xt(west, z), x2 = xt(east, z), y1 = yt(north, z), y2 = yt(south, z);
-            const candidateCount = (x2 - x1 + 1) * (y2 - y1 + 1);
-            if (out.size + candidateCount > MAX_TILES_PER_DOWNLOAD) {
-                throw new Error(`La selección supera el límite de ${MAX_TILES_PER_DOWNLOAD.toLocaleString('es-ES')} teselas por descarga.`);
-            }
             for (let x = x1; x <= x2; x++) {
-                for (let y = y1; y <= y2; y++) out.set(`${z}/${x}/${y}`, { z, x, y });
+                for (let y = y1; y <= y2; y++) {
+                    out.set(`${z}/${x}/${y}`, { z, x, y });
+                    if (out.size > MAX_TILES_PER_DOWNLOAD) {
+                        throw new Error(`La selección supera el límite de ${MAX_TILES_PER_DOWNLOAD.toLocaleString('es-ES')} teselas por descarga. Elige nivel de detalle estándar (zoom 7–13) o una zona más pequeña.`);
+                    }
+                }
             }
         }
     }
@@ -691,15 +719,15 @@ function formatOfflineBytes(bytes) {
 }
 
 async function downloadedIgnBudget(stats) {
-    let limitBytes = MAX_DOWNLOADED_IGN_BYTES;
+    let limitBytes = OFFLINE_BYTE_LIMIT;
     let note = '';
     if (navigator.storage && navigator.storage.estimate) {
         try {
             const estimate = await navigator.storage.estimate();
             if (Number.isFinite(estimate.quota) && Number.isFinite(estimate.usage)) {
-                const availableBytes = Math.max(0, estimate.quota - estimate.usage - OFFLINE_STORAGE_RESERVE_BYTES);
+                const availableBytes = Math.max(0, estimate.quota - estimate.usage - OFFLINE_RESERVE_LIMIT);
                 limitBytes = Math.min(limitBytes, stats.bytes + availableBytes);
-                note = ` La cuota del dispositivo deja ${formatOfflineBytes(availableBytes)} para mapas tras reservar ${formatOfflineBytes(OFFLINE_STORAGE_RESERVE_BYTES)} para el resto de datos y cachés.`;
+                note = ` La cuota del dispositivo deja ${formatOfflineBytes(availableBytes)} para mapas tras reservar ${formatOfflineBytes(OFFLINE_RESERVE_LIMIT)} para el resto de datos y cachés.`;
             }
         } catch (error) {
             console.warn('No se pudo estimar el espacio de mapas offline:', error);
@@ -711,7 +739,7 @@ async function downloadedIgnBudget(stats) {
 function setOfflineProgress(done, total, errors, stats = null) {
     const pct = total ? Math.round(done / total * 100) : 0;
     $('offline-progress-fill').style.width = pct + '%';
-    const storage = stats ? ` · ${formatOfflineBytes(stats.bytes)} / ${formatOfflineBytes(MAX_DOWNLOADED_IGN_BYTES)}` : '';
+    const storage = stats ? ` · ${formatOfflineBytes(stats.bytes)} / ${formatOfflineBytes(OFFLINE_BYTE_LIMIT)}` : '';
     $('offline-progress-text').textContent = `${done.toLocaleString('es-ES')} / ${total.toLocaleString('es-ES')} teselas (${pct}%)${errors ? ` · ${errors} errores` : ''}${storage}`;
 }
 async function downloadRegionOffline() {
@@ -833,7 +861,44 @@ async function downloadTileSetOffline(tiles, regionName, detailName, downloadBut
         downloadButton.disabled = false;
     }
 }
+function updateOfflineEstimateUI() {
+    const regionSelect = $('offline-region');
+    const detailSelect = $('offline-detail');
+    const estimateInfo = $('offline-estimate-info');
+    const downloadBtn = $('btn-download-region');
+    if (!regionSelect || !detailSelect || !estimateInfo) return;
+
+    const region = regionSelect.value;
+    const maxZoom = Number(detailSelect.value) || 13;
+    const count = estimateRegionTileCount(region, maxZoom);
+
+    if (count === null) {
+        estimateInfo.textContent = 'Selecciona una región válida.';
+        estimateInfo.style.color = '#ff6b6b';
+        if (downloadBtn) downloadBtn.disabled = true;
+        return;
+    }
+
+    if (count > MAX_TILES_PER_DOWNLOAD) {
+        estimateInfo.innerHTML = `⚠️ <strong>Límite excedido:</strong> ~${count.toLocaleString('es-ES')} teselas estimadas (máx. ${MAX_TILES_PER_DOWNLOAD.toLocaleString('es-ES')}). Te recomendamos detalle estándar (zoom 7–13) o descargar solo la vista visible.`;
+        estimateInfo.style.color = '#ffaa44';
+        if (downloadBtn && !offlineDownloadRunning) {
+            downloadBtn.disabled = true;
+            downloadBtn.title = 'Límite de teselas por descarga excedido para esta combinación';
+        }
+    } else {
+        const estBytes = count * 9200; // ~9 KB de promedio real por tesela IGN
+        estimateInfo.innerHTML = `Estimación: <strong>${count.toLocaleString('es-ES')} teselas</strong> (~${formatOfflineBytes(estBytes)}) para esta región.`;
+        estimateInfo.style.color = '#00B8FF';
+        if (downloadBtn && !offlineDownloadRunning) {
+            downloadBtn.disabled = false;
+            downloadBtn.removeAttribute('title');
+        }
+    }
+}
+
 async function openOfflineMaps() {
+    updateOfflineEstimateUI();
     // Actualiza el espacio local al entrar en Ajustes.
     try {
         const [stats, automaticCount, onlineCount] = await Promise.all([
@@ -853,61 +918,54 @@ async function openOfflineMaps() {
         $('offline-storage-note').textContent = 'El almacenamiento local aún no está inicializado.';
     }
 }
-$('btn-download-region').addEventListener('click', downloadRegionOffline);
-$('btn-download-visible-detail').addEventListener('click', downloadVisibleDetailOffline);
-$('btn-cancel-download').addEventListener('click', () => { stopOfflineDownload = true; $('offline-storage-note').textContent = 'Parando la descarga…'; });
+if (typeof $ === 'function') {
+    $('btn-download-region')?.addEventListener('click', downloadRegionOffline);
+    $('btn-download-visible-detail')?.addEventListener('click', downloadVisibleDetailOffline);
+    $('btn-cancel-download')?.addEventListener('click', () => { stopOfflineDownload = true; $('offline-storage-note').textContent = 'Parando la descarga…'; });
+    $('offline-region')?.addEventListener('change', updateOfflineEstimateUI);
+    $('offline-detail')?.addEventListener('change', updateOfflineEstimateUI);
+    updateOfflineEstimateUI();
+    $('btn-clear-offline')?.addEventListener('click', clearOfflineTiles);
 
-async function clearOfflineTiles() {
-    if (offlineDownloadRunning) { toast('Para antes la descarga'); return; }
-    const ok = await modal({ message: '¿Borrar los mapas IGN descargados y la caché online de este móvil? Tus rutas no se borran.', ok: 'Borrar' });
-    if (!ok) return;
-    try {
-        const db = await openOfflineDb();
-        await new Promise((res, rej) => {
-            const tx = db.transaction([OFFLINE_STORE, AUTOMATIC_IGN_STORE, ONLINE_TILE_STORE, OFFLINE_META_STORE], 'readwrite');
-            tx.objectStore(OFFLINE_STORE).clear();
-            tx.objectStore(AUTOMATIC_IGN_STORE).clear();
-            tx.objectStore(ONLINE_TILE_STORE).clear();
-            tx.objectStore(OFFLINE_META_STORE).put({ bytes: 0, count: 0, reconciledAt: Date.now() }, DOWNLOADED_IGN_STATS_KEY);
-            tx.oncomplete = res;
-            tx.onerror = () => rej(tx.error);
-            tx.onabort = () => rej(tx.error || new Error('abort'));
+    const mapStyleSelect = $('map-style-select');
+    if (mapStyleSelect) {
+        mapStyleSelect.value = selectedMapStyle();
+        mapStyleSelect.addEventListener('change', () => {
+            try { localStorage.setItem(MAP_STYLE_KEY, mapStyleSelect.value); }
+            catch (e) { console.warn('No se pudo guardar el mapa elegido:', e); }
+            if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
+            applyMapStyle();
+            updateQuickMapStyleButton();
         });
-        setOfflineProgress(0, 0, 0);
-        $('offline-progress-text').textContent = 'Preparado para descargar';
-        $('offline-storage-note').textContent = 'Mapas descargados y caché online borrados.';
-        toast('Mapas borrados');
-    } catch (e) {
-        console.warn(e);
-        toast('No se pudieron borrar los mapas');
     }
-}
-$('btn-clear-offline').addEventListener('click', clearOfflineTiles);
-
-const mapStyleSelect = $('map-style-select');
-mapStyleSelect.value = selectedMapStyle();
-function updateQuickMapStyleButton() {
-    const button = $('btn-map-style');
-    if (!button) return;
-    const style = selectedMapStyle();
-    const icon = { ign: '📥', topographic: '⛰️', cyclosm: '🚵', osm: '🗺️', satellite: '🛰️' }[style] || '🗺️';
-    button.textContent = icon;
-    button.title = `Capa: ${MAP_STYLE_NAMES[style]} · pulsa para cambiar`;
-    button.setAttribute('aria-label', `Capa del mapa: ${MAP_STYLE_NAMES[style]}. Cambiar capa`);
-}
-mapStyleSelect.addEventListener('change', () => {
-    try { localStorage.setItem(MAP_STYLE_KEY, mapStyleSelect.value); }
-    catch (e) { console.warn('No se pudo guardar el mapa elegido:', e); }
-    applyMapStyle();
+    $('btn-map-style')?.addEventListener('click', () => {
+        const styles = Object.keys(MAP_STYLE_NAMES);
+        const next = styles[(styles.indexOf(selectedMapStyle()) + 1) % styles.length];
+        if (mapStyleSelect) {
+            mapStyleSelect.value = next;
+            mapStyleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
     updateQuickMapStyleButton();
-});
-$('btn-map-style')?.addEventListener('click', () => {
-    const styles = Object.keys(MAP_STYLE_NAMES);
-    const next = styles[(styles.indexOf(selectedMapStyle()) + 1) % styles.length];
-    mapStyleSelect.value = next;
-    mapStyleSelect.dispatchEvent(new Event('change', { bubbles: true }));
-});
-updateQuickMapStyleButton();
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        REGION_BOUNDS,
+        regionTiles,
+        visibleDetailTiles,
+        estimateRegionTileCount,
+        formatOfflineBytes,
+        MAX_DOWNLOADED_IGN_BYTES: OFFLINE_BYTE_LIMIT,
+        OFFLINE_STORAGE_RESERVE_BYTES: OFFLINE_RESERVE_LIMIT,
+        MAX_DOWNLOADED_IGN_TILES,
+        MAX_TILES_PER_DOWNLOAD,
+        ONLINE_TILE_OFFLINE_CACHE_ENABLED,
+        ignTileUrl,
+        tileKey,
+        onlineTileKey
+    };
+}
 
 
 // ============================================================

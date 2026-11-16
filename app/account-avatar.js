@@ -101,8 +101,12 @@ function renderAccountProfile(record = {}, force = false) {
     if (!force && accountProfileLoadedUid === uid) return;
     const weight = $('acc-profile-weight');
     const age = $('acc-profile-age');
-    if (weight && document.activeElement !== weight) weight.value = record.weightKg ?? '';
-    if (age && document.activeElement !== age) age.value = record.age ?? '';
+    const weightKg = Number(record.weightKg);
+    const ageYears = Number(record.age);
+    const validWeight = record.weightKg !== null && record.weightKg !== undefined && Number.isFinite(weightKg) && weightKg >= 25 && weightKg <= 250;
+    const validAge = record.age !== null && record.age !== undefined && Number.isInteger(ageYears) && ageYears >= 10 && ageYears <= 100;
+    if (weight && document.activeElement !== weight) weight.value = validWeight ? String(weightKg) : '';
+    if (age && document.activeElement !== age) age.value = validAge ? String(ageYears) : '';
     if (typeof statsApplyAccountProfile === 'function') {
         statsApplyAccountProfile(record.weightKg, record.age);
     }

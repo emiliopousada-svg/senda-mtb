@@ -17,6 +17,7 @@ function dashboardSaveCardOrder() {
     ]));
     try { localStorage.setItem(DASHBOARD_ORDER_KEY, JSON.stringify(order)); }
     catch (error) { console.warn('No se pudo guardar el orden del dashboard:', error); }
+    if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
 }
 
 function dashboardApplySavedCardOrder() {

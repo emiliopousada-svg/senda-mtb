@@ -115,6 +115,7 @@ function updateOrientBtn() {
 function setMapRotationMode(enabled) {
     mapRotationEnabled = enabled;
     localStorage.setItem('mtb_pro_map_rotation', enabled ? '1' : '0');
+    if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
     const setting = $('setting-map-rotation');
     if (setting) setting.checked = enabled;
     updateOrientBtn();
@@ -135,6 +136,7 @@ if (largeControlsSetting) {
         const isEnabled = largeControlsSetting.checked;
         document.documentElement.classList.toggle('large-controls', isEnabled);
         localStorage.setItem('mtb_pro_large_controls', isEnabled ? '1' : '0');
+        if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
     });
 }
 

@@ -63,6 +63,7 @@ const Cloud = {
     },
     clearSession() {
         cancelCloudSyncRetry();
+        if (typeof cancelCloudPreferencesSync === 'function') cancelCloudPreferencesSync();
         ['mtb_pro_token', 'mtb_pro_uid', 'mtb_pro_email', 'mtb_pro_nickname', 'mtb_pro_group_code'].forEach(k => localStorage.removeItem(k));
         if (typeof resetAccountProfileCache === 'function') resetAccountProfileCache();
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
@@ -321,6 +322,7 @@ function renderAccount() {
     $('acc-status').textContent = on
         ? `Conectado como ${Cloud.email}` + (Cloud.groupCode ? ' · grupo asignado' : ' · sin grupo asignado') + (last ? ` · última sincronización: ${new Date(Number(last)).toLocaleString('es-ES')}` : '') + (syncFailures ? ` · sincronización parcial: ${syncFailures} elemento(s) pendiente(s)` : '')
         : 'Sin sesión: tus rutas se guardan solo en este móvil.';
+    if (typeof renderCloudPreferencesStatus === 'function') renderCloudPreferencesStatus();
 }
 
 function renderAccountServer() {
@@ -361,6 +363,7 @@ async function accAuth(register) {
         }
         try { await syncPendingAccountAvatar(r.record); }
         catch (avatarError) { console.warn('No se pudo sincronizar el avatar pendiente:', avatarError); }
+        await syncCloudPreferences();
         $('acc-pass').value = '';
         $('acc-weight').value = '';
         $('acc-age').value = '';
@@ -787,10 +790,22 @@ function initSettings() {
     updateOrientBtn();
     window.addEventListener('online', applyMapStyle);
     window.addEventListener('offline', applyMapStyle);
-    sound.addEventListener('change', () => localStorage.setItem('mtb_pro_route_sound', sound.checked ? '1' : '0'));
-    vibration.addEventListener('change', () => localStorage.setItem('mtb_pro_route_vibration', vibration.checked ? '1' : '0'));
-    voice.addEventListener('change', () => localStorage.setItem('mtb_pro_route_voice', voice.checked ? '1' : '0'));
-    recordingHaptics.addEventListener('change', () => localStorage.setItem('mtb_pro_recording_haptics', recordingHaptics.checked ? '1' : '0'));
+    sound.addEventListener('change', () => {
+        localStorage.setItem('mtb_pro_route_sound', sound.checked ? '1' : '0');
+        queueCloudPreferencesSync();
+    });
+    vibration.addEventListener('change', () => {
+        localStorage.setItem('mtb_pro_route_vibration', vibration.checked ? '1' : '0');
+        queueCloudPreferencesSync();
+    });
+    voice.addEventListener('change', () => {
+        localStorage.setItem('mtb_pro_route_voice', voice.checked ? '1' : '0');
+        queueCloudPreferencesSync();
+    });
+    recordingHaptics.addEventListener('change', () => {
+        localStorage.setItem('mtb_pro_recording_haptics', recordingHaptics.checked ? '1' : '0');
+        queueCloudPreferencesSync();
+    });
     mapRotation.addEventListener('change', () => setMapRotationMode(mapRotation.checked));
     initRecordingPanelSettings();
     initSensorConnections();
@@ -798,6 +813,7 @@ function initSettings() {
 }
 
 async function syncWhenOnline() {
+    syncCloudPreferences();
     if (syncing) syncRetryQueued = true;
     else await syncRoutes();
     syncSharedPois();
@@ -840,6 +856,7 @@ function initAccount() {
     $('acc-register').addEventListener('click', () => accAuth(true));
     $('acc-nickname-save').addEventListener('click', saveAccountNickname);
     $('acc-sync').addEventListener('click', async () => {
+        await syncCloudPreferences();
         await syncRoutes(true);
         await restoreGroup();
     });
@@ -850,6 +867,7 @@ function initAccount() {
         if (document.visibilityState === 'visible' && navigator.onLine) syncWhenOnline();
     });
     renderAccount();
+    if (Cloud.loggedIn()) syncCloudPreferences();
 }
 
 async function init() {

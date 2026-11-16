@@ -110,8 +110,10 @@ async function pollMapBattery() {
         }
     } catch (e) { console.warn('Batería no disponible:', e); }
 }
-pollMapBattery();
-setInterval(pollMapBattery, 300000);
+if (typeof window !== 'undefined') {
+    pollMapBattery();
+    setInterval(pollMapBattery, 300000);
+}
 
 function updateBatteryStatus() {
     const label = $('ride-battery');
@@ -501,8 +503,9 @@ function addRoutePhoto() {
     input.click();
 }
 
-$('btn-route-photo').addEventListener('click', addRoutePhoto);
-$('route-photo-input').addEventListener('change', async event => {
+if (typeof $ === 'function') {
+    $('btn-route-photo')?.addEventListener('click', addRoutePhoto);
+    $('route-photo-input')?.addEventListener('change', async event => {
     const file = event.target.files && event.target.files[0];
     const position = routePhotoCapturePosition;
     routePhotoCapturePosition = null;
@@ -548,7 +551,8 @@ $('route-photo-input').addEventListener('change', async event => {
         if (routePhotoProcessing === processing) routePhotoProcessing = null;
         event.target.value = '';
     }
-});
+    });
+}
 
 function startRecording(activityType) {
     unlockOffRouteSound();
@@ -624,18 +628,22 @@ function resumeRecording(automatic = false, position = null) {
     if (automatic) toast('Grabación reanudada automáticamente.');
 }
 
-btnStart.addEventListener('click', async () => {
-    if (!isRecording) {
-        startRecording('mtb');
-    }
-    else if (!isPaused) pauseRecording();
-    else resumeRecording();
-});
+if (typeof btnStart !== 'undefined' && btnStart) {
+    btnStart.addEventListener('click', async () => {
+        if (!isRecording) {
+            startRecording('mtb');
+        }
+        else if (!isPaused) pauseRecording();
+        else resumeRecording();
+    });
+}
 
-btnStop.addEventListener('click', async () => {
-    const ok = await modal({ message: '¿Finalizar y guardar esta ruta?', ok: 'Guardar', cancel: 'Seguir grabando' });
-    if (ok) await finishRecording();
-});
+if (typeof btnStop !== 'undefined' && btnStop) {
+    btnStop.addEventListener('click', async () => {
+        const ok = await modal({ message: '¿Finalizar y guardar esta ruta?', ok: 'Guardar', cancel: 'Seguir grabando' });
+        if (ok) await finishRecording();
+    });
+}
 
 async function finishRecording() {
     const hasRoute = points.length > 1 && totalDistance >= 0.05;
@@ -860,13 +868,16 @@ function restoreDraft(d) {
     toast('Ruta recuperada y en pausa. Pulsa REANUDAR para continuar.', 6000);
 }
 
+function isDraftRecoverable(d) {
+    return !!(d && Array.isArray(d.points) && d.points.length > 0
+        && d.points.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])));
+}
+
 async function maybeRestoreDraft() {
     let d = null;
     try { d = await DB.kvGet('draft'); } catch (e) {}
     if (!d) return;
-    const recoverable = d && Array.isArray(d.points) && d.points.length > 0
-        && d.points.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]));
-    if (recoverable) {
+    if (isDraftRecoverable(d)) {
         const saved = d.savedAt ? ` · guardada ${new Date(d.savedAt).toLocaleString('es-ES')}` : '';
         const ok = await modal({
             message: `Hay una grabación interrumpida (${(d.totalDistance || 0).toFixed(2)} km${saved}). ¿Quieres recuperarla?`,
@@ -877,14 +888,27 @@ async function maybeRestoreDraft() {
     DB.kvDel('draft').catch(() => {});
 }
 
-document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'hidden') {
-        if (isRecording) await saveDraft();
-    } else if (isRecording && !isPaused) {
-        updateTimerDisplay();
-        acquireWake(); // el wake lock se pierde al ocultar la página
-    }
-});
-window.addEventListener('pagehide', async () => { if (isRecording) await saveDraft(); });
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'hidden') {
+            if (isRecording) await saveDraft();
+        } else if (isRecording && !isPaused) {
+            updateTimerDisplay();
+            acquireWake(); // el wake lock se pierde al ocultar la página
+        }
+    });
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', async () => { if (isRecording) await saveDraft(); });
+}
 
 // ============================================================
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        buildSegments,
+        autoPauseMovementThreshold,
+        autoResumeMovementThreshold,
+        isDraftRecoverable
+    };
+}
