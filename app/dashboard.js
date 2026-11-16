@@ -2,9 +2,19 @@
 
 function dashboardUpdateGreeting() {
     const greeting = $('home-greeting');
-    if (!greeting) return;
-    const nickname = String(Cloud.nickname || '').trim();
-    greeting.textContent = `¡Hola, ${nickname || 'Biker'}!`;
+    if (greeting) {
+        const nickname = String(Cloud.nickname || '').trim();
+        greeting.textContent = `¡Hola, ${nickname || 'Biker'}!`;
+    }
+
+    const avatar = $('home-avatar');
+    const placeholder = $('home-avatar-placeholder');
+    if (!avatar || !placeholder) return;
+    const avatarUrl = typeof getAccountAvatarUrl === 'function' ? getAccountAvatarUrl() : '';
+    avatar.hidden = !avatarUrl;
+    placeholder.hidden = Boolean(avatarUrl);
+    if (avatarUrl) avatar.src = avatarUrl;
+    else avatar.removeAttribute('src');
 }
 
 function dashboardUpdateNav(page = currentPage) {

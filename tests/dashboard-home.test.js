@@ -8,8 +8,14 @@ const vm = require('node:vm');
 
 const dashboardSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.js'), 'utf8');
 
-function dashboardContext(nickname) {
+function dashboardContext(nickname, avatarUrl = '') {
     const greeting = { textContent: '' };
+    const avatar = {
+        hidden: true,
+        src: '',
+        removeAttribute(name) { if (name === 'src') this.src = ''; }
+    };
+    const avatarPlaceholder = { hidden: false };
     const gps = {
         attributes: {},
         classList: { toggle() {} },
@@ -25,6 +31,7 @@ function dashboardContext(nickname) {
     };
     const context = vm.createContext({
         Cloud: { nickname },
+        getAccountAvatarUrl: () => avatarUrl,
         currentPage: 5,
         activeStatsSlide: 0,
         firstFix: false,
@@ -38,13 +45,15 @@ function dashboardContext(nickname) {
         },
         $(id) {
             if (id === 'home-greeting') return greeting;
+            if (id === 'home-avatar') return avatar;
+            if (id === 'home-avatar-placeholder') return avatarPlaceholder;
             if (id === 'dashboard-gps-status') return gps;
             if (id === 'dashboard-network-status') return network;
             return null;
         }
     });
     vm.runInContext(dashboardSource, context);
-    return { context, greeting, gps, network };
+    return { context, greeting, avatar, avatarPlaceholder, gps, network };
 }
 
 test('home greeting uses the account nickname and falls back when signed out', () => {
@@ -55,12 +64,28 @@ test('home greeting uses the account nickname and falls back when signed out', (
     assert.equal(greeting.textContent, '¡Hola, Biker!');
 });
 
-test('home action area has GPS and network status without organize or fullscreen controls', () => {
+test('home shows the cached account avatar beside the greeting or the placeholder', () => {
+    const { context, avatar, avatarPlaceholder } = dashboardContext('TrailRider', 'data:image/jpeg;base64,avatar');
+    assert.equal(avatar.hidden, false);
+    assert.equal(avatar.src, 'data:image/jpeg;base64,avatar');
+    assert.equal(avatarPlaceholder.hidden, true);
+
+    context.getAccountAvatarUrl = () => '';
+    context.dashboardUpdateGreeting();
+    assert.equal(avatar.hidden, true);
+    assert.equal(avatar.src, '');
+    assert.equal(avatarPlaceholder.hidden, false);
+});
+
+test('home groups GPS with network status and labels the control-center shortcut beside recording', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-    const actions = html.match(/<div class="hero-actions">([\s\S]*?)<\/div>/);
+    assert.match(html, /class="dashboard-greeting"[\s\S]*id="home-greeting"[\s\S]*id="home-avatar"/);
+    const actions = html.match(/<div class="hero-actions">([\s\S]*?)<\/div>\s*<\/div>/);
     assert.ok(actions);
-    assert.match(actions[1], /id="dashboard-gps-status"/);
-    assert.match(actions[1], /id="dashboard-network-status"/);
+    assert.match(actions[1], /data-recording[\s\S]*data-page="6"[^>]*>Centro de control<\/button>/);
+    assert.doesNotMatch(html, /tools-menu-button|>☷<\/button>/);
+    assert.match(actions[1], /class="hero-connectivity-status"[\s\S]*id="dashboard-network-status"[\s\S]*id="dashboard-gps-status"/);
+    assert.doesNotMatch(html, /class="hero-status"/);
     assert.doesNotMatch(html, /dashboard-arrange-toggle|screen-fullscreen-toggle|fullscreen-exit/);
     assert.doesNotMatch(dashboardSource, /dashboardInitCardArrangement|dashboard-arrange-toggle/);
 });
@@ -78,6 +103,14 @@ test('home GPS status shows signal quality as up to four bars', () => {
     context.dashboardUpdateGpsStatus();
     assert.equal(gps.attributes['data-gps-quality'], '1');
     assert.equal((gps.innerHTML.match(/class="active"/g) || []).length, 1);
+});
+
+test('tools hub does not duplicate the Bluetooth sensor settings', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const toolsHub = html.match(/<section class="tools-hub"[\s\S]*?<\/section>/);
+    assert.ok(toolsHub);
+    assert.doesNotMatch(toolsHub[0], /data-tool="sensors"|<strong>Sensores<\/strong>/);
+    assert.match(html, /id="settings-sensors"[\s\S]*id="sensor-hr-enabled"/);
 });
 
 test('home network status glows online and switches to offline state', () => {

@@ -23,13 +23,17 @@
     border-radius: 20px; background: radial-gradient(ellipse at 80% 5%,rgba(22,140,255,.26),transparent 34%),
     radial-gradient(ellipse at 40% 110%,rgba(255,118,31,.19),transparent 42%),linear-gradient(115deg,#171d26,#10141a 66%,#151b24);
 }
-.hero-copy,.hero-status { position: relative; z-index: 2; }
+.hero-copy { position: relative; z-index: 2; }
 .hero-copy .eyebrow { color:#aab6c7; }
 .eyebrow { display:block; color:#8895a7; font-size:.62rem; font-weight:800; letter-spacing:.15em; }
 .eyebrow i { display:inline-block; width:5px; height:5px; margin:0 6px 1px; border-radius:50%; background:var(--mtb-orange); }
+.dashboard-greeting { display:flex; min-width:0; align-items:center; gap:14px; }
 .dashboard-hero h1 { margin-top:8px; color:#f7f8fa; font-size:clamp(1.8rem,5.6vw,2.7rem); font-weight:760; letter-spacing:-.055em; line-height:1.05; }
+.dashboard-avatar,.dashboard-avatar-placeholder { width:52px; height:52px; flex:0 0 52px; border:2px solid rgba(255,255,255,.2); border-radius:50%; }
+.dashboard-avatar { background:#17202b; object-fit:cover; }
+.dashboard-avatar-placeholder { display:grid; place-items:center; background:linear-gradient(145deg,#263445,#141a22); color:#dce4ee; font-size:1.35rem; }
+.dashboard-avatar[hidden],.dashboard-avatar-placeholder[hidden] { display:none; }
 .dashboard-hero p { margin-top:9px; color:#bbc5d2; font-size:.94rem; }
-.hero-status { display:flex; align-items:center; gap:9px; align-self:flex-start; }
 .status-chip { display:inline-flex; align-items:center; gap:9px; min-height:42px; padding:0 14px; border:1px solid rgba(255,255,255,.1); border-radius:999px; background:rgba(8,12,18,.66); color:#d9e0e9; font-size:.8rem; font-weight:750; white-space:nowrap; }
 .status-chip > i:first-child { width:9px; height:9px; flex:0 0 auto; border-radius:50%; background:#778290; box-shadow:0 0 0 4px rgba(119,130,144,.12); }
 .status-chip.connected { border-color:rgba(40,209,124,.5); background:rgba(14,48,35,.76); color:#b9ffd8; box-shadow:0 0 16px rgba(40,209,124,.14); }
@@ -46,7 +50,6 @@
 .status-chip[data-gps-quality="2"] .gps-signal-bars i.active { background:#ffc247; }
 .status-chip[data-gps-quality="3"] .gps-signal-bars i.active { background:#a9e85e; }
 .status-chip[data-gps-quality="4"] .gps-signal-bars i.active { background:#28d17c; box-shadow:0 0 8px rgba(40,209,124,.55); }
-.profile-button { width:36px; height:36px; border:1px solid rgba(255,255,255,.13); border-radius:50%; background:linear-gradient(145deg,#263445,#141a22); color:#e8edf5; font-size:.69rem; font-weight:800; }
 .hero-terrain { position:absolute; z-index:1; right:16%; bottom:-60px; width:44%; height:175px; opacity:.36; background:linear-gradient(165deg,transparent 37%,rgba(22,140,255,.12) 38% 40%,transparent 41%),linear-gradient(156deg,transparent 48%,rgba(255,255,255,.09) 49% 50%,transparent 51%); clip-path:polygon(0 100%,19% 53%,28% 67%,45% 24%,60% 58%,72% 42%,100% 100%); }
 
 .dashboard-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
@@ -95,11 +98,10 @@
 .tools-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 .tool-card { display:flex; min-height:72px; flex-direction:column; align-items:center; justify-content:center; gap:6px; border:1px solid transparent; border-radius:11px; background:#242a34; color:#f5f6f8; font-size:.77rem; transition:background .16s ease,transform .16s ease; }
 .tool-card:hover { background:#2d3541; transform:translateY(-1px); }
-.tool-card:focus-visible,.tools-menu-button:focus-visible { outline:2px solid #168cff; outline-offset:2px; }
+.tool-card:focus-visible,.hero-tools-action:focus-visible { outline:2px solid #168cff; outline-offset:2px; }
 .tool-card > span { color:#39b7ff; font-size:1rem; line-height:1; }
 .tool-card strong { font-weight:650; }
 .tools-page .ai-preview { margin-top:12px; }
-.tools-menu-button { display:grid; place-items:center; font-size:1.05rem; }
 .tools-sidebar-link .sidebar-icon { color:#39b7ff; }
 @media (min-width:720px) { .tools-content { padding:30px 25px; } .tools-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; } .tool-card { min-height:82px; } }
 @media (min-width:900px) { .tools-content { max-width:1000px; } }
@@ -208,9 +210,8 @@
     .mobile-nav .nav-btn.active { color:var(--mtb-blue); }
     .dashboard-content { padding-top:10px; }
     .dashboard-hero { min-height:156px; flex-direction:column; align-items:flex-start; justify-content:flex-end; padding:20px 17px; }
-    .hero-status { position:absolute; top:13px; right:12px; }
-    .profile-button { display:none; }
     .hero-copy h1 { font-size:1.85rem; }
+    .dashboard-avatar,.dashboard-avatar-placeholder { width:44px; height:44px; flex-basis:44px; }
     .hero-copy p { font-size:.8rem; }
     .status-chip { min-height:37px; gap:7px; padding:0 11px; font-size:.71rem; }
     .gps-signal-bars { height:15px; }
@@ -518,6 +519,8 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .status-chip.offline { border-color:rgba(255,118,31,.25); color:#ffbd91; }
 .status-chip.offline i { background:#ff761f; box-shadow:0 0 0 4px rgba(255,118,31,.13); }
 .hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; }
+.hero-action-buttons,.hero-connectivity-status { display:flex; align-items:center; gap:8px; }
+.hero-connectivity-status { flex-wrap:wrap; }
 .hero-primary-action {
     min-height:40px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 15px;
     border:1px solid transparent; border-radius:11px; color:#fff; font-size:.75rem; font-weight:780;
@@ -525,6 +528,11 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 }
 .hero-primary-action { background:linear-gradient(110deg,#ff761f,#e85c0d); box-shadow:0 8px 20px rgba(232,92,13,.22); }
 .hero-primary-action:active { transform:scale(.97); }
+.hero-tools-action {
+    min-height:40px; display:inline-flex; align-items:center; justify-content:center; padding:0 12px;
+    border:1px solid rgba(255,255,255,.13); border-radius:11px; background:linear-gradient(145deg,#263445,#141a22);
+    color:#e8edf5; font-size:.72rem; font-weight:750; white-space:nowrap;
+}
 .recording-metric-config { display:grid; gap:7px; margin-top:12px; }
 .recording-metric-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 10px; border:1px solid rgba(255,255,255,.07); border-radius:11px; background:#121821; }
 .recording-metric-choice { display:flex; min-width:0; align-items:center; gap:10px; color:#dce4ee; font-size:.82rem; }
@@ -538,8 +546,9 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .swiper-wrapper { transition:transform .28s cubic-bezier(.22,.72,.25,1); }
 @media (max-width:719px) {
     .hero-actions { gap:6px; margin-top:9px; }
+    .hero-action-buttons,.hero-connectivity-status { gap:6px; }
     .hero-primary-action { min-height:35px; padding:0 10px; font-size:.65rem; }
-    .hero-status { gap:5px; }
+    .hero-tools-action { min-height:35px; padding:0 10px; font-size:.65rem; }
     .hero-actions .status-chip { min-height:36px; gap:7px; padding:0 9px; font-size:.72rem; }
     .hero-actions .status-chip > i:first-child { width:8px; height:8px; }
     .recording-metric-row { padding:8px; }
@@ -558,18 +567,13 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     .mobile-nav .nav-btn.active { color:#ff9858; }
     .mobile-nav .nav-btn.active .icon { background:rgba(255,118,31,.14); color:#ff8b43; filter:none; box-shadow:inset 0 0 0 1px rgba(255,118,31,.12); }
     .mobile-nav .nav-btn:active .icon { transform:scale(.96); }
-    .profile-button:not(.tools-menu-button) { display:none; }
-    .tools-menu-button { display:grid; width:31px; height:31px; flex:0 0 31px; border-radius:10px; }
 }
 @media (max-width:359px) {
     .mobile-nav .nav-btn .icon { width:36px; }
     .mobile-nav .nav-btn { font-size:.55rem; }
-    .hero-status { right:8px; gap:3px; }
-    .hero-status .status-chip { padding-inline:5px; }
 }
 @media (max-width:719px) {
     .hero-eyebrow-long { display:none; }
-    .hero-status { top:max(13px,calc(env(safe-area-inset-top,0px) + 7px)); }
 }
 @media (prefers-reduced-motion:reduce) {
     .mobile-nav .nav-btn .icon { transition:none; }

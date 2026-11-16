@@ -30,6 +30,7 @@ function renderAccountAvatar() {
         placeholder.hidden = !!src;
     }
     if (typeof updateGpsAvatarMarkers === 'function') updateGpsAvatarMarkers();
+    if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
 }
 
 function accountAvatarToJpeg(file) {

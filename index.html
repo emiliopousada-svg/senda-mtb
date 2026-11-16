@@ -774,16 +774,22 @@
                 <header class="dashboard-hero">
                     <div class="hero-copy">
                         <span class="eyebrow">MTB PRO <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
-                        <h1 id="home-greeting">¡Hola, Biker!</h1>
+                        <div class="dashboard-greeting">
+                            <h1 id="home-greeting">¡Hola, Biker!</h1>
+                            <img id="home-avatar" class="dashboard-avatar" alt="Avatar del usuario" hidden>
+                            <span id="home-avatar-placeholder" class="dashboard-avatar-placeholder" aria-hidden="true">👤</span>
+                        </div>
                         <p>Tu próxima aventura empieza aquí.</p>
                         <div class="hero-actions">
-                            <button class="hero-primary-action" type="button" data-recording>▶ <span>Grabar salida</span></button>
-                            <span id="dashboard-gps-status" class="status-chip" aria-live="polite"><i></i>GPS · Buscando</span>
-                            <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En línea</span>
+                            <div class="hero-action-buttons">
+                                <button class="hero-primary-action" type="button" data-recording>▶ <span>Grabar salida</span></button>
+                                <button class="hero-tools-action" type="button" data-page="6">Centro de control</button>
+                            </div>
+                            <div class="hero-connectivity-status">
+                                <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En línea</span>
+                                <span id="dashboard-gps-status" class="status-chip" aria-live="polite"><i></i>GPS · Buscando</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="hero-status">
-                        <button class="profile-button tools-menu-button" type="button" data-page="6" aria-label="Abrir más herramientas">☷</button>
                     </div>
                     <div class="hero-terrain" aria-hidden="true"></div>
                 </header>
@@ -864,7 +870,6 @@
                         <button class="tool-card" type="button" data-tool="garage"><span aria-hidden="true">♧</span><strong>Garaje</strong></button>
                         <button class="tool-card" type="button" data-tool="ai"><span aria-hidden="true">✳</span><strong>Camboya AI</strong></button>
                         <button class="tool-card" type="button" data-tool="calendar"><span aria-hidden="true">▦</span><strong>Calendario</strong></button>
-                        <button class="tool-card" type="button" data-tool="sensors"><span aria-hidden="true">♧</span><strong>Sensores</strong></button>
                         <button class="tool-card" type="button" data-tool="settings"><span aria-hidden="true">⚙</span><strong>Ajustes</strong></button>
                     </div>
                 </section>
