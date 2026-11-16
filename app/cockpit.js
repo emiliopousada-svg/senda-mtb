@@ -103,9 +103,12 @@ function cockpitRender() {
     }
     const networkSource = $('dashboard-network-status');
     const networkTarget = $('cockpit-network-status');
-    if (networkSource && networkTarget) {
-        networkTarget.textContent = networkSource.textContent.replace(/\s+/g, ' ').trim();
+    const networkLabel = $('cockpit-network-label');
+    if (networkSource && networkTarget && networkLabel) {
+        networkLabel.textContent = networkSource.textContent.replace(/\s+/g, ' ').trim();
+        networkTarget.classList.toggle('connected', networkSource.classList.contains('connected'));
         networkTarget.classList.toggle('offline', networkSource.classList.contains('offline'));
+        networkTarget.setAttribute('aria-label', networkSource.getAttribute('aria-label') || networkLabel.textContent);
     }
 
     const altitude = $('recording-live-altitude');

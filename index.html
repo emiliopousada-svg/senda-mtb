@@ -153,6 +153,13 @@
                     </svg>
                 </button>
                 <button class="btn-icon-only" id="btn-map-style" type="button" title="Cambiar capa del mapa" aria-label="Cambiar capa del mapa">⛰️</button>
+                <button class="btn-icon-only cockpit-map-button" id="btn-map-cockpit" type="button" data-page="6" title="Volver al Cockpit" aria-label="Volver al Cockpit">
+                    <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4.6 18.2a9 9 0 1 1 14.8 0"></path>
+                        <path d="M12 12l4.3-4.3M12 4.2v1.5M19.8 12h-1.5"></path>
+                        <circle cx="12" cy="12" r="1.5"></circle>
+                    </svg>
+                </button>
             </div>
             <div class="controls-overlay">
                 <button class="btn-main-action" id="btn-start">
@@ -874,7 +881,10 @@
                 <div class="cockpit-status-row" aria-label="Estado de la actividad">
                     <span id="cockpit-recording-state" class="cockpit-state" data-state="idle">Lista para salir</span>
                     <span id="cockpit-gps-status" class="cockpit-status-chip">GPS · Buscando</span>
-                    <span id="cockpit-network-status" class="cockpit-status-chip">En línea</span>
+                    <span id="cockpit-network-status" class="cockpit-status-chip" aria-live="polite">
+                        <i class="cockpit-connectivity-icon" aria-hidden="true"></i>
+                        <span id="cockpit-network-label">En línea</span>
+                    </span>
                 </div>
 
                 <section class="cockpit-trip-summary" aria-label="Resumen de la salida">

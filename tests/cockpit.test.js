@@ -42,7 +42,7 @@ function cockpitContext() {
         ['cockpit-time'], ['cockpit-distance'], ['cockpit-elevation'], ['cockpit-avg-speed'], ['cockpit-moving'],
         ['cockpit-heart-rate'], ['cockpit-cadence'], ['cockpit-power'], ['cockpit-speed'],
         ['cockpit-speed-gauge'], ['cockpit-recording-state'], ['cockpit-toggle-label'], ['cockpit-toggle-icon'],
-        ['cockpit-finish'], ['cockpit-gps-status'], ['cockpit-network-status'],
+        ['cockpit-finish'], ['cockpit-gps-status'], ['cockpit-network-status'], ['cockpit-network-label'],
         ['cockpit-profile-altitude'], ['cockpit-elevation-range'], ['cockpit-profile-line'],
         ['cockpit-profile-area'], ['cockpit-profile-empty'], ['cockpit-route-line'], ['cockpit-route-start'],
         ['cockpit-route-end'], ['cockpit-route-empty'], ['cockpit-route-title'], ['cockpit-toggle'],
@@ -75,6 +75,8 @@ test('cockpit mirrors ride metrics, live status and route into its own view', ()
     assert.equal(elements.get('cockpit-toggle-label').textContent, 'Pausar salida');
     assert.equal(elements.get('cockpit-finish').hidden, false);
     assert.equal(elements.get('cockpit-gps-status').textContent, 'GPS · Buena');
+    assert.equal(elements.get('cockpit-network-label').textContent, 'En línea');
+    assert.equal(elements.get('cockpit-network-status').classList.contains('connected'), true);
     assert.equal(elements.get('cockpit-profile-line').getAttribute('d'), 'M0,40 L320,10');
     assert.match(elements.get('cockpit-route-line').getAttribute('d'), /^M/);
     assert.equal(elements.get('cockpit-route-empty').hidden, true);
@@ -93,12 +95,28 @@ test('cockpit forwards recording controls and reflects paused state', () => {
     assert.equal(elements.get('cockpit-toggle-label').textContent, 'Reanudar salida');
 });
 
+test('cockpit switches the connection indicator to offline styling when disconnected', () => {
+    const { context, elements } = cockpitContext();
+    const network = elements.get('dashboard-network-status');
+    network.textContent = 'Sin conexión';
+    network.classList.toggle('connected', false);
+    network.classList.toggle('offline', true);
+
+    context.cockpitRender();
+    assert.equal(elements.get('cockpit-network-label').textContent, 'Sin conexión');
+    assert.equal(elements.get('cockpit-network-status').classList.contains('connected'), false);
+    assert.equal(elements.get('cockpit-network-status').classList.contains('offline'), true);
+});
+
 test('cockpit sits between home and tools and maps back to the existing map navigation', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     const home = html.indexOf('id="page-home"');
     const cockpit = html.indexOf('id="page-cockpit"');
     const tools = html.indexOf('id="page-tools"');
+    const mapControls = html.match(/<div class="side-controls">([\s\S]*?)<\/div>\s*<div class="controls-overlay">/);
     assert.ok(home < cockpit && cockpit < tools);
     assert.match(html, /data-page="6"[^>]*>Cockpit<\/button>/);
     assert.match(html, /id="page-cockpit"[\s\S]*data-page="0">Abrir mapa/);
+    assert.ok(mapControls);
+    assert.match(mapControls[1], /id="btn-map-cockpit"[^>]*data-page="6"[^>]*aria-label="Volver al Cockpit"/);
 });

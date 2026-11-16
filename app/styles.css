@@ -400,6 +400,11 @@ html, body {
     z-index: 1000;
 }
 .side-controls #btn-center { margin-top: 7px; }
+#btn-map-cockpit {
+    border-color: rgba(255, 118, 31, .38);
+    color: #ffad77;
+}
+#btn-map-cockpit:focus-visible { outline: 2px solid #ff9858; outline-offset: 2px; }
 .map-zoom-controls {
     position: absolute;
     top: calc(env(safe-area-inset-top, 0px) + 190px);
