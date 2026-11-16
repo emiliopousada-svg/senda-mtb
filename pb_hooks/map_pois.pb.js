@@ -18,7 +18,7 @@ onRecordCreateRequest((e) => {
         throw new BadRequestError("El nombre o las coordenadas del punto no son válidos.");
     }
 
-    const count = $app.countRecords("map_pois", 'owner = "' + ownerId + '"');
+    const count = $app.countRecords("map_pois", $dbx.hashExp({ owner: ownerId }));
     if (count >= MAX_SHARED_POIS_PER_USER) {
         throw new BadRequestError("Has alcanzado el máximo de 500 puntos compartidos.");
     }
