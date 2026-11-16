@@ -67,6 +67,7 @@ const COMMUNITY_MAX_RESULTS = 15;
 const COMMUNITY_TRACK_BATCH_SIZE = 5;
 const COMMUNITY_MAX_TRACKS_TO_CHECK = 40;
 const COMMUNITY_MAX_METADATA_CANDIDATES = 2000;
+const COMMUNITY_MAX_TRACK_JSON_CHARS = 262144;
 const COMMUNITY_SEARCH_CACHE_KEY = 'community-nearby-search-v2';
 const COMMUNITY_SEARCH_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMUNITY_DIFFICULTIES = {
@@ -488,7 +489,11 @@ async function submitCommunityRoute() {
         formData.append('movingTimeSec', String(Number(route.movingTimeSec) || 0));
         const performedAt = communityPerformedDate(route);
         if (performedAt) formData.append('performedAt', performedAt);
-        formData.append('trackJson', JSON.stringify(communityUploadTrack(route)));
+        const trackJson = JSON.stringify(communityUploadTrack(route));
+        if (trackJson.length > COMMUNITY_MAX_TRACK_JSON_CHARS) {
+            throw new Error('El trazado supera el límite de tamaño para publicarlo.');
+        }
+        formData.append('trackJson', trackJson);
         formData.append('poisJson', poiData.json);
         formData.append('published', 'true');
         if (poiData.skipped) {
@@ -546,7 +551,7 @@ async function submitCommunityRoute() {
         communitySetStatus(error.status === 404
             ? 'Falta instalar la colección community_routes en el servidor. Consulta CONFIGURAR-RUTAS-COMUNIDAD.md.'
             : error.status === 400
-                ? `PocketBase rechazó la ruta: ${error.message || 'solicitud no válida'}. Revisa el hook community_routes.pb.js y los logs del servidor; consulta CONFIGURAR-RUTAS-COMUNIDAD.md.`
+                ? `PocketBase rechazó la ruta: ${error.message || 'solicitud no válida'}. Revisa los límites de los campos de community_routes y aplica las migraciones; consulta CONFIGURAR-RUTAS-COMUNIDAD.md.`
                 : 'No se pudo enviar la ruta: ' + (error.message || 'error de conexión'), true);
         button.disabled = false;
     }

@@ -212,7 +212,7 @@ migrate((app) => {
             numberField("elevationGain", 0, 100000),
             numberField("movingTimeSec", 0, 604800, true),
             { name: "performedAt", type: "date" },
-            { name: "trackJson", type: "text", required: true },
+            { name: "trackJson", type: "text", required: true, max: 262144 },
             { name: "poisJson", type: "text", max: 131072 },
             { name: "published", type: "bool" },
             {

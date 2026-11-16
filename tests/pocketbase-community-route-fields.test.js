@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-function runMigration(fields = []) {
+function runMigration(fields = [], migrationFile = '1794835001_add_community_route_poi_fields.js') {
     let up;
     let saveCount = 0;
     const schema = fields.slice();
@@ -40,7 +40,7 @@ function runMigration(fields = []) {
     });
     vm.runInContext(
         fs.readFileSync(
-            path.join(__dirname, '..', 'pb_migrations', '1794835001_add_community_route_poi_fields.js'),
+            path.join(__dirname, '..', 'pb_migrations', migrationFile),
             'utf8'
         ),
         context
@@ -80,4 +80,26 @@ test('community routes migration refuses incompatible existing field types', () 
         () => runMigration([{ name: 'poisJson', type: 'number' }]),
         /community_routes\.poisJson must be a text field/
     );
+});
+
+test('community routes track migration raises the text limit for existing collections', () => {
+    const trackJson = { name: 'trackJson', type: 'text', max: 5000 };
+    const { schema, saveCount } = runMigration(
+        [trackJson],
+        '1794835002_expand_community_route_track_json.js'
+    );
+
+    assert.equal(schema[0].max, 262144);
+    assert.equal(saveCount, 1);
+});
+
+test('community routes track migration preserves an existing larger limit', () => {
+    const trackJson = { name: 'trackJson', type: 'text', max: 300000 };
+    const { schema, saveCount } = runMigration(
+        [trackJson],
+        '1794835002_expand_community_route_track_json.js'
+    );
+
+    assert.equal(schema[0].max, 300000);
+    assert.equal(saveCount, 0);
 });
