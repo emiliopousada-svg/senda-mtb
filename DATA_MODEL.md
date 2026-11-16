@@ -171,7 +171,7 @@ Las colecciones de PocketBase gestionan usuarios, sincronización y vida social 
 | `users` | Auth | Registro privado (`id = @request.auth.id`; el cliente no puede cambiar `groupCode`) | Apodo (máx. 32), peso (25–250 kg) y edad (10–100 años) del titular; avatar JPEG descargable por URL para mostrarlo en grupos. |
 | `routes` | Base | Propietario (`owner = @request.auth.id`) | Copia de seguridad en la nube de rutas privadas. |
 | `map_pois` | Base | Propietario (`owner = @request.auth.id`) | Sincronización de puntos de interés personales. |
-| `live_locations` | Base | Miembros de grupo autenticados | Ubicación efímera para seguimiento grupal en ruta (purgada automáticamente por `live_cleanup.pb.js`). |
+| `live_locations` | Base | Miembros autorizados del mismo grupo | Ubicación efímera para seguimiento grupal; lecturas y escrituras requieren membresía vigente, y se purga automáticamente por `live_cleanup.pb.js`. |
 | `mtb_groups` | Base | Gestionado vía hooks `/api/mtb/groups/*` | Grupos privados de ciclistas, miembros y roles. |
 | `mtb_group_members` | Base | Gestionado vía hooks | Pertenencia y permisos de administración. |
 | `mtb_group_ranking_entries` | Base | Gestionado vía hooks | Resultados de actividades y clasificación del grupo. |

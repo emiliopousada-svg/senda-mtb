@@ -38,6 +38,9 @@ migrate((app) => {
     const ownerOnly = '@request.auth.id != "" && owner = @request.auth.id'
     const ownerCreate = '@request.auth.id != "" && @request.body.owner = @request.auth.id'
     const ownerUpdate = `${ownerOnly} && (@request.body.owner:isset = false || @request.body.owner = @request.auth.id)`
+    const liveLocationMemberRule = '@request.auth.id != "" && @request.auth.groupCode != "" && groupCode = @request.auth.groupCode && @collection.mtb_group_members.group ?= groupCode && @collection.mtb_group_members.user ?= @request.auth.id'
+    const liveLocationCreateRule = '@request.auth.id != "" && @request.auth.groupCode != "" && @request.body.owner = @request.auth.id && @request.body.groupCode = @request.auth.groupCode && @collection.mtb_group_members.group ?= @request.body.groupCode && @collection.mtb_group_members.user ?= @request.auth.id'
+    const liveLocationUpdateRule = '@request.auth.id != "" && owner = @request.auth.id && groupCode = @request.auth.groupCode && @request.body.owner:changed = false && @request.body.groupCode:changed = false && @collection.mtb_group_members.group ?= groupCode && @collection.mtb_group_members.user ?= @request.auth.id'
 
     createCollectionIfMissing(app, {
         type: "base",
@@ -146,10 +149,10 @@ migrate((app) => {
     createCollectionIfMissing(app, {
         type: "base",
         name: "live_locations",
-        listRule: '@request.auth.id != "" && groupCode = @request.auth.groupCode',
-        viewRule: '@request.auth.id != "" && groupCode = @request.auth.groupCode',
-        createRule: '@request.auth.id != "" && @request.body.owner = @request.auth.id && @request.body.groupCode = @request.auth.groupCode',
-        updateRule: '@request.auth.id != "" && owner = @request.auth.id && @request.body.owner = @request.auth.id && @request.body.groupCode = @request.auth.groupCode',
+        listRule: liveLocationMemberRule,
+        viewRule: liveLocationMemberRule,
+        createRule: liveLocationCreateRule,
+        updateRule: liveLocationUpdateRule,
         deleteRule: '@request.auth.id != "" && owner = @request.auth.id',
         fields: [
             relationField("owner", users.id),
