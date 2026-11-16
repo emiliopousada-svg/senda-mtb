@@ -2,6 +2,8 @@
 
 //  MAPA
 // ============================================================
+let lastRidePreviewLayer = null;
+
 function initMap() {
     if (typeof L === 'undefined') {
         $('map').innerHTML = '<div style="padding:90px 24px; text-align:center; color:#b0b0b0;">No se pudo cargar el mapa (sin conexión y sin copia guardada). Puedes seguir grabando; el track se guarda igualmente.</div>';
@@ -31,6 +33,7 @@ function initMap() {
     applyMapStyle();
 
     savedRouteLayer = L.polyline([], { color: '#29b6f6', weight: 4, dashArray: '5, 5' }).addTo(map);
+    lastRidePreviewLayer = L.polyline([], { color: '#168cff', weight: 5, opacity: .95, lineCap: 'round' }).addTo(map);
 
     // Al arrastrar el mapa se desactiva el seguimiento automático
     map.on('dragstart', () => { following = false; updateCenterBtn(); });
@@ -61,6 +64,37 @@ function initMap() {
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) setTimeout(refreshMapViewport, 150);
     });
+}
+
+function clearLastRideMapPreview() {
+    if (lastRidePreviewLayer) lastRidePreviewLayer.setLatLngs([]);
+}
+
+function openLastRideOnMap(route) {
+    const lines = route && typeof communityRawSegments === 'function'
+        ? communityRawSegments(route.points)
+        : [];
+    if (!lines.length) {
+        goToPage(0);
+        toast('Esta salida no contiene un trazado que se pueda mostrar.');
+        return;
+    }
+    if (!map || !lastRidePreviewLayer) {
+        goToPage(0);
+        toast('No se pudo cargar el mapa para mostrar este recorrido.');
+        return;
+    }
+
+    lastRidePreviewLayer.setLatLngs(lines);
+    following = false;
+    updateCenterBtn();
+    goToPage(0);
+    setTimeout(() => {
+        if (!map || !lastRidePreviewLayer) return;
+        map.invalidateSize({ pan: false });
+        const bounds = lastRidePreviewLayer.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+    }, 180);
 }
 
 function updateMapZoomButtons() {

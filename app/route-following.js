@@ -160,6 +160,7 @@ function updateMapRouteProfilePosition(match) {
 
 function followRoute(r) {
     unlockOffRouteSound();
+    clearLastRideMapPreview();
     followedRoute = {
         id: r.id,
         name: r.name,

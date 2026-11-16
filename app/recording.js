@@ -570,6 +570,7 @@ function startRecording(activityType) {
     $('m-dist').textContent = '0.00';
     $('m-elevation').textContent = '0';
     clearRoutePolylines();
+    clearLastRideMapPreview();
     setBtnState('recording');
     startTimers();
     startAutoPauseMonitor();

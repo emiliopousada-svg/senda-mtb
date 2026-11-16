@@ -873,7 +873,6 @@ function initAccount() {
 async function init() {
     renderAccountServer();
     initMap();
-    dashboardInitMap();
     initCharts();
     initMetricPanel();
     setBtnState('idle');

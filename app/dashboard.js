@@ -1,7 +1,5 @@
 'use strict';
 
-let dashboardMap = null;
-let dashboardRouteLine = null;
 const DASHBOARD_ORDER_KEY = 'mtb_pro_dashboard_card_order_v1';
 let dashboardArrangeMode = false;
 
@@ -73,7 +71,6 @@ function dashboardInitCardArrangement() {
     $('dashboard-arrange-toggle')?.addEventListener('click', () => {
         dashboardArrangeMode = !dashboardArrangeMode;
         dashboardRefreshOrderControls();
-        if (dashboardMap) requestAnimationFrame(() => dashboardMap.invalidateSize({ pan: false }));
     });
     document.addEventListener('click', event => {
         const button = event.target.closest('[data-dashboard-move]');
@@ -86,7 +83,6 @@ function dashboardInitCardArrangement() {
         group.insertBefore(card, button.dataset.dashboardMove === 'up' ? sibling : sibling.nextElementSibling);
         dashboardSaveCardOrder();
         dashboardRefreshOrderControls();
-        if (dashboardMap && card.id === 'dashboard-map-panel') requestAnimationFrame(() => dashboardMap.invalidateSize({ pan: false }));
     });
     dashboardRefreshOrderControls();
 }
@@ -101,27 +97,6 @@ function dashboardUpdateNav(page = currentPage) {
     document.querySelectorAll('.mobile-nav .nav-btn[data-page]').forEach(button => {
         button.classList.toggle('active', Number(button.dataset.page) === page);
     });
-}
-
-function dashboardInitMap() {
-    const container = $('home-map');
-    if (!container || typeof L === 'undefined' || dashboardMap) return;
-    dashboardMap = L.map(container, {
-        zoomControl: false,
-        attributionControl: false,
-        scrollWheelZoom: false,
-        dragging: true,
-        minZoom: 5,
-        maxZoom: 18
-    }).setView([13.4125, 103.867], 12);
-    L.control.attribution({ prefix: false }).addTo(dashboardMap);
-    try {
-        createMapStyleLayer('satellite').addTo(dashboardMap);
-    } catch (error) {
-        console.warn('No se pudo cargar el mapa de inicio:', error);
-    }
-    dashboardRouteLine = L.polyline([], { color: '#168cff', weight: 4, opacity: .95, lineCap: 'round' }).addTo(dashboardMap);
-    dashboardMap.whenReady(() => dashboardMap.invalidateSize({ pan: false }));
 }
 
 function dashboardUpdateGpsStatus() {
@@ -144,11 +119,37 @@ function dashboardUpdateNetworkStatus() {
     status.innerHTML = online ? '<i></i>En línea' : '<i></i>Sin conexión';
 }
 
+function dashboardLatestRecordedRoute() {
+    return (Array.isArray(savedRoutes) ? savedRoutes : [])
+        .filter(route => route && (route.kind === 'recorded' || !route.kind))
+        .sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0))[0] || null;
+}
+
+function dashboardRenderMapPreview(route) {
+    const container = $('home-map');
+    if (!container) return;
+    const preview = route && typeof createRouteCardMap === 'function'
+        ? createRouteCardMap(route)
+        : null;
+    if (preview) {
+        container.replaceChildren(preview);
+        return;
+    }
+
+    const empty = document.createElement('div');
+    empty.className = 'home-map-empty';
+    const title = document.createElement('strong');
+    title.textContent = route ? 'Recorrido no disponible' : 'Aún no hay recorridos';
+    const message = document.createElement('span');
+    message.textContent = route
+        ? 'Esta salida no contiene un trazado que se pueda mostrar.'
+        : 'Tu último recorrido aparecerá aquí cuando guardes una salida.';
+    empty.append(title, message);
+    container.replaceChildren(empty);
+}
+
 function dashboardRender() {
-    const recorded = (Array.isArray(savedRoutes) ? savedRoutes : [])
-        .filter(route => route && route.kind !== 'imported')
-        .sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0));
-    const latest = recorded[0] || null;
+    const latest = dashboardLatestRecordedRoute();
     const routeCount = Array.isArray(savedRoutes) ? savedRoutes.length : 0;
     const count = $('home-routes-count');
     if (count) count.textContent = `${routeCount} ${routeCount === 1 ? 'ruta guardada' : 'rutas guardadas'}`;
@@ -165,23 +166,30 @@ function dashboardRender() {
         if (latestAscent) latestAscent.textContent = Number.isFinite(Number(latest.elevationGain))
             ? `${Math.round(Number(latest.elevationGain))} m+`
             : '— m+';
+    } else {
+        if (latestName) latestName.textContent = 'Aún no hay salidas';
+        if (latestDate) latestDate.textContent = 'Tu primera ruta te espera';
+        if (latestDistance) latestDistance.textContent = '— km';
+        if (latestAscent) latestAscent.textContent = '— m+';
     }
     const mapLabel = $('home-map-label');
-    if (mapLabel) mapLabel.textContent = latest ? `Última ruta · ${routeNameWithoutActivity(latest) || 'MTB'}` : 'Angkor · Camboya';
+    if (mapLabel) mapLabel.textContent = latest
+        ? `Última ruta · ${routeNameWithoutActivity(latest) || 'MTB'}`
+        : 'Sin recorridos realizados';
+    dashboardRenderMapPreview(latest);
     const prompt = $('home-route-prompt');
     if (prompt) prompt.textContent = routeCount
         ? `${routeCount} rutas listas para consultar, seguir o exportar.`
         : 'Importa un GPX y prepara tu próxima salida de montaña.';
-    if (dashboardMap && dashboardRouteLine) {
-        const coordinates = latest && Array.isArray(latest.points)
-            ? latest.points.filter(point => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1])).map(point => [point[0], point[1]])
-            : [];
-        dashboardRouteLine.setLatLngs(coordinates);
-        if (coordinates.length > 1) dashboardMap.fitBounds(dashboardRouteLine.getBounds(), { padding: [24, 24], maxZoom: 14 });
-    }
     dashboardUpdateGpsStatus();
     dashboardUpdateNetworkStatus();
 }
+
+$('home-open-map')?.addEventListener('click', () => {
+    const latest = dashboardLatestRecordedRoute();
+    if (latest) openLastRideOnMap(latest);
+    else goToPage(0);
+});
 
 document.addEventListener('click', event => {
     const button = event.target.closest('[data-page]');
@@ -206,7 +214,3 @@ dashboardInitCardArrangement();
 dashboardUpdateNetworkStatus();
 window.addEventListener('online', dashboardUpdateNetworkStatus);
 window.addEventListener('offline', dashboardUpdateNetworkStatus);
-
-window.addEventListener('resize', () => {
-    if (dashboardMap && currentPage === 5) requestAnimationFrame(() => dashboardMap.invalidateSize({ pan: false }));
-}, { passive: true });

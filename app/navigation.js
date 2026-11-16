@@ -37,7 +37,6 @@ function renderPage(index) {
     if (index === 5) {
         if (statsNeedsRefresh) requestAnimationFrame(refreshStats);
         if (typeof dashboardRender === 'function') dashboardRender();
-        if (typeof dashboardMap !== 'undefined' && dashboardMap) setTimeout(() => dashboardMap.invalidateSize({ pan: false }), 150);
     }
     if (index === 4) {
         if (typeof renderAccount === 'function') renderAccount();
