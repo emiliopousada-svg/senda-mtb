@@ -7,7 +7,7 @@ migrate((app) => {
         trackJson = new TextField({ name: "trackJson", max: 262144 })
         collection.fields.add(trackJson)
         changed = true
-    } else if (trackJson.type !== "text") {
+    } else if (trackJson.type() !== "text") {
         throw new Error("community_routes.trackJson must be a text field")
     }
 

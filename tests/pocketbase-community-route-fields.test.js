@@ -28,10 +28,12 @@ function runMigration(fields = [], migrationFile = '1794835001_add_community_rou
         }
     };
     class FakeTextField {
-        constructor(definition) { Object.assign(this, { type: 'text' }, definition); }
+        constructor(definition) { Object.assign(this, definition); }
+        type() { return 'text'; }
     }
     class FakeFileField {
-        constructor(definition) { Object.assign(this, { type: 'file' }, definition); }
+        constructor(definition) { Object.assign(this, definition); }
+        type() { return 'file'; }
     }
     const context = vm.createContext({
         TextField: FakeTextField,
@@ -53,9 +55,9 @@ test('community routes migration adds optional POI JSON and photo fields', () =>
     const { schema, saveCount } = runMigration();
     const byName = new Map(schema.map(field => [field.name, field]));
 
-    assert.equal(byName.get('poisJson').type, 'text');
+    assert.equal(byName.get('poisJson').type(), 'text');
     assert.equal(byName.get('poisJson').max, 131072);
-    assert.equal(byName.get('poiPhotos').type, 'file');
+    assert.equal(byName.get('poiPhotos').type(), 'file');
     assert.equal(byName.get('poiPhotos').maxSelect, 5);
     assert.equal(byName.get('poiPhotos').maxSize, 614400);
     assert.deepEqual(Array.from(byName.get('poiPhotos').mimeTypes), ['image/jpeg']);
@@ -64,8 +66,8 @@ test('community routes migration adds optional POI JSON and photo fields', () =>
 
 test('community routes migration leaves existing compatible fields intact', () => {
     const existing = [
-        { name: 'poisJson', type: 'text', max: 1000 },
-        { name: 'poiPhotos', type: 'file', maxSelect: 1 }
+        { name: 'poisJson', type() { return 'text'; }, max: 1000 },
+        { name: 'poiPhotos', type() { return 'file'; }, maxSelect: 1 }
     ];
     const { schema, saveCount } = runMigration(existing);
 
@@ -77,13 +79,13 @@ test('community routes migration leaves existing compatible fields intact', () =
 
 test('community routes migration refuses incompatible existing field types', () => {
     assert.throws(
-        () => runMigration([{ name: 'poisJson', type: 'number' }]),
+        () => runMigration([{ name: 'poisJson', type() { return 'number'; } }]),
         /community_routes\.poisJson must be a text field/
     );
 });
 
 test('community routes track migration raises the text limit for existing collections', () => {
-    const trackJson = { name: 'trackJson', type: 'text', max: 5000 };
+    const trackJson = { name: 'trackJson', type() { return 'text'; }, max: 5000 };
     const { schema, saveCount } = runMigration(
         [trackJson],
         '1794835002_expand_community_route_track_json.js'
@@ -94,7 +96,7 @@ test('community routes track migration raises the text limit for existing collec
 });
 
 test('community routes track migration preserves an existing larger limit', () => {
-    const trackJson = { name: 'trackJson', type: 'text', max: 300000 };
+    const trackJson = { name: 'trackJson', type() { return 'text'; }, max: 300000 };
     const { schema, saveCount } = runMigration(
         [trackJson],
         '1794835002_expand_community_route_track_json.js'
@@ -112,7 +114,7 @@ test('community routes track migration adds a missing optional text field', () =
 
     assert.equal(schema.length, 1);
     assert.equal(schema[0].name, 'trackJson');
-    assert.equal(schema[0].type, 'text');
+    assert.equal(schema[0].type(), 'text');
     assert.equal(schema[0].max, 262144);
     assert.equal(schema[0].required, undefined);
     assert.equal(saveCount, 1);
@@ -121,7 +123,7 @@ test('community routes track migration adds a missing optional text field', () =
 test('community routes track migration refuses an incompatible existing field', () => {
     assert.throws(
         () => runMigration(
-            [{ name: 'trackJson', type: 'number', max: 5000 }],
+            [{ name: 'trackJson', type() { return 'number'; }, max: 5000 }],
             '1794835002_expand_community_route_track_json.js'
         ),
         /community_routes\.trackJson must be a text field/

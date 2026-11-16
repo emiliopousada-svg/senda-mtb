@@ -3,10 +3,10 @@ migrate((app) => {
     const poisJson = collection.fields.getByName("poisJson")
     const poiPhotos = collection.fields.getByName("poiPhotos")
 
-    if (poisJson && poisJson.type !== "text") {
+    if (poisJson && poisJson.type() !== "text") {
         throw new Error("community_routes.poisJson must be a text field")
     }
-    if (poiPhotos && poiPhotos.type !== "file") {
+    if (poiPhotos && poiPhotos.type() !== "file") {
         throw new Error("community_routes.poiPhotos must be a file field")
     }
 
