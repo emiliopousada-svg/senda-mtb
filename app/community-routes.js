@@ -1,16 +1,65 @@
 'use strict';
 
 // RUTAS PÚBLICAS DE LA COMUNIDAD
-const COMMUNITY_PROVINCES = [
-    'A Coruña', 'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila',
-    'Badajoz', 'Barcelona', 'Burgos', 'Cáceres', 'Cádiz', 'Cantabria', 'Castellón',
-    'Ciudad Real', 'Córdoba', 'Cuenca', 'Girona', 'Granada', 'Guadalajara',
-    'Gipuzkoa', 'Huelva', 'Huesca', 'Illes Balears', 'Jaén', 'La Rioja',
-    'Las Palmas', 'León', 'Lleida', 'Lugo', 'Madrid', 'Málaga', 'Murcia',
-    'Navarra', 'Ourense', 'Palencia', 'Pontevedra', 'Salamanca', 'Santa Cruz de Tenerife',
-    'Segovia', 'Sevilla', 'Soria', 'Tarragona', 'Teruel', 'Toledo', 'Valencia',
-    'Valladolid', 'Bizkaia', 'Zamora', 'Zaragoza', 'Ceuta', 'Melilla'
+const COMMUNITY_AUTONOMOUS_COMMUNITIES = [
+    'Andalucía', 'Aragón', 'Asturias', 'Canarias', 'Cantabria',
+    'Castilla-La Mancha', 'Castilla y León', 'Cataluña', 'Ceuta',
+    'Comunidad de Madrid', 'Comunidad Foral de Navarra', 'Comunidad Valenciana',
+    'Extremadura', 'Galicia', 'Illes Balears', 'La Rioja', 'Melilla',
+    'País Vasco', 'Región de Murcia'
 ];
+const COMMUNITY_PROVINCE_TO_AUTONOMY = {
+    'A Coruña': 'Galicia',
+    'Álava': 'País Vasco',
+    'Albacete': 'Castilla-La Mancha',
+    'Alicante': 'Comunidad Valenciana',
+    'Almería': 'Andalucía',
+    'Asturias': 'Asturias',
+    'Ávila': 'Castilla y León',
+    'Badajoz': 'Extremadura',
+    'Barcelona': 'Cataluña',
+    'Burgos': 'Castilla y León',
+    'Cáceres': 'Extremadura',
+    'Cádiz': 'Andalucía',
+    'Cantabria': 'Cantabria',
+    'Castellón': 'Comunidad Valenciana',
+    'Ciudad Real': 'Castilla-La Mancha',
+    'Córdoba': 'Andalucía',
+    'Cuenca': 'Castilla-La Mancha',
+    'Girona': 'Cataluña',
+    'Granada': 'Andalucía',
+    'Guadalajara': 'Castilla-La Mancha',
+    'Gipuzkoa': 'País Vasco',
+    'Huelva': 'Andalucía',
+    'Huesca': 'Aragón',
+    'Illes Balears': 'Illes Balears',
+    'Jaén': 'Andalucía',
+    'La Rioja': 'La Rioja',
+    'Las Palmas': 'Canarias',
+    'León': 'Castilla y León',
+    'Lleida': 'Cataluña',
+    'Lugo': 'Galicia',
+    'Madrid': 'Comunidad de Madrid',
+    'Málaga': 'Andalucía',
+    'Murcia': 'Región de Murcia',
+    'Navarra': 'Comunidad Foral de Navarra',
+    'Ourense': 'Galicia',
+    'Palencia': 'Castilla y León',
+    'Pontevedra': 'Galicia',
+    'Salamanca': 'Castilla y León',
+    'Santa Cruz de Tenerife': 'Canarias',
+    'Segovia': 'Castilla y León',
+    'Sevilla': 'Andalucía',
+    'Soria': 'Castilla y León',
+    'Tarragona': 'Cataluña',
+    'Teruel': 'Aragón',
+    'Toledo': 'Castilla-La Mancha',
+    'Valencia': 'Comunidad Valenciana',
+    'Valladolid': 'Castilla y León',
+    'Bizkaia': 'País Vasco',
+    'Zamora': 'Castilla y León',
+    'Zaragoza': 'Aragón'
+};
 
 const COMMUNITY_TRIM_METERS = 150;
 const COMMUNITY_PAGE_SIZE = 100;
@@ -61,9 +110,14 @@ function communityFillActivities(select) {
     });
 }
 
-function communityFillProvinces(select) {
-    select.replaceChildren(new Option('Elige una provincia', ''));
-    COMMUNITY_PROVINCES.forEach(province => select.add(new Option(province, province)));
+function communityAutonomousCommunity(value) {
+    const place = String(value || '').trim();
+    return COMMUNITY_PROVINCE_TO_AUTONOMY[place] || place;
+}
+
+function communityFillAutonomousCommunities(select) {
+    select.replaceChildren(new Option('Elige una comunidad autónoma', ''));
+    COMMUNITY_AUTONOMOUS_COMMUNITIES.forEach(community => select.add(new Option(community, community)));
 }
 
 function openCommunityCatalog() {
@@ -117,14 +171,14 @@ function openCommunityPublish(route) {
     $('community-publish').hidden = false;
     $('community-title').textContent = 'Publicar ruta en la comunidad';
     $('community-share-title').textContent = route.name || 'Ruta grabada';
-    $('community-share-province').value = '';
+    $('community-share-autonomous-community').value = '';
     $('community-share-description').value = route.description || '';
     $('community-share-difficulty').value = '';
     $('community-share-consent').checked = false;
     $('community-submit').disabled = false;
     communitySetStatus('Al enviarla, la ruta aparecerá publicada en el mapa comunitario.');
     $('community-dialog').hidden = false;
-    $('community-share-province').focus();
+    $('community-share-autonomous-community').focus();
 }
 
 function communityPerformedDate(route) {
@@ -182,7 +236,7 @@ function openCommunityDetail(record, lines, options = {}) {
         ['Tiempo en movimiento', movingTimeSec > 0 ? fmtDur(movingTimeSec) : 'No disponible'],
         ['Actividad', activity],
         ['Fecha de realización', communityPerformedDateLabel(record.performedAt)],
-        ['Provincia', record.province || 'No disponible'],
+        ['Comunidad autónoma', communityAutonomousCommunity(record.province) || 'No disponible'],
         ['Localidad', record.locality || 'No disponible'],
         ['Dificultad', COMMUNITY_DIFFICULTIES[record.difficulty] || 'Sin especificar']
     ])];
@@ -411,9 +465,9 @@ function communityTrackBounds(lines) {
 
 async function submitCommunityRoute() {
     if (!communityShareRoute || !Cloud.loggedIn()) return;
-    const province = $('community-share-province').value;
-    if (!province || !$('community-share-consent').checked) {
-        communitySetStatus('Elige la provincia y confirma la publicación voluntaria.', true);
+    const autonomousCommunity = $('community-share-autonomous-community').value;
+    if (!autonomousCommunity || !$('community-share-consent').checked) {
+        communitySetStatus('Elige la comunidad autónoma y confirma la publicación voluntaria.', true);
         return;
     }
     const button = $('community-submit');
@@ -425,7 +479,7 @@ async function submitCommunityRoute() {
         const poiData = communityPublicPoiData(route, formData);
         formData.append('owner', Cloud.uid);
         formData.append('title', String(route.name || 'Ruta MTB').trim().slice(0, 100));
-        formData.append('province', province);
+        formData.append('province', autonomousCommunity);
         formData.append('description', String($('community-share-description').value || '').trim().slice(0, 500));
         formData.append('difficulty', $('community-share-difficulty').value);
         formData.append('activityType', activityTypeForRoute(route) || 'mtb');
@@ -459,7 +513,7 @@ async function submitCommunityRoute() {
         const previousProvince = route.province;
         const previousPerformedAt = route.performedAt;
         route.communityRouteId = record.id;
-        route.province = province;
+        route.province = autonomousCommunity;
         if (performedAt) route.performedAt = performedAt;
         try {
             await DB.put(route);
@@ -492,7 +546,7 @@ async function submitCommunityRoute() {
         communitySetStatus(error.status === 404
             ? 'Falta instalar la colección community_routes en el servidor. Consulta CONFIGURAR-RUTAS-COMUNIDAD.md.'
             : error.status === 400
-                ? 'No se pudo enviar la ruta. Comprueba que community_routes incluye los campos poisJson y poiPhotos; consulta CONFIGURAR-RUTAS-COMUNIDAD.md.'
+                ? `PocketBase rechazó la ruta: ${error.message || 'solicitud no válida'}. Comprueba los campos poisJson y poiPhotos; consulta CONFIGURAR-RUTAS-COMUNIDAD.md.`
                 : 'No se pudo enviar la ruta: ' + (error.message || 'error de conexión'), true);
         button.disabled = false;
     }
@@ -564,7 +618,7 @@ function communityLocalRoute(record, lines) {
         performedAt: /^\d{4}-\d{2}-\d{2}$/.test(String(record.performedAt || '').slice(0, 10))
             ? String(record.performedAt).slice(0, 10)
             : '',
-        province: record.province || '',
+        province: communityAutonomousCommunity(record.province),
         locality: record.locality || '',
         difficulty: record.difficulty || '',
         points: communityPointsForApp(lines),
@@ -690,7 +744,7 @@ function communityPopup(record, lines) {
     const title = document.createElement('strong');
     title.textContent = record.title || 'Ruta de la comunidad';
     const info = document.createElement('p');
-    info.textContent = (record.province || '') + ' · ' +
+    info.textContent = communityAutonomousCommunity(record.province) + ' · ' +
         ((Number(record.distanceKm) || 0).toFixed(1)) + ' km · +' +
         (Number(record.elevationGain) || 0) + ' m';
     const follow = document.createElement('button');
@@ -764,7 +818,7 @@ function renderCommunityRoutes(records) {
         const poiCount = communityPoisFromRecord(record).length;
         const difficulty = COMMUNITY_DIFFICULTIES[record.difficulty];
         facts.textContent = (record.proximityKm != null ? `A ${record.proximityKm.toFixed(1)} km · ` : '') +
-            [record.locality, record.province].filter(Boolean).join(', ') + ' · ' +
+            [record.locality, communityAutonomousCommunity(record.province)].filter(Boolean).join(', ') + ' · ' +
             ((Number(record.distanceKm) || 0).toFixed(1)) + ' km · +' +
             (Number(record.elevationGain) || 0) + ' m' +
             (difficulty ? ` · ${difficulty}` : '') +
@@ -872,7 +926,7 @@ async function loadCommunityRoutes() {
         communitySearchActive = false;
         communityCatalogRoutes = [];
         renderCommunityRoutes(communityCatalogRoutes);
-        communitySetStatus('Activa el GPS o escribe una localidad, provincia o usuario para buscar rutas.', true);
+        communitySetStatus('Activa el GPS o escribe una localidad, comunidad autónoma o usuario para buscar rutas.', true);
         if (typeof requestCurrentGpsFix === 'function') requestCurrentGpsFix();
         return false;
     }
@@ -1055,7 +1109,7 @@ async function loadCommunityRoutes() {
 }
 function initCommunityRoutes() {
     communityFillActivities($('community-activity'));
-    communityFillProvinces($('community-share-province'));
+    communityFillAutonomousCommunities($('community-share-autonomous-community'));
     $('community-close').addEventListener('click', closeCommunityDialog);
     $('community-dialog').addEventListener('click', event => {
         if (event.target === $('community-dialog')) closeCommunityDialog();

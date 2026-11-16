@@ -582,12 +582,15 @@ async function openSavedRouteDetail(route) {
         && typeof communityDistanceToRoute === 'function'
         ? communityDistanceToRoute([lastLat, lastLon], lines) / 1000
         : null;
+    const autonomousCommunity = typeof communityAutonomousCommunity === 'function'
+        ? communityAutonomousCommunity(route.province)
+        : route.province || '';
     const values = [
         ...(imported ? [
             ['Distancia desde tu posición', Number.isFinite(distanceFromPositionKm)
                 ? `${distanceFromPositionKm.toFixed(1)} km` : 'No disponible'],
-            ['Provincia', route.province || 'No disponible']
-        ] : route.province ? [['Provincia', route.province]] : []),
+            ['Comunidad autónoma', autonomousCommunity || 'No disponible']
+        ] : autonomousCommunity ? [['Comunidad autónoma', autonomousCommunity]] : []),
         ['Distancia', distanceKm != null ? `${distanceKm.toFixed(1)} km` : 'No disponible'],
         ['Desnivel', routeHasElevationData(route) ? `+${Math.round(Number(route.elevationGain) || 0)} m` : 'No disponible'],
         ['Tiempo en movimiento', routeMovingTime(route) > 0 ? fmtDur(routeMovingTime(route)) : 'No disponible'],

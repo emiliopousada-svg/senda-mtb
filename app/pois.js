@@ -122,7 +122,7 @@ async function syncSharedPois() {
             const records = [];
             const filter = incremental && since ? `&filter=${encodeURIComponent(`updated >= "${since}"`)}` : '';
             for (let page = 1; ; page++) {
-                const sort = incremental ? 'updated,created' : 'created';
+                const sort = incremental ? 'updated,created' : '-id';
                 const result = await cloudApi(`/api/collections/map_pois/records?page=${page}&perPage=200&sort=${sort}${filter}`);
                 records.push(...result.items);
                 if (page >= result.totalPages) break;
