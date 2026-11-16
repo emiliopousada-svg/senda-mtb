@@ -35,6 +35,23 @@ gradle -p android assembleDebug
 
 `npm run build` prepara `www/` y sincroniza Capacitor con Android. El APK debug se genera en `android/app/build/outputs/apk/debug/app-debug.apk`.
 
+### APK actualizable desde GitHub
+
+En **Actions**, ejecuta el workflow **Android debug APK** sobre `main` y descarga el artefacto `MTBPro-debug-apk`. Cada ejecución aumenta el `versionCode`. Para que Android permita instalarlo sobre la app existente y conservar sus datos, configura estos secretos del repositorio en **Settings > Secrets and variables > Actions**:
+
+- `MTB_SIGNING_KEYSTORE_BASE64`: almacén de claves de firma codificado en Base64.
+- `MTB_SIGNING_STORE_PASSWORD`
+- `MTB_SIGNING_KEY_ALIAS`
+- `MTB_SIGNING_KEY_PASSWORD`
+
+Usa el mismo almacén de claves con el que se firmó la app instalada. Para reutilizar el almacén debug local en Windows, puedes copiar su Base64 al portapapeles con:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\debug.keystore")) | Set-Clipboard
+```
+
+El almacén debug predeterminado usa la contraseña `android` y el alias `androiddebugkey`; guarda esos valores como secretos también. No subas el almacén de claves al repositorio. Si la app instalada tiene otra firma, Android no permitirá actualizarla con esta clave.
+
 La aplicación apunta al PocketBase independiente `https://mtbpro.ddns.net`. Consulta [POCKETBASE.md](POCKETBASE.md) para las colecciones y reglas requeridas. No se incluyen credenciales ni datos del proyecto de origen.
 
 ## iOS
