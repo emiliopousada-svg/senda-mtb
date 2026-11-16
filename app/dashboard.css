@@ -102,10 +102,46 @@
 .tool-card > span { color:#39b7ff; font-size:1rem; line-height:1; }
 .tool-card strong { font-weight:650; }
 .tools-page .ai-preview { margin-top:12px; }
+.tools-page .ai-preview[hidden],.safety-workspace[hidden] { display:none; }
 .tools-sidebar-link .sidebar-icon { color:#39b7ff; }
 @media (min-width:720px) { .tools-content { padding:30px 25px; } .tools-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; } .tool-card { min-height:82px; } }
 @media (min-width:900px) { .tools-content { max-width:1000px; } }
 @media (max-width:420px) { .tools-content { padding:13px 12px calc(78px + env(safe-area-inset-bottom,0px)); } .tools-hub { padding:12px; } .tool-card { min-height:65px; } }
+.ride-safety-actions { display:flex; flex:0 0 auto; gap:6px; align-items:center; }
+.ride-safety-actions[hidden] { display:none; }
+.ride-safety-open,.ride-safety-sos { width:44px; height:44px; border:1px solid rgba(255,255,255,.2); font-weight:850; touch-action:manipulation; }
+.ride-safety-open { color:#b8f5d0; background:#153b2a; }
+.ride-safety-sos { color:#fff; background:#c62828; border-color:#ff8a80; font-size:.75rem; }
+.safety-workspace { display:grid; gap:15px; margin-top:12px; }
+.safety-back { justify-self:start; padding:8px 11px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:#202630; color:#e7edf4; font:inherit; font-size:.8rem; }
+.safety-heading h2 { margin:5px 0; color:#f5f7fa; font-size:1.35rem; }
+.safety-heading p,.safety-card > p { margin:4px 0 0; color:#aeb8c5; font-size:.78rem; line-height:1.5; }
+.safety-grid { display:grid; gap:11px; }
+.safety-card { min-width:0; display:grid; align-content:start; gap:11px; padding:15px; border:1px solid rgba(255,255,255,.09); border-radius:16px; background:linear-gradient(145deg,#171d26,#11161e); }
+.safety-card h3 { margin:0; color:#f2f5f8; font-size:.96rem; }
+.safety-contact-form { display:grid; gap:7px; }
+.safety-contact-form label,.safety-field-row { color:#d5dce5; font-size:.75rem; font-weight:650; }
+.safety-contact-form input,.safety-field-row input,.safety-field-row select { width:100%; min-width:0; min-height:42px; padding:9px 11px; border:1px solid rgba(255,255,255,.13); border-radius:10px; background:#0d1219; color:#f4f6fa; font:inherit; }
+.safety-field-row { display:grid; gap:7px; }
+.safety-toggle { display:flex; align-items:flex-start; gap:9px; color:#e1e7ee; font-size:.77rem; line-height:1.45; }
+.safety-toggle input { flex:0 0 auto; width:18px; height:18px; margin:1px 0 0; accent-color:#38c976; }
+.safety-unavailable { color:#929eac; }
+.safety-unavailable input { accent-color:#777; }
+.safety-note { margin:0; color:#9eabb9; font-size:.72rem; line-height:1.5; }
+.safety-note[data-state="error"] { color:#ff9b91; }
+.safety-note[data-state="success"] { color:#80e6a8; }
+.safety-primary-button,.safety-secondary-button,.safety-sos-button { min-height:42px; padding:9px 12px; border:0; border-radius:10px; font:inherit; font-size:.77rem; font-weight:800; cursor:pointer; touch-action:manipulation; }
+.safety-primary-button { background:#34c879; color:#101a14; }
+.safety-secondary-button { border:1px solid rgba(255,255,255,.14); background:#252c36; color:#e7edf4; }
+.safety-sos-button { background:#c62828; color:#fff; }
+.safety-contact-list { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+.safety-contact-item { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-radius:10px; background:#202630; color:#e6ebf0; font-size:.76rem; }
+.safety-contact-item button { flex:0 0 auto; border:0; background:transparent; color:#ffaaa2; font:inherit; font-size:.7rem; }
+.safety-countdown { color:#76e3a0; font-size:1.65rem; font-variant-numeric:tabular-nums; font-weight:850; letter-spacing:.03em; }
+.safety-location-link { color:#66c2ff; font-size:.77rem; }
+.safety-active-card { border-color:rgba(52,200,121,.25); }
+@media (min-width:850px) { .safety-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .safety-active-card { grid-column:1 / -1; } }
+@media (min-width:1100px) { .safety-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .safety-active-card { grid-column:auto; } }
 .panel-heading { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px 10px; }
 .panel-heading h2 { margin-top:4px; color:#f0f3f7; font-size:1rem; font-weight:720; letter-spacing:-.025em; }
 .text-link { display:inline-flex; align-items:center; gap:8px; padding:7px 0; border:0; background:none; color:#46b4ff; font-size:.72rem; font-weight:720; white-space:nowrap; }
@@ -294,12 +330,12 @@ body { background:var(--mtb-graphite); color:var(--text); }
 .community-hub-tab span { color:var(--mtb-orange); font-size:1.2rem; line-height:1; }
 .community-hub-tab:hover { background:#303744; }
 .community-hub-tab.active { border-color:rgba(255,118,31,.35); background:linear-gradient(145deg,rgba(255,118,31,.19),#282d36 75%); box-shadow:inset 0 0 0 1px rgba(255,118,31,.08); }
-.community-hub-tab:focus-visible,.community-create-competition:focus-visible { outline:3px solid rgba(22,140,255,.8); outline-offset:2px; }
-.community-create-competition { display:flex; width:100%; min-height:76px; flex-direction:column; align-items:center; justify-content:center; gap:5px; margin-top:10px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:linear-gradient(105deg,#ff7a25,#f16b1a); color:#17130f; box-shadow:0 8px 20px rgba(241,107,26,.2); transition:filter .16s ease,transform .16s ease; }
-.community-create-competition:hover { filter:brightness(1.07); }
-.community-create-competition:active { transform:scale(.99); }
-.community-create-competition strong { font-size:.94rem; letter-spacing:.02em; }
-.community-create-competition small { font-size:.68rem; }
+.community-hub-tab:focus-visible,.community-season-shortcut:focus-visible { outline:3px solid rgba(22,140,255,.8); outline-offset:2px; }
+.community-season-shortcut { display:flex; width:100%; min-height:76px; flex-direction:column; align-items:center; justify-content:center; gap:5px; margin-top:10px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:linear-gradient(105deg,#ff7a25,#f16b1a); color:#17130f; box-shadow:0 8px 20px rgba(241,107,26,.2); transition:filter .16s ease,transform .16s ease; }
+.community-season-shortcut:hover { filter:brightness(1.07); }
+.community-season-shortcut:active { transform:scale(.99); }
+.community-season-shortcut strong { font-size:.94rem; letter-spacing:.02em; }
+.community-season-shortcut small { font-size:.68rem; }
 .community-section { display:grid; gap:12px; }
 .community-section[hidden] { display:none !important; }
 #page-community .community-section .card { width:100%; margin-inline:auto; }
@@ -325,7 +361,7 @@ body { background:var(--mtb-graphite); color:var(--text); }
 .community-section .group-ranking-categories { grid-template-columns:1fr; }
 @media (min-width:720px) { .community-section .group-ranking-categories { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (min-width:1100px) { .community-section .group-ranking-categories { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-@media (max-width:420px) { .community-menu { padding:10px; border-radius:15px; } .community-hub { gap:6px; } .community-hub-tab { min-height:66px; border-radius:10px; font-size:.69rem; } .community-create-competition { min-height:68px; } }
+@media (max-width:420px) { .community-menu { padding:10px; border-radius:15px; } .community-hub { gap:6px; } .community-hub-tab { min-height:66px; border-radius:10px; font-size:.69rem; } .community-season-shortcut { min-height:68px; } }
 .hint,.content-panel .hint { color:#98a4b3; line-height:1.55; }
 .content-panel label:not(.setting-toggle) { color:#b3becc; }
 
@@ -437,7 +473,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     backdrop-filter:blur(16px);
 }
 .stats-header h2 { font-size:1.25rem; letter-spacing:-.04em; }
-.stats-header h2::before { content:"MTB CAMBOYA PRO · PERFORMANCE"; color:#54b6ff; }
+.stats-header h2::before { content:"senda-brava · PERFORMANCE"; color:#54b6ff; }
 .stats-period-btn,.stats-tab {
     border-color:rgba(255,255,255,.1);
     background:#151b24;

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>MTB Camboya PRO</string>
+        <string>senda-brava</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -25,11 +25,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>MTB Camboya PRO usa tu ubicación para grabar y seguir rutas cuando activas estas funciones.</string>
+	<string>senda-brava usa tu ubicación para grabar y seguir rutas cuando activas estas funciones.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>MTB Camboya PRO mantiene la grabación GPS de tu ruta cuando bloqueas la pantalla.</string>
+	<string>senda-brava mantiene la grabación GPS de tu ruta cuando bloqueas la pantalla.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>MTB Camboya PRO usa Bluetooth cuando conectas un sensor de ciclismo compatible.</string>
+	<string>senda-brava usa Bluetooth cuando conectas un sensor de ciclismo compatible.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

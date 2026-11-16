@@ -1,8 +1,8 @@
 {
   "appId": "com.emiliopousada.mtbcamboyapro",
-  "appName": "MTB Camboya PRO",
+  "appName": "senda-brava",
   "webDir": "www",
-  "appendUserAgent": "MTBCamboyaPRO (+https://github.com/emiliopousada-svg/MTBPro)",
+  "appendUserAgent": "senda-brava (+https://github.com/emiliopousada-svg/MTBPro)",
   "server": {
     "androidScheme": "https"
   },

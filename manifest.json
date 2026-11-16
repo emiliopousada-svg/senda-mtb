@@ -1,6 +1,6 @@
 {
-  "name": "MTB Camboya PRO",
-  "short_name": "MTB PRO",
+  "name": "senda-brava",
+  "short_name": "senda-brava",
   "description": "GPS, rutas y mapas offline para MTB",
   "lang": "es",
   "start_url": "./",

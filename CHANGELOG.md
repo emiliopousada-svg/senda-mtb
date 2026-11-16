@@ -1,6 +1,6 @@
 # Changelog
 
-Todas las novedades y cambios relevantes de **MTB Camboya PRO** se documentan en este archivo.  
+Todas las novedades y cambios relevantes de **senda-brava** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
 ---

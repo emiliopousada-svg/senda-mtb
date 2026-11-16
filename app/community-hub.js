@@ -45,15 +45,22 @@ $('community-open-segments')?.addEventListener('click', () => {
     setRoutesTab('community');
 });
 
-$('community-create-competition')?.addEventListener('click', () => {
-    communitySetSection('challenges');
+$('community-open-season')?.addEventListener('click', () => {
     const status = $('community-competition-status');
     if (!Cloud.loggedIn() || !groupJoined) {
-        status.textContent = 'Inicia sesión y únete a un grupo para preparar una competición privada.';
         communitySetSection('group');
+        const message = 'Inicia sesión y únete a un grupo para consultar la temporada activa.';
+        status.textContent = message;
+        if ($('group-status')) $('group-status').textContent = message;
         $('group-setup')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
-    status.textContent = 'PocketBase responde en https://mtbpro.ddns.net. Falta instalar la API y las colecciones de temporadas para guardar la competición de forma segura.';
+    communitySetSection('challenges');
+    loadGroupRankings();
     status.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+$('community-open-ranking')?.addEventListener('click', () => {
+    communitySetSection('ranking');
+    loadGroupRankings();
 });

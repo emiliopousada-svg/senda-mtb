@@ -593,7 +593,8 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
     }
 }
 async function publishMyLocation(force = false) {
-    if (!groupJoined || !Cloud.loggedIn() || !isRecording || isPaused || lastLat === null || lastLon === null
+    if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+        || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused || lastLat === null || lastLon === null
         || !Number.isFinite(lastLat) || lastLat < -90 || lastLat > 90
         || !Number.isFinite(lastLon) || lastLon < -180 || lastLon > 180
         || !Number.isFinite(lastPositionAt) || Date.now() - lastPositionAt > LIVE_PENDING_TTL_MS
@@ -605,7 +606,8 @@ async function publishMyLocation(force = false) {
         return;
     }
     await loadPendingLiveLocation();
-    if (!groupJoined || !Cloud.loggedIn() || !isRecording || isPaused) return;
+    if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+        || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused) return;
     if (!pendingLiveLocation && !force && Date.now() - lastLivePush < LIVE_INTERVAL_MS && navigator.onLine) return;
     const snapshot = updatePendingLiveLocation(nickname);
     if (!navigator.onLine || livePushPending) {
@@ -630,7 +632,8 @@ async function publishMyLocation(force = false) {
 }
 
 async function retryPendingLiveLocation() {
-    if (!groupJoined || !Cloud.loggedIn() || !isRecording || isPaused || !navigator.onLine) return;
+    if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+        || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused || !navigator.onLine) return;
     if (liveLocationRetryIsBlocked()) return;
     await loadPendingLiveLocation();
     const snapshot = pendingLiveLocation;
@@ -652,12 +655,17 @@ async function retryPendingLiveLocation() {
 }
 
 async function sendPendingLiveLocation(snapshot) {
+    if (typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled()) {
+        await removeMyLiveLocation();
+        return;
+    }
     if (livePushPending || !snapshot) return;
     livePushPending = true;
     try {
         try { await persistPendingLiveLocation(); }
         catch (error) { reportPendingLiveLocationStorageError(error); }
-        if (!groupJoined || !Cloud.loggedIn() || !isRecording || isPaused
+        if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+            || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused
             || groupName() !== snapshot.groupCode || Cloud.uid !== snapshot.ownerId) {
             await removeMyLiveLocation();
             return;
@@ -680,7 +688,8 @@ async function sendPendingLiveLocation(snapshot) {
             const rec = await cloudApi('/api/collections/live_locations/records', 'POST', payload);
             myLiveRecordId = rec.id;
         }
-        if (!groupJoined || !isRecording || isPaused || groupName() !== snapshot.groupCode || Cloud.uid !== snapshot.ownerId) {
+        if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+            || !groupJoined || !isRecording || isPaused || groupName() !== snapshot.groupCode || Cloud.uid !== snapshot.ownerId) {
             await removeMyLiveLocation();
             return;
         }
@@ -709,7 +718,8 @@ async function sendPendingLiveLocation(snapshot) {
                 ? `Error al compartir ubicaci\u00f3n: ${e.message}. Se reintentar\u00e1 autom\u00e1ticamente.`
                 : 'Sin conexi\u00f3n: la posici\u00f3n m\u00e1s reciente queda pendiente y se reintentar\u00e1 al recuperar cobertura.'
             : `No se pudo compartir la posici\u00f3n: ${e.message}. Se detuvieron los reintentos autom\u00e1ticos.`;
-        if (groupJoined && Cloud.loggedIn() && isRecording && !isPaused
+        if ((typeof safetyGroupTrackingEnabled !== 'function' || safetyGroupTrackingEnabled())
+            && groupJoined && Cloud.loggedIn() && isRecording && !isPaused
             && groupName() === snapshot.groupCode && Cloud.uid === snapshot.ownerId) {
             if (willRetry) {
                 const retry = pendingLiveLocation || snapshot;

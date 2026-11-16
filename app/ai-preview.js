@@ -15,6 +15,9 @@ document.querySelector('.tools-grid')?.addEventListener('click', event => {
     const button = event.target.closest('[data-tool]');
     if (!button) return;
     switch (button.dataset.tool) {
+        case 'safety':
+            if (typeof safetyOpenWorkspace === 'function') safetyOpenWorkspace();
+            break;
         case 'ai':
             document.getElementById('ai-preview-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById('ai-preview-input')?.focus({ preventScroll: true });

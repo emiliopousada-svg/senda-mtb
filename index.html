@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>MTB Camboya PRO</title>
+    <title>senda-brava</title>
     <!-- Enlace al manifiesto PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#111318">
@@ -24,7 +24,7 @@
     <aside class="desktop-sidebar" aria-label="Navegación principal">
         <a class="brand-lockup" href="#inicio" onclick="goToPage(5); return false;">
             <img src="icon.svg" alt="">
-            <span>MTB<span>PRO</span></span>
+            <span>senda-<span>brava</span></span>
         </a>
         <p class="sidebar-caption">TU CENTRO MTB</p>
         <nav class="sidebar-nav">
@@ -36,7 +36,7 @@
             <button class="sidebar-link" type="button" data-page="1"><span class="sidebar-icon">▥</span>Estadísticas</button>
             <button class="sidebar-link tools-sidebar-link" type="button" data-page="7"><span class="sidebar-icon">☷</span>Más herramientas</button>
         </nav>
-        <div class="sidebar-footer"><span class="sidebar-status-dot"></span><span>MTB PRO <small>· LISTO PARA RODAR</small></span></div>
+        <div class="sidebar-footer"><span class="sidebar-status-dot"></span><span>senda-brava <small>· LISTO PARA RODAR</small></span></div>
     </aside>
 
     <!-- CONTENEDOR DESLIZABLE DE PÁGINAS -->
@@ -165,6 +165,10 @@
                 <button class="btn-main-action" id="btn-start">
                     <span id="ico-start">▶️</span> <span id="lbl-start">COMENZAR RUTA</span>
                 </button>
+                <div id="ride-safety-actions" class="ride-safety-actions" hidden>
+                    <button class="btn-icon-only ride-safety-open" id="safety-ride-open" type="button" aria-label="Abrir seguridad de ruta" title="Seguridad de ruta">⬡</button>
+                    <button class="btn-icon-only ride-safety-sos" id="safety-ride-sos" type="button" aria-label="Preparar SOS por WhatsApp" title="Preparar SOS por WhatsApp">SOS</button>
+                </div>
                 <button class="btn-unfollow-map" id="btn-unfollow" type="button" style="display:none;">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M4 19V5l6-2 4 2 6-2v11M4 5l6 2 4-2 6 2M10 7v11m4-13v8M16 17l5 5m0-5-5 5"></path>
@@ -384,7 +388,7 @@
         <!-- PÁGINA 3: AMIGOS EN LIVE -->
         <div class="page content-panel" id="page-community">
             <header class="page-intro">
-                <span class="eyebrow"><i></i> MTB CAMBOYA PRO · COMUNIDAD</span>
+                <span class="eyebrow"><i></i> senda-brava · COMUNIDAD</span>
                 <h1>Comunidad</h1>
                 <p>Competición entre riders · ligas privadas de MTB.</p>
             </header>
@@ -397,13 +401,13 @@
                 <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-achievements" data-community-section="achievements"><span aria-hidden="true">♢</span>Logros</button>
                 <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-activity" data-community-section="activity"><span aria-hidden="true">▣</span>Actividad</button>
             </nav>
-            <button class="community-create-competition" id="community-create-competition" type="button"><strong>CREAR COMPETICIÓN</strong><small>Organiza una liga de cuatro semanas para tu grupo</small></button>
+            <button class="community-season-shortcut" id="community-open-season" type="button"><strong>VER TEMPORADA</strong><small>Consulta la clasificación activa de tu grupo</small></button>
             </div>
             <section class="community-section" id="community-section-ranking" role="tabpanel" aria-label="Clasificación del grupo">
             <div class="card" id="group-ranking-card">
                 <h2>🏆 Clasificación de la liga</h2>
                 <p class="hint">Compite en categorías independientes. Las marcas actuales se basan en actividades compartidas por miembros del grupo.</p>
-                <div class="community-season-banner"><span>⏱</span><div><strong>Temporadas de 4 semanas</strong><small>El calendario y los campeones se activarán con la liga del grupo.</small></div></div>
+                <div class="community-season-banner"><span>⏱</span><div><strong>Temporadas de 4 semanas</strong><small>La clasificación suma las actividades compartidas durante la temporada activa.</small></div></div>
                 <div class="group-ranking-header">
                     <p id="group-ranking-status" class="hint" role="status" aria-live="polite">Únete a un grupo para consultar sus marcas.</p>
                     <button class="btn-small secondary" id="group-rankings-refresh" type="button">Actualizar</button>
@@ -417,7 +421,7 @@
                     <section class="group-ranking-category"><h3>Mayor regularidad</h3><div id="group-ranking-consistency" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category group-ranking-total"><h3>Puntuación global</h3><div id="group-ranking-points" class="group-ranking-list"></div></section>
                 </div>
-                <details class="community-scoring-rules"><summary>Cómo se puntúa la liga</summary><p>Base propuesta: 1 punto por kilómetro y 1 punto por cada 20 m de desnivel positivo. Desafíos, récords, participación y regularidad sumarán bonus con límites por temporada. Las categorías se mantienen separadas para que cada ciclista tenga una forma justa de competir.</p><small>El cálculo competitivo se habilitará cuando el servidor nuevo tenga instaladas las colecciones y reglas de validación.</small></details>
+                <details class="community-scoring-rules"><summary>Cómo se puntúa la liga</summary><p>Por salida: 1 punto por kilómetro (máximo 200), 1 punto por cada 50 m de desnivel positivo y 1 punto por cada 15 minutos en movimiento. Se añaden 10 puntos si la salida alcanza 10 km o 30 minutos. Solo cuentan las marcas compartidas durante la temporada activa.</p></details>
             </div>
             </section>
 
@@ -425,8 +429,8 @@
                 <div class="card community-empty-card"><span class="community-feature-icon">▲</span><h2>Segmentos MTB</h2><p>Los segmentos públicos se crean sobre rutas de la comunidad. Cada uno conserva su perfil, distancia y clasificación de intentos.</p><button class="btn" id="community-open-segments" type="button">Explorar rutas y segmentos</button><p class="hint">Abre una ruta para consultar sus segmentos y tiempos publicados.</p></div>
             </section>
 
-            <section class="community-section" id="community-section-challenges" role="tabpanel" aria-label="Desafíos del grupo" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">◎</span><h2>Desafíos de la liga</h2><p>Retos individuales y colectivos con fechas, reglas, participantes y progreso semanal.</p><div class="community-challenge-examples"><span>100 km esta semana</span><span>Desnivel acumulado</span><span>3 rutas diferentes</span><span>10.000 m en equipo</span></div><p id="community-competition-status" class="hint" role="status">Las temporadas se configuran desde el botón «Crear competición».</p></div>
+            <section class="community-section" id="community-section-challenges" role="tabpanel" aria-label="Temporada del grupo" hidden>
+                <div class="card community-empty-card"><span class="community-feature-icon">◎</span><h2>Temporada activa</h2><p>Las actividades que compartes con tu grupo suman a la clasificación de cuatro semanas.</p><p id="community-competition-status" class="hint" role="status" aria-live="polite">Inicia sesión y únete a un grupo para consultar la temporada activa.</p><button class="btn" id="community-open-ranking" type="button">Ver clasificación de temporada</button><p class="hint">Los retos personalizados, las medallas y el historial de actividad requieren funciones adicionales de servidor y aún no están activos.</p></div>
             </section>
 
             <section class="community-section" id="community-section-group" role="tabpanel" aria-label="Mi grupo" hidden>
@@ -488,7 +492,7 @@
         <!-- PÁGINA 4: RUTAS REALIZADAS Y TRACKS -->
         <div class="page content-panel" id="page-routes">
             <header class="page-intro">
-                <span class="eyebrow"><i></i> MTB CAMBOYA PRO · EXPLORACIÓN</span>
+                <span class="eyebrow"><i></i> senda-brava · EXPLORACIÓN</span>
                 <h1>Tu biblioteca MTB</h1>
                 <p>Organiza tus recorridos, importa tracks y prepara la próxima aventura.</p>
             </header>
@@ -597,7 +601,7 @@
         <!-- PÁGINA 5: AJUSTES -->
         <div class="page content-panel" id="page-settings">
             <header class="page-intro">
-                <span class="eyebrow"><i></i> MTB CAMBOYA PRO · PERSONALIZACIÓN</span>
+                <span class="eyebrow"><i></i> senda-brava · PERSONALIZACIÓN</span>
                 <h1>Configura tu experiencia</h1>
                 <p>Mapas, sensores y preferencias para tener cada salida bajo control.</p>
             </header>
@@ -775,12 +779,12 @@
             </div>
         </div>
 
-        <!-- INICIO / DASHBOARD MTB PRO -->
+        <!-- INICIO / DASHBOARD SENDA-BRAVA -->
         <div class="page dashboard-page" id="page-home">
             <main class="dashboard-content">
                 <header class="dashboard-hero">
                     <div class="hero-copy">
-                        <span class="eyebrow">MTB PRO <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
+                        <span class="eyebrow">senda-brava <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
                         <div class="dashboard-greeting">
                             <h1 id="home-greeting">¡Hola, Biker!</h1>
                             <img id="home-avatar" class="dashboard-avatar" alt="Avatar del usuario" hidden>
@@ -872,7 +876,7 @@
             <main class="cockpit-content">
                 <header class="cockpit-header">
                     <div>
-                        <span class="eyebrow">MTB PRO <i></i> COCKPIT</span>
+                        <span class="eyebrow">senda-brava <i></i> COCKPIT</span>
                         <h1>Tu salida, de un vistazo</h1>
                     </div>
                     <button class="cockpit-back" type="button" data-page="5">← Inicio</button>
@@ -974,7 +978,7 @@
 
         <div class="page tools-page" id="page-tools">
             <main class="tools-content">
-                <header class="tools-page-heading"><span class="eyebrow">TU CENTRO MTB</span><h1>MTB CAMBOYA PRO</h1><p>Accesos principales en la barra inferior. Tus herramientas, aquí.</p></header>
+                <header class="tools-page-heading"><span class="eyebrow">TU CENTRO MTB</span><h1>senda-brava</h1><p>Accesos principales en la barra inferior. Tus herramientas, aquí.</p></header>
                 <section class="tools-hub" aria-labelledby="tools-hub-title">
                     <h2 id="tools-hub-title">Más herramientas</h2>
                     <div class="tools-grid">
@@ -1003,6 +1007,66 @@
                         <button class="ai-send-button" type="submit">Probar</button>
                     </form>
                     <p id="ai-preview-status" class="ai-preview-footnote" role="status" aria-live="polite">Ejemplo ilustrativo. El servicio aún no está conectado y no se envían datos.</p>
+                </section>
+                <section id="safety-workspace" class="safety-workspace" aria-labelledby="safety-title" hidden>
+                    <button id="safety-back" class="safety-back" type="button">← Más herramientas</button>
+                    <header class="safety-heading">
+                        <span class="eyebrow">PREPARACIÓN DE RUTA</span>
+                        <h2 id="safety-title">Seguridad</h2>
+                        <p>Configura avisos locales y contactos. En una emergencia, WhatsApp se abrirá con el mensaje preparado; tú tendrás que enviarlo.</p>
+                    </header>
+                    <div class="safety-grid">
+                        <section class="safety-card" aria-labelledby="safety-contacts-title">
+                            <h3 id="safety-contacts-title">Contactos de emergencia</h3>
+                            <p>Se guardan solo en este dispositivo y no se sincronizan con tu cuenta.</p>
+                            <form id="safety-contact-form" class="safety-contact-form">
+                                <label for="safety-contact-name">Nombre</label>
+                                <input id="safety-contact-name" type="text" maxlength="40" autocomplete="name" required>
+                                <label for="safety-contact-phone">Teléfono internacional</label>
+                                <input id="safety-contact-phone" type="tel" inputmode="tel" placeholder="+34600123456" autocomplete="tel" required>
+                                <button class="safety-secondary-button" type="submit">Añadir contacto</button>
+                            </form>
+                            <ul id="safety-contact-list" class="safety-contact-list" aria-label="Contactos guardados"></ul>
+                        </section>
+                        <section class="safety-card" aria-labelledby="safety-settings-title">
+                            <h3 id="safety-settings-title">Aviso de salida</h3>
+                            <div class="safety-field-row">
+                                <label for="safety-duration">Duración prevista (minutos)</label>
+                                <input id="safety-duration" type="number" min="15" max="720" step="15" value="180">
+                            </div>
+                            <div class="safety-field-row">
+                                <label for="safety-grace">Avisar tras el retraso (minutos)</label>
+                                <input id="safety-grace" type="number" min="5" max="120" step="5" value="15">
+                            </div>
+                            <label class="safety-toggle">
+                                <input id="safety-group-sharing" type="checkbox">
+                                <span>Compartir ubicación en directo con mi grupo mientras grabo</span>
+                            </label>
+                            <p id="safety-group-status" class="safety-note" role="status" aria-live="polite"></p>
+                            <label class="safety-toggle safety-unavailable">
+                                <input type="checkbox" disabled>
+                                <span>Detección de caídas</span>
+                            </label>
+                            <p class="safety-note">No disponible: esta versión no tiene un detector de caídas validado para tu dispositivo.</p>
+                            <button id="safety-prepare" class="safety-primary-button" type="button">Preparar próxima salida</button>
+                            <p id="safety-status" class="safety-note" role="status" aria-live="polite"></p>
+                        </section>
+                        <section class="safety-card safety-active-card" aria-labelledby="safety-active-title">
+                            <h3 id="safety-active-title">Durante la salida</h3>
+                            <p id="safety-session-status" class="safety-note" role="status" aria-live="polite">Sin protección activa.</p>
+                            <div id="safety-countdown" class="safety-countdown">--:--</div>
+                            <p id="safety-last-location" class="safety-note">Última ubicación conocida: no disponible.</p>
+                            <a id="safety-location-link" class="safety-location-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación en el mapa</a>
+                            <label class="safety-field-row" for="safety-sos-contact">
+                                Contactar mediante WhatsApp
+                                <select id="safety-sos-contact"></select>
+                            </label>
+                            <button id="safety-send-sos" class="safety-sos-button" type="button">Preparar mensaje SOS</button>
+                            <button id="safety-cancel-alert" class="safety-secondary-button" type="button" hidden>Estoy bien · cancelar aviso</button>
+                            <button id="safety-end-session" class="safety-secondary-button" type="button" hidden>Finalizar protección</button>
+                            <p class="safety-note">El SOS no se envía automáticamente. El aviso por retraso es local y no contacta a nadie si no puedes responder.</p>
+                        </section>
+                    </div>
                 </section>
             </main>
         </div>
@@ -1142,6 +1206,7 @@
     <script src="app/pois.js"></script>
     <script src="app/group-rankings.js"></script>
     <script src="app/groups.js"></script>
+    <script src="app/safety.js"></script>
     <script src="app/ui.js"></script>
     <script src="lib/native-app.js"></script>
     <script src="app/cloud-preferences.js"></script>

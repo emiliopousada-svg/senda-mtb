@@ -108,8 +108,8 @@ function groupRankingSummaryFromEntries(entries, options = {}) {
     entries.forEach((entry) => {
         if (season) {
             const created = getEntryValue(entry, "created", false);
-            const entryTime = created ? Date.parse(created) : 0;
-            if (entryTime && (entryTime < season.startMs || entryTime > season.endMs)) return;
+            const entryTime = Date.parse(created);
+            if (!Number.isFinite(entryTime) || entryTime < season.startMs || entryTime > season.endMs) return;
         }
 
         const owner = getEntryValue(entry, "owner", false);

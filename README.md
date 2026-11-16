@@ -1,4 +1,4 @@
-# MTB Camboya PRO
+# senda-brava
 
 App de ciclismo de montaña con GPS, registro de actividades, mapas offline, rutas GPX/KML/GeoJSON, estadísticas, sensores Bluetooth y funciones sociales.
 
@@ -6,7 +6,7 @@ Versión indicada en el proyecto: **0.1.0**
 
 ## Identidad y alcance
 
-MTB Camboya PRO 0.1.0 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
+senda-brava 0.1.0 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
 
 ## Documentación del proyecto
 
@@ -56,7 +56,7 @@ La aplicación apunta al PocketBase independiente `https://mtbpro.ddns.net`. Con
 
 ## iOS
 
-El proyecto iOS está generado para `com.emiliopousada.mtbcamboyapro`, nombre `MTB Camboya PRO` y despliegue mínimo iOS 15. El acceso a ubicación en uso y en segundo plano y Bluetooth declara sus textos de permiso en `ios/App/App/Info.plist`. Revisa los mensajes y valida el comportamiento en un dispositivo antes de publicar.
+El proyecto iOS está generado para `com.emiliopousada.mtbcamboyapro`, nombre `senda-brava` y despliegue mínimo iOS 15. El acceso a ubicación en uso y en segundo plano y Bluetooth declara sus textos de permiso en `ios/App/App/Info.plist`. Revisa los mensajes y valida el comportamiento en un dispositivo antes de publicar.
 
 Para compilarlo se necesita macOS con Xcode 26 o posterior:
 

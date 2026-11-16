@@ -2,7 +2,7 @@
   "name": "mtbpro",
   "version": "0.1.0",
   "private": true,
-  "description": "MTB Camboya PRO: rutas, GPS, mapas offline y comunidad",
+  "description": "senda-brava: rutas, GPS, mapas offline y comunidad",
   "scripts": {
     "prepare-web": "node scripts/prepare-web.js",
     "build": "node scripts/prepare-web.js && npx cap sync",

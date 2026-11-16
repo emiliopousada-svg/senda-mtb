@@ -235,7 +235,7 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
         const season = getSeasonInfo(Date.now());
         const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "");
         const entries = findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + safeGroupId + '"', "");
-        const rankingsByUser = groupRankingSummaryFromEntries(entries);
+        const rankingsByUser = groupRankingSummaryFromEntries(entries, { season });
         const members = memberships.map((membership) => {
             const userId = membership.getString("user");
             const member = $app.findRecordById("users", userId);

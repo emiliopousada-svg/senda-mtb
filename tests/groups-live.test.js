@@ -88,3 +88,24 @@ test('a failed live-location refresh removes stale friend markers from the list'
     assert.equal(elements.get('friends-list').children.length, 0);
     assert.match(elements.get('friends-list').textContent, /No se pudo verificar/);
 });
+
+test('disabling safety group tracking prevents live-location publishing and retries', async () => {
+    const { context } = groupsContext();
+    let apiCalls = 0;
+    context.safetyGroupTrackingEnabled = () => false;
+    context.isRecording = true;
+    context.isPaused = false;
+    context.lastLat = 40;
+    context.lastLon = -3;
+    context.lastPositionAt = Date.now();
+    context.lastAccuracy = 5;
+    context.cloudApi = async () => {
+        apiCalls += 1;
+        throw new Error('A disabled share should not reach PocketBase.');
+    };
+
+    await context.publishMyLocation(true);
+    await context.retryPendingLiveLocation();
+
+    assert.equal(apiCalls, 0);
+});

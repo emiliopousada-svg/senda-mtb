@@ -167,7 +167,7 @@ function notifyBatteryWarning(message) {
         return ln.schedule({
             notifications: [{
                 id: (Date.now() % 2147483647) + 1,
-                title: 'MTB Camboya PRO · Batería',
+                title: 'senda-brava · Batería',
                 body: message,
                 schedule: { at: new Date(Date.now() + 1000) }
             }]
@@ -255,7 +255,7 @@ async function startBgWatcher() {
     try {
         await ensureNotifPermission();
         const id = await bg.addWatcher({
-            backgroundTitle: 'MTB Camboya PRO',
+            backgroundTitle: 'senda-brava',
             backgroundMessage: 'Grabando tu ruta…',
             requestPermissions: true,
             stale: false,
@@ -577,6 +577,10 @@ function startRecording(activityType) {
     startRideAdvisories();
     following = true;
     updateCenterBtn();
+    if (typeof safetyOnRecordingStarted === 'function') {
+        safetyOnRecordingStarted().catch(error => console.error('No se pudo activar la protección de ruta:', error));
+    }
+    if (typeof safetyRender === 'function') safetyRender();
     publishMyLocation(true);
     beginTracking(true);
 }
@@ -605,6 +609,7 @@ function pauseRecording(automatic = false) {
     if (!automatic && navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate(45);
     $('m-speed').textContent = '0.0';
     scheduleDraftSave(0);
+    if (typeof safetyRender === 'function') safetyRender();
     if (automatic) toast(`Pausa automática: sin movimiento durante ${AUTO_PAUSE_AFTER_MS / 1000} segundos.`);
 }
 
@@ -626,6 +631,7 @@ function resumeRecording(automatic = false, position = null) {
     startRideAdvisories();
     publishMyLocation(true);
     beginTracking(false);
+    if (typeof safetyRender === 'function') safetyRender();
     if (automatic) toast('Grabación reanudada automáticamente.');
 }
 
@@ -698,6 +704,8 @@ async function finishRecording() {
     }
     isRecording = false;
     isPaused = false;
+    if (typeof safetyOnRecordingStopped === 'function') await safetyOnRecordingStopped();
+    if (typeof safetyRender === 'function') safetyRender();
     if (navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate([70, 45, 130]);
     refreshGpsMode();
     resetAutoPauseState();

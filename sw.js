@@ -1,4 +1,4 @@
-// Service Worker de MTB Camboya PRO
+// Service Worker de senda-brava
 // - Guarda la app y las librerías para que abra sin conexión.
 // - Los mapas offline (teselas del IGN) se guardan en IndexedDB desde la propia aplicación.
 // prepare-web.js sustituye el marcador con la versión de package.json.
