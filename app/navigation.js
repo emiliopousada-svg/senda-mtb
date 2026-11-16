@@ -14,11 +14,9 @@ function setSwiperPosition(index, immediate = false) {
         swiper.style.transform = 'translate3d(0,0,0)';
         return;
     }
-    const pageWidth = targetPage.getBoundingClientRect().width
-        || document.documentElement.clientWidth
-        || window.innerWidth;
+    const pageOffset = targetPage.offsetLeft;
     if (immediate) swiper.style.transition = 'none';
-    swiper.style.transform = `translate3d(-${index * pageWidth}px,0,0)`;
+    swiper.style.transform = `translate3d(-${pageOffset}px,0,0)`;
     if (immediate) requestAnimationFrame(() => { swiper.style.transition = ''; });
 }
 
