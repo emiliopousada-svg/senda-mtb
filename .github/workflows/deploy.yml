@@ -1,0 +1,27 @@
+name: Ejecutar con Secretos
+
+# Se activa cada vez que haces push a la rama main
+on:
+  push:
+    branches: [ "main" ]
+  # Permite lanzarlo manualmente desde la pestaña Actions de GitHub
+  workflow_dispatch:
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descarga tu código en el servidor de GitHub
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      # 2. Ejemplo de uso de secretos como variables de entorno
+      - name: Ejecutar script usando secretos
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          echo "Conectando de forma segura..."
+          # Aquí llamas a tu script (ej: python app.py o npm run build)
+          # Tu código leerá API_KEY y DB_PASSWORD desde las variables de entorno del sistema
