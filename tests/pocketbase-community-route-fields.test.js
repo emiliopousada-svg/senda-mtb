@@ -103,3 +103,27 @@ test('community routes track migration preserves an existing larger limit', () =
     assert.equal(schema[0].max, 300000);
     assert.equal(saveCount, 0);
 });
+
+test('community routes track migration adds a missing optional text field', () => {
+    const { schema, saveCount } = runMigration(
+        [],
+        '1794835002_expand_community_route_track_json.js'
+    );
+
+    assert.equal(schema.length, 1);
+    assert.equal(schema[0].name, 'trackJson');
+    assert.equal(schema[0].type, 'text');
+    assert.equal(schema[0].max, 262144);
+    assert.equal(schema[0].required, undefined);
+    assert.equal(saveCount, 1);
+});
+
+test('community routes track migration refuses an incompatible existing field', () => {
+    assert.throws(
+        () => runMigration(
+            [{ name: 'trackJson', type: 'number', max: 5000 }],
+            '1794835002_expand_community_route_track_json.js'
+        ),
+        /community_routes\.trackJson must be a text field/
+    );
+});
