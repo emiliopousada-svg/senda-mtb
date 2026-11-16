@@ -1,6 +1,6 @@
-# PocketBase para MTB Camboya PRO
+﻿# PocketBase para senda-mtb
 
-La instancia independiente de MTB Camboya PRO está publicada en `https://mtbpro.ddns.net` y es el servidor por defecto de la aplicación. No importes bases de datos, cuentas, ubicaciones, rutas ni rankings del proyecto mtb-camboya.
+La instancia independiente de senda-mtb está publicada en `https://mtbpro.ddns.net` y es el servidor por defecto de la aplicación. No importes bases de datos, cuentas, ubicaciones, rutas ni rankings del proyecto senda-mtb.
 
 ## Colecciones usadas
 
@@ -49,3 +49,4 @@ La app conserva estas preferencias localmente y las sincroniza al iniciar sesió
 Los tracks comunitarios son datos públicos. El hook de rutas comunitarias recorta 150 m de los extremos y rechaza POIs próximos a esos extremos; reduce la exposición de domicilios pero no garantiza anonimato. Las fotos se procesan en el cliente; la instancia debe validar y limpiar metadatos del lado del servidor.
 
 Antes de conectar un servidor nuevo, prueba las reglas con dos cuentas distintas, un usuario anónimo, un miembro y un no miembro de grupo, y un administrador de grupo. Confirma que un usuario no pueda leer/modificar datos privados de otro.
+

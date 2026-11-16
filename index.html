@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>senda-brava</title>
+    <title>senda-mtb</title>
     <!-- Enlace al manifiesto PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#111318">
@@ -13,7 +13,7 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Chart.js (versión fijada) -->
+    <!-- Chart.js (versiÃ³n fijada) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 
     <link rel="stylesheet" href="app/styles.css">
@@ -21,28 +21,28 @@
 </head>
 <body>
 
-    <aside class="desktop-sidebar" aria-label="Navegación principal">
+    <aside class="desktop-sidebar" aria-label="NavegaciÃ³n principal">
         <a class="brand-lockup" href="#inicio" onclick="goToPage(5); return false;">
             <img src="icon.svg" alt="">
             <span>senda-<span>brava</span></span>
         </a>
         <p class="sidebar-caption">TU CENTRO MTB</p>
         <nav class="sidebar-nav">
-            <button class="sidebar-link" type="button" data-page="5"><span class="sidebar-icon">⌂</span>Inicio</button>
-            <button class="sidebar-link" type="button" data-page="3"><span class="sidebar-icon">⌁</span>Rutas</button>
-            <button class="sidebar-link" type="button" data-page="0"><span class="sidebar-icon">◇</span>Mapa</button>
-            <button class="sidebar-link sidebar-record" type="button" data-recording><span class="record-ring"></span>Grabación</button>
-            <button class="sidebar-link" type="button" data-page="2"><span class="sidebar-icon">◉</span>Comunidad</button>
-            <button class="sidebar-link" type="button" data-page="1"><span class="sidebar-icon">▥</span>Estadísticas</button>
-            <button class="sidebar-link tools-sidebar-link" type="button" data-page="7"><span class="sidebar-icon">☷</span>Más herramientas</button>
+            <button class="sidebar-link" type="button" data-page="5"><span class="sidebar-icon">âŒ‚</span>Inicio</button>
+            <button class="sidebar-link" type="button" data-page="3"><span class="sidebar-icon">âŒ</span>Rutas</button>
+            <button class="sidebar-link" type="button" data-page="0"><span class="sidebar-icon">â—‡</span>Mapa</button>
+            <button class="sidebar-link sidebar-record" type="button" data-recording><span class="record-ring"></span>GrabaciÃ³n</button>
+            <button class="sidebar-link" type="button" data-page="2"><span class="sidebar-icon">â—‰</span>Comunidad</button>
+            <button class="sidebar-link" type="button" data-page="1"><span class="sidebar-icon">â–¥</span>EstadÃ­sticas</button>
+            <button class="sidebar-link tools-sidebar-link" type="button" data-page="7"><span class="sidebar-icon">â˜·</span>MÃ¡s herramientas</button>
         </nav>
-        <div class="sidebar-footer"><span class="sidebar-status-dot"></span><span>senda-brava <small>· LISTO PARA RODAR</small></span></div>
+        <div class="sidebar-footer"><span class="sidebar-status-dot"></span><span>senda-mtb <small>Â· LISTO PARA RODAR</small></span></div>
     </aside>
 
-    <!-- CONTENEDOR DESLIZABLE DE PÁGINAS -->
+    <!-- CONTENEDOR DESLIZABLE DE PÃGINAS -->
     <div class="swiper-wrapper" id="swiper">
 
-        <!-- PÁGINA 1: MAPA Y CONTROLES DIRECTOS -->
+        <!-- PÃGINA 1: MAPA Y CONTROLES DIRECTOS -->
         <div class="page" id="page-map">
             <div class="metrics-bar">
                 <div class="m-box" data-metric="speed" role="button">
@@ -83,7 +83,7 @@
                 </div>
             </div>
 
-            <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
+            <div id="recording-live-profile" aria-label="Perfil de elevaciÃ³n de la grabaciÃ³n en curso" hidden>
                 <div><span>PERFIL EN DIRECTO</span><strong id="recording-live-altitude">-- m</strong></div>
                 <svg viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
                     <path id="recording-live-area"></path>
@@ -93,7 +93,7 @@
             </div>
 
             <div id="ride-status" role="status" aria-live="polite">
-                <span class="ride-status-item" id="ride-battery">🔋 --</span>
+                <span class="ride-status-item" id="ride-battery">ðŸ”‹ --</span>
             </div>
 
             <div id="map-route-profile" aria-live="polite">
@@ -101,7 +101,7 @@
                     <strong id="map-route-name"></strong>
                     <span id="map-route-alt"></span>
                 </div>
-                <svg id="map-route-svg" viewBox="0 0 320 64" preserveAspectRatio="none" role="img" aria-label="Perfil de altitud y posición actual en la ruta">
+                <svg id="map-route-svg" viewBox="0 0 320 64" preserveAspectRatio="none" role="img" aria-label="Perfil de altitud y posiciÃ³n actual en la ruta">
                     <path id="map-route-area"></path>
                     <path id="map-route-line"></path>
                     <line id="map-route-cursor-line" x1="0" y1="7" x2="0" y2="60" style="display:none"></line>
@@ -116,10 +116,10 @@
             </div>
             <div class="map-zoom-controls" role="group" aria-label="Controles del mapa">
                 <button class="map-zoom-btn" id="btn-map-zoom-in" type="button" aria-label="Acercar el mapa" title="Acercar">+</button>
-                <button class="map-zoom-btn" id="btn-map-zoom-out" type="button" aria-label="Alejar el mapa" title="Alejar">−</button>
-                <button class="map-zoom-btn orient" id="btn-map-north" type="button" aria-label="Orientación del mapa" title="Norte arriba / dirección de la ruta"></button>
-                <button class="map-zoom-btn route-photo-button" id="btn-route-photo" type="button" aria-label="Añadir foto a la ruta" title="Añadir foto y POI a la ruta" hidden>📷</button>
-                <div id="map-battery" role="status" aria-label="Batería del dispositivo" hidden>
+                <button class="map-zoom-btn" id="btn-map-zoom-out" type="button" aria-label="Alejar el mapa" title="Alejar">âˆ’</button>
+                <button class="map-zoom-btn orient" id="btn-map-north" type="button" aria-label="OrientaciÃ³n del mapa" title="Norte arriba / direcciÃ³n de la ruta"></button>
+                <button class="map-zoom-btn route-photo-button" id="btn-route-photo" type="button" aria-label="AÃ±adir foto a la ruta" title="AÃ±adir foto y POI a la ruta" hidden>ðŸ“·</button>
+                <div id="map-battery" role="status" aria-label="BaterÃ­a del dispositivo" hidden>
                     <span id="map-battery-icon" aria-hidden="true"><i></i></span>
                     <span id="map-battery-text">--%</span>
                 </div>
@@ -140,19 +140,19 @@
             </div>
 
             <div class="side-controls">
-                <button class="btn-icon-only" id="btn-poi-fountain" title="Marcar fuente de agua aquí">🚰</button>
+                <button class="btn-icon-only" id="btn-poi-fountain" title="Marcar fuente de agua aquÃ­">ðŸš°</button>
                 <button class="btn-icon-only" id="btn-poi-bar" title="Marcar parada en un bar">
                     <img src="estrella-galicia.svg" alt="Parada en un bar" class="btn-logo">
                 </button>
-                <button class="btn-icon-only" id="btn-poi-food" title="Marcar un sitio de comida">🍽️</button>
-                <button class="btn-icon-only active" id="btn-center" type="button" title="Centrar y seguir mi posición" aria-label="Centrar y seguir mi posición">
+                <button class="btn-icon-only" id="btn-poi-food" title="Marcar un sitio de comida">ðŸ½ï¸</button>
+                <button class="btn-icon-only active" id="btn-center" type="button" title="Centrar y seguir mi posiciÃ³n" aria-label="Centrar y seguir mi posiciÃ³n">
                     <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="8.5"></circle>
                         <circle cx="12" cy="12" r="2.5"></circle>
                         <path d="M12 2v3M22 12h-3M12 22v-3M2 12h3"></path>
                     </svg>
                 </button>
-                <button class="btn-icon-only" id="btn-map-style" type="button" title="Cambiar capa del mapa" aria-label="Cambiar capa del mapa">⛰️</button>
+                <button class="btn-icon-only" id="btn-map-style" type="button" title="Cambiar capa del mapa" aria-label="Cambiar capa del mapa">â›°ï¸</button>
                 <button class="btn-icon-only cockpit-map-button" id="btn-map-cockpit" type="button" data-page="6" title="Volver al Cockpit" aria-label="Volver al Cockpit">
                     <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M4.6 18.2a9 9 0 1 1 14.8 0"></path>
@@ -163,10 +163,10 @@
             </div>
             <div class="controls-overlay">
                 <button class="btn-main-action" id="btn-start">
-                    <span id="ico-start">▶️</span> <span id="lbl-start">COMENZAR RUTA</span>
+                    <span id="ico-start">â–¶ï¸</span> <span id="lbl-start">COMENZAR RUTA</span>
                 </button>
                 <div id="ride-safety-actions" class="ride-safety-actions" hidden>
-                    <button class="btn-icon-only ride-safety-open" id="safety-ride-open" type="button" aria-label="Abrir seguridad de ruta" title="Seguridad de ruta">⬡</button>
+                    <button class="btn-icon-only ride-safety-open" id="safety-ride-open" type="button" aria-label="Abrir seguridad de ruta" title="Seguridad de ruta">â¬¡</button>
                     <button class="btn-icon-only ride-safety-sos" id="safety-ride-sos" type="button" aria-label="Preparar SOS por WhatsApp" title="Preparar SOS por WhatsApp">SOS</button>
                 </div>
                 <button class="btn-unfollow-map" id="btn-unfollow" type="button" style="display:none;">
@@ -175,26 +175,26 @@
                     </svg>
                     <span>Dejar de seguir ruta</span>
                 </button>
-                <button class="btn-icon-only btn-danger-stop" id="btn-stop" title="Finalizar ruta">⏹️</button>
+                <button class="btn-icon-only btn-danger-stop" id="btn-stop" title="Finalizar ruta">â¹ï¸</button>
             </div>
         </div>
 
-        <!-- PÁGINA 2: ESTADÍSTICAS -->
+        <!-- PÃGINA 2: ESTADÃSTICAS -->
         <div class="page stats-page" id="page-stats">
             <header class="stats-header">
-                <h2>📊 Estadísticas</h2>
-                <div class="stats-periods" role="group" aria-label="Periodo de estadísticas">
+                <h2>ðŸ“Š EstadÃ­sticas</h2>
+                <div class="stats-periods" role="group" aria-label="Periodo de estadÃ­sticas">
                     <button class="stats-period-btn" data-stats-period="today" aria-pressed="false">Hoy</button>
                     <button class="stats-period-btn active" data-stats-period="weekly" aria-pressed="true">Semana</button>
                     <button class="stats-period-btn" data-stats-period="monthly" aria-pressed="false">Mes</button>
-                    <button class="stats-period-btn" data-stats-period="yearly" aria-pressed="false">Año</button>
+                    <button class="stats-period-btn" data-stats-period="yearly" aria-pressed="false">AÃ±o</button>
                     <button class="stats-period-btn" data-stats-period="all" aria-pressed="false">Todo</button>
                 </div>
-                <nav class="stats-tabs" aria-label="Secciones de estadísticas">
+                <nav class="stats-tabs" aria-label="Secciones de estadÃ­sticas">
                     <button class="stats-tab active" type="button" data-stats-slide="0" aria-current="page">Resumen</button>
                     <button class="stats-tab" type="button" data-stats-slide="1">Rendimiento MTB</button>
-                    <button class="stats-tab" type="button" data-stats-slide="2">Evolución</button>
-                    <button class="stats-tab" type="button" data-stats-slide="3">Récords</button>
+                    <button class="stats-tab" type="button" data-stats-slide="2">EvoluciÃ³n</button>
+                    <button class="stats-tab" type="button" data-stats-slide="3">RÃ©cords</button>
                     <button class="stats-tab" type="button" data-stats-slide="4">Sensores</button>
                 </nav>
             </header>
@@ -210,41 +210,41 @@
                                 <div class="stat-box"><div class="v" id="st-ascent">--</div><div class="l">Desnivel positivo</div></div>
                                 <div class="stat-box"><div class="v" id="st-descent">--</div><div class="l">Desnivel negativo</div></div>
                                 <div class="stat-box"><div class="v" id="st-average-speed">--</div><div class="l">Velocidad media</div></div>
-                                <div class="stat-box"><div class="v" id="st-max-speed">--</div><div class="l">Velocidad máxima GPS</div></div>
+                                <div class="stat-box"><div class="v" id="st-max-speed">--</div><div class="l">Velocidad mÃ¡xima GPS</div></div>
                                 <div class="stat-box"><div class="v" id="st-stopped-time">--</div><div class="l">Tiempo parado (estimado)</div></div>
-                                <div class="stat-box"><div class="v" id="st-ride-count">--</div><div class="l">Número de salidas</div></div>
+                                <div class="stat-box"><div class="v" id="st-ride-count">--</div><div class="l">NÃºmero de salidas</div></div>
                                 <div class="stat-box"><div class="v" id="st-average-distance">--</div><div class="l">Distancia media/salida</div></div>
                                 <div class="stat-box"><div class="v" id="st-average-ascent">--</div><div class="l">Desnivel medio/salida</div></div>
-                                <div class="stat-box"><div class="v" id="st-average-duration">--</div><div class="l">Duración media</div></div>
+                                <div class="stat-box"><div class="v" id="st-average-duration">--</div><div class="l">DuraciÃ³n media</div></div>
                             </div>
                             <p class="hint">El tiempo parado se estima con las marcas de tiempo del track. Los tracks importados no cuentan como salidas.</p>
                         </div>
                         <div class="stats-overview-charts">
                             <div class="card">
                                 <h3>Distancia recorrida</h3>
-                                <div class="stats-chart"><canvas id="statsChart" aria-label="Kilómetros recorridos por periodo"></canvas></div>
+                                <div class="stats-chart"><canvas id="statsChart" aria-label="KilÃ³metros recorridos por periodo"></canvas></div>
                             </div>
                             <div class="card">
                                 <h3>Desnivel acumulado</h3>
                                 <div class="stats-chart"><canvas id="stats-ascent-chart" aria-label="Desnivel positivo por periodo"></canvas></div>
                             </div>
                             <div class="card">
-                                <h3>Evolución de velocidad</h3>
-                                <div class="stats-chart"><canvas id="stats-speed-chart" aria-label="Velocidad media y máxima por periodo"></canvas></div>
+                                <h3>EvoluciÃ³n de velocidad</h3>
+                                <div class="stats-chart"><canvas id="stats-speed-chart" aria-label="Velocidad media y mÃ¡xima por periodo"></canvas></div>
                             </div>
                             <div class="card">
                                 <h3 id="stats-activity-title">Actividad semanal</h3>
-                                <div class="stats-chart"><canvas id="stats-activity-chart" aria-label="Número de salidas por periodo"></canvas></div>
+                                <div class="stats-chart"><canvas id="stats-activity-chart" aria-label="NÃºmero de salidas por periodo"></canvas></div>
                             </div>
                         </div>
                     </section>
 
                     <section class="stats-slide" aria-label="Rendimiento MTB">
                         <div class="card">
-                            <h3>Perfil de elevación</h3>
+                            <h3>Perfil de elevaciÃ³n</h3>
                             <label for="stats-profile-route">Ruta grabada</label>
                             <select id="stats-profile-route"></select>
-                            <div class="stats-profile-chart"><canvas id="stats-profile-chart" aria-label="Perfil de elevación interactivo"></canvas></div>
+                            <div class="stats-profile-chart"><canvas id="stats-profile-chart" aria-label="Perfil de elevaciÃ³n interactivo"></canvas></div>
                             <div id="stats-profile-point" class="stats-profile-point">Selecciona un punto del perfil para consultar sus datos.</div>
                         </div>
                         <div class="card">
@@ -254,19 +254,19 @@
                                 <div class="stat-box"><div class="v" id="st-downhill-speed">--</div><div class="l">Velocidad en bajada</div></div>
                                 <div class="stat-box"><div class="v" id="st-vam">--</div><div class="l">VAM media</div></div>
                                 <div class="stat-box"><div class="v" id="st-average-grade">--</div><div class="l">Pendiente media</div></div>
-                                <div class="stat-box"><div class="v" id="st-max-grade">--</div><div class="l">Pendiente máxima</div></div>
+                                <div class="stat-box"><div class="v" id="st-max-grade">--</div><div class="l">Pendiente mÃ¡xima</div></div>
                                 <div class="stat-box"><div class="v" id="st-climb-time">--</div><div class="l">Tiempo subiendo</div></div>
                                 <div class="stat-box"><div class="v" id="st-downhill-time">--</div><div class="l">Tiempo bajando</div></div>
                                 <div class="stat-box"><div class="v" id="st-downhill-total">--</div><div class="l">Descenso vertical</div></div>
                                 <div class="stat-box"><div class="v" id="st-ascent-total">--</div><div class="l">Ascenso vertical</div></div>
-                                <div class="stat-box"><div class="v" id="st-max-altitude">--</div><div class="l">Altitud máxima</div></div>
-                                <div class="stat-box"><div class="v" id="st-min-altitude">--</div><div class="l">Altitud mínima</div></div>
+                                <div class="stat-box"><div class="v" id="st-max-altitude">--</div><div class="l">Altitud mÃ¡xima</div></div>
+                                <div class="stat-box"><div class="v" id="st-min-altitude">--</div><div class="l">Altitud mÃ­nima</div></div>
                             </div>
                             <div class="stats-unavailable">
-                                <strong>Kilómetros técnicos:</strong> No disponible; la app no clasifica el terreno técnico.<br>
+                                <strong>KilÃ³metros tÃ©cnicos:</strong> No disponible; la app no clasifica el terreno tÃ©cnico.<br>
                                 <strong>Dificultad:</strong> No disponible; no hay datos objetivos del terreno.
                             </div>
-                            <p class="hint">Subidas y bajadas se clasifican con pendiente sostenida superior a ±3% en tramos de al menos 25 m.</p>
+                            <p class="hint">Subidas y bajadas se clasifican con pendiente sostenida superior a Â±3% en tramos de al menos 25 m.</p>
                         </div>
                         <div class="stats-mtb-charts">
                             <div class="card">
@@ -274,7 +274,7 @@
                                 <div class="stats-chart"><canvas id="stats-mtb-speed-chart" aria-label="Comparativa de velocidad en subida y bajada"></canvas></div>
                             </div>
                             <div class="card">
-                                <h3>Distribución de pendientes</h3>
+                                <h3>DistribuciÃ³n de pendientes</h3>
                                 <div class="stats-chart"><canvas id="stats-grade-chart" aria-label="Distancia por rango de pendiente"></canvas></div>
                             </div>
                             <div class="card">
@@ -282,13 +282,13 @@
                                 <div class="stats-chart"><canvas id="stats-climb-time-chart" aria-label="Tiempo registrado subiendo y bajando"></canvas></div>
                             </div>
                             <div class="card">
-                                <h3>Evolución del VAM</h3>
+                                <h3>EvoluciÃ³n del VAM</h3>
                                 <div class="stats-chart"><canvas id="stats-vam-chart" aria-label="VAM por periodo"></canvas></div>
                             </div>
                         </div>
                     </section>
 
-                    <section class="stats-slide" aria-label="Evolución histórica">
+                    <section class="stats-slide" aria-label="EvoluciÃ³n histÃ³rica">
                         <div class="card">
                             <h3>Carga semanal y mensual</h3>
                             <p class="hint">Las actividades se agrupan por la fecha de inicio. El VAM y los desniveles se muestran solo si el track permite calcularlos.</p>
@@ -299,19 +299,19 @@
                             <div id="stats-comparisons" class="stats-comparisons"></div>
                         </div>
                         <div class="card">
-                            <h3>Comparación de rutas</h3>
-                            <p class="hint">Superpone los perfiles de dos recorridos y compara sus métricas principales.</p>
+                            <h3>ComparaciÃ³n de rutas</h3>
+                            <p class="hint">Superpone los perfiles de dos recorridos y compara sus mÃ©tricas principales.</p>
                             <div class="route-compare-selectors">
                                 <label for="stats-route-compare-a">Ruta A</label>
                                 <select id="stats-route-compare-a"></select>
                                 <label for="stats-route-compare-b">Ruta B</label>
                                 <select id="stats-route-compare-b"></select>
                             </div>
-                            <div class="stats-chart route-compare-chart"><canvas id="stats-route-compare-chart" aria-label="Comparación interactiva de perfiles de altitud de dos rutas"></canvas></div>
+                            <div class="stats-chart route-compare-chart"><canvas id="stats-route-compare-chart" aria-label="ComparaciÃ³n interactiva de perfiles de altitud de dos rutas"></canvas></div>
                             <div id="stats-route-compare-summary" class="route-compare-summary" aria-live="polite"></div>
                         </div>
                         <div class="card">
-                            <h3>Evolución por periodos</h3>
+                            <h3>EvoluciÃ³n por periodos</h3>
                             <div class="stats-evolution-controls">
                                 <div>
                                     <label for="stats-evolution-period">Agrupar por</label>
@@ -321,62 +321,62 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="stats-evolution-metric">Métrica</label>
+                                    <label for="stats-evolution-metric">MÃ©trica</label>
                                     <select id="stats-evolution-metric">
-                                        <option value="distance">Kilómetros recorridos</option>
+                                        <option value="distance">KilÃ³metros recorridos</option>
                                         <option value="speed">Velocidad media</option>
                                         <option value="ascent">Desnivel positivo</option>
                                         <option value="descent">Desnivel negativo</option>
-                                        <option value="activityCount">Número de salidas</option>
-                                        <option value="duration">Duración media</option>
+                                        <option value="activityCount">NÃºmero de salidas</option>
+                                        <option value="duration">DuraciÃ³n media</option>
                                         <option value="vam">VAM</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="stats-chart"><canvas id="stats-evolution-chart" aria-label="Evolución semanal o mensual de métricas"></canvas></div>
+                            <div class="stats-chart"><canvas id="stats-evolution-chart" aria-label="EvoluciÃ³n semanal o mensual de mÃ©tricas"></canvas></div>
                         </div>
                     </section>
 
-                    <section class="stats-slide" aria-label="Récords personales y logros">
+                    <section class="stats-slide" aria-label="RÃ©cords personales y logros">
                         <div class="card">
-                            <h3>Récords y medallas</h3>
+                            <h3>RÃ©cords y medallas</h3>
                             <p class="hint">Cada logro se basa en los datos disponibles de tus actividades; no se asignan marcas estimadas.</p>
                             <div id="stats-records" class="stats-records"></div>
                         </div>
                     </section>
 
-                    <section class="stats-slide" aria-label="Sensores y métricas avanzadas">
+                    <section class="stats-slide" aria-label="Sensores y mÃ©tricas avanzadas">
                         <div class="card">
-                            <h3>Rendimiento físico</h3>
+                            <h3>Rendimiento fÃ­sico</h3>
                             <div class="stats-grid">
-                                <div class="stat-box"><div class="v" id="st-hr-average">--</div><div class="l">Frecuencia cardíaca media</div></div>
-                                <div class="stat-box"><div class="v" id="st-hr-max">--</div><div class="l">Frecuencia cardíaca máxima</div></div>
+                                <div class="stat-box"><div class="v" id="st-hr-average">--</div><div class="l">Frecuencia cardÃ­aca media</div></div>
+                                <div class="stat-box"><div class="v" id="st-hr-max">--</div><div class="l">Frecuencia cardÃ­aca mÃ¡xima</div></div>
                                 <div class="stat-box"><div class="v" id="st-cadence-average">--</div><div class="l">Cadencia media</div></div>
-                                <div class="stat-box"><div class="v" id="st-cadence-max">--</div><div class="l">Cadencia máxima</div></div>
+                                <div class="stat-box"><div class="v" id="st-cadence-max">--</div><div class="l">Cadencia mÃ¡xima</div></div>
                                 <div class="stat-box"><div class="v" id="st-power-average">--</div><div class="l">Potencia media</div></div>
-                                <div class="stat-box"><div class="v" id="st-power-max">--</div><div class="l">Potencia máxima</div></div>
-                                <div class="stat-box"><div class="v" id="st-calories">--</div><div class="l">Calorías estimadas</div></div>
+                                <div class="stat-box"><div class="v" id="st-power-max">--</div><div class="l">Potencia mÃ¡xima</div></div>
+                                <div class="stat-box"><div class="v" id="st-calories">--</div><div class="l">CalorÃ­as estimadas</div></div>
                             </div>
                             <div class="stats-config">
-                                <label for="stats-weight">Peso para estimar calorías</label>
+                                <label for="stats-weight">Peso para estimar calorÃ­as</label>
                                 <output id="stats-weight" class="stats-profile-value">Sin configurar</output>
-                                <label for="stats-age">Edad para estimar FC máxima</label>
+                                <label for="stats-age">Edad para estimar FC mÃ¡xima</label>
                                 <output id="stats-age" class="stats-profile-value">Sin configurar</output>
-                                <label for="stats-hr-max-config">FC máxima para zonas (lpm)</label>
+                                <label for="stats-hr-max-config">FC mÃ¡xima para zonas (lpm)</label>
                                 <input id="stats-hr-max-config" type="number" placeholder="Sin configurar" readonly>
                                 <label for="stats-power-ftp">FTP para zonas Coggan (W)</label>
                                 <input id="stats-power-ftp" type="number" min="50" max="800" step="1" inputmode="numeric" placeholder="Sin configurar">
                             </div>
                         </div>
                         <div class="card">
-                            <h3>Zonas de frecuencia cardíaca</h3>
-                            <p class="hint">La FC máxima se estima como 220 − edad. Las zonas usan solo datos del sensor.</p>
+                            <h3>Zonas de frecuencia cardÃ­aca</h3>
+                            <p class="hint">La FC mÃ¡xima se estima como 220 âˆ’ edad. Las zonas usan solo datos del sensor.</p>
                             <div id="stats-hr-zones" class="stats-zones"></div>
                             <p id="stats-effort-time" class="hint">Tiempo en zonas de esfuerzo: --</p>
                         </div>
                         <div class="card">
                             <h3>Zonas de potencia Coggan</h3>
-                            <p class="hint">Z1 recuperación, Z2 resistencia, Z3 tempo, Z4 umbral, Z5 VO₂ máx., Z6 anaeróbica y Z7 neuromuscular. Se requiere potencia registrada y FTP configurado.</p>
+                            <p class="hint">Z1 recuperaciÃ³n, Z2 resistencia, Z3 tempo, Z4 umbral, Z5 VOâ‚‚ mÃ¡x., Z6 anaerÃ³bica y Z7 neuromuscular. Se requiere potencia registrada y FTP configurado.</p>
                             <div id="stats-power-zones" class="stats-zones"></div>
                             <p id="stats-power-zone-time" class="hint">Tiempo en zonas de potencia: --</p>
                         </div>
@@ -385,71 +385,71 @@
             </div>
         </div>
 
-        <!-- PÁGINA 3: AMIGOS EN LIVE -->
+        <!-- PÃGINA 3: AMIGOS EN LIVE -->
         <div class="page content-panel" id="page-community">
             <header class="page-intro">
-                <span class="eyebrow"><i></i> senda-brava · COMUNIDAD</span>
+                <span class="eyebrow"><i></i> senda-mtb Â· COMUNIDAD</span>
                 <h1>Comunidad</h1>
-                <p>Competición entre riders · ligas privadas de MTB.</p>
+                <p>CompeticiÃ³n entre riders Â· ligas privadas de MTB.</p>
             </header>
             <div class="community-menu">
             <nav class="community-hub" role="tablist" aria-label="Secciones de Comunidad">
-                <button class="community-hub-tab active" type="button" role="tab" aria-selected="true" aria-controls="community-section-ranking" data-community-section="ranking"><span aria-hidden="true">🏆</span>Ranking</button>
-                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-segments" data-community-section="segments"><span aria-hidden="true">▲</span>Segmentos</button>
-                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-challenges" data-community-section="challenges"><span aria-hidden="true">◎</span>Desafíos</button>
-                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-group" data-community-section="group"><span aria-hidden="true">♧</span>Mi grupo</button>
-                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-achievements" data-community-section="achievements"><span aria-hidden="true">♢</span>Logros</button>
-                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-activity" data-community-section="activity"><span aria-hidden="true">▣</span>Actividad</button>
+                <button class="community-hub-tab active" type="button" role="tab" aria-selected="true" aria-controls="community-section-ranking" data-community-section="ranking"><span aria-hidden="true">ðŸ†</span>Ranking</button>
+                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-segments" data-community-section="segments"><span aria-hidden="true">â–²</span>Segmentos</button>
+                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-challenges" data-community-section="challenges"><span aria-hidden="true">â—Ž</span>DesafÃ­os</button>
+                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-group" data-community-section="group"><span aria-hidden="true">â™§</span>Mi grupo</button>
+                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-achievements" data-community-section="achievements"><span aria-hidden="true">â™¢</span>Logros</button>
+                <button class="community-hub-tab" type="button" role="tab" aria-selected="false" aria-controls="community-section-activity" data-community-section="activity"><span aria-hidden="true">â–£</span>Actividad</button>
             </nav>
-            <button class="community-season-shortcut" id="community-open-season" type="button"><strong>VER TEMPORADA</strong><small>Consulta la clasificación activa de tu grupo</small></button>
+            <button class="community-season-shortcut" id="community-open-season" type="button"><strong>VER TEMPORADA</strong><small>Consulta la clasificaciÃ³n activa de tu grupo</small></button>
             </div>
-            <section class="community-section" id="community-section-ranking" role="tabpanel" aria-label="Clasificación del grupo">
+            <section class="community-section" id="community-section-ranking" role="tabpanel" aria-label="ClasificaciÃ³n del grupo">
             <div class="card" id="group-ranking-card">
-                <h2>🏆 Clasificación de la liga</h2>
-                <p class="hint">Compite en categorías independientes. Las marcas actuales se basan en actividades compartidas por miembros del grupo.</p>
-                <div class="community-season-banner"><span>⏱</span><div><strong>Temporadas de 4 semanas</strong><small>La clasificación suma las actividades compartidas durante la temporada activa.</small></div></div>
+                <h2>ðŸ† ClasificaciÃ³n de la liga</h2>
+                <p class="hint">Compite en categorÃ­as independientes. Las marcas actuales se basan en actividades compartidas por miembros del grupo.</p>
+                <div class="community-season-banner"><span>â±</span><div><strong>Temporadas de 4 semanas</strong><small>La clasificaciÃ³n suma las actividades compartidas durante la temporada activa.</small></div></div>
                 <div class="group-ranking-header">
-                    <p id="group-ranking-status" class="hint" role="status" aria-live="polite">Únete a un grupo para consultar sus marcas.</p>
+                    <p id="group-ranking-status" class="hint" role="status" aria-live="polite">Ãšnete a un grupo para consultar sus marcas.</p>
                     <button class="btn-small secondary" id="group-rankings-refresh" type="button">Actualizar</button>
                 </div>
                 <div class="group-ranking-categories">
-                    <section class="group-ranking-category"><h3>Más kilómetros · actividad más larga</h3><div id="group-ranking-distance" class="group-ranking-list"></div></section>
+                    <section class="group-ranking-category"><h3>MÃ¡s kilÃ³metros Â· actividad mÃ¡s larga</h3><div id="group-ranking-distance" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category"><h3>Mayor desnivel</h3><div id="group-ranking-ascent" class="group-ranking-list"></div></section>
-                    <section class="group-ranking-category"><h3>Salida de mayor duración</h3><div id="group-ranking-time" class="group-ranking-list"></div></section>
-                    <section class="group-ranking-category"><h3>Velocidad punta · marca personal</h3><div id="group-ranking-speed" class="group-ranking-list"></div></section>
+                    <section class="group-ranking-category"><h3>Salida de mayor duraciÃ³n</h3><div id="group-ranking-time" class="group-ranking-list"></div></section>
+                    <section class="group-ranking-category"><h3>Velocidad punta Â· marca personal</h3><div id="group-ranking-speed" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category"><h3>Rendimiento en segmentos</h3><div id="group-ranking-segments" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category"><h3>Mayor regularidad</h3><div id="group-ranking-consistency" class="group-ranking-list"></div></section>
-                    <section class="group-ranking-category group-ranking-total"><h3>Puntuación global</h3><div id="group-ranking-points" class="group-ranking-list"></div></section>
+                    <section class="group-ranking-category group-ranking-total"><h3>PuntuaciÃ³n global</h3><div id="group-ranking-points" class="group-ranking-list"></div></section>
                 </div>
-                <details class="community-scoring-rules"><summary>Cómo se puntúa la liga</summary><p>Por salida: 1 punto por kilómetro (máximo 200), 1 punto por cada 50 m de desnivel positivo y 1 punto por cada 15 minutos en movimiento. Se añaden 10 puntos si la salida alcanza 10 km o 30 minutos. Solo cuentan las marcas compartidas durante la temporada activa.</p></details>
+                <details class="community-scoring-rules"><summary>CÃ³mo se puntÃºa la liga</summary><p>Por salida: 1 punto por kilÃ³metro (mÃ¡ximo 200), 1 punto por cada 50 m de desnivel positivo y 1 punto por cada 15 minutos en movimiento. Se aÃ±aden 10 puntos si la salida alcanza 10 km o 30 minutos. Solo cuentan las marcas compartidas durante la temporada activa.</p></details>
             </div>
             </section>
 
             <section class="community-section" id="community-section-segments" role="tabpanel" aria-label="Segmentos MTB" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">▲</span><h2>Segmentos MTB</h2><p>Los segmentos públicos se crean sobre rutas de la comunidad. Cada uno conserva su perfil, distancia y clasificación de intentos.</p><button class="btn" id="community-open-segments" type="button">Explorar rutas y segmentos</button><p class="hint">Abre una ruta para consultar sus segmentos y tiempos publicados.</p></div>
+                <div class="card community-empty-card"><span class="community-feature-icon">â–²</span><h2>Segmentos MTB</h2><p>Los segmentos pÃºblicos se crean sobre rutas de la comunidad. Cada uno conserva su perfil, distancia y clasificaciÃ³n de intentos.</p><button class="btn" id="community-open-segments" type="button">Explorar rutas y segmentos</button><p class="hint">Abre una ruta para consultar sus segmentos y tiempos publicados.</p></div>
             </section>
 
             <section class="community-section" id="community-section-challenges" role="tabpanel" aria-label="Temporada del grupo" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">◎</span><h2>Temporada activa</h2><p>Las actividades que compartes con tu grupo suman a la clasificación de cuatro semanas.</p><p id="community-competition-status" class="hint" role="status" aria-live="polite">Inicia sesión y únete a un grupo para consultar la temporada activa.</p><button class="btn" id="community-open-ranking" type="button">Ver clasificación de temporada</button><p class="hint">Los retos personalizados, las medallas y el historial de actividad requieren funciones adicionales de servidor y aún no están activos.</p></div>
+                <div class="card community-empty-card"><span class="community-feature-icon">â—Ž</span><h2>Temporada activa</h2><p>Las actividades que compartes con tu grupo suman a la clasificaciÃ³n de cuatro semanas.</p><p id="community-competition-status" class="hint" role="status" aria-live="polite">Inicia sesiÃ³n y Ãºnete a un grupo para consultar la temporada activa.</p><button class="btn" id="community-open-ranking" type="button">Ver clasificaciÃ³n de temporada</button><p class="hint">Los retos personalizados, las medallas y el historial de actividad requieren funciones adicionales de servidor y aÃºn no estÃ¡n activos.</p></div>
             </section>
 
             <section class="community-section" id="community-section-group" role="tabpanel" aria-label="Mi grupo" hidden>
             <div class="card">
-                <h2>🚴‍♂️ Compañeros Cerca</h2>
-                <p id="friends-group-status" class="friends-group-status" role="status" aria-live="polite">Sin conexión a un grupo</p>
-                <div id="friends-list"><p style="font-size:0.85rem; color:var(--text-secondary); text-align:center; padding:10px 0;">No hay compañeros cerca o no te has unido a un grupo activo.</p></div>
+                <h2>ðŸš´â€â™‚ï¸ CompaÃ±eros Cerca</h2>
+                <p id="friends-group-status" class="friends-group-status" role="status" aria-live="polite">Sin conexiÃ³n a un grupo</p>
+                <div id="friends-list"><p style="font-size:0.85rem; color:var(--text-secondary); text-align:center; padding:10px 0;">No hay compaÃ±eros cerca o no te has unido a un grupo activo.</p></div>
             </div>
             <div class="card">
-                <h2>👥 Grupos y amigos (Live)</h2>
-                <p class="hint">Crea un grupo para administrarlo o únete con una invitación. La ubicación solo se comparte mientras grabas y formas parte del grupo.</p>
-                <p class="hint">En el grupo se mostrará el apodo de tu cuenta.</p>
+                <h2>ðŸ‘¥ Grupos y amigos (Live)</h2>
+                <p class="hint">Crea un grupo para administrarlo o Ãºnete con una invitaciÃ³n. La ubicaciÃ³n solo se comparte mientras grabas y formas parte del grupo.</p>
+                <p class="hint">En el grupo se mostrarÃ¡ el apodo de tu cuenta.</p>
                 <div id="group-setup">
                     <input type="text" id="group-name" placeholder="Nombre del grupo" maxlength="40">
                     <label class="group-icon-label" for="group-icon">Icono del grupo (opcional)</label>
                     <input type="file" id="group-icon" accept="image/jpeg,image/png,image/webp">
-                    <p class="hint">Si no subes una imagen, se mostrará un icono con las iniciales del grupo.</p>
+                    <p class="hint">Si no subes una imagen, se mostrarÃ¡ un icono con las iniciales del grupo.</p>
                     <button class="btn" id="btn-create-group" type="button">Crear grupo y ser administrador</button>
-                    <input type="text" id="group-code" placeholder="Código de invitación" maxlength="12" autocomplete="off">
+                    <input type="text" id="group-code" placeholder="CÃ³digo de invitaciÃ³n" maxlength="12" autocomplete="off">
                     <button class="btn secondary" id="btn-join" type="button">Unirme a un grupo</button>
                 </div>
                 <div id="group-choices" class="group-choices" style="display:none;"><p class="hint">Tus grupos:</p><div id="group-list" class="group-shortcuts"></div></div>
@@ -461,40 +461,40 @@
                     <details id="group-admin-panel" class="group-admin-panel" style="display:none;">
                         <summary class="group-admin-summary">Administrar grupo</summary>
                         <div class="group-admin-content">
-                        <p class="hint" style="margin-top:0;">Comparte el código para autorizar a nuevos miembros:</p>
+                        <p class="hint" style="margin-top:0;">Comparte el cÃ³digo para autorizar a nuevos miembros:</p>
                         <strong id="group-invite-code" class="group-invite-code"></strong>
                         <label class="group-icon-label" for="group-admin-icon">Cambiar logo del grupo</label>
                         <input type="file" id="group-admin-icon" accept="image/jpeg,image/png,image/webp">
                         <button class="btn-small secondary" id="btn-update-group-icon" type="button">Guardar logo</button>
                         <p id="group-icon-update-status" class="hint" role="status" aria-live="polite"></p>
                         <div class="group-actions">
-                            <button class="btn-small" id="btn-copy-invite" type="button">Copiar invitación</button>
-                            <button class="btn-small secondary" id="btn-rotate-invite" type="button">Renovar código</button>
+                            <button class="btn-small" id="btn-copy-invite" type="button">Copiar invitaciÃ³n</button>
+                            <button class="btn-small secondary" id="btn-rotate-invite" type="button">Renovar cÃ³digo</button>
                             <button class="btn-small danger" id="btn-delete-group" type="button">Eliminar grupo</button>
                         </div>
-                        <p class="hint">Miembros autorizados (pueden salir y volver a entrar). Puedes pasar la administración a otro miembro sin borrar el grupo:</p><div id="group-members-list"></div>
+                        <p class="hint">Miembros autorizados (pueden salir y volver a entrar). Puedes pasar la administraciÃ³n a otro miembro sin borrar el grupo:</p><div id="group-members-list"></div>
                         </div>
                     </details>
                 </div>
-                <p class="hint" id="group-status">Inicia sesión para crear un grupo o aceptar una invitación.</p>
+                <p class="hint" id="group-status">Inicia sesiÃ³n para crear un grupo o aceptar una invitaciÃ³n.</p>
             </div>
             </section>
 
             <section class="community-section" id="community-section-achievements" role="tabpanel" aria-label="Logros del grupo" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">♢</span><h2>Títulos y medallas</h2><p>King of the Mountain, Fastest Rider, Climbing Beast y Most Consistent se otorgarán al cerrar cada temporada de cuatro semanas.</p><div class="community-title-grid"><span>👑<small>King of the Mountain</small></span><span>⚡<small>Fastest Rider</small></span><span>⛰️<small>Climbing Beast</small></span><span>🔥<small>Most Consistent</small></span></div><button class="btn secondary" type="button" data-page="1" data-stats-slide="3">Ver mis récords personales</button><p class="hint">El historial de campeones se guardará por grupo y temporada.</p></div>
+                <div class="card community-empty-card"><span class="community-feature-icon">â™¢</span><h2>TÃ­tulos y medallas</h2><p>King of the Mountain, Fastest Rider, Climbing Beast y Most Consistent se otorgarÃ¡n al cerrar cada temporada de cuatro semanas.</p><div class="community-title-grid"><span>ðŸ‘‘<small>King of the Mountain</small></span><span>âš¡<small>Fastest Rider</small></span><span>â›°ï¸<small>Climbing Beast</small></span><span>ðŸ”¥<small>Most Consistent</small></span></div><button class="btn secondary" type="button" data-page="1" data-stats-slide="3">Ver mis rÃ©cords personales</button><p class="hint">El historial de campeones se guardarÃ¡ por grupo y temporada.</p></div>
             </section>
 
             <section class="community-section" id="community-section-activity" role="tabpanel" aria-label="Actividad del grupo" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">▣</span><h2>Actividad del grupo</h2><p>Un resumen cronológico de salidas, resultados de segmentos, desafíos completados y nuevos récords.</p><div id="community-activity-feed" class="community-activity-feed"><p class="hint">La actividad aparecerá aquí al activar las temporadas y el registro de eventos en el backend propio.</p></div></div>
+                <div class="card community-empty-card"><span class="community-feature-icon">â–£</span><h2>Actividad del grupo</h2><p>Un resumen cronolÃ³gico de salidas, resultados de segmentos, desafÃ­os completados y nuevos rÃ©cords.</p><div id="community-activity-feed" class="community-activity-feed"><p class="hint">La actividad aparecerÃ¡ aquÃ­ al activar las temporadas y el registro de eventos en el backend propio.</p></div></div>
             </section>
         </div>
 
-        <!-- PÁGINA 4: RUTAS REALIZADAS Y TRACKS -->
+        <!-- PÃGINA 4: RUTAS REALIZADAS Y TRACKS -->
         <div class="page content-panel" id="page-routes">
             <header class="page-intro">
-                <span class="eyebrow"><i></i> senda-brava · EXPLORACIÓN</span>
+                <span class="eyebrow"><i></i> senda-mtb Â· EXPLORACIÃ“N</span>
                 <h1>Tu biblioteca MTB</h1>
-                <p>Organiza tus recorridos, importa tracks y prepara la próxima aventura.</p>
+                <p>Organiza tus recorridos, importa tracks y prepara la prÃ³xima aventura.</p>
             </header>
             <div class="card">
                 <header class="routes-header">
@@ -518,11 +518,11 @@
                     <section id="community-catalog">
                         <label for="community-activity">Tipo de actividad</label>
                         <select id="community-activity"></select>
-                        <label for="community-locality-search">Localidad o comunidad autónoma (opcional)</label>
+                        <label for="community-locality-search">Localidad o comunidad autÃ³noma (opcional)</label>
                         <input id="community-locality-search" type="search" maxlength="80" placeholder="Ej. Girona">
                         <label for="community-author-search">Usuario (apodo)</label>
                         <input id="community-author-search" type="search" maxlength="32" placeholder="Ej. emilio">
-                        <label for="community-radius">Distancia máxima</label>
+                        <label for="community-radius">Distancia mÃ¡xima</label>
                         <select id="community-radius">
                             <option value="10">10 km</option>
                             <option value="25" selected>25 km</option>
@@ -532,10 +532,10 @@
                         <label for="community-difficulty">Dificultad</label>
                         <select id="community-difficulty">
                             <option value="">Todas</option>
-                            <option value="easy">Fácil</option>
+                            <option value="easy">FÃ¡cil</option>
                             <option value="moderate">Moderada</option>
-                            <option value="hard">Difícil</option>
-                            <option value="very-hard">Muy difícil</option>
+                            <option value="hard">DifÃ­cil</option>
+                            <option value="very-hard">Muy difÃ­cil</option>
                         </select>
                         <label for="community-ascent">Desnivel positivo</label>
                         <select id="community-ascent">
@@ -553,15 +553,15 @@
                 <div class="routes-divider"></div>
                 <section class="routes-latest-section" id="routes-latest-section" aria-labelledby="routes-latest-title">
                     <header class="routes-section-header">
-                        <h3 id="routes-latest-title">Últimas actividades</h3>
-                        <button class="routes-show-all" id="routes-show-all" type="button">Ver todas <span aria-hidden="true">→</span></button>
+                        <h3 id="routes-latest-title">Ãšltimas actividades</h3>
+                        <button class="routes-show-all" id="routes-show-all" type="button">Ver todas <span aria-hidden="true">â†’</span></button>
                     </header>
                 </section>
                 <div id="route-list-controls" hidden>
-                    <p class="hint" id="routes-tab-hint">Gestiona tus rutas MTB. Usa ✏️ para editar el nombre o importar un track.</p>
+                    <p class="hint" id="routes-tab-hint">Gestiona tus rutas MTB. Usa âœï¸ para editar el nombre o importar un track.</p>
                     <div id="routes-import-box" hidden>
                         <input type="file" id="route-file-input" accept=".gpx,.kml,.geojson,.json,.fit,application/vnd.ant.fit" aria-label="Archivo del track a importar">
-                        <button class="btn secondary" id="btn-import-route" type="button">📥 Importar track</button>
+                        <button class="btn secondary" id="btn-import-route" type="button">ðŸ“¥ Importar track</button>
                         <p class="hint">Importa GPX, KML, GeoJSON o FIT. Los tracks guardados se pueden previsualizar, exportar o seguir; al grabar una salida siguiendo un track, se guarda como actividad realizada.</p>
                     </div>
                     <div class="routes-filters">
@@ -569,8 +569,8 @@
                             <label for="route-activity-filter" class="hint">Tipo de ruta</label>
                             <select id="route-activity-filter" aria-label="Filtrar rutas MTB">
                                 <option value="all">Todas las rutas</option>
-                                <option value="mtb">🚵 MTB</option>
-                                <option value="other">📍 Sin clasificar</option>
+                                <option value="mtb">ðŸšµ MTB</option>
+                                <option value="other">ðŸ“ Sin clasificar</option>
                             </select>
                         </div>
                         <div>
@@ -582,12 +582,12 @@
                         <div>
                             <label for="route-sort-filter" class="hint">Ordenar por</label>
                             <select id="route-sort-filter" aria-label="Ordenar rutas">
-                                <option value="recent">Más recientes</option>
-                                <option value="distance-desc">Más distancia</option>
+                                <option value="recent">MÃ¡s recientes</option>
+                                <option value="distance-desc">MÃ¡s distancia</option>
                                 <option value="distance-asc">Menos distancia</option>
-                                <option value="time-desc">Más tiempo</option>
+                                <option value="time-desc">MÃ¡s tiempo</option>
                                 <option value="time-asc">Menos tiempo</option>
-                                <option value="elevation-desc">Más desnivel</option>
+                                <option value="elevation-desc">MÃ¡s desnivel</option>
                                 <option value="elevation-asc">Menos desnivel</option>
                             </select>
                         </div>
@@ -598,29 +598,29 @@
 
         </div>
 
-        <!-- PÁGINA 5: AJUSTES -->
+        <!-- PÃGINA 5: AJUSTES -->
         <div class="page content-panel" id="page-settings">
             <header class="page-intro">
-                <span class="eyebrow"><i></i> senda-brava · PERSONALIZACIÓN</span>
+                <span class="eyebrow"><i></i> senda-mtb Â· PERSONALIZACIÃ“N</span>
                 <h1>Configura tu experiencia</h1>
                 <p>Mapas, sensores y preferencias para tener cada salida bajo control.</p>
             </header>
             <div class="card">
-                <h2>☁️ Cuenta y sincronización</h2>
-                <p class="hint" id="acc-status">Sin sesión: tus rutas se guardan solo en este móvil.</p>
-                <p class="hint" id="acc-preferences-status" role="status" aria-live="polite">Inicia sesión para sincronizar tus ajustes entre dispositivos.</p>
-                <p class="hint">Se sincronizan tus preferencias de uso. La ubicación GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
-                <p class="hint">Servidor de sincronización:</p>
+                <h2>â˜ï¸ Cuenta y sincronizaciÃ³n</h2>
+                <p class="hint" id="acc-status">Sin sesiÃ³n: tus rutas se guardan solo en este mÃ³vil.</p>
+                <p class="hint" id="acc-preferences-status" role="status" aria-live="polite">Inicia sesiÃ³n para sincronizar tus ajustes entre dispositivos.</p>
+                <p class="hint">Se sincronizan tus preferencias de uso. La ubicaciÃ³n GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
+                <p class="hint">Servidor de sincronizaciÃ³n:</p>
                 <code id="acc-server" class="server-address" aria-live="polite">Sin servidor configurado</code>
                 <div id="acc-form">
                     <label for="acc-nickname">Apodo</label>
                     <input type="text" id="acc-nickname" maxlength="32" autocomplete="nickname" placeholder="Obligatorio al crear cuenta">
                     <input type="text" id="acc-email" placeholder="Correo" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
-                    <input type="password" id="acc-pass" placeholder="Contraseña (mínimo 8 caracteres)" autocomplete="current-password">
+                    <input type="password" id="acc-pass" placeholder="ContraseÃ±a (mÃ­nimo 8 caracteres)" autocomplete="current-password">
                     <label for="acc-weight">Peso (kg)</label>
                     <input type="number" id="acc-weight" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Se guarda en tu cuenta">
-                    <label for="acc-age">Edad (años)</label>
-                    <input type="number" id="acc-age" min="10" max="100" step="1" inputmode="numeric" placeholder="Para estimar la FC máxima">
+                    <label for="acc-age">Edad (aÃ±os)</label>
+                    <input type="number" id="acc-age" min="10" max="100" step="1" inputmode="numeric" placeholder="Para estimar la FC mÃ¡xima">
                     <p class="hint">Se guardan en tu cuenta. Si ya completaste tu perfil, no hace falta volver a introducirlos.</p>
                     <button class="btn" id="acc-login">Entrar</button>
                     <button class="btn secondary" id="acc-register">Crear cuenta</button>
@@ -631,16 +631,16 @@
                         <label for="acc-account-nickname">Apodo</label>
                         <input type="text" id="acc-account-nickname" maxlength="32" autocomplete="nickname" required>
                         <button class="btn" id="acc-nickname-save" type="button">Guardar apodo</button>
-                        <button class="btn secondary" id="acc-logout-incomplete" type="button">Cerrar sesión</button>
+                        <button class="btn secondary" id="acc-logout-incomplete" type="button">Cerrar sesiÃ³n</button>
                     </div>
                     <div id="acc-ready" hidden>
                         <p id="acc-nickname-summary" class="hint"></p>
                         <button class="btn" id="acc-sync">Sincronizar ahora</button>
                         <details class="account-options">
-                            <summary>Perfil y sesión</summary>
+                            <summary>Perfil y sesiÃ³n</summary>
                             <div class="account-profile">
                                 <div class="account-avatar" id="acc-avatar" aria-label="Avatar del usuario">
-                                    <span id="acc-avatar-placeholder" aria-hidden="true">👤</span>
+                                    <span id="acc-avatar-placeholder" aria-hidden="true">ðŸ‘¤</span>
                                     <img id="acc-avatar-image" alt="Avatar del usuario" hidden>
                                 </div>
                                 <div class="account-profile-content">
@@ -648,113 +648,113 @@
                                     <div id="acc-profile-editor">
                                         <label for="acc-profile-weight">Peso (kg)</label>
                                         <input type="number" id="acc-profile-weight" min="25" max="250" step="0.1" inputmode="decimal">
-                                        <label for="acc-profile-age">Edad (años)</label>
+                                        <label for="acc-profile-age">Edad (aÃ±os)</label>
                                         <input type="number" id="acc-profile-age" min="10" max="100" step="1" inputmode="numeric">
                                         <label for="acc-avatar-file">Foto de perfil (opcional)</label>
                                         <input type="file" id="acc-avatar-file" accept="image/jpeg,image/png,image/webp">
-                                        <p class="hint">Se ajusta a 512 × 512 y se comprime a un máximo de 256 KB.</p>
+                                        <p class="hint">Se ajusta a 512 Ã— 512 y se comprime a un mÃ¡ximo de 256 KB.</p>
                                         <button class="btn secondary" id="acc-profile-save">Guardar perfil</button>
                                         <button class="btn secondary" id="acc-profile-cancel" type="button" hidden>Cancelar</button>
                                     </div>
                                     <button class="btn secondary" id="acc-profile-edit" type="button" hidden>Modificar perfil</button>
                                 </div>
                             </div>
-                            <button class="btn secondary" id="acc-logout">Cerrar sesión</button>
+                            <button class="btn secondary" id="acc-logout">Cerrar sesiÃ³n</button>
                         </details>
                     </div>
                 </div>
             </div>
             <div class="card">
-                <h2>🎛️ Panel de grabación</h2>
-                <p class="hint">Elige las métricas visibles y su orden en el mapa durante una salida.</p>
-                <div id="recording-metric-config" class="recording-metric-config" role="group" aria-label="Métricas del panel de grabación"></div>
+                <h2>ðŸŽ›ï¸ Panel de grabaciÃ³n</h2>
+                <p class="hint">Elige las mÃ©tricas visibles y su orden en el mapa durante una salida.</p>
+                <div id="recording-metric-config" class="recording-metric-config" role="group" aria-label="MÃ©tricas del panel de grabaciÃ³n"></div>
             </div>
             <div class="card">
-                <h2>🗺️ Cartografía del mapa</h2>
-                <label for="map-style-select" class="hint">Mapa con conexión</label>
-                <select id="map-style-select" aria-label="Mapa a usar con conexión">
-                    <option value="topographic">⛰️ Topográfico OpenTopoMap</option>
-                    <option value="cyclosm">🚵 CyclOSM (ciclismo)</option>
-                    <option value="osm">🗺️ OpenStreetMap (callejero)</option>
-                    <option value="satellite">🛰️ Satélite Esri</option>
-                    <option value="ign">📥 Topográfico IGN (mapas descargados)</option>
+                <h2>ðŸ—ºï¸ CartografÃ­a del mapa</h2>
+                <label for="map-style-select" class="hint">Mapa con conexiÃ³n</label>
+                <select id="map-style-select" aria-label="Mapa a usar con conexiÃ³n">
+                    <option value="topographic">â›°ï¸ TopogrÃ¡fico OpenTopoMap</option>
+                    <option value="cyclosm">ðŸšµ CyclOSM (ciclismo)</option>
+                    <option value="osm">ðŸ—ºï¸ OpenStreetMap (callejero)</option>
+                    <option value="satellite">ðŸ›°ï¸ SatÃ©lite Esri</option>
+                    <option value="ign">ðŸ“¥ TopogrÃ¡fico IGN (mapas descargados)</option>
                 </select>
-                <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexión se usa el mapa elegido; sin conexión, el IGN descargado.</p>
+                <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexiÃ³n se usa el mapa elegido; sin conexiÃ³n, el IGN descargado.</p>
             </div>
             <div class="card" id="settings-sensors">
-                <h2>📡 Sensores Bluetooth</h2>
-                <p class="hint">Conecta sensores BLE estándar. Si un sensor de velocidad está conectado, su lectura tiene prioridad sobre la velocidad GPS; el GPS sigue registrando tu posición.</p>
+                <h2>ðŸ“¡ Sensores Bluetooth</h2>
+                <p class="hint">Conecta sensores BLE estÃ¡ndar. Si un sensor de velocidad estÃ¡ conectado, su lectura tiene prioridad sobre la velocidad GPS; el GPS sigue registrando tu posiciÃ³n.</p>
                 <label class="setting-toggle" for="sensor-hr-enabled">
                     <input type="checkbox" id="sensor-hr-enabled">
-                    <span><strong>❤️ Pulsómetro</strong><span class="hint" id="sensor-hr-status">Desconectado</span></span>
+                    <span><strong>â¤ï¸ PulsÃ³metro</strong><span class="hint" id="sensor-hr-status">Desconectado</span></span>
                 </label>
                 <label class="setting-toggle" for="sensor-cadence-enabled">
                     <input type="checkbox" id="sensor-cadence-enabled">
-                    <span><strong>🔄 Cadencia</strong><span class="hint" id="sensor-cadence-status">Desconectado</span></span>
+                    <span><strong>ðŸ”„ Cadencia</strong><span class="hint" id="sensor-cadence-status">Desconectado</span></span>
                 </label>
                 <label class="setting-toggle" for="sensor-power-enabled">
                     <input type="checkbox" id="sensor-power-enabled">
-                    <span><strong>⚡ Potenciómetro</strong><span class="hint" id="sensor-power-status">Desconectado</span></span>
+                    <span><strong>âš¡ PotenciÃ³metro</strong><span class="hint" id="sensor-power-status">Desconectado</span></span>
                 </label>
                 <label class="setting-toggle" for="sensor-speed-enabled">
                     <input type="checkbox" id="sensor-speed-enabled">
-                    <span><strong>🚴 Velocímetro</strong><span class="hint" id="sensor-speed-status">Desconectado</span></span>
+                    <span><strong>ðŸš´ VelocÃ­metro</strong><span class="hint" id="sensor-speed-status">Desconectado</span></span>
                 </label>
-                <label for="sensor-wheel-circumference" class="hint">Circunferencia de rueda para velocímetro (mm)</label>
-                <input type="number" id="sensor-wheel-circumference" min="500" max="3000" step="1" value="2100" aria-label="Circunferencia de rueda en milímetros">
+                <label for="sensor-wheel-circumference" class="hint">Circunferencia de rueda para velocÃ­metro (mm)</label>
+                <input type="number" id="sensor-wheel-circumference" min="500" max="3000" step="1" value="2100" aria-label="Circunferencia de rueda en milÃ­metros">
                 <p class="hint">Las lecturas de pulso, cadencia, potencia y velocidad se guardan en las rutas grabadas. Si no llega velocidad Bluetooth, se usa el GPS.</p>
             </div>
 
-            <section id="offline-panel" class="card" aria-label="Mapas sin conexión">
-    <h2>🗺️ Mapas sin conexión</h2>
-                <p>Descarga zonas del mapa topográfico IGN de España y Portugal. Los mapas online se consultan con conexión; su almacenamiento offline se habilitará cuando el proveedor autorice ese uso.</p>
-    <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
+            <section id="offline-panel" class="card" aria-label="Mapas sin conexiÃ³n">
+    <h2>ðŸ—ºï¸ Mapas sin conexiÃ³n</h2>
+                <p>Descarga zonas del mapa topogrÃ¡fico IGN de EspaÃ±a y Portugal. Los mapas online se consultan con conexiÃ³n; su almacenamiento offline se habilitarÃ¡ cuando el proveedor autorice ese uso.</p>
+    <label for="offline-region" style="font-size:.8rem;color:#ddd;">RegiÃ³n</label>
     <select id="offline-region">
-        <option value="andalucia">Andalucía</option>
-        <option value="aragon">Aragón</option>
+        <option value="andalucia">AndalucÃ­a</option>
+        <option value="aragon">AragÃ³n</option>
         <option value="asturias">Principado de Asturias</option>
         <option value="baleares">Islas Baleares</option>
         <option value="canarias">Canarias</option>
         <option value="cantabria">Cantabria</option>
         <option value="castilla-la-mancha">Castilla-La Mancha</option>
-        <option value="castilla-y-leon">Castilla y León</option>
-        <option value="cataluna">Cataluña</option>
+        <option value="castilla-y-leon">Castilla y LeÃ³n</option>
+        <option value="cataluna">CataluÃ±a</option>
         <option value="comunidad-valenciana">Comunidad Valenciana</option>
         <option value="extremadura">Extremadura</option>
         <option value="galicia" selected>Galicia</option>
         <option value="madrid">Comunidad de Madrid</option>
-        <option value="murcia">Región de Murcia</option>
+        <option value="murcia">RegiÃ³n de Murcia</option>
         <option value="navarra">Comunidad Foral de Navarra</option>
-        <option value="pais-vasco">País Vasco</option>
+        <option value="pais-vasco">PaÃ­s Vasco</option>
         <option value="la-rioja">La Rioja</option>
-        <option value="portugal">Portugal (área continental)</option>
+        <option value="portugal">Portugal (Ã¡rea continental)</option>
     </select>
     <label for="offline-detail" style="font-size:.8rem;color:#ddd;">Nivel de detalle</label>
     <select id="offline-detail">
-        <option value="13" selected>Estándar (zoom 7–13)</option>
-        <option value="14">Alto (zoom 7–14, ocupa bastante más)</option>
+        <option value="13" selected>EstÃ¡ndar (zoom 7â€“13)</option>
+        <option value="14">Alto (zoom 7â€“14, ocupa bastante mÃ¡s)</option>
     </select>
     <div id="offline-estimate-info" class="hint" style="margin: 8px 0; font-size: 0.85rem;"></div>
-    <p class="hint">La descarga cubre el área geográfica aproximada de la comunidad y puede incluir zonas limítrofes. Se muestra el número de teselas antes de iniciar.</p>
+    <p class="hint">La descarga cubre el Ã¡rea geogrÃ¡fica aproximada de la comunidad y puede incluir zonas limÃ­trofes. Se muestra el nÃºmero de teselas antes de iniciar.</p>
     <div id="offline-progress"><div id="offline-progress-fill"></div></div>
     <div id="offline-progress-text">Preparado para descargar</div>
-    <p id="offline-storage-note">Se necesita conexión Wi-Fi y espacio libre. Mantén la aplicación abierta durante la descarga. Los mapas IGN descargados tienen un presupuesto de 256 MiB medido por tamaño real; las cachés automáticas se limitan por teselas y también consumen cuota.</p>
+    <p id="offline-storage-note">Se necesita conexiÃ³n Wi-Fi y espacio libre. MantÃ©n la aplicaciÃ³n abierta durante la descarga. Los mapas IGN descargados tienen un presupuesto de 256 MiB medido por tamaÃ±o real; las cachÃ©s automÃ¡ticas se limitan por teselas y tambiÃ©n consumen cuota.</p>
     <div class="offline-actions">
         <button class="btn" id="btn-download-region" type="button">Descargar / reanudar</button>
-        <button class="btn secondary" id="btn-download-visible-detail" type="button">Descargar detalle de la vista (15–17)</button>
+        <button class="btn secondary" id="btn-download-visible-detail" type="button">Descargar detalle de la vista (15â€“17)</button>
         <button class="btn secondary" id="btn-cancel-download" type="button">Parar</button>
     </div>
     <button class="btn danger" id="btn-clear-offline" type="button">Borrar mapas guardados</button>
     </section>
             <div class="card">
-                <h2>⚙️ Ajustes varios</h2>
+                <h2>âš™ï¸ Ajustes varios</h2>
                 <label class="setting-toggle" for="setting-route-sound">
                     <input type="checkbox" id="setting-route-sound">
                     <span><strong>Avisos sonoros de ruta</strong><span class="hint">Sonido diferente al salir de la ruta y al volver a ella.</span></span>
                 </label>
                 <label class="setting-toggle" for="setting-route-vibration">
                     <input type="checkbox" id="setting-route-vibration">
-                    <span><strong>Vibración al desviarte</strong><span class="hint">Vibra cuando te sales de la ruta cargada.</span></span>
+                    <span><strong>VibraciÃ³n al desviarte</strong><span class="hint">Vibra cuando te sales de la ruta cargada.</span></span>
                 </label>
                 <label class="setting-toggle" for="setting-route-voice">
                     <input type="checkbox" id="setting-route-voice">
@@ -762,44 +762,44 @@
                 </label>
                 <label class="setting-toggle" for="setting-recording-haptics">
                     <input type="checkbox" id="setting-recording-haptics">
-                    <span><strong>Respuesta háptica al grabar</strong><span class="hint">Vibración breve al iniciar, pausar, reanudar o finalizar una salida.</span></span>
+                    <span><strong>Respuesta hÃ¡ptica al grabar</strong><span class="hint">VibraciÃ³n breve al iniciar, pausar, reanudar o finalizar una salida.</span></span>
                 </label>
                 <label class="setting-toggle" for="setting-map-rotation">
                     <input type="checkbox" id="setting-map-rotation">
-                    <span><strong>Rotación automática del mapa</strong><span class="hint">Orienta el mapa según tu dirección o la ruta cargada mientras sigues tu posición. Si el GPS no informa velocidad, se calcula el rumbo con el desplazamiento.</span></span>
+                    <span><strong>RotaciÃ³n automÃ¡tica del mapa</strong><span class="hint">Orienta el mapa segÃºn tu direcciÃ³n o la ruta cargada mientras sigues tu posiciÃ³n. Si el GPS no informa velocidad, se calcula el rumbo con el desplazamiento.</span></span>
                 </label>
                 <label class="setting-toggle" for="setting-large-controls">
                     <input type="checkbox" id="setting-large-controls">
-                    <span><strong>Controles grandes y alto contraste</strong><span class="hint">Aumenta el tamaño y el contraste de los controles del mapa y de la navegación inferior.</span></span>
+                    <span><strong>Controles grandes y alto contraste</strong><span class="hint">Aumenta el tamaÃ±o y el contraste de los controles del mapa y de la navegaciÃ³n inferior.</span></span>
                 </label>
             </div>
             <div class="card">
-                <h2>ℹ️ Aplicación</h2>
-                <p class="hint">Versión instalada: <strong id="app-version">v1.2.7 (build local)</strong></p>
+                <h2>â„¹ï¸ AplicaciÃ³n</h2>
+                <p class="hint">VersiÃ³n instalada: <strong id="app-version">v1.2.7 (build local)</strong></p>
             </div>
         </div>
 
-        <!-- INICIO / DASHBOARD SENDA-BRAVA -->
+        <!-- INICIO / DASHBOARD senda-mtb -->
         <div class="page dashboard-page" id="page-home">
             <main class="dashboard-content">
                 <header class="dashboard-hero">
                     <div class="hero-copy">
-                        <span class="eyebrow">senda-brava <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
+                        <span class="eyebrow">senda-mtb <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
                         <div class="dashboard-greeting">
-                            <h1 id="home-greeting">¡Hola, Biker!</h1>
+                            <h1 id="home-greeting">Â¡Hola, Biker!</h1>
                             <img id="home-avatar" class="dashboard-avatar" alt="Avatar del usuario" hidden>
-                            <span id="home-avatar-placeholder" class="dashboard-avatar-placeholder" aria-hidden="true">👤</span>
+                            <span id="home-avatar-placeholder" class="dashboard-avatar-placeholder" aria-hidden="true">ðŸ‘¤</span>
                         </div>
-                        <p>Tu próxima aventura empieza aquí.</p>
+                        <p>Tu prÃ³xima aventura empieza aquÃ­.</p>
                         <div class="hero-actions">
                             <div class="hero-action-buttons">
-                                <button class="hero-primary-action" type="button" data-recording>▶ <span>Grabar salida</span></button>
+                                <button class="hero-primary-action" type="button" data-recording>â–¶ <span>Grabar salida</span></button>
                                 <button class="hero-tools-action" type="button" data-page="7">Centro de control</button>
                                 <button class="hero-cockpit-action" type="button" data-page="6">Cockpit</button>
                             </div>
                             <div class="hero-connectivity-status">
-                                <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En línea</span>
-                                <span id="dashboard-gps-status" class="status-chip" aria-live="polite"><i></i>GPS · Buscando</span>
+                                <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En lÃ­nea</span>
+                                <span id="dashboard-gps-status" class="status-chip" aria-live="polite"><i></i>GPS Â· Buscando</span>
                             </div>
                         </div>
                     </div>
@@ -808,23 +808,23 @@
 
                 <section class="dashboard-kpis" aria-label="Resumen semanal">
                     <article class="dashboard-kpi kpi-orange" id="dashboard-distance-kpi">
-                        <div class="kpi-icon">↗</div><span class="kpi-label">DISTANCIA ESTA SEMANA</span>
+                        <div class="kpi-icon">â†—</div><span class="kpi-label">DISTANCIA ESTA SEMANA</span>
                         <strong id="home-week-distance">0 km</strong><span class="kpi-foot">En tus salidas MTB</span>
                         <span class="kpi-spark spark-orange" aria-hidden="true"></span>
                     </article>
                     <article class="dashboard-kpi kpi-blue" id="dashboard-ascent-kpi">
-                        <div class="kpi-icon">▲</div><span class="kpi-label">DESNIVEL POSITIVO</span>
+                        <div class="kpi-icon">â–²</div><span class="kpi-label">DESNIVEL POSITIVO</span>
                         <strong id="home-week-ascent">0 m</strong><span class="kpi-foot">Acumulado semanal</span>
                         <span class="kpi-spark spark-blue" aria-hidden="true"></span>
                     </article>
                     <article class="dashboard-kpi kpi-green" id="dashboard-time-kpi">
-                        <div class="kpi-icon">◷</div><span class="kpi-label">TIEMPO EN MOVIMIENTO</span>
+                        <div class="kpi-icon">â—·</div><span class="kpi-label">TIEMPO EN MOVIMIENTO</span>
                         <strong id="home-week-time">0 h</strong><span class="kpi-foot">Tiempo sobre la bici</span>
                         <span class="kpi-spark spark-green" aria-hidden="true"></span>
                     </article>
                     <article class="dashboard-kpi kpi-violet" id="dashboard-speed-kpi">
-                        <div class="kpi-icon">⌁</div><span class="kpi-label">VELOCIDAD MEDIA</span>
-                        <strong id="home-week-speed">— km/h</strong><span class="kpi-foot">En tus rutas grabadas</span>
+                        <div class="kpi-icon">âŒ</div><span class="kpi-label">VELOCIDAD MEDIA</span>
+                        <strong id="home-week-speed">â€” km/h</strong><span class="kpi-foot">En tus rutas grabadas</span>
                         <span class="kpi-spark spark-violet" aria-hidden="true"></span>
                     </article>
                 </section>
@@ -832,40 +832,40 @@
                 <section class="dashboard-main-grid">
                     <article class="dashboard-panel dashboard-map-panel" id="dashboard-map-panel">
                         <div class="panel-heading">
-                            <div><span class="eyebrow">EXPLORACIÓN</span><h2>Tu mapa</h2></div>
-                            <button id="home-open-map" class="text-link" type="button">Abrir mapa <span>↗</span></button>
+                            <div><span class="eyebrow">EXPLORACIÃ“N</span><h2>Tu mapa</h2></div>
+                            <button id="home-open-map" class="text-link" type="button">Abrir mapa <span>â†—</span></button>
                         </div>
-                        <div id="home-map" role="region" aria-label="Vista previa del mapa de montaña"></div>
-                        <div class="map-preview-footer"><span><i></i><span id="home-map-label">Angkor · Camboya</span></span><span id="home-routes-count">0 rutas guardadas</span></div>
+                        <div id="home-map" role="region" aria-label="Vista previa del mapa de montaÃ±a"></div>
+                        <div class="map-preview-footer"><span><i></i><span id="home-map-label">Angkor Â· Camboya</span></span><span id="home-routes-count">0 rutas guardadas</span></div>
                     </article>
                     <article class="dashboard-panel dashboard-performance-panel" id="dashboard-performance-panel">
                         <div class="panel-heading">
-                            <div><span class="eyebrow">ANÁLISIS MTB</span><h2>Tu rendimiento</h2></div>
-                            <span class="period-pill">7 días</span>
+                            <div><span class="eyebrow">ANÃLISIS MTB</span><h2>Tu rendimiento</h2></div>
+                            <span class="period-pill">7 dÃ­as</span>
                         </div>
-                        <div class="dashboard-chart-wrap"><canvas id="home-distance-chart" aria-label="Distancia recorrida por día esta semana"></canvas></div>
+                        <div class="dashboard-chart-wrap"><canvas id="home-distance-chart" aria-label="Distancia recorrida por dÃ­a esta semana"></canvas></div>
                         <div class="performance-foot"><span>Salidas esta semana</span><strong id="home-week-rides">0</strong></div>
                     </article>
                 </section>
 
                 <section class="dashboard-lower-grid" aria-label="Actividad y rutas">
                     <article class="dashboard-panel latest-ride-panel" id="dashboard-latest-panel">
-                        <div class="panel-heading"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Última salida</h2></div><span class="panel-symbol orange-symbol">↗</span></div>
+                        <div class="panel-heading"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Ãšltima salida</h2></div><span class="panel-symbol orange-symbol">â†—</span></div>
                         <div class="latest-ride-content">
                             <div class="ride-thumb" aria-hidden="true"><span>MTB</span></div>
-                            <div class="ride-copy"><strong id="home-last-route-name">Aún no hay salidas</strong><span id="home-last-route-date">Tu primera ruta te espera</span><div><span id="home-last-route-distance">— km</span><span id="home-last-route-ascent">— m+</span></div></div>
-                            <button class="round-arrow" type="button" data-page="3" aria-label="Ver rutas">›</button>
+                            <div class="ride-copy"><strong id="home-last-route-name">AÃºn no hay salidas</strong><span id="home-last-route-date">Tu primera ruta te espera</span><div><span id="home-last-route-distance">â€” km</span><span id="home-last-route-ascent">â€” m+</span></div></div>
+                            <button class="round-arrow" type="button" data-page="3" aria-label="Ver rutas">â€º</button>
                         </div>
                     </article>
                     <article class="dashboard-panel weekly-panel" id="dashboard-weekly-panel">
-                        <div class="panel-heading"><div><span class="eyebrow">CONSTANCIA</span><h2>Tu actividad</h2></div><span class="panel-symbol blue-symbol">◉</span></div>
-                        <div class="weekly-summary"><div class="weekly-ring"><span id="home-week-ride-count">0</span><small>salidas</small></div><div><strong id="home-week-activity-km">0 km</strong><span>recorridos esta semana</span><button class="text-link" type="button" data-page="1">Ver estadísticas <span>↗</span></button></div></div>
-                        <div class="weekly-goal"><label for="home-week-goal-input">Objetivo semanal <span>km</span></label><input id="home-week-goal-input" type="number" min="5" max="1000" step="5" inputmode="numeric" aria-label="Objetivo semanal en kilómetros"><progress id="home-week-goal-progress" max="100" value="0" aria-label="Progreso del objetivo semanal"></progress><small id="home-week-goal-caption">0 de 100 km completados</small></div>
+                        <div class="panel-heading"><div><span class="eyebrow">CONSTANCIA</span><h2>Tu actividad</h2></div><span class="panel-symbol blue-symbol">â—‰</span></div>
+                        <div class="weekly-summary"><div class="weekly-ring"><span id="home-week-ride-count">0</span><small>salidas</small></div><div><strong id="home-week-activity-km">0 km</strong><span>recorridos esta semana</span><button class="text-link" type="button" data-page="1">Ver estadÃ­sticas <span>â†—</span></button></div></div>
+                        <div class="weekly-goal"><label for="home-week-goal-input">Objetivo semanal <span>km</span></label><input id="home-week-goal-input" type="number" min="5" max="1000" step="5" inputmode="numeric" aria-label="Objetivo semanal en kilÃ³metros"><progress id="home-week-goal-progress" max="100" value="0" aria-label="Progreso del objetivo semanal"></progress><small id="home-week-goal-caption">0 de 100 km completados</small></div>
                     </article>
                     <article class="dashboard-panel explore-panel" id="dashboard-explore-panel">
-                        <div class="panel-heading"><div><span class="eyebrow">SIGUIENTE AVENTURA</span><h2>Explora tus rutas</h2></div><span class="panel-symbol orange-symbol">⌖</span></div>
+                        <div class="panel-heading"><div><span class="eyebrow">SIGUIENTE AVENTURA</span><h2>Explora tus rutas</h2></div><span class="panel-symbol orange-symbol">âŒ–</span></div>
                         <p id="home-route-prompt">Importa un GPX o descubre una ruta de la comunidad.</p>
-                        <button class="explore-button" type="button" data-page="3">Ver mis rutas <span>→</span></button>
+                        <button class="explore-button" type="button" data-page="3">Ver mis rutas <span>â†’</span></button>
                     </article>
                 </section>
 
@@ -876,18 +876,18 @@
             <main class="cockpit-content">
                 <header class="cockpit-header">
                     <div>
-                        <span class="eyebrow">senda-brava <i></i> COCKPIT</span>
+                        <span class="eyebrow">senda-mtb <i></i> COCKPIT</span>
                         <h1>Tu salida, de un vistazo</h1>
                     </div>
-                    <button class="cockpit-back" type="button" data-page="5">← Inicio</button>
+                    <button class="cockpit-back" type="button" data-page="5">â† Inicio</button>
                 </header>
 
                 <div class="cockpit-status-row" aria-label="Estado de la actividad">
                     <span id="cockpit-recording-state" class="cockpit-state" data-state="idle">Lista para salir</span>
-                    <span id="cockpit-gps-status" class="cockpit-status-chip">GPS · Buscando</span>
+                    <span id="cockpit-gps-status" class="cockpit-status-chip">GPS Â· Buscando</span>
                     <span id="cockpit-network-status" class="cockpit-status-chip" aria-live="polite">
                         <i class="cockpit-connectivity-icon" aria-hidden="true"></i>
-                        <span id="cockpit-network-label">En línea</span>
+                        <span id="cockpit-network-label">En lÃ­nea</span>
                     </span>
                 </div>
 
@@ -910,7 +910,7 @@
                     </article>
                 </section>
 
-                <section class="cockpit-performance" aria-label="Métricas en directo">
+                <section class="cockpit-performance" aria-label="MÃ©tricas en directo">
                     <article class="cockpit-speed-panel">
                         <div class="cockpit-section-heading">
                             <span>VELOCIDAD ACTUAL</span>
@@ -923,17 +923,17 @@
                             </div>
                         </div>
                         <div class="cockpit-sensor-grid">
-                            <div><span>PULSO</span><strong><span id="cockpit-heart-rate">—</span><small> bpm</small></strong></div>
-                            <div><span>CADENCIA</span><strong><span id="cockpit-cadence">—</span><small> rpm</small></strong></div>
-                            <div><span>POTENCIA</span><strong><span id="cockpit-power">—</span><small> W</small></strong></div>
-                            <div><span>MEDIA</span><strong><span id="cockpit-avg-speed">—</span><small> km/h</small></strong></div>
+                            <div><span>PULSO</span><strong><span id="cockpit-heart-rate">â€”</span><small> bpm</small></strong></div>
+                            <div><span>CADENCIA</span><strong><span id="cockpit-cadence">â€”</span><small> rpm</small></strong></div>
+                            <div><span>POTENCIA</span><strong><span id="cockpit-power">â€”</span><small> W</small></strong></div>
+                            <div><span>MEDIA</span><strong><span id="cockpit-avg-speed">â€”</span><small> km/h</small></strong></div>
                         </div>
                     </article>
 
                     <section class="cockpit-visuals" aria-label="Perfil y trazado">
                         <article class="cockpit-panel">
                             <div class="cockpit-section-heading">
-                                <div><span>ALTIMETRÍA</span><strong id="cockpit-profile-altitude">Perfil en directo</strong></div>
+                                <div><span>ALTIMETRÃA</span><strong id="cockpit-profile-altitude">Perfil en directo</strong></div>
                                 <span id="cockpit-elevation-range">-- m</span>
                             </div>
                             <div class="cockpit-chart-wrap">
@@ -941,13 +941,13 @@
                                     <path id="cockpit-profile-area"></path>
                                     <path id="cockpit-profile-line"></path>
                                 </svg>
-                                <p id="cockpit-profile-empty">El perfil aparecerá cuando comience la salida.</p>
+                                <p id="cockpit-profile-empty">El perfil aparecerÃ¡ cuando comience la salida.</p>
                             </div>
                         </article>
                         <article class="cockpit-panel">
                             <div class="cockpit-section-heading">
                                 <div><span>TRAZADO</span><strong id="cockpit-route-title">Tu recorrido</strong></div>
-                                <button class="cockpit-map-link" type="button" data-page="0">Abrir mapa ↗</button>
+                                <button class="cockpit-map-link" type="button" data-page="0">Abrir mapa â†—</button>
                             </div>
                             <div class="cockpit-route-preview">
                                 <svg id="cockpit-route-svg" viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true">
@@ -955,20 +955,20 @@
                                     <circle id="cockpit-route-start" r="2.5"></circle>
                                     <circle id="cockpit-route-end" r="2.5"></circle>
                                 </svg>
-                                <p id="cockpit-route-empty">El trazado de tu salida aparecerá aquí.</p>
+                                <p id="cockpit-route-empty">El trazado de tu salida aparecerÃ¡ aquÃ­.</p>
                             </div>
                         </article>
                     </section>
                 </section>
 
-                <section class="cockpit-controls" aria-label="Controles de grabación">
+                <section class="cockpit-controls" aria-label="Controles de grabaciÃ³n">
                     <div>
                         <span class="eyebrow">CONTROLES DE SALIDA</span>
-                        <p>La grabación usa el GPS y los sensores conectados.</p>
+                        <p>La grabaciÃ³n usa el GPS y los sensores conectados.</p>
                     </div>
                     <div class="cockpit-control-buttons">
                         <button id="cockpit-toggle" class="cockpit-toggle" type="button">
-                            <span id="cockpit-toggle-icon" aria-hidden="true">▶</span><span id="cockpit-toggle-label">Iniciar salida</span>
+                            <span id="cockpit-toggle-icon" aria-hidden="true">â–¶</span><span id="cockpit-toggle-label">Iniciar salida</span>
                         </button>
                         <button id="cockpit-finish" class="cockpit-finish" type="button" hidden>Finalizar y guardar</button>
                     </div>
@@ -978,42 +978,42 @@
 
         <div class="page tools-page" id="page-tools">
             <main class="tools-content">
-                <header class="tools-page-heading"><span class="eyebrow">TU CENTRO MTB</span><h1>senda-brava</h1><p>Accesos principales en la barra inferior. Tus herramientas, aquí.</p></header>
+                <header class="tools-page-heading"><span class="eyebrow">TU CENTRO MTB</span><h1>senda-mtb</h1><p>Accesos principales en la barra inferior. Tus herramientas, aquÃ­.</p></header>
                 <section class="tools-hub" aria-labelledby="tools-hub-title">
-                    <h2 id="tools-hub-title">Más herramientas</h2>
+                    <h2 id="tools-hub-title">MÃ¡s herramientas</h2>
                     <div class="tools-grid">
-                        <button class="tool-card" type="button" data-tool="safety"><span aria-hidden="true">⬡</span><strong>Seguridad</strong></button>
-                        <button class="tool-card" type="button" data-tool="garage"><span aria-hidden="true">♧</span><strong>Garaje</strong></button>
-                        <button class="tool-card" type="button" data-tool="ai"><span aria-hidden="true">✳</span><strong>Camboya AI</strong></button>
-                        <button class="tool-card" type="button" data-tool="calendar"><span aria-hidden="true">▦</span><strong>Calendario</strong></button>
-                        <button class="tool-card" type="button" data-tool="settings"><span aria-hidden="true">⚙</span><strong>Ajustes</strong></button>
+                        <button class="tool-card" type="button" data-tool="safety"><span aria-hidden="true">â¬¡</span><strong>Seguridad</strong></button>
+                        <button class="tool-card" type="button" data-tool="garage"><span aria-hidden="true">â™§</span><strong>Garaje</strong></button>
+                        <button class="tool-card" type="button" data-tool="ai"><span aria-hidden="true">âœ³</span><strong>Senda AI</strong></button>
+                        <button class="tool-card" type="button" data-tool="calendar"><span aria-hidden="true">â–¦</span><strong>Calendario</strong></button>
+                        <button class="tool-card" type="button" data-tool="settings"><span aria-hidden="true">âš™</span><strong>Ajustes</strong></button>
                     </div>
                 </section>
                 <section class="dashboard-panel ai-preview" aria-labelledby="ai-preview-title">
                     <div class="ai-preview-heading">
-                        <div class="ai-brand-mark" aria-hidden="true">✳</div>
-                        <div class="ai-brand-copy"><h2 id="ai-preview-title">CAMBOYA AI</h2><span>Tu asistente inteligente MTB</span></div>
+                        <div class="ai-brand-mark" aria-hidden="true">âœ³</div>
+                        <div class="ai-brand-copy"><h2 id="ai-preview-title">Senda AI</h2><span>Tu asistente inteligente MTB</span></div>
                         <span class="ai-concept-badge">Concepto</span>
                     </div>
-                    <div class="ai-conversation" aria-label="Ejemplo de conversación">
-                        <p class="ai-message ai-message-user">¿Cómo ha sido mi rendimiento este mes?</p>
-                        <p class="ai-message ai-message-assistant">Cuando conectemos el asistente, podrá resumir tu evolución usando tus actividades registradas y señalar qué periodo compara.</p>
-                        <p class="ai-message ai-message-user">Encuéntrame una ruta de 35 km con dificultad media.</p>
-                        <p class="ai-message ai-message-assistant">Podrá buscar rutas con distancia y dificultad disponibles. La dificultad técnica solo aparecerá si tenemos datos fiables.</p>
+                    <div class="ai-conversation" aria-label="Ejemplo de conversaciÃ³n">
+                        <p class="ai-message ai-message-user">Â¿CÃ³mo ha sido mi rendimiento este mes?</p>
+                        <p class="ai-message ai-message-assistant">Cuando conectemos el asistente, podrÃ¡ resumir tu evoluciÃ³n usando tus actividades registradas y seÃ±alar quÃ© periodo compara.</p>
+                        <p class="ai-message ai-message-user">EncuÃ©ntrame una ruta de 35 km con dificultad media.</p>
+                        <p class="ai-message ai-message-assistant">PodrÃ¡ buscar rutas con distancia y dificultad disponibles. La dificultad tÃ©cnica solo aparecerÃ¡ si tenemos datos fiables.</p>
                     </div>
                     <form id="ai-preview-form" class="ai-preview-form">
-                        <label class="sr-only" for="ai-preview-input">Pregunta a Camboya AI</label>
-                        <input id="ai-preview-input" type="text" maxlength="240" placeholder="Pregunta sobre tus rutas o rendimiento…" autocomplete="off">
+                        <label class="sr-only" for="ai-preview-input">Pregunta a Senda AI</label>
+                        <input id="ai-preview-input" type="text" maxlength="240" placeholder="Pregunta sobre tus rutas o rendimientoâ€¦" autocomplete="off">
                         <button class="ai-send-button" type="submit">Probar</button>
                     </form>
-                    <p id="ai-preview-status" class="ai-preview-footnote" role="status" aria-live="polite">Ejemplo ilustrativo. El servicio aún no está conectado y no se envían datos.</p>
+                    <p id="ai-preview-status" class="ai-preview-footnote" role="status" aria-live="polite">Ejemplo ilustrativo. El servicio aÃºn no estÃ¡ conectado y no se envÃ­an datos.</p>
                 </section>
                 <section id="safety-workspace" class="safety-workspace" aria-labelledby="safety-title" hidden>
-                    <button id="safety-back" class="safety-back" type="button">← Más herramientas</button>
+                    <button id="safety-back" class="safety-back" type="button">â† MÃ¡s herramientas</button>
                     <header class="safety-heading">
-                        <span class="eyebrow">PREPARACIÓN DE RUTA</span>
+                        <span class="eyebrow">PREPARACIÃ“N DE RUTA</span>
                         <h2 id="safety-title">Seguridad</h2>
-                        <p>Configura avisos locales y contactos. En una emergencia, WhatsApp se abrirá con el mensaje preparado; tú tendrás que enviarlo.</p>
+                        <p>Configura avisos locales y contactos. En una emergencia, WhatsApp se abrirÃ¡ con el mensaje preparado; tÃº tendrÃ¡s que enviarlo.</p>
                     </header>
                     <div class="safety-grid">
                         <section class="safety-card" aria-labelledby="safety-contacts-title">
@@ -1022,16 +1022,16 @@
                             <form id="safety-contact-form" class="safety-contact-form">
                                 <label for="safety-contact-name">Nombre</label>
                                 <input id="safety-contact-name" type="text" maxlength="40" autocomplete="name" required>
-                                <label for="safety-contact-phone">Teléfono internacional</label>
+                                <label for="safety-contact-phone">TelÃ©fono internacional</label>
                                 <input id="safety-contact-phone" type="tel" inputmode="tel" placeholder="+34600123456" autocomplete="tel" required>
-                                <button class="safety-secondary-button" type="submit">Añadir contacto</button>
+                                <button class="safety-secondary-button" type="submit">AÃ±adir contacto</button>
                             </form>
                             <ul id="safety-contact-list" class="safety-contact-list" aria-label="Contactos guardados"></ul>
                         </section>
                         <section class="safety-card" aria-labelledby="safety-settings-title">
                             <h3 id="safety-settings-title">Aviso de salida</h3>
                             <div class="safety-field-row">
-                                <label for="safety-duration">Duración prevista (minutos)</label>
+                                <label for="safety-duration">DuraciÃ³n prevista (minutos)</label>
                                 <input id="safety-duration" type="number" min="15" max="720" step="15" value="180">
                             </div>
                             <div class="safety-field-row">
@@ -1040,31 +1040,31 @@
                             </div>
                             <label class="safety-toggle">
                                 <input id="safety-group-sharing" type="checkbox">
-                                <span>Compartir ubicación en directo con mi grupo mientras grabo</span>
+                                <span>Compartir ubicaciÃ³n en directo con mi grupo mientras grabo</span>
                             </label>
                             <p id="safety-group-status" class="safety-note" role="status" aria-live="polite"></p>
                             <label class="safety-toggle safety-unavailable">
                                 <input type="checkbox" disabled>
-                                <span>Detección de caídas</span>
+                                <span>DetecciÃ³n de caÃ­das</span>
                             </label>
-                            <p class="safety-note">No disponible: esta versión no tiene un detector de caídas validado para tu dispositivo.</p>
-                            <button id="safety-prepare" class="safety-primary-button" type="button">Preparar próxima salida</button>
+                            <p class="safety-note">No disponible: esta versiÃ³n no tiene un detector de caÃ­das validado para tu dispositivo.</p>
+                            <button id="safety-prepare" class="safety-primary-button" type="button">Preparar prÃ³xima salida</button>
                             <p id="safety-status" class="safety-note" role="status" aria-live="polite"></p>
                         </section>
                         <section class="safety-card safety-active-card" aria-labelledby="safety-active-title">
                             <h3 id="safety-active-title">Durante la salida</h3>
-                            <p id="safety-session-status" class="safety-note" role="status" aria-live="polite">Sin protección activa.</p>
+                            <p id="safety-session-status" class="safety-note" role="status" aria-live="polite">Sin protecciÃ³n activa.</p>
                             <div id="safety-countdown" class="safety-countdown">--:--</div>
-                            <p id="safety-last-location" class="safety-note">Última ubicación conocida: no disponible.</p>
-                            <a id="safety-location-link" class="safety-location-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación en el mapa</a>
+                            <p id="safety-last-location" class="safety-note">Ãšltima ubicaciÃ³n conocida: no disponible.</p>
+                            <a id="safety-location-link" class="safety-location-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicaciÃ³n en el mapa</a>
                             <label class="safety-field-row" for="safety-sos-contact">
                                 Contactar mediante WhatsApp
                                 <select id="safety-sos-contact"></select>
                             </label>
                             <button id="safety-send-sos" class="safety-sos-button" type="button">Preparar mensaje SOS</button>
-                            <button id="safety-cancel-alert" class="safety-secondary-button" type="button" hidden>Estoy bien · cancelar aviso</button>
-                            <button id="safety-end-session" class="safety-secondary-button" type="button" hidden>Finalizar protección</button>
-                            <p class="safety-note">El SOS no se envía automáticamente. El aviso por retraso es local y no contacta a nadie si no puedes responder.</p>
+                            <button id="safety-cancel-alert" class="safety-secondary-button" type="button" hidden>Estoy bien Â· cancelar aviso</button>
+                            <button id="safety-end-session" class="safety-secondary-button" type="button" hidden>Finalizar protecciÃ³n</button>
+                            <p class="safety-note">El SOS no se envÃ­a automÃ¡ticamente. El aviso por retraso es local y no contacta a nadie si no puedes responder.</p>
                         </section>
                     </div>
                 </section>
@@ -1075,8 +1075,8 @@
 
 
 
-    <!-- NAVEGACIÓN DE PESTAÑAS INFERIOR -->
-    <nav class="mobile-nav" aria-label="Navegación principal">
+    <!-- NAVEGACIÃ“N DE PESTAÃ‘AS INFERIOR -->
+    <nav class="mobile-nav" aria-label="NavegaciÃ³n principal">
         <button class="nav-btn active" data-page="5" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7"></path><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"></path></svg></span><span>Inicio</span></button>
         <button class="nav-btn" data-page="3" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17c3-1 3-7 8-8M11 9l2 3-3 2"></path></svg></span><span>Rutas</span></button>
         <button class="nav-btn" data-page="0" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15m6-12v15"></path></svg></span><span>Mapa</span></button>
@@ -1105,7 +1105,7 @@
         <section class="community-panel">
             <header class="community-header">
                 <h2 id="community-title">Rutas de la comunidad</h2>
-                <button id="community-close" class="community-close" type="button" aria-label="Cerrar">×</button>
+                <button id="community-close" class="community-close" type="button" aria-label="Cerrar">Ã—</button>
             </header>
             <p id="community-modal-status" class="community-status" role="status" aria-live="polite"></p>
             <section id="community-detail" hidden>
@@ -1121,7 +1121,7 @@
                     <div id="community-comment-form"></div>
                 </section>
                 <section id="community-route-ranking-section" class="community-detail-section" aria-labelledby="community-route-ranking-title">
-                    <h3 id="community-route-ranking-title">Clasificación de la ruta</h3>
+                    <h3 id="community-route-ranking-title">ClasificaciÃ³n de la ruta</h3>
                     <p class="community-privacy">Se muestra un alias asignado a la cuenta y el mejor tiempo. La marca no se verifica de forma independiente. No se publica el track de la actividad, el correo ni los datos de sensores.</p>
                     <div id="community-route-leaderboard" class="community-ranking-list" aria-live="polite"></div>
                     <div id="community-route-attempt"></div>
@@ -1130,14 +1130,14 @@
                     <div class="community-segments-heading">
                         <div>
                             <h3 id="community-segments-title">Segmentos de la comunidad</h3>
-                            <p class="community-privacy">Los segmentos quedan asociados a este trazado público. Se pueden crear seleccionando dos puntos del mapa.</p>
+                            <p class="community-privacy">Los segmentos quedan asociados a este trazado pÃºblico. Se pueden crear seleccionando dos puntos del mapa.</p>
                         </div>
-                        <button id="community-create-segment" class="btn-small" type="button">＋ Crear segmento</button>
+                        <button id="community-create-segment" class="btn-small" type="button">ï¼‹ Crear segmento</button>
                     </div>
                     <div id="community-segment-editor" class="community-segment-editor" hidden>
                         <label for="community-segment-name">Nombre del segmento</label>
                         <input id="community-segment-name" type="text" maxlength="60" placeholder="Ej. Subida del mirador">
-                        <p id="community-segment-editor-status" class="community-status" role="status" aria-live="polite">Toca el inicio y después el final del tramo en el mapa.</p>
+                        <p id="community-segment-editor-status" class="community-status" role="status" aria-live="polite">Toca el inicio y despuÃ©s el final del tramo en el mapa.</p>
                         <div class="community-dialog-actions">
                             <button id="community-segment-cancel" class="btn secondary" type="button">Cancelar</button>
                             <button id="community-segment-submit" class="btn" type="button" disabled>Publicar segmento</button>
@@ -1152,22 +1152,22 @@
             </section>
             <section id="community-publish" hidden>
                 <h3 id="community-share-title"></h3>
-                <p class="community-privacy">Se publicará una copia simplificada del trazado, con unos 150 m ocultos en cada extremo. Si está disponible, también se publicará el día en que se realizó la ruta; no se enviarán la hora, el pulso ni la velocidad. Las fotos y sus ubicaciones se mostrarán públicamente; se eliminan sus metadatos de imagen y se omiten los POI próximos a los extremos, pero una foto aún puede revelar lugares reconocibles. Al confirmar, aparecerá públicamente en el mapa comunitario.</p>
-                <label for="community-share-autonomous-community">Comunidad autónoma</label>
+                <p class="community-privacy">Se publicarÃ¡ una copia simplificada del trazado, con unos 150 m ocultos en cada extremo. Si estÃ¡ disponible, tambiÃ©n se publicarÃ¡ el dÃ­a en que se realizÃ³ la ruta; no se enviarÃ¡n la hora, el pulso ni la velocidad. Las fotos y sus ubicaciones se mostrarÃ¡n pÃºblicamente; se eliminan sus metadatos de imagen y se omiten los POI prÃ³ximos a los extremos, pero una foto aÃºn puede revelar lugares reconocibles. Al confirmar, aparecerÃ¡ pÃºblicamente en el mapa comunitario.</p>
+                <label for="community-share-autonomous-community">Comunidad autÃ³noma</label>
                 <select id="community-share-autonomous-community"></select>
-                <label for="community-share-description">Descripción (opcional)</label>
-                <textarea id="community-share-description" maxlength="500" rows="3" placeholder="Detalles útiles del recorrido"></textarea>
+                <label for="community-share-description">DescripciÃ³n (opcional)</label>
+                <textarea id="community-share-description" maxlength="500" rows="3" placeholder="Detalles Ãºtiles del recorrido"></textarea>
                 <label for="community-share-difficulty">Dificultad percibida</label>
                 <select id="community-share-difficulty">
                     <option value="">Sin especificar</option>
-                    <option value="easy">Fácil</option>
+                    <option value="easy">FÃ¡cil</option>
                     <option value="moderate">Moderada</option>
-                    <option value="hard">Difícil</option>
-                    <option value="very-hard">Muy difícil</option>
+                    <option value="hard">DifÃ­cil</option>
+                    <option value="very-hard">Muy difÃ­cil</option>
                 </select>
                 <label class="community-consent">
                     <input id="community-share-consent" type="checkbox">
-                    <span>Quiero publicar el trazado, el día de realización si está disponible y las fotos/ubicaciones de sus POI en el mapa comunitario.</span>
+                    <span>Quiero publicar el trazado, el dÃ­a de realizaciÃ³n si estÃ¡ disponible y las fotos/ubicaciones de sus POI en el mapa comunitario.</span>
                 </label>
                 <div class="community-dialog-actions">
                     <button id="community-back" class="btn secondary" type="button">Volver</button>
@@ -1220,3 +1220,4 @@
     <script src="app/back-button.js"></script>
 </body>
 </html>
+

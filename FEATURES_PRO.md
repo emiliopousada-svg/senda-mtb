@@ -1,4 +1,4 @@
-# MTB PRO — estado de las funciones premium
+﻿# MTB PRO — estado de las funciones premium
 
 Este inventario separa lo que ya funciona en esta versión de lo que depende de servicios, permisos o trabajo posterior.
 
@@ -8,7 +8,7 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 - Separar presentación, lógica de dominio y acceso a datos. Reducir dependencias cruzadas entre módulos y documentar sus interfaces.
 - Consolidar servicios comunes para GPS, archivos, permisos, conectividad y sincronización en iteraciones compatibles con la aplicación actual.
 - Mantener las actividades locales disponibles sin conexión y sincronizarlas cuando la red vuelva, sin perder cambios locales.
-- Usar únicamente backend e identidad propios de MTBPro, sin compartir PocketBase, credenciales o datos con MTB Camboya.
+- Usar únicamente backend e identidad propios de MTBPro, sin compartir PocketBase, credenciales o datos con senda-mtb.
 
 ## Cockpit MTB de grabación
 
@@ -33,7 +33,7 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 | Sincronización de preferencias | Sincronización privada por cuenta para ajustes de mapa, panel, métricas y entrenamiento; requiere aplicar la migración PocketBase `mtb_user_preferences`. |
 | Clasificaciones de grupos | Ya disponible cuando se configura un backend PocketBase propio y la cuenta tiene acceso. |
 | Menú Comunidad | Implementado con seis pestañas: Ranking, Segmentos, Desafíos, Mi grupo, Logros y Actividad. |
-| Navegación principal | Seis accesos inferiores (Inicio, Rutas, Mapa, Comunidad, Stats y Perfil/Ajustes); Seguridad, Garaje, CAMBOYA AI, Calendario y Sensores se reúnen en Más herramientas. Seguridad, Garaje y Calendario son accesos conceptuales hasta que se implementen. |
+| Navegación principal | Seis accesos inferiores (Inicio, Rutas, Mapa, Comunidad, Stats y Perfil/Ajustes); Seguridad, Garaje, SENDA AI, Calendario y Sensores se reúnen en Más herramientas. Seguridad, Garaje y Calendario son accesos conceptuales hasta que se implementen. |
 | Liga privada de cuatro semanas | Diseño y puntuación base documentados; requiere desplegar colecciones, validadores, temporadas e historial del módulo competitivo en PocketBase antes de habilitar escrituras. |
 | Modo nocturno automático | Pendiente de programación horaria; la interfaz actual mantiene el tema oscuro. |
 | Transiciones entre pantallas | Disponibles en el carrusel de páginas, con soporte de movimiento reducido del sistema. |
@@ -85,7 +85,7 @@ Estas propuestas forman parte del alcance de producto. No se deben mostrar como 
 
 ### Inteligencia artificial MTB
 
-- El inicio incluye una tarjeta conceptual de CAMBOYA AI; las respuestas son ejemplos y el formulario no envía información mientras el servicio no esté conectado.
+- El inicio incluye una tarjeta conceptual de SENDA AI; las respuestas son ejemplos y el formulario no envía información mientras el servicio no esté conectado.
 - Ofrecer un asistente conectado a un servicio propio para explicar estadísticas, comparar actividades, resumir salidas, detectar tendencias y ayudar a planificar entrenamientos o temporadas.
 - Recomendar rutas solo a partir de preferencias y datos disponibles (distancia, desnivel, dificultad física y técnica conocida); explicar por qué se recomienda cada ruta y señalar los datos que faltan.
 - Ayudar a preparar desafíos de grupo como borradores revisables por un administrador. No publicar retos ni modificar clasificaciones automáticamente.
@@ -106,3 +106,4 @@ Estas propuestas forman parte del alcance de producto. No se deben mostrar como 
 ## Límites de mapas
 
 No se descargan mosaicos del servidor estándar de OpenStreetMap para uso offline. Su política prohíbe la descarga masiva y el uso offline de ese servicio: [política oficial de teselas de OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/). Para ampliar regiones hay que seleccionar un proveedor y respetar sus condiciones de descarga, atribución y almacenamiento.
+

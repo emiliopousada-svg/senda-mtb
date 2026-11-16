@@ -1,14 +1,14 @@
-# MTB CAMBOYA PRO — Proveedores de Mapas y Política Offline (MAP_PROVIDERS.md)
+﻿# senda-mtb — Proveedores de Mapas y Política Offline (MAP_PROVIDERS.md)
 
 **Versión:** 1.0  
 **Fecha:** 16 de noviembre de 2026  
-**Referencia:** Documento Maestro del Proyecto MTB CAMBOYA PRO  
+**Referencia:** Documento Maestro del Proyecto senda-mtb  
 
 ---
 
 ## 1. Alcance Cartográfico
 
-MTB Camboya PRO proporciona **cobertura cartográfica global**, adaptada a las necesidades específicas de la práctica del ciclismo de montaña (curvas de nivel, sendas, pistas forestales, altimetría y orografía).
+senda-mtb proporciona **cobertura cartográfica global**, adaptada a las necesidades específicas de la práctica del ciclismo de montaña (curvas de nivel, sendas, pistas forestales, altimetría y orografía).
 
 ---
 
@@ -47,8 +47,9 @@ MTB Camboya PRO proporciona **cobertura cartográfica global**, adaptada a las n
 
 ## 4. Atribución Legal Obligatoria
 
-Toda pantalla que muestre mapas renderizados con Leaflet en MTB Camboya PRO incluye la atribución correspondiente en el pie del visor:
+Toda pantalla que muestre mapas renderizados con Leaflet en senda-mtb incluye la atribución correspondiente en el pie del visor:
 
 * **IGN:** `© Instituto Geográfico Nacional de España`
 * **OSM / CyclOSM / OpenTopoMap:** `© Colaboradores de OpenStreetMap, SRTM | Estilo CyclOSM / OpenTopoMap`
 * **ESRI:** `Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community`
+

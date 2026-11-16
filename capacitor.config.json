@@ -1,8 +1,8 @@
-{
+﻿{
   "appId": "com.emiliopousada.mtbcamboyapro",
-  "appName": "senda-brava",
+  "appName": "senda-mtb",
   "webDir": "www",
-  "appendUserAgent": "senda-brava (+https://github.com/emiliopousada-svg/MTBPro)",
+  "appendUserAgent": "senda-mtb (+https://github.com/emiliopousada-svg/MTBPro)",
   "server": {
     "androidScheme": "https"
   },
@@ -11,3 +11,4 @@
     "useLegacyBridge": true
   }
 }
+

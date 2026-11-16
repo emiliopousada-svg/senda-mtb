@@ -1,14 +1,14 @@
-# MTB CAMBOYA PRO — Arquitectura del Sistema (ARCHITECTURE.md)
+﻿# senda-mtb — Arquitectura del Sistema (ARCHITECTURE.md)
 
 **Versión:** 1.0  
 **Fecha:** 16 de noviembre de 2026  
-**Referencia:** Documento Maestro del Proyecto MTB CAMBOYA PRO  
+**Referencia:** Documento Maestro del Proyecto senda-mtb  
 
 ---
 
 ## 1. Principios de Diseño Arquitectónico
 
-La arquitectura de **MTB Camboya PRO** sigue un diseño modular, ligero y desacoplado, concebido bajo los siguientes pilares:
+La arquitectura de **senda-mtb** sigue un diseño modular, ligero y desacoplado, concebido bajo los siguientes pilares:
 
 1. **Local-First & Offline-First:** Toda la funcionalidad crítica (captura GPS, persistencia de telemetría, visor de mapas descargados, cálculo de estadísticas y consulta de biblioteca) se ejecuta y persiste localmente sin requerir conexión a internet ni autenticación obligatoria.
 2. **Separación Estricta de Responsabilidades:** La capa de presentación (UI) nunca accede directamente al almacenamiento en disco ni al backend. Consume exclusivamente los motores de dominio y repositorios locales.
@@ -34,7 +34,7 @@ flowchart TD
         SensorsEngine["Motor de Sensores BLE"]
         SafetyEngine["Guardian Mode Engine"]
         GarageEngine["Motor de Garaje & Desgaste"]
-        AiEngine["Camboya AI (Desacoplado)"]
+        AiEngine["SENDA AI (Desacoplado)"]
     end
 
     subgraph Persistence ["Persistencia & Dispositivo"]
@@ -91,7 +91,7 @@ Módulos JavaScript puros, sin acoplamiento a elementos específicos del DOM, fa
 
 ### 2.5. Capa de Backend y Sincronización
 * **PocketBase (`https://mtbpro.ddns.net`):**
-  * Instancia independiente dedicada en exclusiva a MTB Camboya PRO.
+  * Instancia independiente dedicada en exclusiva a senda-mtb.
   * Autenticación basada en Bearer Token persistente.
   * Arquitectura de hooks de servidor (`pb_hooks/`) para validación de reglas de negocio en grupos, apodos, clasificación y limpieza de ubicaciones en directo (`live_cleanup.pb.js`).
 
@@ -102,7 +102,7 @@ Módulos JavaScript puros, sin acoplamiento a elementos específicos del DOM, fa
 El proyecto converge hacia una organización modular estructurada en `app/`:
 
 ```
-mtb-camboya-pro/
+senda-mtb/
 ├── android/                 # Proyecto nativo Android (Capacitor)
 ├── app/                     # Lógica de la aplicación
 │   ├── config.js            # Configuración global, constantes y límites
@@ -133,7 +133,7 @@ mtb-camboya-pro/
 │   └── native-app.mjs       # Adaptador nativo Capacitor
 ├── tests/                   # Suite de pruebas con node --test
 ├── www/                     # Carpeta de salida compilada para Capacitor
-├── capacitor.config.json    # Configuración de appId com.emiliopousada.mtbcamboyapro
+├── capacitor.config.json    # Configuración de appId com.emiliopousada.sendamtb
 ├── index.html               # Shell de la aplicación
 ├── package.json             # Dependencias de npm y scripts
 ├── sw.js                    # Service Worker y políticas de caché
@@ -156,3 +156,4 @@ mtb-camboya-pro/
 2. **Capacitor CLI:**
    * `npx cap sync` copia `www/` al directorio nativo de Android (`android/app/src/main/assets/public`).
    * Compilación a APK nativo mediante Gradle (`gradle assembleDebug`).
+

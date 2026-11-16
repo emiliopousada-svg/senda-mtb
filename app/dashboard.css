@@ -23,13 +23,14 @@
     border-radius: 20px; background: radial-gradient(ellipse at 80% 5%,rgba(22,140,255,.26),transparent 34%),
     radial-gradient(ellipse at 40% 110%,rgba(255,118,31,.19),transparent 42%),linear-gradient(115deg,#171d26,#10141a 66%,#151b24);
 }
-.hero-copy { position: relative; z-index: 2; }
+.hero-copy { position: relative; z-index: 2; width:100%; }
 .hero-copy .eyebrow { color:#aab6c7; }
 .eyebrow { display:block; color:#8895a7; font-size:.62rem; font-weight:800; letter-spacing:.15em; }
 .eyebrow i { display:inline-block; width:5px; height:5px; margin:0 6px 1px; border-radius:50%; background:var(--mtb-orange); }
-.dashboard-greeting { display:flex; min-width:0; align-items:center; gap:14px; }
+.dashboard-greeting { display:flex; width:100%; min-width:0; align-items:center; justify-content:space-between; gap:14px; }
 .dashboard-hero h1 { margin-top:8px; color:#f7f8fa; font-size:clamp(1.8rem,5.6vw,2.7rem); font-weight:760; letter-spacing:-.055em; line-height:1.05; }
-.dashboard-avatar,.dashboard-avatar-placeholder { width:52px; height:52px; flex:0 0 52px; border:2px solid rgba(255,255,255,.2); border-radius:50%; }
+.dashboard-greeting h1 { min-width:0; flex:1; }
+.dashboard-avatar,.dashboard-avatar-placeholder { width:68px; height:68px; flex:0 0 68px; border:2px solid rgba(255,255,255,.2); border-radius:50%; }
 .dashboard-avatar { background:#17202b; object-fit:cover; }
 .dashboard-avatar-placeholder { display:grid; place-items:center; background:linear-gradient(145deg,#263445,#141a22); color:#dce4ee; font-size:1.35rem; }
 .dashboard-avatar[hidden],.dashboard-avatar-placeholder[hidden] { display:none; }
@@ -247,7 +248,7 @@
     .dashboard-content { padding-top:10px; }
     .dashboard-hero { min-height:156px; flex-direction:column; align-items:flex-start; justify-content:flex-end; padding:20px 17px; }
     .hero-copy h1 { font-size:1.85rem; }
-    .dashboard-avatar,.dashboard-avatar-placeholder { width:44px; height:44px; flex-basis:44px; }
+    .dashboard-avatar,.dashboard-avatar-placeholder { width:64px; height:64px; flex-basis:64px; }
     .hero-copy p { font-size:.8rem; }
     .status-chip { min-height:37px; gap:7px; padding:0 11px; font-size:.71rem; }
     .gps-signal-bars { height:15px; }

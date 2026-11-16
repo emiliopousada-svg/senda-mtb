@@ -1,4 +1,4 @@
-name: MTBPro checks
+﻿name: senda-mtb checks
 
 on:
   workflow_dispatch:
@@ -40,6 +40,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: senda-brava-debug-apk
+          name: senda-mtb-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+

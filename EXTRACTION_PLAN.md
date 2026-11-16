@@ -1,9 +1,9 @@
-# Plan de extracción selectiva — MTB CAMBOYA PRO
+﻿# Plan de extracción selectiva — senda-mtb
 
 ## Decisiones de proyecto
 
 - Repositorio destino: `emiliopousada-svg/MTBPro` (privado, rama `main`, ya creado).
-- El repositorio original `mtb-camboya` se consulta en modo solo lectura y no recibe cambios.
+- El repositorio original `senda-mtb` se consulta en modo solo lectura y no recibe cambios.
 - Plataformas: web y Android primero; el scaffold iOS se conserva para una segunda fase.
 - Actividad: exclusivamente MTB.
 - Mapas: cobertura global online; descargas offline solo con proveedores y zonas cuya licencia permita expresamente ese uso.
@@ -56,3 +56,4 @@ Capacitor 8, Leaflet, Chart.js, `fit-file-parser`, plugins de geolocalización e
 
 - Política oficial de teselas OSM: https://operations.osmfoundation.org/policies/tiles/
 - Repositorio PRO: https://github.com/emiliopousada-svg/MTBPro
+

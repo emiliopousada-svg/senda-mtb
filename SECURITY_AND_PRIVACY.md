@@ -1,8 +1,8 @@
-# MTB CAMBOYA PRO — Seguridad y Privacidad (SECURITY_AND_PRIVACY.md)
+﻿# senda-mtb — Seguridad y Privacidad (SECURITY_AND_PRIVACY.md)
 
 **Versión:** 1.0  
 **Fecha:** 16 de noviembre de 2026  
-**Referencia:** Documento Maestro del Proyecto MTB CAMBOYA PRO  
+**Referencia:** Documento Maestro del Proyecto senda-mtb  
 
 ---
 
@@ -10,10 +10,10 @@
 
 > [!IMPORTANT]
 > **Aislamiento Total del Repositorio y Datos Originales:**
-> El proyecto original `mtb-camboya` permanece completamente intacto. No se comparten secretos, claves privadas, bases de datos, tokens de sesión, identificadores de aplicación, nombres de caché de Service Worker ni instancias de servidor entre ambas aplicaciones.
+> El proyecto original `senda-mtb` permanece completamente intacto. No se comparten secretos, claves privadas, bases de datos, tokens de sesión, identificadores de aplicación, nombres de caché de Service Worker ni instancias de servidor entre ambas aplicaciones.
 
 ### Checklist de Aislamiento Técnico:
-* **Identificador de Aplicación Android:** `com.emiliopousada.mtbcamboyapro` (frente a `com.emiliopousada.mtbcamboya`).
+* **Identificador de Aplicación Android:** `com.emiliopousada.sendamtb` (frente a `com.emiliopousada.mtbcamboya`).
 * **Base de Datos Local:** `mtb_camboya_pro_db` (IndexedDB versión 2 independiente).
 * **Almacenamiento Local (LocalStorage):** Claves con prefijo exclusivo `mtb_pro_*`.
 * **Caché PWA / Service Worker:** Nombre y espacio de nombres de caché independientes para evitar colisiones en navegadores que visiten ambos dominios.
@@ -66,3 +66,4 @@ El modo de seguridad Guardian Mode introduce capacidades críticas de salvaguard
 
 * Todas las conexiones hacia el backend de PocketBase se realizan obligatoriamente bajo **HTTPS / TLS 1.3**.
 * La función cliente `cloudApi()` implementa validación estricta de dominios, control de cabeceras, rechazo de redirecciones inesperadas y `cache: 'no-store'` para evitar que respuestas con datos privados queden registradas en cachés compartidas del navegador.
+

@@ -1,8 +1,8 @@
-# MTB CAMBOYA PRO — Plan de Pruebas y Criterios de Aceptación (TEST_PLAN.md)
+﻿# senda-mtb — Plan de Pruebas y Criterios de Aceptación (TEST_PLAN.md)
 
 **Versión:** 1.0  
 **Fecha:** 16 de noviembre de 2026  
-**Referencia:** Documento Maestro del Proyecto MTB CAMBOYA PRO  
+**Referencia:** Documento Maestro del Proyecto senda-mtb  
 
 ---
 
@@ -86,7 +86,7 @@ Actualmente el proyecto cuenta con **50 pruebas unitarias automatizadas** que de
 | **7** | **Guardian Mode** | Disparo de botón SOS con generación de enlace universal de coordenadas; aviso por superación de tiempo previsto de salida. | Validación funcional con contactos de prueba. |
 | **8** | **Garaje** | Imputación automática de km de salida a bicicleta seleccionada; salto de notificación al alcanzar el límite de uso de cadena (ej. 2000 km). | Pruebas de integración de datos. |
 | **9** | **Comunidad & Eventos**| Creación de evento de salida; inscripción de participantes; visualización de punto de encuentro en el mapa con navegación. | Interfaz web y Android. |
-| **10** | **CAMBOYA AI** | Solicitud de análisis de última actividad: respuesta fundamentada estrictamente en los datos de la salida, sin alucinación de métricas. | Casos de prueba de prompts contextuales. |
+| **10** | **SENDA AI** | Solicitud de análisis de última actividad: respuesta fundamentada estrictamente en los datos de la salida, sin alucinación de métricas. | Casos de prueba de prompts contextuales. |
 | **11** | **QA & Publicación** | Generación de APK Release firmado, análisis de seguridad estático, consumo de batería en grabación continua <8% por hora. | Profiler Android Studio. |
 | **12** | **Adaptación iOS** | Compilación y arranque en simulador y dispositivo iPhone con permisos de ubicación en uso / background y Bluetooth validados. | Xcode en macOS. |
 
@@ -98,3 +98,4 @@ Ninguna fase del desarrollo se considerará completada si:
 1. Alguno de los 29 tests unitarios falla o se desactiva.
 2. Existen llamadas directas no autorizadas entre la capa de presentación y el almacenamiento o backend.
 3. Se detecta cualquier fuga de datos, clave o reutilización de caché respecto a la aplicación original.
+

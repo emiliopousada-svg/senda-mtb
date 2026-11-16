@@ -1,8 +1,8 @@
-{
-  "name": "mtbpro",
-  "version": "0.1.1",
+﻿{
+  "name": "senda-mtb",
+  "version": "0.2.0",
   "private": true,
-  "description": "senda-brava: rutas, GPS, mapas offline y comunidad",
+  "description": "senda-mtb: rutas, GPS, mapas offline y comunidad",
   "scripts": {
     "prepare-web": "node scripts/prepare-web.js",
     "build": "node scripts/prepare-web.js && npx cap sync",
@@ -30,3 +30,5 @@
     "esbuild": "^0.28.2"
   }
 }
+
+

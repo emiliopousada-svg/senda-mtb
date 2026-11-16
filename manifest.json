@@ -1,6 +1,6 @@
-{
-  "name": "senda-brava",
-  "short_name": "senda-brava",
+﻿{
+  "name": "senda-mtb",
+  "short_name": "senda-mtb",
   "description": "GPS, rutas y mapas offline para MTB",
   "lang": "es",
   "start_url": "./",
@@ -24,3 +24,4 @@
     }
   ]
 }
+

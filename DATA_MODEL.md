@@ -1,14 +1,14 @@
-# MTB CAMBOYA PRO — Modelo de Datos (DATA_MODEL.md)
+﻿# senda-mtb — Modelo de Datos (DATA_MODEL.md)
 
 **Versión:** 1.0  
 **Fecha:** 16 de noviembre de 2026  
-**Referencia:** Documento Maestro del Proyecto MTB CAMBOYA PRO  
+**Referencia:** Documento Maestro del Proyecto senda-mtb  
 
 ---
 
 ## 1. Estrategia General de Persistencia
 
-El modelo de datos de **MTB Camboya PRO** sigue el principio de **local-first con sincronización asíncrona e idempotente**:
+El modelo de datos de **senda-mtb** sigue el principio de **local-first con sincronización asíncrona e idempotente**:
 1. **Persistencia Local Primaria:** Todas las entidades (actividades, rutas, perfiles de bicis, telemetría y puntos de interés) se guardan íntegramente en la base de datos local **IndexedDB** (`mtb_camboya_pro_db`). La aplicación es 100% funcional sin conexión.
 2. **Optimización de Telemetría GPS:** Para evitar sobrecargar la base de datos remota con millones de filas, los puntos GPS y lecturas de sensores no se almacenan como filas individuales en el backend. Se empaquetan en arrays binarios o estructuras JSON compactas asociadas al registro de la actividad.
 3. **Sincronización Idempotente:** Toda mutación local pendiente de sincronización genera un registro en la cola `sync_queue` con un identificador UUID único (`clientId`), marca temporal y tipo de acción (`CREATE`, `UPDATE`, `DELETE`).
@@ -193,3 +193,4 @@ Las colecciones de PocketBase gestionan usuarios, sincronización y vida social 
    * Se rechazan POIs situados a menos de 150 metros de los extremos.
 3. **Limpieza de Metadatos EXIF:**
    * Las fotos de ruta adjuntas son re-codificadas en cliente en formato WebP/JPEG desprovistas de metadatos de cámara y localización para evitar fugas de privacidad.
+

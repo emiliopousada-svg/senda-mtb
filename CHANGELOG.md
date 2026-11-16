@@ -1,7 +1,25 @@
-# Changelog
+﻿# Changelog
 
-Todas las novedades y cambios relevantes de **senda-brava** se documentan en este archivo.
+Todas las novedades y cambios relevantes de **senda-mtb** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
+
+---
+
+## [0.2.0] - 2026-11-17
+
+### Cambiado
+* **Renombrado de la app:** `senda-brava` / `MTBPro` → **`senda-mtb`** en todos los archivos del proyecto (HTML, JS, CSS, JSON, Markdown, workflows de CI/CD).
+* **AI renombrada:** `Camboya AI` → `Senda AI` en interfaz, documentación y casos de prueba.
+* **Workflows de GitHub Actions actualizados:** `mtbpro-checks.yml` renombrado a `senda-mtb-checks.yml`; artefactos y títulos de release actualizados al nuevo nombre.
+
+### Añadido
+* **Banner de servidor caído:** Al arrancar, la app comprueba la disponibilidad del servidor PocketBase (`/api/health`) y muestra un aviso rojo persistente si no hay conexión, con reintento automático cada 30 s.
+* **Mensajes de error mejorados en grupos:** Cuando los hooks de PocketBase (`/api/mtb/groups/*`) no están cargados (error 404), se muestra un mensaje claro pidiendo reiniciar PocketBase con `pb_hooks/` activos.
+* **Migración esqueleto para retos/temporadas:** `pb_migrations/PENDING_1794836000_create_competition_collections.js` — colecciones `mtb_group_competitions`, `mtb_group_competition_entries`, `mtb_group_seasons` y `mtb_group_season_awards` listas para activar cuando el módulo esté implementado.
+
+### Corregido
+* **Sincronización de preferencias:** El error cuando falta la colección `mtb_user_preferences` ya muestra un toast específico en lugar de fallar silenciosamente.
+* **Hooks de grupos:** Crear grupo, unirse, renovar código y eliminar grupo muestran mensajes de error claros y accionables ante cualquier fallo de red o de hooks del servidor.
 
 ---
 
@@ -9,7 +27,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ### Añadido
 * **Aislamiento Total de Proyecto:**
-  * Creación del scaffold independiente para MTB Camboya PRO bajo el paquete Android `com.emiliopousada.mtbcamboyapro`.
+  * Creación del scaffold independiente para senda-mtb bajo el paquete Android `com.emiliopousada.sendamtb`.
   * Base de datos local aislada en IndexedDB (`mtb_camboya_pro_db`, esquema v2) y claves de almacenamiento con prefijo exclusivo `mtb_pro_*`.
   * Configuración de backend dedicada en `https://mtbpro.ddns.net` con hooks de PocketBase en `pb_hooks/`.
 * **Identidad Visual Premium:**
@@ -48,3 +66,4 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
   * `SECURITY_AND_PRIVACY.md`: Política de seguridad, permisos de Android y Guardian Mode.
   * `TEST_PLAN.md`: Matriz de pruebas por fases del roadmap y criterios de aceptación.
   * `CHANGELOG.md`: Historial de versiones y cambios.
+
