@@ -58,7 +58,7 @@ jobs:
           echo "MTB_SIGNING_STORE_FILE=$RUNNER_TEMP/senda-brava-signing.keystore" >> "$GITHUB_ENV"
           keytool -list -keystore "$RUNNER_TEMP/senda-brava-signing.keystore" -storepass "$MTB_SIGNING_STORE_PASSWORD" -alias "$MTB_SIGNING_KEY_ALIAS"
       - name: Assemble signed release APK
-        run: gradle -p android assembleRelease -PandroidBuildNumber=${{ github.run_number + 1 }}
+        run: gradle -p android assembleRelease -PandroidBuildNumber=${{ github.run_number }}
       - name: Prepare APK artifact
         run: |
           APP_VERSION="$(node -p "require('./package.json').version")"
