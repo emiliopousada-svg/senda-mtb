@@ -1,8 +1,8 @@
 // Calcula en PocketBase la caja geográfica que usa el catálogo para filtrar candidatos.
-const COMMUNITY_ROUTE_TRIM_METERS = 150;
-
 function indexCommunityRouteBounds(e) {
     if (e.hasSuperuserAuth()) return e.next();
+
+    const communityRouteTrimMeters = 150;
 
     function communityRouteDistance(a, b) {
         const rad = Math.PI / 180;
@@ -45,10 +45,10 @@ function indexCommunityRouteBounds(e) {
     }
 
     function communityRouteTrimEnds(lines) {
-        let result = communityRouteTrimStart(lines, COMMUNITY_ROUTE_TRIM_METERS);
+        let result = communityRouteTrimStart(lines, communityRouteTrimMeters);
         result = communityRouteTrimStart(
             result.slice().reverse().map(line => line.slice().reverse()),
-            COMMUNITY_ROUTE_TRIM_METERS
+            communityRouteTrimMeters
         ).reverse().map(line => line.slice().reverse());
         return result;
     }
@@ -89,8 +89,8 @@ function indexCommunityRouteBounds(e) {
         if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
             throw new BadRequestError("Los puntos de interés contienen coordenadas no válidas.");
         }
-        if (communityRouteDistance([lat, lng], firstPoint) <= COMMUNITY_ROUTE_TRIM_METERS
-            || communityRouteDistance([lat, lng], lastPoint) <= COMMUNITY_ROUTE_TRIM_METERS) {
+        if (communityRouteDistance([lat, lng], firstPoint) <= communityRouteTrimMeters
+            || communityRouteDistance([lat, lng], lastPoint) <= communityRouteTrimMeters) {
             throw new BadRequestError("Los puntos de interés deben quedar a más de 150 metros de los extremos originales.");
         }
     }
