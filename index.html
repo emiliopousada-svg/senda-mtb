@@ -34,7 +34,7 @@
             <button class="sidebar-link sidebar-record" type="button" data-recording><span class="record-ring"></span>Grabación</button>
             <button class="sidebar-link" type="button" data-page="2"><span class="sidebar-icon">◉</span>Comunidad</button>
             <button class="sidebar-link" type="button" data-page="1"><span class="sidebar-icon">▥</span>Estadísticas</button>
-            <button class="sidebar-link tools-sidebar-link" type="button" data-page="6"><span class="sidebar-icon">☷</span>Más herramientas</button>
+            <button class="sidebar-link tools-sidebar-link" type="button" data-page="7"><span class="sidebar-icon">☷</span>Más herramientas</button>
         </nav>
         <div class="sidebar-footer"><span class="sidebar-status-dot"></span><span>MTB PRO <small>· LISTO PARA RODAR</small></span></div>
     </aside>
@@ -783,7 +783,8 @@
                         <div class="hero-actions">
                             <div class="hero-action-buttons">
                                 <button class="hero-primary-action" type="button" data-recording>▶ <span>Grabar salida</span></button>
-                                <button class="hero-tools-action" type="button" data-page="6">Centro de control</button>
+                                <button class="hero-tools-action" type="button" data-page="7">Centro de control</button>
+                                <button class="hero-cockpit-action" type="button" data-page="6">Cockpit</button>
                             </div>
                             <div class="hero-connectivity-status">
                                 <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En línea</span>
@@ -857,6 +858,107 @@
                     </article>
                 </section>
 
+            </main>
+        </div>
+
+        <div class="page cockpit-page" id="page-cockpit">
+            <main class="cockpit-content">
+                <header class="cockpit-header">
+                    <div>
+                        <span class="eyebrow">MTB PRO <i></i> COCKPIT</span>
+                        <h1>Tu salida, de un vistazo</h1>
+                    </div>
+                    <button class="cockpit-back" type="button" data-page="5">← Inicio</button>
+                </header>
+
+                <div class="cockpit-status-row" aria-label="Estado de la actividad">
+                    <span id="cockpit-recording-state" class="cockpit-state" data-state="idle">Lista para salir</span>
+                    <span id="cockpit-gps-status" class="cockpit-status-chip">GPS · Buscando</span>
+                    <span id="cockpit-network-status" class="cockpit-status-chip">En línea</span>
+                </div>
+
+                <section class="cockpit-trip-summary" aria-label="Resumen de la salida">
+                    <article class="cockpit-summary-card">
+                        <span>TIEMPO TOTAL</span>
+                        <strong id="cockpit-time">00:00</strong>
+                    </article>
+                    <article class="cockpit-summary-card">
+                        <span>EN MOVIMIENTO</span>
+                        <strong id="cockpit-moving">00:00</strong>
+                    </article>
+                    <article class="cockpit-summary-card">
+                        <span>DISTANCIA</span>
+                        <strong><span id="cockpit-distance">0.00</span><small> km</small></strong>
+                    </article>
+                    <article class="cockpit-summary-card">
+                        <span>DESNIVEL +</span>
+                        <strong><span id="cockpit-elevation">0</span><small> m</small></strong>
+                    </article>
+                </section>
+
+                <section class="cockpit-performance" aria-label="Métricas en directo">
+                    <article class="cockpit-speed-panel">
+                        <div class="cockpit-section-heading">
+                            <span>VELOCIDAD ACTUAL</span>
+                            <span class="cockpit-live-dot" aria-hidden="true"></span>
+                        </div>
+                        <div id="cockpit-speed-gauge" class="cockpit-speed-gauge" role="img" aria-label="Velocidad actual 0.0 km/h">
+                            <div class="cockpit-speed-gauge-inner">
+                                <strong id="cockpit-speed">0.0</strong>
+                                <span>KM/H</span>
+                            </div>
+                        </div>
+                        <div class="cockpit-sensor-grid">
+                            <div><span>PULSO</span><strong><span id="cockpit-heart-rate">—</span><small> bpm</small></strong></div>
+                            <div><span>CADENCIA</span><strong><span id="cockpit-cadence">—</span><small> rpm</small></strong></div>
+                            <div><span>POTENCIA</span><strong><span id="cockpit-power">—</span><small> W</small></strong></div>
+                            <div><span>MEDIA</span><strong><span id="cockpit-avg-speed">—</span><small> km/h</small></strong></div>
+                        </div>
+                    </article>
+
+                    <section class="cockpit-visuals" aria-label="Perfil y trazado">
+                        <article class="cockpit-panel">
+                            <div class="cockpit-section-heading">
+                                <div><span>ALTIMETRÍA</span><strong id="cockpit-profile-altitude">Perfil en directo</strong></div>
+                                <span id="cockpit-elevation-range">-- m</span>
+                            </div>
+                            <div class="cockpit-chart-wrap">
+                                <svg viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
+                                    <path id="cockpit-profile-area"></path>
+                                    <path id="cockpit-profile-line"></path>
+                                </svg>
+                                <p id="cockpit-profile-empty">El perfil aparecerá cuando comience la salida.</p>
+                            </div>
+                        </article>
+                        <article class="cockpit-panel">
+                            <div class="cockpit-section-heading">
+                                <div><span>TRAZADO</span><strong id="cockpit-route-title">Tu recorrido</strong></div>
+                                <button class="cockpit-map-link" type="button" data-page="0">Abrir mapa ↗</button>
+                            </div>
+                            <div class="cockpit-route-preview">
+                                <svg id="cockpit-route-svg" viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true">
+                                    <path id="cockpit-route-line"></path>
+                                    <circle id="cockpit-route-start" r="2.5"></circle>
+                                    <circle id="cockpit-route-end" r="2.5"></circle>
+                                </svg>
+                                <p id="cockpit-route-empty">El trazado de tu salida aparecerá aquí.</p>
+                            </div>
+                        </article>
+                    </section>
+                </section>
+
+                <section class="cockpit-controls" aria-label="Controles de grabación">
+                    <div>
+                        <span class="eyebrow">CONTROLES DE SALIDA</span>
+                        <p>La grabación usa el GPS y los sensores conectados.</p>
+                    </div>
+                    <div class="cockpit-control-buttons">
+                        <button id="cockpit-toggle" class="cockpit-toggle" type="button">
+                            <span id="cockpit-toggle-icon" aria-hidden="true">▶</span><span id="cockpit-toggle-label">Iniciar salida</span>
+                        </button>
+                        <button id="cockpit-finish" class="cockpit-finish" type="button" hidden>Finalizar y guardar</button>
+                    </div>
+                </section>
             </main>
         </div>
 
@@ -1017,6 +1119,7 @@
     <script src="app/account-avatar.js"></script>
     <script src="app/gps.js"></script>
     <script src="app/recording.js"></script>
+    <script src="app/cockpit.js"></script>
     <script src="app/route-following.js"></script>
     <script src="app/routes.js"></script>
     <script src="lib/fit.js"></script>

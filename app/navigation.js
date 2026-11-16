@@ -26,9 +26,11 @@ requestAnimationFrame(() => setSwiperPosition(currentPage, true));
 function renderPage(index) {
     currentPage = index;
     setSwiperPosition(index);
-    navBtns.forEach(btn => btn.classList.toggle('active', Number(btn.dataset.page) === index));
+    const navPage = index === 6 ? 0 : index;
+    navBtns.forEach(btn => btn.classList.toggle('active', Number(btn.dataset.page) === navPage));
     document.body.dataset.currentPage = String(index);
     if (typeof dashboardUpdateNav === 'function') dashboardUpdateNav(index);
+    if (index === 6 && typeof cockpitRender === 'function') cockpitRender();
     if (index === 1 && statsNeedsRefresh) requestAnimationFrame(refreshStats);
     if (index === 2 && typeof loadGroupRankings === 'function') loadGroupRankings();
     if (index === 0 && map) setTimeout(() => map.invalidateSize(), 150);
@@ -65,7 +67,10 @@ function goBackPage() {
 // Devolver true significa que la pulsación quedó atendida por la aplicación.
 window.mtbHandleHardwareBack = function () {
     if (currentPage > 0) {
-        goToPage(currentPage === 5 ? 0 : currentPage - 1);
+        const previousPage = currentPage === 5 ? 0
+            : currentPage === 6 || currentPage === 7 ? 5
+                : currentPage - 1;
+        goToPage(previousPage);
         return true;
     }
     if (isRecording) {

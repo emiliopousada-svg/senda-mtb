@@ -18,14 +18,15 @@ function dashboardUpdateGreeting() {
 }
 
 function dashboardUpdateNav(page = currentPage) {
+    const navPage = page === 6 ? 0 : page;
     document.querySelectorAll('.sidebar-link[data-page]').forEach(button => {
-        const pageMatches = Number(button.dataset.page) === page;
+        const pageMatches = Number(button.dataset.page) === navPage;
         const slideMatches = button.dataset.statsSlide === undefined
             || Number(button.dataset.statsSlide) === activeStatsSlide;
         button.classList.toggle('active', pageMatches && slideMatches);
     });
     document.querySelectorAll('.mobile-nav .nav-btn[data-page]').forEach(button => {
-        button.classList.toggle('active', Number(button.dataset.page) === page);
+        button.classList.toggle('active', Number(button.dataset.page) === navPage);
     });
 }
 

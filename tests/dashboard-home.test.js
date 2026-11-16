@@ -82,7 +82,7 @@ test('home groups GPS with network status and labels the control-center shortcut
     assert.match(html, /class="dashboard-greeting"[\s\S]*id="home-greeting"[\s\S]*id="home-avatar"/);
     const actions = html.match(/<div class="hero-actions">([\s\S]*?)<\/div>\s*<\/div>/);
     assert.ok(actions);
-    assert.match(actions[1], /data-recording[\s\S]*data-page="6"[^>]*>Centro de control<\/button>/);
+    assert.match(actions[1], /data-recording[\s\S]*data-page="7"[^>]*>Centro de control<\/button>[\s\S]*data-page="6"[^>]*>Cockpit<\/button>/);
     assert.doesNotMatch(html, /tools-menu-button|>☷<\/button>/);
     assert.match(actions[1], /class="hero-connectivity-status"[\s\S]*id="dashboard-network-status"[\s\S]*id="dashboard-gps-status"/);
     assert.doesNotMatch(html, /class="hero-status"/);
