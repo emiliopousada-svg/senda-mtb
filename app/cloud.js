@@ -788,8 +788,12 @@ function initSettings() {
     mapRotationEnabled = localStorage.getItem('mtb_pro_map_rotation') !== '0';
     mapRotation.checked = mapRotationEnabled;
     updateOrientBtn();
-    window.addEventListener('online', applyMapStyle);
-    window.addEventListener('offline', applyMapStyle);
+    const refreshMapStyle = () => {
+        applyMapStyle();
+        updateQuickMapStyleButton();
+    };
+    window.addEventListener('online', refreshMapStyle);
+    window.addEventListener('offline', refreshMapStyle);
     sound.addEventListener('change', () => {
         localStorage.setItem('mtb_pro_route_sound', sound.checked ? '1' : '0');
         queueCloudPreferencesSync();

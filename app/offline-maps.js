@@ -608,6 +608,7 @@ function applyMapStyle() {
                 map.removeLayer(layer);
             }
             pendingMapStyleTransition = null;
+            updateQuickMapStyleButton();
         };
         transition.onLoad = () => finishTransition(transition.tileLoads > 0 && transition.tileErrors === 0);
         pendingMapStyleTransition = transition;
@@ -627,6 +628,23 @@ function applyMapStyle() {
     } else {
         status.textContent = `${MAP_STYLE_NAMES[style]} se muestra online. Para uso sin conexión se utiliza ${MAP_STYLE_NAMES.ign} y las zonas descargadas desde Mapas offline.${retinaText}`;
     }
+}
+
+function updateQuickMapStyleButton() {
+    const button = $('btn-map-style');
+    if (!button) return;
+    const style = !navigator.onLine ? 'ign' : activeMapStyle || selectedMapStyle();
+    const icons = {
+        ign: '🗺️',
+        topographic: '⛰️',
+        cyclosm: '🚵',
+        osm: '🌍',
+        satellite: '🛰️'
+    };
+    const name = MAP_STYLE_NAMES[style] || MAP_STYLE_NAMES[DEFAULT_MAP_STYLE];
+    button.textContent = icons[style] || '🗺️';
+    button.title = `Capa actual: ${name}. Pulsa para cambiar.`;
+    button.setAttribute('aria-label', `Capa actual: ${name}. Pulsa para cambiar el mapa.`);
 }
 
 // Rectángulos geográficos para descargar mapas offline por comunidad o región.
@@ -918,6 +936,38 @@ async function openOfflineMaps() {
         $('offline-storage-note').textContent = 'El almacenamiento local aún no está inicializado.';
     }
 }
+
+async function clearOfflineTiles() {
+    if (offlineDownloadRunning) {
+        toast('Pausa la descarga antes de borrar los mapas guardados.');
+        return;
+    }
+    const confirmed = await modal({
+        message: '¿Borrar los mapas descargados y las teselas de mapa guardadas en este dispositivo?',
+        ok: 'Borrar mapas'
+    });
+    if (!confirmed) return;
+
+    try {
+        const db = await openOfflineDb();
+        await new Promise((resolve, reject) => {
+            const stores = [OFFLINE_STORE, OFFLINE_META_STORE, AUTOMATIC_IGN_STORE, ONLINE_TILE_STORE];
+            const tx = db.transaction(stores, 'readwrite');
+            stores.forEach(name => tx.objectStore(name).clear());
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error || new Error('No se pudieron borrar los mapas guardados.'));
+            tx.onabort = () => reject(tx.error || new Error('No se pudieron borrar los mapas guardados.'));
+        });
+    } catch (error) {
+        console.error('No se pudieron borrar los mapas guardados:', error);
+        toast('No se pudieron borrar los mapas guardados.', 5000);
+        return;
+    }
+
+    toast('Mapas guardados borrados.');
+    await openOfflineMaps();
+}
+
 if (typeof $ === 'function') {
     $('btn-download-region')?.addEventListener('click', downloadRegionOffline);
     $('btn-download-visible-detail')?.addEventListener('click', downloadVisibleDetailOffline);
