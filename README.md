@@ -35,16 +35,18 @@ gradle -p android assembleDebug
 
 `npm run build` prepara `www/` y sincroniza Capacitor con Android. El APK debug se genera en `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-### APK actualizable desde GitHub
+### APK en GitHub Actions y Releases
 
-En **Actions**, ejecuta el workflow **Android debug APK** sobre `main` y descarga el artefacto `MTBPro-debug-apk`. Cada ejecución aumenta el `versionCode`. Para que Android permita instalarlo sobre la app existente y conservar sus datos, configura estos secretos del repositorio en **Settings > Secrets and variables > Actions**:
+Cada subida a `main` ejecuta **MTBPro checks** y publica el APK de pruebas como artefacto `senda-brava-debug-apk`. Para generar un APK firmado de distribución y adjuntarlo a una GitHub Release, crea y sube una etiqueta `vX.Y.Z` que coincida con la versión de `package.json` (por ejemplo, `v0.1.0`). El workflow **Android signed APK** también conserva el APK firmado como artefacto de Actions; puede ejecutarse manualmente para generar el artefacto sin publicar una Release.
+
+El APK firmado requiere estos secretos del repositorio en **Settings > Secrets and variables > Actions**:
 
 - `MTB_SIGNING_KEYSTORE_BASE64`: almacén de claves de firma codificado en Base64.
 - `MTB_SIGNING_STORE_PASSWORD`
 - `MTB_SIGNING_KEY_ALIAS`
 - `MTB_SIGNING_KEY_PASSWORD`
 
-Usa el mismo almacén de claves con el que se firmó la app instalada. Para reutilizar el almacén debug local en Windows, puedes copiar su Base64 al portapapeles con:
+Usa siempre el mismo almacén de claves para que Android permita instalar actualizaciones sobre la app y conservar sus datos. Para reutilizar el almacén debug local en Windows, puedes copiar su Base64 al portapapeles con:
 
 ```powershell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\debug.keystore")) | Set-Clipboard
