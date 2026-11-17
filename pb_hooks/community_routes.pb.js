@@ -132,6 +132,28 @@ function indexCommunityRouteBounds(e) {
     e.record.set("maxLat", maxLat);
     e.record.set("minLng", minLng);
     e.record.set("maxLng", maxLng);
+
+    // No se admite publicar dos veces la misma ruta: mismo trazado, o misma distancia y tiempo en movimiento.
+    const owner = e.record.getString("owner");
+    const movingTimeSec = Math.round(Number(e.record.get("movingTimeSec")) || 0);
+    const distanceKm = Number(e.record.get("distanceKm")) || 0;
+    const params = {
+        owner: owner,
+        id: e.record.id || "",
+        track: e.record.getString("trackJson"),
+        moving: movingTimeSec,
+        dmin: distanceKm - 0.05,
+        dmax: distanceKm + 0.05
+    };
+    let filter = "owner = {:owner} && id != {:id} && (trackJson = {:track}";
+    if (movingTimeSec > 0 && distanceKm > 0) {
+        filter += " || (movingTimeSec = {:moving} && distanceKm >= {:dmin} && distanceKm <= {:dmax})";
+    }
+    filter += ")";
+    let duplicates = [];
+    try { duplicates = $app.findRecordsByFilter("community_routes", filter, "", 1, 0, params) || []; }
+    catch (error) { duplicates = []; }
+    if (duplicates.length) throw new BadRequestError("Esta ruta ya está publicada en la comunidad.");
     e.next();
 }
 

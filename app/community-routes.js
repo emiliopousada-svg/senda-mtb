@@ -77,6 +77,7 @@ const COMMUNITY_DIFFICULTIES = {
     'very-hard': 'Muy difícil'
 };
 let communityShareRoute = null;
+let communityPublishing = false;
 let communityCatalogRoutes = [];
 let communitySearchActive = false;
 let communityVisibleLayers = new Map();
@@ -465,8 +466,29 @@ function communityTrackBounds(lines) {
     };
 }
 
+// Busca una publicación propia de la misma salida (misma distancia y tiempo en movimiento).
+async function communityFindPublishedDuplicate(route) {
+    const movingTimeSec = Math.round(Number(route.movingTimeSec) || 0);
+    const distanceKm = Number(route.distanceKm) || 0;
+    if (!(movingTimeSec > 0) || !(distanceKm > 0)) return null;
+    const filter = [
+        `owner = "${String(Cloud.uid).replace(/["\\]/g, '')}"`,
+        `movingTimeSec = ${movingTimeSec}`,
+        `distanceKm >= ${(distanceKm - 0.05).toFixed(3)}`,
+        `distanceKm <= ${(distanceKm + 0.05).toFixed(3)}`
+    ].join(' && ');
+    const result = await cloudApi('/api/collections/community_routes/records?page=1&perPage=1&fields=id&filter='
+        + encodeURIComponent(filter));
+    const record = result && Array.isArray(result.items) ? result.items[0] : null;
+    return record && typeof record.id === 'string' && record.id ? record : null;
+}
+
+function communityIsDuplicateError(error) {
+    return Boolean(error && error.status === 400 && /ya está publicada/i.test(String(error.message || '')));
+}
+
 async function submitCommunityRoute() {
-    if (!communityShareRoute || !Cloud.loggedIn()) return;
+    if (!communityShareRoute || !Cloud.loggedIn() || communityPublishing) return;
     const autonomousCommunity = $('community-share-autonomous-community').value;
     if (!autonomousCommunity || !$('community-share-consent').checked) {
         communitySetStatus('Elige la comunidad autónoma y confirma la publicación voluntaria.', true);
@@ -474,6 +496,7 @@ async function submitCommunityRoute() {
     }
     const button = $('community-submit');
     button.disabled = true;
+    communityPublishing = true;
     communitySetStatus('Preparando el trazado y las fotos para publicarlos…');
     try {
         const route = communityShareRoute;
@@ -505,6 +528,15 @@ async function submitCommunityRoute() {
         }
         const collectionPath = '/api/collections/community_routes/records';
         let record = null;
+        let updatedExisting = false;
+        if (!route.communityRouteId) {
+            // Si ya estaba publicada (otro dispositivo o una copia), se actualiza en lugar de duplicarla.
+            const existing = await communityFindPublishedDuplicate(route);
+            if (existing) {
+                route.communityRouteId = existing.id;
+                updatedExisting = true;
+            }
+        }
         if (route.communityRouteId) {
             try {
                 record = await cloudApi(`${collectionPath}/${encodeURIComponent(route.communityRouteId)}`, 'PATCH', formData);
@@ -543,19 +575,29 @@ async function submitCommunityRoute() {
         const searchRefreshed = refreshCommunitySearch ? await loadCommunityRoutes() : true;
         communitySetStatus(refreshCommunitySearch && !searchRefreshed
             ? 'Ruta publicada. No se pudo actualizar la búsqueda; vuelve a buscar para refrescar el contador.'
-            : 'Ruta publicada. Ya aparece en el mapa comunitario.');
-        toast(`Ruta publicada${poiData.count ? ` con ${poiData.count} foto(s)` : ''} en la comunidad.`);
+            : updatedExisting
+                ? 'Esta ruta ya estaba publicada; se ha actualizado sin crear otra copia.'
+                : 'Ruta publicada. Ya aparece en el mapa comunitario.');
+        toast(updatedExisting
+            ? 'La ruta ya estaba en la comunidad; se ha actualizado.'
+            : `Ruta publicada${poiData.count ? ` con ${poiData.count} foto(s)` : ''} en la comunidad.`);
         button.textContent = 'Publicada';
         setTimeout(closeCommunityDialog, 1400);
         return record;
     } catch (error) {
         console.warn('No se pudo proponer la ruta a la comunidad:', error);
+        if (communityIsDuplicateError(error)) {
+            communitySetStatus('Esta ruta ya está publicada en la comunidad; no se admiten duplicados.', true);
+            return null;
+        }
         communitySetStatus(error.status === 404
             ? 'Falta instalar la colección community_routes en el servidor. Consulta CONFIGURAR-RUTAS-COMUNIDAD.md.'
             : error.status === 400
                 ? `PocketBase rechazó la ruta: ${error.message || 'solicitud no válida'}. Revisa los límites de los campos de community_routes y aplica las migraciones; consulta CONFIGURAR-RUTAS-COMUNIDAD.md.`
                 : 'No se pudo enviar la ruta: ' + (error.message || 'error de conexión'), true);
         button.disabled = false;
+    } finally {
+        communityPublishing = false;
     }
 }
 

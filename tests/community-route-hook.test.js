@@ -55,3 +55,61 @@ test('community route create hook trims the track and calculates its bounds', ()
     assert.equal(Number.isFinite(values.minLng), true);
     assert.equal(Number.isFinite(values.maxLng), true);
 });
+
+function communityRouteHookWith(findRecordsByFilter) {
+    let createHandler;
+    const context = vm.createContext({
+        BadRequestError: class BadRequestError extends Error {},
+        $app: {
+            findRecordById() { return { getString: name => name === 'nickname' ? 'Rider' : '' }; },
+            findRecordsByFilter
+        },
+        onRecordCreateRequest(handler, name) {
+            if (name === 'community_routes') createHandler = handler;
+        },
+        onRecordUpdateRequest() {}
+    });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'pb_hooks', 'community_routes.pb.js'), 'utf8'), context);
+    return (values) => {
+        let nextCalled = false;
+        createHandler({
+            hasSuperuserAuth: () => false,
+            auth: { id: 'user123' },
+            record: {
+                id: '',
+                getString(name) { return values[name] === undefined ? '' : String(values[name]); },
+                get(name) { return values[name]; },
+                set(name, value) { values[name] = value; }
+            },
+            next() { nextCalled = true; }
+        });
+        return nextCalled;
+    };
+}
+
+const duplicateRouteValues = () => ({
+    owner: 'user123',
+    trackJson: JSON.stringify([[[0, 0], [0.001, 0.001], [0.5, 0.5]]]),
+    poisJson: '[]',
+    distanceKm: 42.3,
+    movingTimeSec: 7200
+});
+
+test('community route hook rejects publishing the same route twice', () => {
+    const queries = [];
+    const create = communityRouteHookWith((collection, filter, sort, limit, offset, params) => {
+        queries.push({ collection, filter, params });
+        return [{ id: 'existing' }];
+    });
+    assert.throws(() => create(duplicateRouteValues()), /ya está publicada/);
+    assert.equal(queries[0].collection, 'community_routes');
+    assert.match(queries[0].filter, /owner = \{:owner\}/);
+    assert.match(queries[0].filter, /movingTimeSec = \{:moving\}/);
+    assert.equal(queries[0].params.owner, 'user123');
+    assert.equal(queries[0].params.moving, 7200);
+});
+
+test('community route hook accepts a route that is not yet published', () => {
+    const create = communityRouteHookWith(() => []);
+    assert.equal(create(duplicateRouteValues()), true);
+});

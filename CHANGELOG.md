@@ -30,6 +30,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * **Tiempo total en el mapa:** ya no se muestra ni se puede elegir en las métricas del mapa (las preferencias guardadas con él se limpian solas). El Cockpit y las estadísticas siguen mostrando el tiempo total.
 
 ### Corregido
+- Una ruta ya publicada en la comunidad no se puede volver a publicar: la app actualiza la publicación existente y el hook `community_routes.pb.js` rechaza duplicados del mismo autor (mismo trazado, o misma distancia y tiempo en movimiento).
 * **Inicio en móvil:** la tarjeta de bienvenida quedaba detrás de la barra de estado del teléfono (hora, batería, notch). Ahora deja libre la altura real de la barra en cada dispositivo, usando `env(safe-area-inset-top)` y la variable `--safe-area-inset-top` que inyecta Capacitor.
 
 ---
