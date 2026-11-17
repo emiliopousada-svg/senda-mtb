@@ -16,7 +16,7 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 | `mtb_groups`, `mtb_group_members`, `mtb_group_ranking_entries` | Grupos, membresías y resultados de clasificación; gestionados mediante hooks de grupos. |
 | `community_routes`, `community_route_favorites`, `community_route_ratings`, `community_route_comments` | Rutas publicadas e interacciones sociales. |
 | `community_segments`, `community_segment_efforts`, `community_route_efforts` | Segmentos y marcas de rendimiento de la comunidad. |
-| `mtb_group_competitions`, `mtb_group_competition_entries`, `mtb_group_seasons`, `mtb_group_season_awards` | Colecciones propuestas para desafíos, ligas de cuatro semanas, participación e historial de campeones; requieren instalar el módulo competitivo antes de habilitar su interfaz de escritura. |
+| `mtb_group_challenges` | Desafíos de grupo (distancia, desnivel, salidas o tiempo con fechas). Cerrada: solo se usa desde los hooks de `/api/mtb/groups/*`. Las temporadas de cuatro semanas, los títulos y el palmarés se calculan a partir de `mtb_group_ranking_entries` y no necesitan colecciones propias. |
 
 ## Límites de acceso recomendados
 
@@ -42,7 +42,22 @@ La migración `pb_migrations/1794835005_add_author_nicknames.js` añade campos d
 
 La app solicita la comunidad autónoma al publicar; conserva el nombre histórico del campo `province` en PocketBase para no romper rutas y clientes existentes. Consulta [CONFIGURAR-RUTAS-COMUNIDAD.md](./CONFIGURAR-RUTAS-COMUNIDAD.md) para desplegar y verificar los campos y hooks.
 
-Las colecciones de retos y temporadas enumeradas arriba son propuestas y no las crea esta migración.
+La migración `pb_migrations/1794836000_create_group_challenges.js` añade los campos automáticos `created` y `updated` a `mtb_group_ranking_entries` (las marcas antiguas usan como fecha el `clientId` de la salida) y crea `mtb_group_challenges`. El hook `pb_hooks/group_league.pb.js` publica, para el grupo del usuario autenticado:
+
+| Ruta | Uso |
+| --- | --- |
+| `GET /api/mtb/groups/challenges` | Temporada activa, clasificación y desafíos con el progreso de cada miembro. |
+| `POST /api/mtb/groups/challenges` | Crea un desafío (`name`, `metric`, `target`, `endsAt`; cualquier miembro, máximo 20 activos). |
+| `POST /api/mtb/groups/challenges/delete` | Borra un desafío (`id`; solo su creador o el administrador del grupo). |
+| `GET /api/mtb/groups/awards` | Títulos de la temporada, palmarés de las últimas 12 temporadas y medallero. |
+| `GET /api/mtb/groups/activity` | Actividad del grupo de los últimos 90 días. |
+
+### Desplegar la liga de grupo
+
+1. Haz una copia de seguridad de `pb_data`.
+2. Copia `pb_hooks/` (incluidos `groups_utils.js`, `groups.pb.js` y `group_league.pb.js`) y `pb_migrations/` al servidor.
+3. Ejecuta `pocketbase migrate up` (o reinicia con las migraciones automáticas activas).
+4. Reinicia PocketBase y comprueba que `GET /api/mtb/groups/challenges` responde `401` sin sesión y `200` con un usuario que pertenece a un grupo.
 
 La app conserva estas preferencias localmente y las sincroniza al iniciar sesión y cuando cambian: avisos de ruta, vibración, rotación y estilo del mapa, controles grandes, circunferencia de rueda, objetivo semanal, FTP y FC máxima, y orden/visibilidad de métricas. Si hay cambios simultáneos, prevalece la última escritura sincronizada. Las ubicaciones recientes, los dispositivos Bluetooth y los mapas descargados siguen siendo específicos del dispositivo.
 

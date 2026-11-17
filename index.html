@@ -417,7 +417,7 @@
                     <section class="group-ranking-category"><h3>Mayor desnivel</h3><div id="group-ranking-ascent" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category"><h3>Salida de mayor duración</h3><div id="group-ranking-time" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category"><h3>Velocidad punta · marca personal</h3><div id="group-ranking-speed" class="group-ranking-list"></div></section>
-                    <section class="group-ranking-category"><h3>Rendimiento en segmentos</h3><div id="group-ranking-segments" class="group-ranking-list"></div></section>
+                    <section class="group-ranking-category"><h3>Lideratos en segmentos</h3><div id="group-ranking-segments" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category"><h3>Mayor regularidad</h3><div id="group-ranking-consistency" class="group-ranking-list"></div></section>
                     <section class="group-ranking-category group-ranking-total"><h3>Puntuación global</h3><div id="group-ranking-points" class="group-ranking-list"></div></section>
                 </div>
@@ -429,8 +429,44 @@
                 <div class="card community-empty-card"><span class="community-feature-icon">▲</span><h2>Segmentos MTB</h2><p>Los segmentos públicos se crean sobre rutas de la comunidad. Cada uno conserva su perfil, distancia y clasificación de intentos.</p><button class="btn" id="community-open-segments" type="button">Explorar rutas y segmentos</button><p class="hint">Abre una ruta para consultar sus segmentos y tiempos publicados.</p></div>
             </section>
 
-            <section class="community-section" id="community-section-challenges" role="tabpanel" aria-label="Temporada del grupo" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">◎</span><h2>Temporada activa</h2><p>Las actividades que compartes con tu grupo suman a la clasificación de cuatro semanas.</p><p id="community-competition-status" class="hint" role="status" aria-live="polite">Inicia sesión y únete a un grupo para consultar la temporada activa.</p><button class="btn" id="community-open-ranking" type="button">Ver clasificación de temporada</button><p class="hint">Los retos personalizados, las medallas y el historial de actividad requieren funciones adicionales de servidor y aún no están activos.</p></div>
+            <section class="community-section" id="community-section-challenges" role="tabpanel" aria-label="Temporada y desafíos del grupo" hidden>
+                <div class="card league-card">
+                    <h2>◎ Temporada activa</h2>
+                    <p id="community-competition-status" class="hint" role="status" aria-live="polite">Inicia sesión y únete a un grupo para consultar la temporada activa.</p>
+                    <div id="league-season" class="league-season" hidden>
+                        <div class="league-season-head"><strong id="league-season-title">Temporada</strong><span id="league-season-days"></span></div>
+                        <div class="league-progress" aria-hidden="true"><i id="league-season-bar"></i></div>
+                        <ol id="league-standings" class="league-standings" aria-label="Clasificación provisional"></ol>
+                    </div>
+                    <button class="btn secondary" id="community-open-ranking" type="button">Ver clasificación completa</button>
+                </div>
+                <div class="card league-card">
+                    <div class="league-card-head"><h2>Desafíos del grupo</h2><button class="btn-small secondary" id="league-challenges-refresh" type="button">Actualizar</button></div>
+                    <p id="league-challenges-status" class="hint" role="status" aria-live="polite"></p>
+                    <div id="league-challenges-list" class="league-challenges"></div>
+                    <details class="league-create" id="league-create">
+                        <summary>Crear un desafío</summary>
+                        <form id="league-challenge-form" class="league-form" novalidate>
+                            <label for="league-challenge-name">Nombre</label>
+                            <input type="text" id="league-challenge-name" maxlength="60" placeholder="Ej.: 200 km antes de Navidad" required>
+                            <div class="league-form-row">
+                                <div><label for="league-challenge-metric">Objetivo</label>
+                                <select id="league-challenge-metric">
+                                    <option value="distance">Kilómetros</option>
+                                    <option value="elevation">Desnivel positivo (m)</option>
+                                    <option value="activities">Número de salidas</option>
+                                    <option value="time">Horas en movimiento</option>
+                                </select></div>
+                                <div><label for="league-challenge-target">Meta</label>
+                                <input type="number" id="league-challenge-target" min="1" step="any" inputmode="decimal" placeholder="200" required></div>
+                            </div>
+                            <label for="league-challenge-end">Termina el</label>
+                            <input type="date" id="league-challenge-end" required>
+                            <button class="btn" id="league-challenge-submit" type="submit">Crear desafío</button>
+                            <p class="hint">Cuentan las salidas que cada miembro comparte con el grupo desde hoy hasta la fecha de fin (incluida).</p>
+                        </form>
+                    </details>
+                </div>
             </section>
 
             <section class="community-section" id="community-section-group" role="tabpanel" aria-label="Mi grupo" hidden>
@@ -481,11 +517,26 @@
             </section>
 
             <section class="community-section" id="community-section-achievements" role="tabpanel" aria-label="Logros del grupo" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">♢</span><h2>Títulos y medallas</h2><p>King of the Mountain, Fastest Rider, Climbing Beast y Most Consistent se otorgarán al cerrar cada temporada de cuatro semanas.</p><div class="community-title-grid"><span>👑<small>King of the Mountain</small></span><span>⚡<small>Fastest Rider</small></span><span>⛰️<small>Climbing Beast</small></span><span>🔥<small>Most Consistent</small></span></div><button class="btn secondary" type="button" data-page="1" data-stats-slide="3">Ver mis récords personales</button><p class="hint">El historial de campeones se guardará por grupo y temporada.</p></div>
+                <div class="card league-card">
+                    <div class="league-card-head"><h2>♢ Títulos de la temporada</h2><button class="btn-small secondary" id="league-awards-refresh" type="button">Actualizar</button></div>
+                    <p id="league-awards-status" class="hint" role="status" aria-live="polite">Inicia sesión y únete a un grupo para consultar los títulos.</p>
+                    <div id="league-current-titles" class="league-titles"></div>
+                    <p class="hint">Los títulos son provisionales hasta que termina la temporada de cuatro semanas; después pasan al palmarés.</p>
+                    <button class="btn secondary" type="button" data-page="1" data-stats-slide="3">Ver mis récords personales</button>
+                </div>
+                <div class="card league-card">
+                    <h2>🏅 Palmarés del grupo</h2>
+                    <div id="league-medal-table" class="league-medal-table"></div>
+                    <div id="league-awards-history" class="league-history"></div>
+                </div>
             </section>
 
             <section class="community-section" id="community-section-activity" role="tabpanel" aria-label="Actividad del grupo" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">▣</span><h2>Actividad del grupo</h2><p>Un resumen cronológico de salidas, resultados de segmentos, desafíos completados y nuevos récords.</p><div id="community-activity-feed" class="community-activity-feed"><p class="hint">La actividad aparecerá aquí al activar las temporadas y el registro de eventos en el backend propio.</p></div></div>
+                <div class="card league-card">
+                    <div class="league-card-head"><h2>▣ Actividad del grupo</h2><button class="btn-small secondary" id="league-activity-refresh" type="button">Actualizar</button></div>
+                    <p id="league-activity-status" class="hint" role="status" aria-live="polite">Inicia sesión y únete a un grupo para ver su actividad.</p>
+                    <ol id="community-activity-feed" class="community-activity-feed league-feed" aria-label="Últimos 90 días"></ol>
+                </div>
             </section>
         </div>
 
@@ -1215,6 +1266,7 @@
     <script src="app/community-performance-ui.js"></script>
     <script src="app/community-segments.js"></script>
     <script src="app/community-routes.js"></script>
+    <script src="app/community-league.js"></script>
     <script src="app/community-hub.js"></script>
     <script src="app/screen-activity.js"></script>
     <script src="app/back-button.js"></script>

@@ -69,6 +69,7 @@ async function loadGroupRankings() {
         const message = 'Inicia sesión y únete a un grupo para consultar la temporada activa.';
         status.textContent = message;
         renderCommunityCompetitionStatus(message);
+        if (typeof refreshCommunityLeague === 'function') refreshCommunityLeague();
         return;
     }
     status.classList.remove('error');
@@ -96,7 +97,11 @@ async function loadGroupRankings() {
         renderGroupMetricRanking('group-ranking-time', 'bestMovingTimeSec', member => fmtDur(Number(member.bestMovingTimeSec)));
         renderGroupMetricRanking('group-ranking-consistency', 'activityCount', member => `${member.activityCount} ${member.activityCount === 1 ? 'salida' : 'salidas'}`);
         renderGroupMetricRanking('group-ranking-points', 'leaguePoints', member => `${Math.round(Number(member.leaguePoints))} pts`);
-        renderGroupRankingPending('group-ranking-segments', 'Crea segmentos comunitarios para registrar los tiempos del grupo.');
+        if (groupRankingMembers.some(member => Number(member.segmentLeads) > 0)) {
+            renderGroupMetricRanking('group-ranking-segments', 'segmentLeads', member => `${member.segmentLeads} ${Number(member.segmentLeads) === 1 ? 'segmento liderado' : 'segmentos liderados'}`);
+        } else {
+            renderGroupRankingPending('group-ranking-segments', 'Nadie del grupo tiene tiempos en segmentos. Recorre un segmento comunitario para estrenar esta categoría.');
+        }
 
         const seasonText = result.season
             ? ` · Temporada ${result.season.seasonNumber} (Semana ${result.season.currentWeek}/4)`
@@ -105,10 +110,11 @@ async function loadGroupRankings() {
         renderCommunityCompetitionStatus(result.season
             ? `${result.group.name} · Temporada ${result.season.seasonNumber}, semana ${result.season.currentWeek}/4 · ${result.season.daysRemaining} días restantes.`
             : `La clasificación de ${result.group.name} está disponible.`);
+        if (typeof refreshCommunityLeague === 'function') refreshCommunityLeague();
     } catch (error) {
         console.warn('No se pudo cargar el ranking del grupo:', error);
         const message = error.status === 404
-            ? 'Falta instalar mtbpro_group_ranking_entries.json y actualizar groups.pb.js en PocketBase.'
+            ? 'El servidor no tiene el ranking del grupo. Copia pb_hooks/ y pb_migrations/ en PocketBase y reinícialo.'
             : `No se pudo cargar el ranking: ${error.message || 'error de conexión'}`;
         status.textContent = message;
         status.classList.add('error');
@@ -219,7 +225,7 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         console.warn('No se pudieron compartir las marcas con el grupo:', error);
         if (automatic) throw error;
         toast(error.status === 404
-            ? 'Falta instalar mtbpro_group_ranking_entries.json y actualizar groups.pb.js en PocketBase.'
+            ? 'El servidor no tiene el ranking del grupo. Copia pb_hooks/ y pb_migrations/ en PocketBase y reinícialo.'
             : `No se pudieron compartir las marcas: ${error.message || 'error de conexión'}`, 6000);
         return false;
     } finally {
