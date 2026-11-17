@@ -37,7 +37,7 @@ gradle -p android assembleDebug
 
 ### APK en GitHub Actions y Releases
 
-Cada subida a `main` ejecuta **senda-mtb checks** y publica el APK de pruebas como artefacto `senda-mtb-debug-apk`. Para generar un APK firmado de distribución y adjuntarlo a una GitHub Release, crea y sube una etiqueta `vX.Y.Z` que coincida con la versión de `package.json`. Después de publicar correctamente la Release, **Android signed APK** incrementa automáticamente la versión patch en `main` para preparar la siguiente (por ejemplo, `0.2.0` a `0.2.1`). El workflow también conserva el APK firmado como artefacto de Actions; puede ejecutarse manualmente para generar el artefacto sin publicar una Release.
+Cada subida a `main` ejecuta **senda-mtb checks** y publica el APK de pruebas como artefacto `senda-mtb-debug-apk`. Para generar un APK firmado de distribución y adjuntarlo a una GitHub Release, crea y sube una etiqueta `vX.Y.Z` que coincida con la versión de `package.json`. Después de publicar correctamente la Release, **Android signed APK** incrementa automáticamente la versión patch en `main` para preparar la siguiente (por ejemplo, de `1.4.2` a `1.4.3`). El workflow también conserva el APK firmado como artefacto de Actions; puede ejecutarse manualmente para generar el artefacto sin publicar una Release.
 
 El APK firmado requiere estos secretos del repositorio en **Settings > Secrets and variables > Actions**:
 
