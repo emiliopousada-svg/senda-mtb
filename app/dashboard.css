@@ -22,6 +22,17 @@
    - En WebView antiguos Capacitor ya separa el contenido de la barra y ambos valen 0.
    Se usa el mayor de los dos para que valga en cualquier teléfono. */
 :root { --app-safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
+/* Franja negra bajo la barra de estado del teléfono (hora, cobertura, batería):
+   el contenido, sobre todo el mapa, no se dibuja debajo y los iconos siguen visibles.
+   En escritorio y en WebView que ya separan la barra, --app-safe-top vale 0 y no se ve. */
+body::before {
+    content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--app-safe-top);
+    background: #000; z-index: 7000; pointer-events: none;
+}
+#page-map #map { top: var(--app-safe-top); height: calc(100% - var(--app-safe-top)); }
+/* El resto de páginas (salvo Inicio, que ya suma --app-safe-top a su relleno) reservan
+   ese hueco con un borde: el contenido empieza y se desplaza siempre por debajo de la franja. */
+.page:not(#page-map):not(#page-home) { border-top: var(--app-safe-top) solid transparent; }
 .dashboard-content { min-height: 100%; padding: 14px 14px calc(84px + env(safe-area-inset-bottom, 0px)); }
 .dashboard-hero {
     position: relative; isolation: isolate; min-height: 170px; display: flex; align-items: flex-end;
@@ -661,7 +672,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .cockpit-toggle:focus-visible,.cockpit-finish:focus-visible,.cockpit-back:focus-visible,.cockpit-map-link:focus-visible { outline:2px solid #ff9858; outline-offset:2px; }
 .cockpit-finish[hidden] { display:none; }
 @media (max-width:719px) {
-    .cockpit-content { padding:calc(10px + max(env(safe-area-inset-top,0px),24px)) 13px calc(88px + env(safe-area-inset-bottom,0px)); }
+    .cockpit-content { padding:calc(10px + max(0px, 24px - var(--app-safe-top))) 13px calc(88px + env(safe-area-inset-bottom,0px)); }
     .cockpit-header { margin-bottom:11px; }
     .cockpit-trip-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .cockpit-performance { grid-template-columns:1fr; }

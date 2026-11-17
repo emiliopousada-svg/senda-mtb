@@ -9,6 +9,10 @@
   "android": {
     "backgroundColor": "#121212",
     "useLegacyBridge": true
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    }
   }
 }
-
