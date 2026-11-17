@@ -58,6 +58,7 @@ function safetyBuildSOSMessage(location = {}) {
 
 let safetyContacts = [];
 let safetySettings = { groupLiveTracking: true };
+let safetyContactFormOpen = false;
 
 function safetyElement(id) {
     return document.getElementById(id);
@@ -244,6 +245,14 @@ function safetyRenderContacts() {
     const list = safetyElement('safety-contact-list');
     const select = safetyElement('safety-sos-contact');
     if (!list || !select) return;
+    const form = safetyElement('safety-contact-form');
+    const addButton = safetyElement('safety-add-contact');
+    const formOpen = safetyContactFormOpen || safetyContacts.length === 0;
+    if (form) form.hidden = !formOpen;
+    if (addButton) {
+        addButton.hidden = formOpen || safetyContacts.length >= SAFETY_MAX_CONTACTS;
+        addButton.setAttribute('aria-expanded', String(formOpen));
+    }
     list.replaceChildren();
     select.replaceChildren();
     const placeholder = document.createElement('option');
@@ -268,6 +277,21 @@ function safetyRenderContacts() {
         option.textContent = contact.name;
         select.append(option);
     });
+    select.value = safetyContacts.length ? '0' : '';
+    const callLink = safetyElement('safety-call-contact');
+    const defaultContact = safetyContacts[0];
+    if (callLink) {
+        callLink.hidden = !defaultContact;
+        if (defaultContact) {
+            callLink.href = `tel:${defaultContact.phone}`;
+            callLink.textContent = `Llamar al contacto predeterminado: ${defaultContact.name}`;
+            callLink.setAttribute('aria-label', `Llamar al contacto predeterminado ${defaultContact.name}, ${defaultContact.phone}`);
+        } else {
+            callLink.removeAttribute('href');
+            callLink.textContent = 'Llamar al contacto predeterminado';
+            callLink.removeAttribute('aria-label');
+        }
+    }
     const sendButton = safetyElement('safety-send-sos');
     if (sendButton) sendButton.disabled = safetyContacts.length === 0;
 }
@@ -324,22 +348,13 @@ async function safetyOnRecordingStopped() {
 }
 
 function safetyOpenWorkspace() {
-    const workspace = safetyElement('safety-workspace');
-    const hub = document.querySelector('.tools-hub');
-    if (!workspace || !hub) return;
-    hub.hidden = true;
-    workspace.hidden = false;
+    toolsOpenWorkspace('safety-workspace');
     safetyRender();
-    workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function safetyCloseWorkspace() {
-    const workspace = safetyElement('safety-workspace');
-    const hub = document.querySelector('.tools-hub');
-    if (!workspace || !hub) return;
-    workspace.hidden = true;
-    hub.hidden = false;
-    hub.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toolsCloseWorkspaces();
+    document.querySelector('.tools-hub')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function safetySendSOS() {
@@ -373,6 +388,12 @@ function safetyBindUI() {
         groupToggle.addEventListener('change', () => safetySetGroupTracking(groupToggle.checked));
     }
 
+    safetyElement('safety-add-contact')?.addEventListener('click', () => {
+        safetyContactFormOpen = true;
+        safetyRenderContacts();
+        safetyElement('safety-contact-name')?.focus();
+    });
+
     safetyElement('safety-contact-form')?.addEventListener('submit', event => {
         event.preventDefault();
         const nameInput = safetyElement('safety-contact-name');
@@ -396,6 +417,7 @@ function safetyBindUI() {
             safetyPersistContacts();
             nameInput.value = '';
             phoneInput.value = '';
+            safetyContactFormOpen = false;
             safetyRenderContacts();
             safetyShowStatus(safetyContactsSavedMessage('Contacto guardado'), 'success');
         } catch (error) {

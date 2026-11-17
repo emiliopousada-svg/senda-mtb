@@ -22,7 +22,7 @@ function setSwiperPosition(index, immediate = false) {
         return;
     }
 
-    const pageOffset = targetPage.offsetLeft;
+    const pageOffset = targetPage.getBoundingClientRect().left - swiper.getBoundingClientRect().left;
     if (immediate) swiper.style.transition = 'none';
     swiper.style.transform = `translate3d(-${pageOffset}px,0,0)`;
     if (immediate) requestAnimationFrame(() => { swiper.style.transition = ''; });
@@ -38,6 +38,7 @@ setSwiperPosition(currentPage, true);
 requestAnimationFrame(() => setSwiperPosition(currentPage, true));
 
 function renderPage(index) {
+    if (index !== 7 && typeof toolsCloseWorkspaces === 'function') toolsCloseWorkspaces();
     currentPage = index;
     setSwiperPosition(index);
     const navPage = index === 6 ? 0 : index;
@@ -54,7 +55,6 @@ function renderPage(index) {
     }
     if (index === 4) {
         if (typeof renderAccount === 'function') renderAccount();
-        openOfflineMaps();
     }
 }
 

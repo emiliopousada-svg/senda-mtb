@@ -646,16 +646,18 @@
         <div class="page content-panel" id="page-settings">
             <header class="page-intro">
                 <span class="eyebrow"><i></i> senda-mtb · PERSONALIZACIÓN</span>
-                <h1>Configura tu experiencia</h1>
-                <p>Mapas, sensores y preferencias para tener cada salida bajo control.</p>
+                <h1>Perfil</h1>
+                <p>Gestiona tu cuenta y tu perfil personal.</p>
             </header>
             <div class="card">
                 <h2>☁️ Cuenta y sincronización</h2>
                 <p class="hint" id="acc-status">Sin sesión: tus rutas se guardan solo en este móvil.</p>
                 <p class="hint" id="acc-preferences-status" role="status" aria-live="polite">Inicia sesión para sincronizar tus ajustes entre dispositivos.</p>
                 <p class="hint">Se sincronizan tus preferencias de uso. La ubicación GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
-                <p class="hint">Servidor de sincronización:</p>
-                <code id="acc-server" class="server-address" aria-live="polite">Sin servidor configurado</code>
+                <div id="acc-server-status" class="account-server-status" role="status" aria-live="polite" aria-label="Estado del servidor">
+                    <span>Estado del servidor</span>
+                    <i aria-hidden="true"></i>
+                </div>
                 <form id="acc-form" novalidate>
                     <label for="acc-nickname">Apodo</label>
                     <input type="text" id="acc-nickname" name="nickname" maxlength="32" autocomplete="nickname" placeholder="Obligatorio al crear cuenta">
@@ -710,121 +712,6 @@
                     </div>
                 </div>
             </div>
-            <div class="card">
-                <h2>🎛️ Panel de grabación</h2>
-                <p class="hint">Elige las métricas visibles y su orden en el mapa durante una salida.</p>
-                <div id="recording-metric-config" class="recording-metric-config" role="group" aria-label="Métricas del panel de grabación"></div>
-            </div>
-            <div class="card">
-                <h2>🗺️ Cartografía del mapa</h2>
-                <label for="map-style-select" class="hint">Mapa con conexión</label>
-                <select id="map-style-select" aria-label="Mapa a usar con conexión">
-                    <option value="topographic">⛰️ Topográfico OpenTopoMap</option>
-                    <option value="cyclosm">🚵 CyclOSM (ciclismo)</option>
-                    <option value="osm">🗺️ OpenStreetMap (callejero)</option>
-                    <option value="satellite">🛰️ Satélite Esri</option>
-                    <option value="ign">📥 Topográfico IGN (mapas descargados)</option>
-                </select>
-                <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexión se usa el mapa elegido; sin conexión, el IGN descargado.</p>
-            </div>
-            <div class="card" id="settings-sensors">
-                <h2>📡 Sensores Bluetooth</h2>
-                <p class="hint">Conecta sensores BLE estándar. Si un sensor de velocidad está conectado, su lectura tiene prioridad sobre la velocidad GPS; el GPS sigue registrando tu posición.</p>
-                <label class="setting-toggle" for="sensor-hr-enabled">
-                    <input type="checkbox" id="sensor-hr-enabled">
-                    <span><strong>❤️ Pulsómetro</strong><span class="hint" id="sensor-hr-status">Desconectado</span></span>
-                </label>
-                <label class="setting-toggle" for="sensor-cadence-enabled">
-                    <input type="checkbox" id="sensor-cadence-enabled">
-                    <span><strong>🔄 Cadencia</strong><span class="hint" id="sensor-cadence-status">Desconectado</span></span>
-                </label>
-                <label class="setting-toggle" for="sensor-power-enabled">
-                    <input type="checkbox" id="sensor-power-enabled">
-                    <span><strong>⚡ Potenciómetro</strong><span class="hint" id="sensor-power-status">Desconectado</span></span>
-                </label>
-                <label class="setting-toggle" for="sensor-speed-enabled">
-                    <input type="checkbox" id="sensor-speed-enabled">
-                    <span><strong>🚴 Velocímetro</strong><span class="hint" id="sensor-speed-status">Desconectado</span></span>
-                </label>
-                <ul id="sensor-registered" class="sensor-registered" aria-label="Sensores registrados" hidden></ul>
-                <p class="hint">Los sensores conectados quedan registrados: mientras estén activados se conectan solos cuando estén encendidos y cerca. Pulsa Olvidar para elegir otro.</p>
-                <label for="sensor-wheel-circumference" class="hint">Circunferencia de rueda para velocímetro (mm)</label>
-                <input type="number" id="sensor-wheel-circumference" min="500" max="3000" step="1" value="2100" aria-label="Circunferencia de rueda en milímetros">
-                <p class="hint">Las lecturas de pulso, cadencia, potencia y velocidad se guardan en las rutas grabadas. Si no llega velocidad Bluetooth, se usa el GPS.</p>
-            </div>
-
-            <section id="offline-panel" class="card" aria-label="Mapas sin conexión">
-    <h2>🗺️ Mapas sin conexión</h2>
-                <p>Descarga zonas del mapa topográfico IGN de España y Portugal. Los mapas online se consultan con conexión; su almacenamiento offline se habilitará cuando el proveedor autorice ese uso.</p>
-    <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
-    <select id="offline-region">
-        <option value="andalucia">Andalucía</option>
-        <option value="aragon">Aragón</option>
-        <option value="asturias">Principado de Asturias</option>
-        <option value="baleares">Islas Baleares</option>
-        <option value="canarias">Canarias</option>
-        <option value="cantabria">Cantabria</option>
-        <option value="castilla-la-mancha">Castilla-La Mancha</option>
-        <option value="castilla-y-leon">Castilla y León</option>
-        <option value="cataluna">Cataluña</option>
-        <option value="comunidad-valenciana">Comunidad Valenciana</option>
-        <option value="extremadura">Extremadura</option>
-        <option value="galicia" selected>Galicia</option>
-        <option value="madrid">Comunidad de Madrid</option>
-        <option value="murcia">Región de Murcia</option>
-        <option value="navarra">Comunidad Foral de Navarra</option>
-        <option value="pais-vasco">País Vasco</option>
-        <option value="la-rioja">La Rioja</option>
-        <option value="portugal">Portugal (área continental)</option>
-    </select>
-    <label for="offline-detail" style="font-size:.8rem;color:#ddd;">Nivel de detalle</label>
-    <select id="offline-detail">
-        <option value="13" selected>Estándar (zoom 7–13)</option>
-        <option value="14">Alto (zoom 7–14, ocupa bastante más)</option>
-    </select>
-    <div id="offline-estimate-info" class="hint" style="margin: 8px 0; font-size: 0.85rem;"></div>
-    <p class="hint">La descarga cubre el área geográfica aproximada de la comunidad y puede incluir zonas limítrofes. Se muestra el número de teselas antes de iniciar.</p>
-    <div id="offline-progress"><div id="offline-progress-fill"></div></div>
-    <div id="offline-progress-text">Preparado para descargar</div>
-    <p id="offline-storage-note">Se necesita conexión Wi-Fi y espacio libre. Mantén la aplicación abierta durante la descarga. Los mapas IGN descargados tienen un presupuesto de 256 MiB medido por tamaño real; las cachés automáticas se limitan por teselas y también consumen cuota.</p>
-    <div class="offline-actions">
-        <button class="btn" id="btn-download-region" type="button">Descargar / reanudar</button>
-        <button class="btn secondary" id="btn-download-visible-detail" type="button">Descargar detalle de la vista (15–17)</button>
-        <button class="btn secondary" id="btn-cancel-download" type="button">Parar</button>
-    </div>
-    <button class="btn danger" id="btn-clear-offline" type="button">Borrar mapas guardados</button>
-    </section>
-            <div class="card">
-                <h2>⚙️ Ajustes varios</h2>
-                <label class="setting-toggle" for="setting-route-sound">
-                    <input type="checkbox" id="setting-route-sound">
-                    <span><strong>Avisos sonoros de ruta</strong><span class="hint">Sonido diferente al salir de la ruta y al volver a ella.</span></span>
-                </label>
-                <label class="setting-toggle" for="setting-route-vibration">
-                    <input type="checkbox" id="setting-route-vibration">
-                    <span><strong>Vibración al desviarte</strong><span class="hint">Vibra cuando te sales de la ruta cargada.</span></span>
-                </label>
-                <label class="setting-toggle" for="setting-route-voice">
-                    <input type="checkbox" id="setting-route-voice">
-                    <span><strong>Indicaciones por voz</strong><span class="hint">Avisos hablados al salir de la ruta y al volver a ella.</span></span>
-                </label>
-                <label class="setting-toggle" for="setting-recording-haptics">
-                    <input type="checkbox" id="setting-recording-haptics">
-                    <span><strong>Respuesta háptica al grabar</strong><span class="hint">Vibración breve al iniciar, pausar, reanudar o finalizar una salida.</span></span>
-                </label>
-                <label class="setting-toggle" for="setting-map-rotation">
-                    <input type="checkbox" id="setting-map-rotation">
-                    <span><strong>Rotación automática del mapa</strong><span class="hint">Orienta el mapa según tu dirección o la ruta cargada mientras sigues tu posición. Si el GPS no informa velocidad, se calcula el rumbo con el desplazamiento.</span></span>
-                </label>
-                <label class="setting-toggle" for="setting-large-controls">
-                    <input type="checkbox" id="setting-large-controls">
-                    <span><strong>Controles grandes y alto contraste</strong><span class="hint">Aumenta el tamaño y el contraste de los controles del mapa y de la navegación inferior.</span></span>
-                </label>
-            </div>
-            <div class="card">
-                <h2>ℹ️ Aplicación</h2>
-                <p class="hint">Versión instalada: <strong id="app-version">v1.2.7 (build local)</strong></p>
-            </div>
         </div>
 
         <!-- INICIO / DASHBOARD senda-mtb -->
@@ -838,10 +725,8 @@
                             <img id="home-avatar" class="dashboard-avatar" alt="Avatar del usuario" hidden>
                             <span id="home-avatar-placeholder" class="dashboard-avatar-placeholder" aria-hidden="true">👤</span>
                         </div>
-                        <p>Tu próxima aventura empieza aquí.</p>
                         <div class="hero-actions">
                             <div class="hero-action-buttons">
-                                <button class="hero-primary-action" type="button" data-recording>▶ <span>Grabar salida</span></button>
                                 <button class="hero-tools-action" type="button" data-page="7">Centro de control</button>
                                 <button class="hero-cockpit-action" type="button" data-page="6">Cockpit</button>
                             </div>
@@ -1034,15 +919,212 @@
 
         <div class="page tools-page" id="page-tools">
             <main class="tools-content">
-                <header class="tools-page-heading"><span class="eyebrow">TU CENTRO MTB</span><h1>senda-mtb</h1><p>Accesos principales en la barra inferior. Tus herramientas, aquí.</p></header>
+                <header class="tools-page-heading"><span class="eyebrow">CONTROL DE SALIDA</span><h1>Centro de control</h1><p>Prepara y configura tus salidas desde un solo lugar.</p></header>
                 <section class="tools-hub" aria-labelledby="tools-hub-title">
-                    <h2 id="tools-hub-title">Más herramientas</h2>
+                    <h2 id="tools-hub-title">Controles y herramientas</h2>
                     <div class="tools-grid">
                         <button class="tool-card" type="button" data-tool="safety"><span aria-hidden="true">⬡</span><strong>Seguridad</strong></button>
                         <button class="tool-card" type="button" data-tool="garage"><span aria-hidden="true">♧</span><strong>Garaje</strong></button>
                         <button class="tool-card" type="button" data-tool="calendar"><span aria-hidden="true">▦</span><strong>Calendario</strong></button>
-                        <button class="tool-card" type="button" data-tool="settings"><span aria-hidden="true">⚙</span><strong>Ajustes</strong></button>
+                        <button class="tool-card" type="button" data-tool="recording"><span aria-hidden="true">🎛</span><strong>Panel de grabación</strong></button>
+                        <button class="tool-card" type="button" data-tool="sensors"><span aria-hidden="true">📡</span><strong>Sensores Bluetooth</strong></button>
+                        <button class="tool-card" type="button" data-tool="offline-maps"><span aria-hidden="true">🗺</span><strong>Mapas sin conexión</strong></button>
+                        <button class="tool-card" type="button" data-tool="map-style"><span aria-hidden="true">🌐</span><strong>Cartografía del mapa</strong></button>
+                        <button class="tool-card" type="button" data-tool="misc-settings"><span aria-hidden="true">⚙</span><strong>Ajustes varios</strong></button>
                     </div>
+                    <section class="tools-app-version" aria-labelledby="tools-app-version-title">
+                        <h3 id="tools-app-version-title">ℹ️ Aplicación</h3>
+                        <p>Versión instalada: <strong id="app-version">v1.2.7 (build local)</strong></p>
+                    </section>
+                </section>
+                <section id="recording-settings-workspace" class="tools-control-workspace" aria-labelledby="recording-settings-title" hidden>
+                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
+                    <section class="card">
+                        <h2 id="recording-settings-title">🎛️ Panel de grabación</h2>
+                        <p class="hint">Elige las métricas visibles y su orden en el mapa durante una salida.</p>
+                        <div id="recording-metric-config" class="recording-metric-config" role="group" aria-label="Métricas del panel de grabación"></div>
+                    </section>
+                </section>
+                <section id="sensors-workspace" class="tools-control-workspace" aria-labelledby="settings-sensors-title" hidden>
+                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
+                    <section class="card" id="settings-sensors">
+                        <h2 id="settings-sensors-title">📡 Sensores Bluetooth</h2>
+                        <p class="hint">Conecta sensores BLE estándar. Si un sensor de velocidad está conectado, su lectura tiene prioridad sobre la velocidad GPS; el GPS sigue registrando tu posición.</p>
+                        <label class="setting-toggle" for="sensor-hr-enabled">
+                            <input type="checkbox" id="sensor-hr-enabled">
+                            <span><strong>❤️ Pulsómetro</strong><span class="hint" id="sensor-hr-status">Desconectado</span></span>
+                        </label>
+                        <label class="setting-toggle" for="sensor-cadence-enabled">
+                            <input type="checkbox" id="sensor-cadence-enabled">
+                            <span><strong>🔄 Cadencia</strong><span class="hint" id="sensor-cadence-status">Desconectado</span></span>
+                        </label>
+                        <label class="setting-toggle" for="sensor-power-enabled">
+                            <input type="checkbox" id="sensor-power-enabled">
+                            <span><strong>⚡ Potenciómetro</strong><span class="hint" id="sensor-power-status">Desconectado</span></span>
+                        </label>
+                        <label class="setting-toggle" for="sensor-speed-enabled">
+                            <input type="checkbox" id="sensor-speed-enabled">
+                            <span><strong>🚴 Velocímetro</strong><span class="hint" id="sensor-speed-status">Desconectado</span></span>
+                        </label>
+                        <ul id="sensor-registered" class="sensor-registered" aria-label="Sensores registrados" hidden></ul>
+                        <p class="hint">Los sensores conectados quedan registrados: mientras estén activados se conectan solos cuando estén encendidos y cerca. Pulsa Olvidar para elegir otro.</p>
+                        <label for="sensor-wheel-circumference" class="hint">Circunferencia de rueda para velocímetro (mm)</label>
+                        <input type="number" id="sensor-wheel-circumference" min="500" max="3000" step="1" value="2100" aria-label="Circunferencia de rueda en milímetros">
+                        <p class="hint">Las lecturas de pulso, cadencia, potencia y velocidad se guardan en las rutas grabadas. Si no llega velocidad Bluetooth, se usa el GPS.</p>
+                    </section>
+                </section>
+                <div id="offline-maps-workspace" class="tools-control-workspace" hidden>
+                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
+                    <section id="offline-panel" class="card" aria-labelledby="offline-panel-title">
+                        <h2 id="offline-panel-title">🗺️ Mapas sin conexión</h2>
+                        <p>Descarga zonas del mapa topográfico IGN de España y Portugal. Los mapas online se consultan con conexión; su almacenamiento offline se habilitará cuando el proveedor autorice ese uso.</p>
+                        <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
+                        <select id="offline-region">
+                            <option value="andalucia">Andalucía</option>
+                            <option value="aragon">Aragón</option>
+                            <option value="asturias">Principado de Asturias</option>
+                            <option value="baleares">Islas Baleares</option>
+                            <option value="canarias">Canarias</option>
+                            <option value="cantabria">Cantabria</option>
+                            <option value="castilla-la-mancha">Castilla-La Mancha</option>
+                            <option value="castilla-y-leon">Castilla y León</option>
+                            <option value="cataluna">Cataluña</option>
+                            <option value="comunidad-valenciana">Comunidad Valenciana</option>
+                            <option value="extremadura">Extremadura</option>
+                            <option value="galicia" selected>Galicia</option>
+                            <option value="madrid">Comunidad de Madrid</option>
+                            <option value="murcia">Región de Murcia</option>
+                            <option value="navarra">Comunidad Foral de Navarra</option>
+                            <option value="pais-vasco">País Vasco</option>
+                            <option value="la-rioja">La Rioja</option>
+                            <option value="portugal">Portugal (área continental)</option>
+                        </select>
+                        <label for="offline-detail" style="font-size:.8rem;color:#ddd;">Nivel de detalle</label>
+                        <select id="offline-detail">
+                            <option value="13" selected>Estándar (zoom 7–13)</option>
+                            <option value="14">Alto (zoom 7–14, ocupa bastante más)</option>
+                        </select>
+                        <div id="offline-estimate-info" class="hint" style="margin: 8px 0; font-size: 0.85rem;"></div>
+                        <p class="hint">La descarga cubre el área geográfica aproximada de la comunidad y puede incluir zonas limítrofes. Se muestra el número de teselas antes de iniciar.</p>
+                        <div id="offline-progress"><div id="offline-progress-fill"></div></div>
+                        <div id="offline-progress-text">Preparado para descargar</div>
+                        <p id="offline-storage-note">Se necesita conexión Wi-Fi y espacio libre. Mantén la aplicación abierta durante la descarga. Los mapas IGN descargados tienen un presupuesto de 256 MiB medido por tamaño real; las cachés automáticas se limitan por teselas y también consumen cuota.</p>
+                        <div class="offline-actions">
+                            <button class="btn" id="btn-download-region" type="button">Descargar / reanudar</button>
+                            <button class="btn secondary" id="btn-download-visible-detail" type="button">Descargar detalle de la vista (15–17)</button>
+                            <button class="btn secondary" id="btn-cancel-download" type="button">Parar</button>
+                        </div>
+                        <button class="btn danger" id="btn-clear-offline" type="button">Borrar mapas guardados</button>
+                    </section>
+                </div>
+                <section id="map-style-workspace" class="tools-control-workspace" aria-labelledby="map-style-title" hidden>
+                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
+                    <section class="card">
+                        <h2 id="map-style-title">🗺️ Cartografía del mapa</h2>
+                        <label for="map-style-select" class="hint">Mapa con conexión</label>
+                        <select id="map-style-select" aria-label="Mapa a usar con conexión">
+                            <option value="topographic">⛰️ Topográfico OpenTopoMap</option>
+                            <option value="cyclosm">🚵 CyclOSM (ciclismo)</option>
+                            <option value="osm">🗺️ OpenStreetMap (callejero)</option>
+                            <option value="satellite">🛰️ Satélite Esri</option>
+                            <option value="ign">📥 Topográfico IGN (mapas descargados)</option>
+                        </select>
+                        <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexión se usa el mapa elegido; sin conexión, el IGN descargado.</p>
+                    </section>
+                </section>
+                <section id="misc-settings-workspace" class="tools-control-workspace" aria-labelledby="misc-settings-title" hidden>
+                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
+                    <section class="card">
+                        <h2 id="misc-settings-title">⚙️ Ajustes varios</h2>
+                        <label class="setting-toggle" for="setting-route-sound">
+                            <input type="checkbox" id="setting-route-sound">
+                            <span><strong>Avisos sonoros de ruta</strong><span class="hint">Sonido diferente al salir de la ruta y al volver a ella.</span></span>
+                        </label>
+                        <label class="setting-toggle" for="setting-route-vibration">
+                            <input type="checkbox" id="setting-route-vibration">
+                            <span><strong>Vibración al desviarte</strong><span class="hint">Vibra cuando te sales de la ruta cargada.</span></span>
+                        </label>
+                        <label class="setting-toggle" for="setting-route-voice">
+                            <input type="checkbox" id="setting-route-voice">
+                            <span><strong>Indicaciones por voz</strong><span class="hint">Avisos hablados al salir de la ruta y al volver a ella.</span></span>
+                        </label>
+                        <label class="setting-toggle" for="setting-recording-haptics">
+                            <input type="checkbox" id="setting-recording-haptics">
+                            <span><strong>Respuesta háptica al grabar</strong><span class="hint">Vibración breve al iniciar, pausar, reanudar o finalizar una salida.</span></span>
+                        </label>
+                        <label class="setting-toggle" for="setting-map-rotation">
+                            <input type="checkbox" id="setting-map-rotation">
+                            <span><strong>Rotación automática del mapa</strong><span class="hint">Orienta el mapa según tu dirección o la ruta cargada mientras sigues tu posición. Si el GPS no informa velocidad, se calcula el rumbo con el desplazamiento.</span></span>
+                        </label>
+                        <label class="setting-toggle" for="setting-large-controls">
+                            <input type="checkbox" id="setting-large-controls">
+                            <span><strong>Controles grandes y alto contraste</strong><span class="hint">Aumenta el tamaño y el contraste de los controles del mapa y de la navegación inferior.</span></span>
+                        </label>
+                        <label class="setting-toggle" for="safety-group-sharing">
+                            <input type="checkbox" id="safety-group-sharing">
+                            <span><strong>Compartir ubicación en directo con mi grupo mientras grabo</strong><span class="hint">Comparte tu posición con el grupo cuando estés grabando una ruta.</span></span>
+                        </label>
+                    </section>
+                </section>
+                <section id="calendar-workspace" class="calendar-workspace" aria-labelledby="calendar-title" hidden>
+                    <header class="calendar-header">
+                        <button id="calendar-back" class="calendar-icon-button" type="button" aria-label="Volver a Más herramientas">‹</button>
+                        <h2 id="calendar-title">Calendario</h2>
+                        <button id="calendar-add" class="calendar-icon-button calendar-add-button" type="button" aria-label="Añadir evento">+</button>
+                    </header>
+                    <section class="calendar-month-panel" aria-label="Calendario mensual">
+                        <div class="calendar-month-toolbar">
+                            <button id="calendar-prev" type="button" aria-label="Mes anterior">‹</button>
+                            <h3 id="calendar-month-label"></h3>
+                            <button id="calendar-next" type="button" aria-label="Mes siguiente">›</button>
+                        </div>
+                        <div class="calendar-weekdays" aria-hidden="true">
+                            <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+                        </div>
+                        <div id="calendar-grid" class="calendar-grid" aria-label="Días del mes"></div>
+                        <div class="calendar-legend" aria-label="Categorías de evento">
+                            <span><i class="calendar-dot-route"></i>Ruta</span>
+                            <span><i class="calendar-dot-meetup"></i>Quedada</span>
+                            <span><i class="calendar-dot-garage"></i>Garaje</span>
+                        </div>
+                    </section>
+                    <section class="calendar-events-section" aria-labelledby="calendar-events-title">
+                        <header class="calendar-section-heading">
+                            <h2 id="calendar-events-title">Próximos eventos</h2>
+                            <p id="calendar-events-context"></p>
+                        </header>
+                        <div id="calendar-events-list" class="calendar-events-list"></div>
+                        <p id="calendar-status" class="calendar-status" role="status" aria-live="polite"></p>
+                    </section>
+                    <dialog id="calendar-create-dialog" class="calendar-dialog" aria-labelledby="calendar-dialog-title">
+                        <form id="calendar-form" class="calendar-form">
+                            <header>
+                                <h2 id="calendar-dialog-title">Nuevo evento</h2>
+                                <button id="calendar-dialog-close" class="calendar-dialog-close" type="button" aria-label="Cerrar">×</button>
+                            </header>
+                            <label for="calendar-event-category">Categoría</label>
+                            <select id="calendar-event-category" required>
+                                <option value="route">Ruta planificada</option>
+                                <option value="meetup">Quedada grupal</option>
+                                <option value="garage">Garaje</option>
+                            </select>
+                            <label for="calendar-event-title">Título</label>
+                            <input id="calendar-event-title" type="text" maxlength="80" placeholder="Ej.: Ruta por el río Verdugo" required>
+                            <div class="calendar-date-time">
+                                <label for="calendar-event-date">Fecha
+                                    <input id="calendar-event-date" type="date" required>
+                                </label>
+                                <label for="calendar-event-time">Hora
+                                    <input id="calendar-event-time" type="time" required>
+                                </label>
+                            </div>
+                            <p id="calendar-form-status" class="calendar-status" role="status" aria-live="polite"></p>
+                            <footer>
+                                <button id="calendar-cancel" class="calendar-cancel-button" type="button">Cancelar</button>
+                                <button class="calendar-save-button" type="submit">Guardar evento</button>
+                            </footer>
+                        </form>
+                    </dialog>
                 </section>
                 <section id="garage-workspace" class="safety-workspace garage-workspace" aria-labelledby="garage-title" hidden>
                     <button id="garage-back" class="safety-back" type="button">← Más herramientas</button>
@@ -1116,25 +1198,20 @@
                         <section class="safety-card" aria-labelledby="safety-contacts-title">
                             <h3 id="safety-contacts-title">Contactos de emergencia</h3>
                             <p id="safety-contacts-storage">Se guardan en tu cuenta: al iniciar sesión en otro móvil los tendrás disponibles.</p>
-                            <form id="safety-contact-form" class="safety-contact-form">
+                            <button id="safety-add-contact" class="safety-secondary-button safety-contact-add" type="button" aria-controls="safety-contact-form" aria-expanded="false" hidden>Añadir contacto</button>
+                            <form id="safety-contact-form" class="safety-contact-form" hidden>
                                 <label for="safety-contact-name">Nombre</label>
                                 <input id="safety-contact-name" type="text" maxlength="40" autocomplete="name" required>
                                 <label for="safety-contact-phone">Teléfono internacional</label>
                                 <input id="safety-contact-phone" type="tel" inputmode="tel" placeholder="+34600123456" autocomplete="tel" required>
-                                <button class="safety-secondary-button" type="submit">Añadir contacto</button>
+                                <button class="safety-secondary-button" type="submit">Guardar contacto</button>
                             </form>
                             <ul id="safety-contact-list" class="safety-contact-list" aria-label="Contactos guardados"></ul>
                             <p id="safety-status" class="safety-note" role="status" aria-live="polite"></p>
                         </section>
                         <section class="safety-card safety-active-card" aria-labelledby="safety-active-title">
-                            <h3 id="safety-active-title">Durante la salida</h3>
-                            <label class="safety-toggle">
-                                <input id="safety-group-sharing" type="checkbox">
-                                <span>Compartir ubicación en directo con mi grupo mientras grabo</span>
-                            </label>
-                            <p id="safety-group-status" class="safety-note" role="status" aria-live="polite"></p>
-                            <p id="safety-last-location" class="safety-note">Última ubicación conocida: no disponible.</p>
-                            <a id="safety-location-link" class="safety-location-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación en el mapa</a>
+                            <h3 id="safety-active-title">Emergencias</h3>
+                            <a id="safety-call-contact" class="safety-secondary-button safety-call-button" hidden>Llamar al contacto predeterminado</a>
                             <label class="safety-field-row" for="safety-sos-contact">
                                 Contactar mediante WhatsApp
                                 <select id="safety-sos-contact"></select>
@@ -1284,6 +1361,7 @@
     <script src="app/groups.js"></script>
     <script src="app/safety.js"></script>
     <script src="app/garage.js"></script>
+    <script src="app/calendar.js"></script>
     <script src="app/tools.js"></script>
     <script src="app/ui.js"></script>
     <script src="lib/native-app.js"></script>

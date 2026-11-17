@@ -279,25 +279,16 @@ function garageRender() {
 }
 
 function garageOpenWorkspace() {
-    const workspace = garageElement('garage-workspace');
-    const hub = document.querySelector('.tools-hub');
-    if (!workspace || !hub) return;
-    hub.hidden = true;
-    workspace.hidden = false;
+    toolsOpenWorkspace('garage-workspace');
     const date = garageElement('garage-date');
     if (date && !date.value) date.value = garageTodayIso();
     if (date) date.max = garageTodayIso();
     garageRender();
-    workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function garageCloseWorkspace() {
-    const workspace = garageElement('garage-workspace');
-    const hub = document.querySelector('.tools-hub');
-    if (!workspace || !hub) return;
-    workspace.hidden = true;
-    hub.hidden = false;
-    hub.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toolsCloseWorkspaces();
+    document.querySelector('.tools-hub')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function garagePhotoToDataUrl(file) {

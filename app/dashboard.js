@@ -54,12 +54,20 @@ function dashboardUpdateGpsStatus() {
 
 function dashboardUpdateNetworkStatus() {
     const status = $('dashboard-network-status');
-    if (!status) return;
     const online = navigator.onLine;
-    status.classList.toggle('connected', online);
-    status.classList.toggle('offline', !online);
-    status.setAttribute('aria-label', online ? 'Conexión a internet disponible' : 'Sin conexión a internet');
-    status.innerHTML = online ? '<i></i><span>En línea</span>' : '<i></i><span>Sin conexión</span>';
+    if (status) {
+        status.classList.toggle('connected', online);
+        status.classList.toggle('offline', !online);
+        status.setAttribute('aria-label', online ? 'Conexión a internet disponible' : 'Sin conexión a internet');
+        status.innerHTML = online ? '<i></i><span>En línea</span>' : '<i></i><span>Sin conexión</span>';
+    }
+
+    const accountIndicator = $('acc-server-status');
+    if (accountIndicator) {
+        accountIndicator.classList.toggle('connected', online);
+        accountIndicator.classList.toggle('offline', !online);
+        accountIndicator.setAttribute('aria-label', online ? 'Estado del servidor: conectado' : 'Estado del servidor: sin conexión');
+    }
 }
 
 function dashboardLatestRecordedRoute() {

@@ -917,7 +917,7 @@ function updateOfflineEstimateUI() {
 
 async function openOfflineMaps() {
     updateOfflineEstimateUI();
-    // Actualiza el espacio local al entrar en Ajustes.
+    // Actualiza el espacio local al abrir Mapas sin conexión en el centro de control.
     try {
         const [stats, automaticCount, onlineCount] = await Promise.all([
             getDownloadedIgnStats(), countAutomaticIgnTiles(), countCachedOnlineTiles()
