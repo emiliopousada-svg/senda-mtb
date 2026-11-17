@@ -7,6 +7,10 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Sin publicar]
 
+---
+
+## [0.2.2] - 2026-11-17
+
 ### Añadido
 * **Comunidad operativa:** las pestañas Desafíos, Logros y Actividad ya funcionan con datos del servidor.
   * **Desafíos de grupo:** cualquier miembro crea retos de distancia, desnivel, salidas o tiempo con fecha de fin; se muestra el progreso de cada miembro. El creador o el administrador del grupo pueden borrarlos.
@@ -18,11 +22,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ### Cambiado
 * **Nombre senda-mtb en Android:** nombre de la app bajo el icono y título de la actividad (`strings.xml`), diálogo de salida (`MainActivity.java`), notificaciones de grabación en segundo plano, batería, SOS y aviso de ruta, encabezado de estadísticas, aviso de actualización, creador de los GPX exportados y comentario del service worker.
+* **Nombre senda-mtb en iOS:** nombre visible de la app (`CFBundleDisplayName`) y textos de los permisos de ubicación, ubicación en segundo plano y Bluetooth en `Info.plist`.
 
 ### Corregido
 * El ranking de temporada salía siempre a cero porque `mtb_group_ranking_entries` no tenía fecha de creación; ahora se usa la fecha de la salida.
 * Crear un grupo sin icono fallaba en el servidor ("request Content-Type isn't multipart/form-data").
 * `app/community-hub.js` no estaba en la caché offline del service worker.
+* `POCKETBASE.md` indicaba que las colecciones de temporadas y desafíos seguían pendientes de despliegue; ya están en producción.
 
 ### Eliminado
 * Migración pendiente `PENDING_1794836000_create_competition_collections.js`, sustituida por la nueva.
