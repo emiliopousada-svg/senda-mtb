@@ -635,9 +635,39 @@ function resumeRecording(automatic = false, position = null) {
     if (automatic) toast('Grabación reanudada automáticamente.');
 }
 
+// Grabar una ruta exige una cuenta con sesión iniciada y apodo (perfil completo).
+// Devuelve null si se puede grabar, 'login' si falta la sesión o 'nickname' si falta el apodo.
+function rideAccountRequirement(cloud) {
+    if (!cloud || typeof cloud.loggedIn !== 'function' || !cloud.loggedIn()) return 'login';
+    if (!String(cloud.nickname || '').trim()) return 'nickname';
+    return null;
+}
+
+async function ensureRideAccount() {
+    const missing = rideAccountRequirement(typeof Cloud !== 'undefined' ? Cloud : null);
+    if (!missing) return true;
+    const go = await modal({
+        message: missing === 'login'
+            ? 'Para grabar una ruta tienes que iniciar sesión o crear tu cuenta en Ajustes.'
+            : 'Para grabar una ruta elige primero tu apodo en Ajustes > Cuenta.',
+        ok: 'Ir a mi cuenta',
+        cancel: 'Ahora no'
+    });
+    if (go && typeof goToPage === 'function') {
+        goToPage(4);
+        const field = $(missing === 'login' ? 'acc-email' : 'acc-account-nickname');
+        if (field) setTimeout(() => {
+            field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            field.focus({ preventScroll: true });
+        }, 350);
+    }
+    return false;
+}
+
 if (typeof btnStart !== 'undefined' && btnStart) {
     btnStart.addEventListener('click', async () => {
         if (!isRecording) {
+            if (!(await ensureRideAccount())) return;
             startRecording('mtb');
         }
         else if (!isPaused) pauseRecording();
@@ -918,6 +948,7 @@ if (typeof module !== 'undefined' && module.exports) {
         buildSegments,
         autoPauseMovementThreshold,
         autoResumeMovementThreshold,
-        isDraftRecoverable
+        isDraftRecoverable,
+        rideAccountRequirement
     };
 }

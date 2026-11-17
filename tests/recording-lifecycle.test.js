@@ -18,7 +18,8 @@ const {
     buildSegments,
     autoPauseMovementThreshold,
     autoResumeMovementThreshold,
-    isDraftRecoverable
+    isDraftRecoverable,
+    rideAccountRequirement
 } = require('../app/recording.js');
 
 test('isDraftRecoverable validates raw draft objects before user recovery prompt', () => {
@@ -147,4 +148,13 @@ test('GPS tracking options configure high accuracy appropriately', () => {
     assert.equal(GPS_ACTIVE_OPTIONS.maximumAge, 0);
     assert.equal(GPS_LOW_POWER_OPTIONS.enableHighAccuracy, false);
     assert.equal(GPS_LOW_POWER_OPTIONS.maximumAge, 10000);
+});
+
+test('recording requires a signed-in account with a nickname', () => {
+    const cloud = (logged, nickname) => ({ loggedIn: () => logged, nickname });
+    assert.equal(rideAccountRequirement(null), 'login');
+    assert.equal(rideAccountRequirement(cloud(false, 'Emilio')), 'login');
+    assert.equal(rideAccountRequirement(cloud(true, '')), 'nickname');
+    assert.equal(rideAccountRequirement(cloud(true, '   ')), 'nickname');
+    assert.equal(rideAccountRequirement(cloud(true, 'Emilio')), null);
 });

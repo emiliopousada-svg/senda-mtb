@@ -198,9 +198,7 @@ function safetyRenderContacts() {
         select.append(option);
     });
     const sendButton = safetyElement('safety-send-sos');
-    const rideSosButton = safetyElement('safety-ride-sos');
     if (sendButton) sendButton.disabled = safetyContacts.length === 0;
-    if (rideSosButton) rideSosButton.disabled = safetyContacts.length === 0;
 }
 
 function safetyGetLocation() {
@@ -277,8 +275,6 @@ function safetyRender() {
         if (cancelButton) cancelButton.hidden = true;
         if (endButton) endButton.hidden = true;
     }
-    const rideActions = safetyElement('ride-safety-actions');
-    if (rideActions) rideActions.hidden = !(typeof isRecording !== 'undefined' && isRecording);
     safetyUpdateGroupStatus();
     safetyRenderLocation();
 }
@@ -537,11 +533,6 @@ function safetyBindUI() {
 
     safetyElement('safety-back')?.addEventListener('click', safetyCloseWorkspace);
     safetyElement('safety-send-sos')?.addEventListener('click', safetySendSOS);
-    safetyElement('safety-ride-sos')?.addEventListener('click', safetySendSOS);
-    safetyElement('safety-ride-open')?.addEventListener('click', () => {
-        if (typeof goToPage === 'function') goToPage(7);
-        safetyOpenWorkspace();
-    });
     safetyElement('safety-cancel-alert')?.addEventListener('click', () => safetyEndSession('Aviso cancelado: has indicado que estás bien.'));
     safetyElement('safety-end-session')?.addEventListener('click', () => safetyEndSession('Protección finalizada.'));
 

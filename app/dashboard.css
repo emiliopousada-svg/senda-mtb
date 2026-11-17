@@ -117,11 +117,6 @@
 @media (min-width:720px) { .tools-content { padding:30px 25px; } .tools-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; } .tool-card { min-height:82px; } }
 @media (min-width:900px) { .tools-content { max-width:1000px; } }
 @media (max-width:420px) { .tools-content { padding:13px 12px calc(78px + env(safe-area-inset-bottom,0px)); } .tools-hub { padding:12px; } .tool-card { min-height:65px; } }
-.ride-safety-actions { display:flex; flex:0 0 auto; gap:6px; align-items:center; }
-.ride-safety-actions[hidden] { display:none; }
-.ride-safety-open,.ride-safety-sos { width:44px; height:44px; border:1px solid rgba(255,255,255,.2); font-weight:850; touch-action:manipulation; }
-.ride-safety-open { color:#b8f5d0; background:#153b2a; }
-.ride-safety-sos { color:#fff; background:#c62828; border-color:#ff8a80; font-size:.75rem; }
 .safety-workspace { display:grid; gap:15px; margin-top:12px; }
 .safety-back { justify-self:start; padding:8px 11px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:#202630; color:#e7edf4; font:inherit; font-size:.8rem; }
 .safety-heading h2 { margin:5px 0; color:#f5f7fa; font-size:1.35rem; }
@@ -775,7 +770,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 
 /* ============================================================
    MAPA: panel inferior con métricas y controles de grabación
-   (métricas arriba del panel, botones Comenzar/Pausar, seguridad,
+   (métricas arriba del panel, botones Comenzar/Pausar,
    dejar de seguir y finalizar debajo, todo en la misma tarjeta)
    ============================================================ */
 #page-map { --map-top-gap: calc(env(safe-area-inset-top, 0px) + 10px); --map-route-profile-h: 88px; }
@@ -822,24 +817,33 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     .map-bottom-panel .controls-overlay .btn-main-action { flex-basis: 96px; }
     .map-bottom-panel .btn-unfollow-map svg { display: none; }
 }
-.map-bottom-panel .ride-safety-actions .btn-icon-only,
 .map-bottom-panel .controls-overlay #btn-stop { box-shadow: none; }
 
-/* Con el panel abajo, la parte superior queda libre para los controles y perfiles. */
-#page-map #map-route-profile { top: var(--map-top-gap); }
+/* Con el panel abajo, los controles van arriba y los perfiles de desnivel justo encima del panel. */
 #page-map .side-controls,
 #page-map .map-zoom-controls { top: var(--map-top-gap); }
+#page-map #map-route-profile,
 #page-map #recording-live-profile {
-    top: var(--map-top-gap);
-    left: calc(env(safe-area-inset-left, 0px) + 70px);
-    right: calc(env(safe-area-inset-right, 0px) + 70px);
+    top: auto;
+    bottom: calc(var(--map-panel-h, 140px) + 18px);
+    left: calc(env(safe-area-inset-left, 0px) + 10px);
+    right: calc(env(safe-area-inset-right, 0px) + 10px);
     width: auto;
 }
-#page-map #map-route-profile.show ~ .side-controls,
-#page-map #map-route-profile.show ~ .map-zoom-controls,
-#page-map #map-route-profile.show ~ #recording-live-profile { top: calc(var(--map-top-gap) + var(--map-route-profile-h)); }
+/* Si se sigue una ruta, el perfil en directo se apila encima del perfil de la ruta. */
+#page-map #map-route-profile.show ~ #recording-live-profile { bottom: calc(var(--map-panel-h, 140px) + var(--map-route-profile-h) + 26px); }
 /* La atribución del mapa (licencia) queda siempre visible encima del panel. */
-#page-map .leaflet-bottom { bottom: calc(var(--map-panel-h, 140px) + 14px); }
+#page-map .leaflet-bottom { bottom: calc(var(--map-stack-h, 150px) + 4px); }
+/* En vertical, el perfil en directo apilado sobre el de la ruta va entre las columnas de iconos. */
+@media (orientation: portrait) {
+    #page-map #map-route-profile.show ~ #recording-live-profile {
+        left: calc(env(safe-area-inset-left, 0px) + 66px);
+        right: calc(env(safe-area-inset-right, 0px) + 66px);
+    }
+    /* La atribución puede subir hasta la columna de iconos derecha: se separa de ella. */
+    #page-map .leaflet-bottom.leaflet-right { right: calc(env(safe-area-inset-right, 0px) + 62px); }
+    #page-map .leaflet-control-attribution { max-width: calc(100vw - 132px); }
+}
 
 /* Pantallas bajas: botones laterales más compactos para que no lleguen al panel. */
 @media (orientation: portrait) and (max-height: 740px) {
@@ -869,7 +873,14 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     .map-bottom-panel .controls-overlay { flex: 0 1 auto; padding: 0 0 0 8px; border-top: 0; border-left: 1px solid rgba(255,255,255,.08); }
     .map-bottom-panel .controls-overlay .btn-main-action { flex: 0 1 200px; min-width: 130px; }
     .map-bottom-panel .controls-overlay .btn-unfollow-map { flex: 0 1 132px; }
-    #page-map #recording-live-profile { left: auto; right: calc(env(safe-area-inset-right, 0px) + 72px); width: min(40vw, 260px); }
+    #page-map #map-route-profile,
+    #page-map #recording-live-profile {
+        left: calc(env(safe-area-inset-left, 0px) + 72px);
+        right: calc(env(safe-area-inset-right, 0px) + 72px);
+        bottom: calc(var(--map-panel-h, 50px) + 12px);
+    }
+    #page-map #recording-live-profile { left: auto; width: min(40vw, 260px); }
+    #page-map #map-route-profile.show ~ #recording-live-profile { bottom: calc(var(--map-panel-h, 50px) + var(--map-route-profile-h) + 18px); }
     #page-map .leaflet-bottom.leaflet-right { right: calc(env(safe-area-inset-right, 0px) + 66px); }
     /* Columnas de iconos más compactas para que quepan sobre la barra de navegación. */
     #page-map .side-controls,
@@ -877,7 +888,4 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     #page-map .side-controls .btn-icon-only,
     #page-map .map-zoom-btn { width: clamp(36px, 11dvh, 50px); height: clamp(36px, 11dvh, 50px); }
     #page-map .side-controls #btn-center { margin-top: 0; }
-    /* En horizontal el perfil de ruta va entre las columnas: los iconos no bajan. */
-    #page-map #map-route-profile.show ~ .side-controls,
-    #page-map #map-route-profile.show ~ .map-zoom-controls { top: var(--map-top-gap); }
 }

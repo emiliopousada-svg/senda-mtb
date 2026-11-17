@@ -68,9 +68,21 @@ function initMetricPanel() {
     const panel = $('map-bottom-panel');
     if (panel && typeof ResizeObserver === 'function') {
         const page = $('page-map');
-        new ResizeObserver(() => {
+        const routeProfile = $('map-route-profile');
+        const liveProfile = $('recording-live-profile');
+        const observer = new ResizeObserver(() => {
             page.style.setProperty('--map-panel-h', `${Math.ceil(panel.getBoundingClientRect().height)}px`);
-        }).observe(panel);
+            // Alto real del perfil de la ruta seguida, para apilar encima el perfil en directo.
+            const profileH = routeProfile ? Math.ceil(routeProfile.getBoundingClientRect().height) : 0;
+            if (profileH > 0) page.style.setProperty('--map-route-profile-h', `${profileH}px`);
+            // Alto de todo lo apilado abajo (panel + perfiles visibles), para colocar la atribución encima.
+            const pageBottom = page.getBoundingClientRect().bottom;
+            const stackTop = [panel, routeProfile, liveProfile]
+                .filter(el => el && el.offsetParent !== null)
+                .reduce((top, el) => Math.min(top, el.getBoundingClientRect().top), pageBottom);
+            page.style.setProperty('--map-stack-h', `${Math.ceil(pageBottom - stackTop)}px`);
+        });
+        [panel, routeProfile, liveProfile].forEach(el => el && observer.observe(el));
     }
 
     // La vista grande copia en vivo el valor de la métrica original
