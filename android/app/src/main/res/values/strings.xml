@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">senda-brava</string>
-    <string name="title_activity_main">senda-brava</string>
+    <string name="app_name">senda-mtb</string>
+    <string name="title_activity_main">senda-mtb</string>
     <string name="package_name">com.emiliopousada.sendamtb</string>
     <string name="custom_url_scheme">com.emiliopousada.sendamtb</string>
 </resources>
