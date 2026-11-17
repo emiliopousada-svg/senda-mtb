@@ -362,6 +362,6 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') syncSharedPois();
 });
 setInterval(() => {
-    if (document.visibilityState === 'visible') syncSharedPois();
+    if (document.visibilityState === 'visible' && currentPage === 0) syncSharedPois();
 }, 5 * 60 * 1000);
 

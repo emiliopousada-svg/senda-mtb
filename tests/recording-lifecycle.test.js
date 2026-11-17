@@ -90,6 +90,11 @@ test('gpsSpeedFromFix calculates realistic speeds and discards poor fixes', () =
     // Salto imposible de GPS (> 90 km/h = 25 m/s): 1000 metros en 1 segundo -> da 0 km/h
     const jumpSpeed = gpsSpeedFromFix([42.01000, -8.0], 5000, 8);
     assert.equal(jumpSpeed, 0);
+
+    // El salto rechazado se convierte en nueva referencia para que no contamine el siguiente cálculo.
+    const speedAfterJump = gpsSpeedFromFix([42.01009, -8.0], 7000, 8);
+    assert.ok(speedAfterJump > 15 && speedAfterJump < 25,
+        `Velocidad tras reiniciar la referencia debe rondar 20 km/h, obtenida: ${speedAfterJump}`);
 });
 
 test('isUsableAltitude filters invalid barometric or vertical GPS noise', () => {

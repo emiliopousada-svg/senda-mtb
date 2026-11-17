@@ -49,6 +49,8 @@ function renderPage(index) {
     if (index === 1 && statsNeedsRefresh) requestAnimationFrame(refreshStats);
     if (index === 2 && typeof loadGroupRankings === 'function') loadGroupRankings();
     if (index === 0 && map) setTimeout(() => map.invalidateSize(), 150);
+    if (index === 0 && typeof syncSharedPois === 'function') syncSharedPois();
+    if ((index === 0 || index === 2) && typeof refreshFriends === 'function') refreshFriends();
     if (index === 5) {
         if (statsNeedsRefresh) requestAnimationFrame(refreshStats);
         if (typeof dashboardRender === 'function') dashboardRender();

@@ -451,8 +451,8 @@ function safetyBindUI() {
     safetyRender();
     window.addEventListener('load', safetyRender, { once: true });
 
-    // Ubicación y estado del grupo cambian durante la grabación.
-    window.setInterval(safetyRender, 5000);
+    // El estado se actualiza al abrir este espacio y con los cambios de estado
+    // de grabación/grupo; no hace falta despertarlo cada 5 s en toda la app.
 }
 
 if (typeof module !== 'undefined' && module.exports) {

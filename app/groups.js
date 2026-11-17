@@ -331,6 +331,9 @@ function startFriendsTimer() {
     if (friendsTimer) clearInterval(friendsTimer);
     friendsTimer = setInterval(() => {
         if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+        // Las posiciones solo se consultan cuando el mapa o el panel de grupo
+        // están a la vista; al volver, renderPage fuerza una actualización.
+        if (currentPage !== 0 && currentPage !== 2) return;
         // Durante la grabación, las publicaciones de posición ya refrescan la lista de amigos.
         const minimumInterval = isRecording && !isPaused ? LIVE_INTERVAL_MS : FRIENDS_IDLE_REFRESH_MS;
         if (Date.now() - lastFriendsRefreshAt < minimumInterval) return;

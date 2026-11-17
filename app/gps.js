@@ -43,7 +43,8 @@ function gpsSpeedFromFix(position, timestamp, accuracy) {
 
     lastGpsSpeedFix = { position, timestamp };
     const speedMs = distance / elapsedSeconds;
-    return Number.isFinite(speedMs) && speedMs <= GPS_MAX_SPEED_MS ? speedMs * 3.6 : 0;
+    if (!Number.isFinite(speedMs) || speedMs > GPS_MAX_SPEED_MS) return 0;
+    return speedMs * 3.6;
 }
 
 function isUsableAltitude(coords, previous, elapsedSeconds) {
@@ -320,6 +321,8 @@ function onPos(pos) {
     lastAccuracy = accuracy;
     if (typeof dashboardUpdateGpsStatus === 'function') dashboardUpdateGpsStatus();
     lastPositionAt = Date.now();
+    if (typeof document !== 'undefined' && document.getElementById('safety-workspace')?.hidden === false
+        && typeof safetyRenderLocation === 'function') safetyRenderLocation();
     if (isRecording && !isPaused) {
         refreshBatteryStatus();
     }
