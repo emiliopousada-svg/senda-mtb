@@ -2,7 +2,7 @@
 // - Guarda la app y las librerías para que abra sin conexión.
 // - Los mapas offline (teselas del IGN) se guardan en IndexedDB desde la propia aplicación.
 // prepare-web.js sustituye el marcador con la versión de package.json.
-const SHELL = 'mtbpro-shell-v__APP_VERSION__-v8';
+const SHELL = 'mtbpro-shell-v__APP_VERSION__-v9';
 
 const SHELL_URLS = [
   './',
@@ -14,6 +14,7 @@ const SHELL_URLS = [
   'estrella-galicia.svg',
   'app/styles.css',
   'app/dashboard.css',
+  'app/route-relief.js',
   'app/dashboard.js',
   'app/ai-preview.js',
   'app/config.js',

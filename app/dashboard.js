@@ -71,9 +71,17 @@ function dashboardLatestRecordedRoute() {
 function dashboardRenderMapPreview(route) {
     const container = $('home-map');
     if (!container) return;
-    const preview = route && typeof createRouteCardMap === 'function'
-        ? createRouteCardMap(route)
+    // Si la ruta no ha cambiado, se conserva el relieve (y el giro elegido por el usuario).
+    const current = container.firstElementChild;
+    if (route && current && current.routeReliefKey
+        && typeof routeReliefKey === 'function' && current.routeReliefKey === routeReliefKey(route)) return;
+    // Relieve 3D con la altitud de la ruta; si no la tiene, el trazado en 2D.
+    const relief = route && typeof createRouteRelief3D === 'function'
+        ? createRouteRelief3D(route)
         : null;
+    const preview = relief || (route && typeof createRouteCardMap === 'function'
+        ? createRouteCardMap(route)
+        : null);
     if (preview) {
         container.replaceChildren(preview);
         return;

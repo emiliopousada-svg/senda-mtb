@@ -162,6 +162,16 @@ body::before {
 .period-pill { padding:7px 11px; border:1px solid rgba(22,140,255,.2); border-radius:9px; background:rgba(22,140,255,.1); color:#5bbcff; font-size:.68rem; font-weight:750; }
 #home-map { position:relative; height:255px; overflow:hidden; background:radial-gradient(ellipse at 68% 28%,#364532 0 10%,transparent 46%),radial-gradient(ellipse at 31% 74%,#263e2c,transparent 52%),linear-gradient(142deg,#202b23,#17221d); }
 #home-map .route-card-map { width:100%; height:100%; }
+#home-map .route-relief { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 35%,rgba(22,140,255,.1),transparent 60%),linear-gradient(160deg,#1b2420,#121815); }
+.route-relief-canvas { display:block; width:100%; height:100%; cursor:grab; touch-action:none; outline:none; }
+.route-relief.dragging .route-relief-canvas { cursor:grabbing; }
+.route-relief-canvas:focus-visible { box-shadow:inset 0 0 0 2px #46b4ff; }
+.route-relief-badge, .route-relief-legend, .route-relief-hint { position:absolute; pointer-events:none; font-size:.62rem; font-weight:720; letter-spacing:.02em; }
+.route-relief-badge { top:10px; left:12px; padding:5px 9px; border:1px solid rgba(22,140,255,.28); border-radius:8px; background:rgba(17,19,24,.72); color:#7cc8ff; }
+.route-relief-legend { top:10px; right:12px; display:flex; align-items:center; gap:7px; padding:5px 9px; border-radius:8px; background:rgba(17,19,24,.72); color:#d8e0e8; }
+.route-relief-legend i { width:34px; height:6px; border-radius:3px; background:linear-gradient(90deg,#168cff,#ff7a1a); }
+.route-relief-hint { right:12px; bottom:9px; color:#8794a3; font-weight:600; transition:opacity .3s; }
+.route-relief.dragging .route-relief-hint { opacity:0; }
 .home-map-empty { position:absolute; inset:0; display:grid; place-content:center; gap:8px; padding:20px; color:#b5c2cf; text-align:center; font-size:.8rem; }
 .home-map-empty strong { color:#f0f3f7; font-size:.95rem; }
 .map-preview-footer { min-height:39px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 14px; color:#98a4b2; font-size:.65rem; }
