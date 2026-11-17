@@ -56,6 +56,29 @@ El almacén debug predeterminado usa la contraseña `android` y el alias `androi
 
 La aplicación apunta al PocketBase independiente `https://mtbpro.ddns.net`. Consulta [POCKETBASE.md](POCKETBASE.md) para las colecciones y reglas requeridas. No se incluyen credenciales ni datos del proyecto de origen.
 
+## Entornos
+
+La configuración que cambia según el entorno está en `APP_ENVIRONMENTS`, dentro de `app/config.js`. `npm run prepare-web` (y `npm run build`) elige el entorno con la variable `MTB_APP_ENV`; si no se indica, compila para producción.
+
+| `MTB_APP_ENV` | Servidor PocketBase | Uso |
+| --- | --- | --- |
+| `production` (por defecto) | `https://mtbpro.ddns.net` | APK de pruebas, APK firmado y releases. |
+| `staging` | El que indiques en `MTB_CLOUD_SERVER` (obligatorio, HTTPS) | Probar contra un PocketBase de pruebas sin tocar datos reales. |
+| `development` | `http://127.0.0.1:8090` o `MTB_CLOUD_SERVER` | Desarrollo en el navegador con `pocketbase serve` local. Solo en este entorno se admite `http://` y únicamente para `localhost`/`127.0.0.1`. |
+
+```sh
+# Linux / macOS
+MTB_APP_ENV=staging MTB_CLOUD_SERVER=https://pruebas.example.com npm run build
+MTB_APP_ENV=development npm run prepare-web
+```
+
+```powershell
+# Windows PowerShell
+$env:MTB_APP_ENV = 'staging'; $env:MTB_CLOUD_SERVER = 'https://pruebas.example.com'; npm run build
+```
+
+La compilación falla si el entorno no existe, si `staging` no tiene servidor o si la URL no es válida. Las etiquetas `vX.Y.Z` solo se compilan en producción y sin `MTB_CLOUD_SERVER`. Fuera de producción, Ajustes muestra el entorno junto a la versión (por ejemplo, `v0.2.3 (build local) · Pruebas`). Android bloquea el tráfico `http://`, así que en el móvil usa `staging` con un servidor HTTPS; `development` es para el navegador. Si sirves `index.html` sin compilar, la app usa producción.
+
 ## iOS
 
 El proyecto iOS está generado para `com.emiliopousada.sendamtb`, nombre `senda-mtb` y despliegue mínimo iOS 15. El acceso a ubicación en uso y en segundo plano y Bluetooth declara sus textos de permiso en `ios/App/App/Info.plist`. Revisa los mensajes y valida el comportamiento en un dispositivo antes de publicar.

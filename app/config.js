@@ -5,7 +5,56 @@
 // ============================================================
 const APP_VERSION = '0.2.3'; // prepare-web.js la reemplaza por la versión de package.json en el bundle.
 const APP_BUILD = 'local'; // prepare-web.js la reemplaza por el número de ejecución de GitHub Actions.
-const DEFAULT_CLOUD_SERVER = 'https://mtbpro.ddns.net';
+
+// ------------------------------------------------------------
+//  ENTORNOS
+//  prepare-web.js fija APP_ENV con la variable MTB_APP_ENV y, si se
+//  indica, APP_CLOUD_SERVER_OVERRIDE con MTB_CLOUD_SERVER. Sin compilar
+//  (index.html servido tal cual) se usa producción.
+// ------------------------------------------------------------
+const APP_ENV = 'production'; // prepare-web.js la reemplaza por MTB_APP_ENV.
+const APP_CLOUD_SERVER_OVERRIDE = ''; // prepare-web.js la reemplaza por MTB_CLOUD_SERVER.
+const APP_ENVIRONMENTS = Object.freeze({
+    production: Object.freeze({
+        label: 'Producción',
+        cloudServer: 'https://mtbpro.ddns.net',
+        allowLocalHttpServer: false,
+        debug: false
+    }),
+    staging: Object.freeze({
+        label: 'Pruebas',
+        cloudServer: '', // obligatorio indicar MTB_CLOUD_SERVER al compilar.
+        allowLocalHttpServer: false,
+        debug: true
+    }),
+    development: Object.freeze({
+        label: 'Desarrollo',
+        cloudServer: 'http://127.0.0.1:8090', // PocketBase local (`pocketbase serve`).
+        allowLocalHttpServer: true,
+        debug: true
+    })
+});
+const APP_DEFAULT_ENV = 'production';
+
+function resolveAppConfig(envName, serverOverride) {
+    const name = Object.prototype.hasOwnProperty.call(APP_ENVIRONMENTS, envName) ? envName : APP_DEFAULT_ENV;
+    const base = APP_ENVIRONMENTS[name];
+    return Object.freeze({
+        env: name,
+        label: base.label,
+        cloudServer: String(serverOverride || base.cloudServer || '').trim(),
+        allowLocalHttpServer: base.allowLocalHttpServer,
+        debug: base.debug,
+        isProduction: name === 'production'
+    });
+}
+
+const APP_CONFIG = resolveAppConfig(APP_ENV, APP_CLOUD_SERVER_OVERRIDE);
+const DEFAULT_CLOUD_SERVER = APP_CONFIG.cloudServer;
+
+// ------------------------------------------------------------
+//  GRABACIÓN Y MAPAS (iguales en todos los entornos)
+// ------------------------------------------------------------
 const MIN_STEP_M = 4;        // distancia mínima entre puntos grabados (filtra el ruido parado)
 const MAX_ACC_M = 30;        // se descartan fixes con peor precisión que esto
 const MAX_SPEED_MS = 25;     // 90 km/h: por encima es un salto de GPS

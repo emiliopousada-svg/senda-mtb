@@ -3,6 +3,7 @@
 // para que el APK no dependa de internet para arrancar.
 const fs = require('fs');
 const path = require('path');
+const { resolveBuildEnvironment, applyBuildEnvironment } = require('./app-environment');
 
 const root = path.join(__dirname, '..');
 const www = path.join(root, 'www');
@@ -13,6 +14,7 @@ if (buildNumber && !/^\d+$/.test(buildNumber)) {
   throw new Error(`Número de build no válido en GITHUB_RUN_NUMBER: ${buildNumber}`);
 }
 const appBuild = buildNumber || 'local';
+const appEnvironment = resolveBuildEnvironment(process.env);
 
 if (!/^\d+\.\d+\.\d+$/.test(appVersion)) {
   throw new Error(`Versión de aplicación no válida en package.json: ${appVersion}`);
@@ -44,7 +46,7 @@ const versionedConfig = configText.replace(
   /const APP_BUILD = '[^']*';/,
   `const APP_BUILD = '${appBuild}';`
 );
-fs.writeFileSync(appConfig, versionedConfig);
+fs.writeFileSync(appConfig, applyBuildEnvironment(versionedConfig, appEnvironment));
 fs.copyFileSync(path.join(nm, 'leaflet/dist/leaflet.css'), path.join(www, 'lib/leaflet/leaflet.css'));
 fs.copyFileSync(path.join(nm, 'leaflet/dist/leaflet.js'), path.join(www, 'lib/leaflet/leaflet.js'));
 fs.copyFileSync(path.join(root, 'vendor/leaflet-rotate.umd.min.js'), path.join(www, 'lib/leaflet/leaflet-rotate.umd.min.js'));
@@ -121,4 +123,4 @@ fs.writeFileSync(
   path.join(www, 'sw.js'),
   swSource.replace('__APP_VERSION__', appVersion)
 );
-console.log(`www listo (service worker ${appVersion})`);
+console.log(`www listo (service worker ${appVersion}, entorno ${appEnvironment.name}, servidor ${appEnvironment.cloudServer})`);
