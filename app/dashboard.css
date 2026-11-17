@@ -619,6 +619,14 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .m-box[hidden] { display:none !important; }
 .m-box { order:0; transition:background .16s ease,transform .16s ease; }
 .swiper-wrapper { transition:transform .28s cubic-bezier(.22,.72,.25,1); }
+#page-home { order:0; }
+#page-routes { order:1; }
+#page-map { order:2; }
+#page-community { order:3; }
+#page-stats { order:4; }
+#page-settings { order:5; }
+#page-cockpit { order:6; }
+#page-tools { order:7; }
 @media (max-width:719px) {
     .hero-actions { gap:6px; margin-top:9px; }
     .hero-action-buttons,.hero-connectivity-status { gap:6px; }

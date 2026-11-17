@@ -884,6 +884,23 @@ input[type="file"], input[type="text"], input[type="password"], input[type="numb
     color: #c8e6c9; background: rgba(46,125,50,.24);
     border: 1px solid rgba(129,199,132,.55);
 }
+.friends-group-status.connected.has-live-members {
+    display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-start; gap: 12px;
+}
+.friend-live-member { display: flex; width: 76px; flex-direction: column; align-items: center; gap: 7px; text-align: center; }
+.friend-live-name { width: 100%; overflow-wrap: anywhere; color: #fff; font-size: .72rem; font-weight: 780; line-height: 1.2; }
+.friend-live-avatar {
+    position: relative; display: grid; width: 56px; height: 56px; place-items: center; padding: 0;
+    overflow: hidden; border: 2px solid #ff9858; border-radius: 50%; appearance: none;
+    color: inherit; background: #44220d; cursor: pointer;
+    box-shadow: 0 0 0 2px rgba(255,118,31,.16),0 3px 10px rgba(0,0,0,.45);
+    transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+.friend-live-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.friend-live-initials { color: #fff; font-size: .9rem; font-weight: 800; }
+.friend-live-initials[hidden] { display: none; }
+.friend-live-avatar:hover { transform:scale(1.06); border-color:#ffb27b; box-shadow:0 0 0 3px rgba(255,118,31,.24),0 4px 12px rgba(0,0,0,.5); }
+.friend-live-avatar:focus-visible { outline:3px solid #ff9858; outline-offset:3px; }
 
 /* Navegación Inferior */
 nav {

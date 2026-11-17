@@ -28,6 +28,7 @@ function navigationContext(offsets, widths) {
             addEventListener() {},
             innerWidth: widths[0]
         },
+        statsNeedsRefresh: false,
         requestAnimationFrame(callback) { callback(); },
         ResizeObserver: undefined,
         console: { error() {}, warn() {} }
@@ -45,4 +46,15 @@ test('page navigation translates to each page actual offset', () => {
         context.setSwiperPosition(index);
         assert.equal(swiper.style.transform, `translate3d(-${offset}px,0,0)`);
     });
+});
+
+test('swiping from home follows the first route in carousel order', () => {
+    const { context } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+
+    context.goToAdjacentPage(1);
+    assert.equal(vm.runInContext('currentPage', context), 3);
+
+    context.goToAdjacentPage(-1);
+    assert.equal(vm.runInContext('currentPage', context), 5);
 });

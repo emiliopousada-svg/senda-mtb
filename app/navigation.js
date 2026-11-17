@@ -6,6 +6,13 @@ let currentPage = 5;
 const pageHistory = [currentPage];
 const swiper = $('swiper');
 const navBtns = document.querySelectorAll('.nav-btn');
+const carouselPageOrder = [5, 3, 0, 2, 1, 4, 6, 7];
+
+function goToAdjacentPage(direction) {
+    const position = carouselPageOrder.indexOf(currentPage);
+    const nextPage = carouselPageOrder[position + direction];
+    if (nextPage !== undefined) goToPage(nextPage);
+}
 
 function setSwiperPosition(index, immediate = false) {
     const targetPage = swiper.children[index];
@@ -14,12 +21,19 @@ function setSwiperPosition(index, immediate = false) {
         swiper.style.transform = 'translate3d(0,0,0)';
         return;
     }
+
     const pageOffset = targetPage.offsetLeft;
     if (immediate) swiper.style.transition = 'none';
     swiper.style.transform = `translate3d(-${pageOffset}px,0,0)`;
     if (immediate) requestAnimationFrame(() => { swiper.style.transition = ''; });
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.dataset.currentPage = String(currentPage);
+    setSwiperPosition(currentPage, true);
+    requestAnimationFrame(() => setSwiperPosition(currentPage, true));
+    dashboardUpdateNav?.(currentPage);
+});
 setSwiperPosition(currentPage, true);
 requestAnimationFrame(() => setSwiperPosition(currentPage, true));
 
@@ -104,8 +118,8 @@ document.addEventListener('touchend', e => {
             else if (diffX < 0 && activeStatsSlide > 0) setStatsSlide(activeStatsSlide - 1);
             return;
         }
-        if (diffX > 0 && currentPage < swiper.children.length - 1) goToPage(currentPage + 1);
-        else if (diffX < 0 && currentPage > 0) goToPage(currentPage - 1);
+        if (diffX > 0) goToAdjacentPage(1);
+        else if (diffX < 0) goToAdjacentPage(-1);
     }
 }, { passive: true });
 

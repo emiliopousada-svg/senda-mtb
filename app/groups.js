@@ -17,7 +17,7 @@ const LIVE_PENDING_TTL_MS = FRIEND_STALE_MS;
 const LIVE_RETRY_BASE_MS = 5000, LIVE_RETRY_MAX_MS = 60000;
 const FRIENDS_IDLE_REFRESH_MS = 30000;
 
-let groupInfo = null, groupChoices = [], liveFriendCount = 0;
+let groupInfo = null, groupChoices = [];
 
 function groupName() { return Cloud.groupCode || ''; }
 
@@ -173,13 +173,74 @@ async function syncPendingGroupLeave() {
     return true;
 }
 
-function renderFriendsGroupStatus() {
+function friendAvatarUrl(record) {
+    const avatarName = String(record.avatar || '').trim();
+    return avatarName && record.owner
+        ? `${Cloud.server}/api/files/users/${encodeURIComponent(record.owner)}/${encodeURIComponent(avatarName)}?thumb=96x96`
+        : '';
+}
+
+function showFriendOnMap(friend) {
+    const position = [Number(friend.lat), Number(friend.lon)];
+    goToPage(0);
+    if (map) map.setView(position, Math.max(map.getZoom(), 16));
+    const marker = friendMarkers.get(friend.id);
+    if (marker) marker.openPopup();
+}
+
+function renderFriendsGroupStatus(liveMembers = []) {
     const status = $('friends-group-status');
     const connected = groupJoined && groupSyncAvailable;
     status.classList.toggle('connected', connected);
-    status.textContent = connected
-        ? `🟢 Conectado al grupo${groupInfo && groupInfo.name ? ' «' + groupInfo.name + '»' : ''} · ${liveFriendCount} ${liveFriendCount === 1 ? 'compañero' : 'compañeros'} en vivo`
-        : groupJoined ? '🟡 Grupo guardado · esperando conexión' : 'Sin conexión a un grupo';
+    status.classList.toggle('has-live-members', connected && liveMembers.length > 0);
+    status.textContent = '';
+
+    if (!connected) {
+        status.textContent = groupJoined ? '🟡 Grupo guardado · esperando conexión' : 'Sin conexión a un grupo';
+        return;
+    }
+
+    if (!liveMembers.length) {
+        const groupLabel = groupInfo && groupInfo.name ? ` al grupo «${groupInfo.name}»` : ' al grupo';
+        status.textContent = `🟢 Conectado${groupLabel} · sin compañeros en vivo`;
+        return;
+    }
+
+    for (const member of liveMembers) {
+        const name = String(member.nickname || member.name || '').trim() || 'Compañero';
+        const initials = name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('es-ES') || '•';
+        const card = document.createElement('div');
+        card.className = 'friend-live-member';
+
+        const label = document.createElement('span');
+        label.className = 'friend-live-name';
+        label.textContent = name;
+
+        const avatar = document.createElement('button');
+        avatar.type = 'button';
+        avatar.className = 'friend-live-avatar';
+        avatar.setAttribute('aria-label', `Mostrar la posición de ${name} en el mapa`);
+        avatar.title = `Ver la posición de ${name} en el mapa`;
+        avatar.addEventListener('click', () => showFriendOnMap(member));
+        const fallback = document.createElement('span');
+        fallback.className = 'friend-live-initials';
+        fallback.textContent = initials;
+        avatar.appendChild(fallback);
+
+        const url = friendAvatarUrl(member);
+        if (url) {
+            const image = document.createElement('img');
+            image.alt = '';
+            image.referrerPolicy = 'no-referrer';
+            image.addEventListener('load', () => { fallback.hidden = true; }, { once: true });
+            image.addEventListener('error', () => image.remove(), { once: true });
+            image.src = url;
+            avatar.appendChild(image);
+        }
+
+        card.append(label, avatar);
+        status.appendChild(card);
+    }
 }
 
 function renderGroupChoices(activeId = '') {
@@ -440,8 +501,6 @@ async function restoreGroup() {
 }
 
 function renderFriends(items = []) {
-    const box = $('friends-list');
-    box.textContent = '';
     const now = Date.now();
     const live = items.filter(x => {
         const updatedAt = Date.parse(x.updated);
@@ -450,28 +509,18 @@ function renderFriends(items = []) {
             && Number.isFinite(updatedAt) && updatedAt <= now + 30000
             && now - updatedAt < FRIEND_STALE_MS;
     });
-    liveFriendCount = live.length;
-    renderFriendsGroupStatus();
+    renderFriendsGroupStatus(live);
     const ids = new Set(live.map(x => x.id));
     for (const [id, marker] of friendMarkers) {
         if (!ids.has(id)) { if (map) map.removeLayer(marker); friendMarkers.delete(id); }
     }
-    if (!live.length) {
-        const p = document.createElement('p');
-        p.className = 'hint'; p.style.textAlign = 'center';
-        p.textContent = groupJoined ? 'No hay compañeros compartiendo ubicación ahora.' : 'Únete o crea un grupo para consultar las posiciones activas.';
-        box.appendChild(p);
-        return;
-    }
+    if (!live.length) return;
     live.forEach(rec => {
         const name = String(rec.nickname || rec.name || 'Compañero').trim();
         const ll = [Number(rec.lat), Number(rec.lon)];
         let marker = friendMarkers.get(rec.id);
         if (map) {
-            const avatarName = String(rec.avatar || '').trim();
-            const avatarUrl = avatarName && rec.owner
-                ? `${Cloud.server}/api/files/users/${encodeURIComponent(rec.owner)}/${encodeURIComponent(avatarName)}?thumb=96x96`
-                : '';
+            const avatarUrl = friendAvatarUrl(rec);
             const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('es-ES') || '•';
             const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
             const icon = L.divIcon({
@@ -500,29 +549,6 @@ function renderFriends(items = []) {
             popup.append(popupName, popupTime);
             marker.bindPopup(popup);
         }
-        const row = document.createElement('div');
-        row.className = 'friend-row';
-        const main = document.createElement('div');
-        main.className = 'friend-main';
-        const title = document.createElement('div');
-        title.className = 'friend-name';
-        title.textContent = '🚴 ' + name;
-        const time = document.createElement('div');
-        time.className = 'friend-updated';
-        time.textContent = 'Actualizado ' + new Date(rec.updated).toLocaleTimeString('es-ES');
-        const locate = document.createElement('button');
-        locate.type = 'button';
-        locate.className = 'btn-small friend-locate';
-        locate.textContent = 'Ver mapa';
-        locate.addEventListener('click', () => {
-            goToPage(0);
-            if (map) map.setView(ll, Math.max(map.getZoom(), 16));
-            const currentMarker = friendMarkers.get(rec.id);
-            if (currentMarker) currentMarker.openPopup();
-        });
-        main.append(title, time);
-        row.append(main, locate);
-        box.appendChild(row);
     });
 }
 
@@ -572,9 +598,8 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
         groupSyncAvailable = false;
         renderFriends();
         if (groupJoined) {
-            $('friends-list').textContent = 'No se pudo verificar la ubicación en vivo; se retiraron las posiciones anteriores.';
+            $('friends-group-status').textContent = 'No se pudo verificar la ubicación en vivo; se retiraron las posiciones anteriores.';
         }
-        renderFriendsGroupStatus();
         console.warn('Posiciones del grupo:', e);
         if ((e.status === 401 || e.status === 403) && retryAuth) {
             try {
