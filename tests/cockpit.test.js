@@ -11,6 +11,7 @@ const cockpitSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'cockpit
 function cockpitContext() {
     const elements = new Map();
     const clicks = { start: 0, finish: 0 };
+    const observers = [];
     const makeElement = (textContent = '') => {
         const attributes = {};
         const classes = new Set();
@@ -41,7 +42,9 @@ function cockpitContext() {
         ['recording-live-line', ''], ['recording-live-area', ''],
         ['cockpit-time'], ['cockpit-distance'], ['cockpit-elevation'], ['cockpit-avg-speed'], ['cockpit-moving'],
         ['cockpit-heart-rate'], ['cockpit-cadence'], ['cockpit-power'], ['cockpit-speed'],
-        ['cockpit-speed-gauge'], ['cockpit-recording-state'], ['cockpit-toggle-label'], ['cockpit-toggle-icon'],
+        ['cockpit-sensor-hr'], ['cockpit-sensor-cadence'], ['cockpit-sensor-power'],
+        ['sensor-hr-status'], ['sensor-cadence-status'], ['sensor-power-status'],
+        ['cockpit-speed-panel'], ['cockpit-speed-gauge'], ['cockpit-recording-state'], ['cockpit-toggle-label'], ['cockpit-toggle-icon'],
         ['cockpit-finish'], ['cockpit-gps-status'], ['cockpit-network-status'], ['cockpit-network-label'],
         ['cockpit-profile-altitude'], ['cockpit-elevation-range'], ['cockpit-profile-line'],
         ['cockpit-profile-area'], ['cockpit-profile-empty'], ['cockpit-route-line'], ['cockpit-route-start'],
@@ -60,18 +63,34 @@ function cockpitContext() {
         points: [[12.1, 104.1], [12.2, 104.3]],
         isRecording: true,
         isPaused: false,
-        MutationObserver: class { observe() {} }
+        sensorStates: {
+            hr: { connected: true },
+            cadence: { connected: false },
+            power: { connected: true }
+        },
+        MutationObserver: class {
+            constructor(callback) { this.callback = callback; this.targets = []; observers.push(this); }
+            observe(element) { this.targets.push(element); }
+        }
     });
     vm.runInContext(cockpitSource, context);
-    return { context, elements, clicks };
+    return { context, elements, clicks, observers };
 }
 
 test('cockpit mirrors ride metrics, live status and route into its own view', () => {
-    const { elements } = cockpitContext();
+    const { context, elements, observers } = cockpitContext();
     assert.equal(elements.get('cockpit-speed').textContent, '21.4');
+    assert.equal(elements.get('cockpit-speed-panel').dataset.speedBand, 'yellow');
     assert.equal(elements.get('cockpit-distance').textContent, '4.25');
     assert.equal(elements.get('cockpit-heart-rate').textContent, '152');
-    assert.equal(elements.get('cockpit-recording-state').textContent, 'Grabando salida');
+    assert.equal(elements.get('cockpit-sensor-hr').classList.contains('connected'), true);
+    assert.equal(elements.get('cockpit-sensor-cadence').classList.contains('connected'), false);
+    assert.equal(elements.get('cockpit-sensor-power').classList.contains('connected'), true);
+    assert.ok(observers[0].targets.includes(elements.get('sensor-cadence-status')));
+    context.sensorStates.cadence.connected = true;
+    observers[0].callback();
+    assert.equal(elements.get('cockpit-sensor-cadence').classList.contains('connected'), true);
+    assert.equal(elements.get('cockpit-recording-state').textContent, 'Grabando ruta');
     assert.equal(elements.get('cockpit-toggle-label').textContent, 'Pausar salida');
     assert.equal(elements.get('cockpit-finish').hidden, false);
     assert.equal(elements.get('cockpit-gps-status').textContent, 'GPS · Buena');
@@ -80,6 +99,25 @@ test('cockpit mirrors ride metrics, live status and route into its own view', ()
     assert.equal(elements.get('cockpit-profile-line').getAttribute('d'), 'M0,40 L320,10');
     assert.match(elements.get('cockpit-route-line').getAttribute('d'), /^M/);
     assert.equal(elements.get('cockpit-route-empty').hidden, true);
+
+    context.isRecording = false;
+    context.sensorStates.hr.connected = false;
+    context.cockpitRender();
+    assert.equal(elements.get('cockpit-recording-state').textContent, 'Sin grabar');
+    assert.equal(elements.get('cockpit-sensor-hr').classList.contains('connected'), false);
+});
+
+test('cockpit speedometer changes color band at each speed threshold', () => {
+    const { context, elements } = cockpitContext();
+    [
+        [0, 'blue'], [7.9, 'blue'], [8, 'green'], [14.9, 'green'],
+        [15, 'yellow'], [24.9, 'yellow'], [25, 'orange'], [39.9, 'orange'],
+        [40, 'red'], [60, 'red'], [72, 'red']
+    ].forEach(([speed, band]) => {
+        elements.get('m-speed').textContent = String(speed);
+        context.cockpitRender();
+        assert.equal(elements.get('cockpit-speed-panel').dataset.speedBand, band, `${speed} km/h`);
+    });
 });
 
 test('cockpit forwards recording controls and reflects paused state', () => {
@@ -91,7 +129,7 @@ test('cockpit forwards recording controls and reflects paused state', () => {
 
     context.isPaused = true;
     context.cockpitRender();
-    assert.equal(elements.get('cockpit-recording-state').textContent, 'Salida pausada');
+    assert.equal(elements.get('cockpit-recording-state').textContent, 'Grabación pausada');
     assert.equal(elements.get('cockpit-toggle-label').textContent, 'Reanudar salida');
 });
 
@@ -115,6 +153,9 @@ test('cockpit sits between home and tools and maps back to the existing map navi
     const tools = html.indexOf('id="page-tools"');
     const mapControls = html.match(/<div class="side-controls">([\s\S]*?)<\/div>\s*<div class="map-bottom-panel" id="map-bottom-panel">/);
     assert.ok(home < cockpit && cockpit < tools);
+    assert.match(html, /<h1 class="cockpit-title">[\s\S]*class="cockpit-title-brand">SENDA-MTB<\/span>[\s\S]*class="cockpit-title-caption">COCKPIT<\/span>/);
+    assert.doesNotMatch(html, /Tu salida, de un vistazo|CONTROLES DE SALIDA/);
+    assert.match(html, /<div class="cockpit-status-row"[^>]*>\s*<button class="cockpit-back"[^>]*data-page="5">← Inicio<\/button>/);
     assert.match(html, /data-page="6"[^>]*>Cockpit<\/button>/);
     assert.match(html, /id="page-cockpit"[\s\S]*data-page="0">Abrir mapa/);
     assert.ok(mapControls);

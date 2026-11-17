@@ -10,6 +10,11 @@ const cockpitMetricBindings = [
     ['m-cadence', 'cockpit-cadence'],
     ['m-power', 'cockpit-power']
 ];
+const cockpitSensorBindings = [
+    ['hr', 'cockpit-sensor-hr', 'sensor-hr-status'],
+    ['cadence', 'cockpit-sensor-cadence', 'sensor-cadence-status'],
+    ['power', 'cockpit-sensor-power', 'sensor-power-status']
+];
 
 function cockpitRenderRoute() {
     const line = $('cockpit-route-line');
@@ -66,16 +71,32 @@ function cockpitRender() {
         if (source && target) target.textContent = source.textContent.trim() || '—';
     });
 
+    const connections = typeof sensorStates === 'undefined' ? null : sensorStates;
+    cockpitSensorBindings.forEach(([type, targetId]) => {
+        const target = $(targetId);
+        const state = connections && connections[type];
+        if (target) target.classList.toggle('connected', Boolean(state && state.connected));
+    });
+
     const speedSource = $('m-speed');
     const speed = speedSource ? speedSource.textContent.trim() : '0.0';
     const speedValue = Number.parseFloat(speed.replace(',', '.'));
     const gauge = $('cockpit-speed-gauge');
     const speedTarget = $('cockpit-speed');
+    const speedPanel = $('cockpit-speed-panel');
     if (speedTarget) speedTarget.textContent = speed || '0.0';
     if (gauge) {
-        const angle = Number.isFinite(speedValue) ? Math.min(Math.max(speedValue, 0) / 60, 1) * 270 : 0;
+        const normalizedSpeed = Number.isFinite(speedValue) ? Math.min(Math.max(speedValue, 0), 60) : 0;
+        const angle = normalizedSpeed / 60 * 270;
         gauge.style.setProperty('--speed-angle', `${angle.toFixed(1)}deg`);
         gauge.setAttribute('aria-label', `Velocidad actual ${speed || '0.0'} km/h`);
+        if (speedPanel) {
+            speedPanel.dataset.speedBand = normalizedSpeed < 8 ? 'blue'
+                : normalizedSpeed < 15 ? 'green'
+                    : normalizedSpeed < 25 ? 'yellow'
+                        : normalizedSpeed < 40 ? 'orange'
+                            : 'red';
+        }
     }
 
     const active = Boolean(isRecording);
@@ -83,7 +104,7 @@ function cockpitRender() {
     const state = $('cockpit-recording-state');
     if (state) {
         state.dataset.state = !active ? 'idle' : paused ? 'paused' : 'recording';
-        state.textContent = !active ? 'Lista para salir' : paused ? 'Salida pausada' : 'Grabando salida';
+        state.textContent = !active ? 'Sin grabar' : paused ? 'Grabación pausada' : 'Grabando ruta';
     }
     const toggleLabel = $('cockpit-toggle-label');
     if (toggleLabel) toggleLabel.textContent = !active ? 'Iniciar salida' : paused ? 'Reanudar salida' : 'Pausar salida';
@@ -137,6 +158,7 @@ if (typeof MutationObserver !== 'undefined') {
     const cockpitObserver = new MutationObserver(cockpitRender);
     [
         ...cockpitMetricBindings.map(([sourceId]) => $(sourceId)),
+        ...cockpitSensorBindings.map(([, , statusId]) => $(statusId)),
         $('m-speed'),
         $('dashboard-gps-status'),
         $('dashboard-network-status'),

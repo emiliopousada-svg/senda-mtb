@@ -642,20 +642,39 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 }
 
 /* Cockpit de actividad */
+@property --speed-color {
+    syntax:"<color>";
+    inherits:true;
+    initial-value:#42a5ff;
+}
+@property --speed-glow {
+    syntax:"<color>";
+    inherits:true;
+    initial-value:rgba(66,165,255,.35);
+}
+@property --speed-angle {
+    syntax:"<angle>";
+    inherits:false;
+    initial-value:0deg;
+}
 .cockpit-page { background:radial-gradient(ellipse at 50% -12%,rgba(255,118,31,.13),transparent 40%),#0e1116; }
 .cockpit-content { width:100%; max-width:1420px; min-height:100%; margin:0 auto; padding:24px 22px 34px; }
-.cockpit-header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:15px; }
-.cockpit-header .eyebrow { color:#ff9a5d; }
-.cockpit-header h1 { margin-top:5px; color:#f3f5f8; font-size:clamp(1.35rem,3vw,2rem); letter-spacing:-.04em; }
-.cockpit-back,.cockpit-map-link { border:1px solid rgba(255,255,255,.12); border-radius:9px; background:rgba(255,255,255,.04); color:#d5dce5; font-size:.75rem; font-weight:700; }
-.cockpit-back { min-height:38px; padding:0 12px; }
+.cockpit-header { display:flex; align-items:center; justify-content:center; margin-bottom:15px; text-align:center; }
+.cockpit-title { display:grid; justify-items:center; gap:7px; margin:0; }
+.cockpit-title-brand { color:#f3f5f8; font-size:clamp(1.45rem,4vw,2.45rem); font-weight:900; letter-spacing:.075em; line-height:1; text-shadow:0 3px 20px rgba(0,0,0,.35); }
+.cockpit-title-caption { display:flex; align-items:center; gap:9px; color:#ff9a5d; font-size:.62rem; font-weight:800; letter-spacing:.3em; line-height:1; }
+.cockpit-title-caption::before,.cockpit-title-caption::after { width:26px; height:1px; background:linear-gradient(90deg,transparent,rgba(255,154,93,.7)); content:""; }
+.cockpit-title-caption::after { transform:scaleX(-1); }
+.cockpit-back,.cockpit-map-link { border:1px solid rgba(255,255,255,.12); border-radius:999px; background:rgba(255,255,255,.04); color:#d5dce5; font-size:.68rem; font-weight:700; }
+.cockpit-back { min-height:30px; padding:0 11px; }
+.cockpit-back:hover { border-color:rgba(255,255,255,.24); background:rgba(255,255,255,.08); }
 .cockpit-status-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:13px; }
 .cockpit-state,.cockpit-status-chip { display:inline-flex; min-height:30px; align-items:center; gap:7px; padding:0 11px; border:1px solid rgba(255,255,255,.09); border-radius:999px; background:#171c24; color:#b8c2ce; font-size:.68rem; font-weight:700; }
 .cockpit-state::before { width:7px; height:7px; border-radius:50%; background:#87909b; content:""; }
-.cockpit-state[data-state="recording"] { border-color:rgba(255,118,31,.28); color:#ffb47d; }
-.cockpit-state[data-state="recording"]::before { background:#ff761f; box-shadow:0 0 0 4px rgba(255,118,31,.12); }
+.cockpit-state[data-state="recording"] { border-color:rgba(53,209,122,.3); color:#83e3ab; }
+.cockpit-state[data-state="recording"]::before { background:#35d17a; box-shadow:0 0 0 4px rgba(53,209,122,.15),0 0 12px rgba(53,209,122,.55); }
 .cockpit-state[data-state="paused"] { color:#ffd27b; }
-.cockpit-state[data-state="paused"]::before { background:#ffc34d; }
+.cockpit-state[data-state="paused"]::before { background:#ffc34d; box-shadow:0 0 0 4px rgba(255,195,77,.12); }
 .cockpit-status-chip.ready { color:#83e3ab; }
 .cockpit-status-chip.connected { border-color:rgba(53,209,122,.24); color:#83e3ab; }
 .cockpit-connectivity-icon { width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:#7f8a98; }
@@ -673,15 +692,25 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .cockpit-section-heading { width:100%; min-height:28px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .cockpit-section-heading > div { display:grid; gap:4px; }
 .cockpit-section-heading > div > strong { color:#e8edf3; font-size:.83rem; }
-.cockpit-live-dot { width:8px; height:8px; border-radius:50%; background:#ff7620; box-shadow:0 0 0 4px rgba(255,118,31,.11); }
-.cockpit-speed-gauge { --speed-angle:0deg; width:min(64vw,220px); aspect-ratio:1; display:grid; place-items:center; margin:9px auto 15px; padding:10px; border-radius:50%; background:conic-gradient(from 135deg,#ff681b 0deg,#ffb449 var(--speed-angle),rgba(255,255,255,.1) var(--speed-angle) 270deg,transparent 270deg 360deg); }
+.cockpit-speed-panel { --speed-color:#42a5ff; --speed-glow:rgba(66,165,255,.35); transition:--speed-color .45s ease,--speed-glow .45s ease; }
+.cockpit-speed-panel[data-speed-band="green"] { --speed-color:#35d17a; --speed-glow:rgba(53,209,122,.35); }
+.cockpit-speed-panel[data-speed-band="yellow"] { --speed-color:#ffd34e; --speed-glow:rgba(255,211,78,.35); }
+.cockpit-speed-panel[data-speed-band="orange"] { --speed-color:#ff8a32; --speed-glow:rgba(255,138,50,.38); }
+.cockpit-speed-panel[data-speed-band="red"] { --speed-color:#ff4d5a; --speed-glow:rgba(255,77,90,.4); }
+.cockpit-live-dot { width:8px; height:8px; border-radius:50%; background:var(--speed-color); box-shadow:0 0 0 4px var(--speed-glow); transition:background .45s ease,box-shadow .45s ease; }
+.cockpit-speed-gauge { --speed-angle:0deg; width:min(64vw,220px); aspect-ratio:1; display:grid; place-items:center; margin:9px auto 15px; padding:10px; border-radius:50%; background:conic-gradient(from 135deg,var(--speed-color) 0deg,var(--speed-color) var(--speed-angle),rgba(255,255,255,.1) var(--speed-angle) 270deg,transparent 270deg 360deg); transition:--speed-angle .45s ease; }
 .cockpit-speed-gauge-inner { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.07); border-radius:50%; background:radial-gradient(circle at 50% 35%,#252c36,#11151b 72%); }
-.cockpit-speed-gauge-inner strong { color:#fff; font-size:clamp(3.2rem,8vw,5.1rem); font-variant-numeric:tabular-nums; line-height:.95; letter-spacing:-.08em; }
-.cockpit-speed-gauge-inner > span { margin-top:8px; color:#9ca8b6; font-size:.67rem; font-weight:800; letter-spacing:.14em; }
+.cockpit-speed-gauge-inner strong { color:var(--speed-color); font-size:clamp(3.2rem,8vw,5.1rem); font-variant-numeric:tabular-nums; line-height:.95; letter-spacing:-.08em; text-shadow:0 0 18px var(--speed-glow); transition:color .45s ease,text-shadow .45s ease; }
+.cockpit-speed-gauge-inner > span { margin-top:8px; color:var(--speed-color); font-size:.67rem; font-weight:800; letter-spacing:.14em; transition:color .45s ease; }
 .cockpit-sensor-grid { width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
 .cockpit-sensor-grid > div { min-width:0; display:grid; gap:6px; padding:10px 7px; border:1px solid rgba(255,255,255,.055); border-radius:10px; background:rgba(255,255,255,.025); text-align:center; }
-.cockpit-sensor-grid > div > span { color:#8793a1; font-size:.54rem; font-weight:780; letter-spacing:.05em; }
+.cockpit-sensor-grid > div > span { display:flex; align-items:center; justify-content:center; gap:4px; color:#8793a1; font-size:.54rem; font-weight:780; letter-spacing:.05em; }
+.cockpit-sensor-icon { width:12px; height:12px; flex:0 0 12px; fill:none; stroke:#8793a1; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; transition:filter .2s ease,stroke .2s ease; }
+.cockpit-sensor-grid > .connected { border-color:rgba(53,209,122,.36); background:rgba(53,209,122,.07); box-shadow:0 0 16px rgba(53,209,122,.12),inset 0 0 0 1px rgba(53,209,122,.08); }
+.cockpit-sensor-grid > .connected > span { color:#83e3ab; }
+.cockpit-sensor-grid > .connected .cockpit-sensor-icon { stroke:#35d17a; filter:drop-shadow(0 0 4px rgba(53,209,122,.65)); }
 .cockpit-sensor-grid strong { color:#eef1f5; font-size:1rem; font-variant-numeric:tabular-nums; }
+.cockpit-sensor-grid > .connected strong { color:#eafff1; text-shadow:0 0 10px rgba(53,209,122,.2); }
 .cockpit-visuals { min-width:0; display:grid; grid-template-rows:1fr 1fr; gap:12px; }
 .cockpit-panel { min-width:0; min-height:190px; padding:14px; }
 .cockpit-map-link { min-height:30px; padding:0 9px; color:#ffad77; }
@@ -695,8 +724,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .cockpit-chart-wrap p,.cockpit-route-preview p { position:absolute; inset:0; display:grid; place-items:center; padding:12px; color:#7f8a98; font-size:.68rem; text-align:center; }
 .cockpit-chart-wrap p[hidden],.cockpit-route-preview p[hidden] { display:none; }
 .cockpit-controls { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:12px; padding:15px 17px; }
-.cockpit-controls .eyebrow { color:#ff9a5d; }
-.cockpit-controls p { margin-top:5px; color:#919dab; font-size:.68rem; }
+.cockpit-controls p { margin:0; color:#919dab; font-size:.68rem; }
 .cockpit-control-buttons { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
 .cockpit-toggle,.cockpit-finish { min-height:42px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 15px; border:1px solid transparent; border-radius:10px; color:#fff; font-size:.74rem; font-weight:780; }
 .cockpit-toggle { background:linear-gradient(110deg,#ff761f,#e85c0d); box-shadow:0 7px 18px rgba(232,92,13,.2); }
@@ -721,7 +749,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     .cockpit-summary-card { min-height:72px; padding:10px; }
     .cockpit-summary-card strong { font-size:1.16rem; }
     .cockpit-status-row { gap:5px; }
-    .cockpit-state,.cockpit-status-chip { min-height:27px; padding:0 8px; font-size:.61rem; }
+    .cockpit-state,.cockpit-status-chip,.cockpit-back { min-height:27px; padding:0 8px; font-size:.61rem; }
 }
 
 /* Barra inferior compacta, clara y adaptable en móviles pequeños y grandes. */
@@ -822,8 +850,8 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     bottom: 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 8px;
+    gap: 6px;
+    padding: 7px;
     border: 1px solid rgba(255,255,255,.11);
     border-radius: 18px;
     background: rgba(13,16,21,.92);
@@ -833,7 +861,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .map-bottom-panel .metrics-bar {
     position: static;
     inset: auto;
-    gap: 2px;
+    gap: 1px;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -842,12 +870,14 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     backdrop-filter: none;
 }
 .map-bottom-panel .m-box,
-.map-bottom-panel .m-box:nth-child(n + 4) { min-height: 44px; border-top: 0; border-radius: 11px; }
+.map-bottom-panel .m-box:nth-child(n + 4) { min-height: 38px; border-top: 0; border-radius: 11px; }
+.map-bottom-panel .m-val { font-size: clamp(.9rem, 3.8vw, 1.05rem); }
+.map-bottom-panel .m-lbl { margin-top: 2px; font-size: clamp(.48rem, 2vw, .52rem); letter-spacing: .06em; }
 .map-bottom-panel .controls-overlay {
     position: static;
     inset: auto;
     gap: 8px;
-    padding: 8px 0 0;
+    padding: 6px 0 0;
     border-top: 1px solid rgba(255,255,255,.08);
 }
 .map-bottom-panel .controls-overlay .btn-main-action { flex: 1 1 160px; max-width: none; }
@@ -870,6 +900,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     right: calc(env(safe-area-inset-right, 0px) + 10px);
     width: auto;
 }
+#page-map #recording-live-profile { left: 50%; right: auto; width: min(76vw, 360px); transform: translateX(-50%); }
 /* Si se sigue una ruta, el perfil en directo se apila encima del perfil de la ruta. */
 #page-map #map-route-profile.show ~ #recording-live-profile { bottom: calc(var(--map-panel-h, 140px) + var(--map-route-profile-h) + 26px); }
 /* La atribución del mapa (licencia) queda siempre visible encima del panel. */
@@ -879,10 +910,12 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     #page-map #map-route-profile.show ~ #recording-live-profile {
         left: calc(env(safe-area-inset-left, 0px) + 66px);
         right: calc(env(safe-area-inset-right, 0px) + 66px);
+        width: auto;
+        transform: none;
     }
     /* La atribución puede subir hasta la columna de iconos derecha: se separa de ella. */
     #page-map .leaflet-bottom.leaflet-right { right: calc(env(safe-area-inset-right, 0px) + 62px); }
-    #page-map .leaflet-control-attribution { max-width: calc(100vw - 132px); }
+    #page-map .leaflet-control-attribution { max-width: calc(100vw - 132px); font-size: 8px; }
 }
 
 /* Pantallas bajas: botones laterales más compactos para que no lleguen al panel. */
@@ -919,7 +952,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
         right: calc(env(safe-area-inset-right, 0px) + 72px);
         bottom: calc(var(--map-panel-h, 50px) + 12px);
     }
-    #page-map #recording-live-profile { left: auto; width: min(40vw, 260px); }
+    #page-map #recording-live-profile { left: auto; width: min(34vw, 220px); transform: none; }
     #page-map #map-route-profile.show ~ #recording-live-profile { bottom: calc(var(--map-panel-h, 50px) + var(--map-route-profile-h) + 18px); }
     #page-map .leaflet-bottom.leaflet-right { right: calc(env(safe-area-inset-right, 0px) + 66px); }
     /* Columnas de iconos más compactas para que quepan sobre la barra de navegación. */

@@ -923,14 +923,14 @@
         <div class="page cockpit-page" id="page-cockpit">
             <main class="cockpit-content">
                 <header class="cockpit-header">
-                    <div>
-                        <span class="eyebrow">senda-mtb <i></i> COCKPIT</span>
-                        <h1>Tu salida, de un vistazo</h1>
-                    </div>
-                    <button class="cockpit-back" type="button" data-page="5">← Inicio</button>
+                    <h1 class="cockpit-title">
+                        <span class="cockpit-title-brand">SENDA-MTB</span>
+                        <span class="cockpit-title-caption">COCKPIT</span>
+                    </h1>
                 </header>
 
                 <div class="cockpit-status-row" aria-label="Estado de la actividad">
+                    <button class="cockpit-back" type="button" data-page="5">← Inicio</button>
                     <span id="cockpit-recording-state" class="cockpit-state" data-state="idle">Lista para salir</span>
                     <span id="cockpit-gps-status" class="cockpit-status-chip">GPS · Buscando</span>
                     <span id="cockpit-network-status" class="cockpit-status-chip" aria-live="polite">
@@ -959,7 +959,7 @@
                 </section>
 
                 <section class="cockpit-performance" aria-label="Métricas en directo">
-                    <article class="cockpit-speed-panel">
+                    <article class="cockpit-speed-panel" id="cockpit-speed-panel" data-speed-band="blue">
                         <div class="cockpit-section-heading">
                             <span>VELOCIDAD ACTUAL</span>
                             <span class="cockpit-live-dot" aria-hidden="true"></span>
@@ -971,9 +971,18 @@
                             </div>
                         </div>
                         <div class="cockpit-sensor-grid">
-                            <div><span>PULSO</span><strong><span id="cockpit-heart-rate">—</span><small> bpm</small></strong></div>
-                            <div><span>CADENCIA</span><strong><span id="cockpit-cadence">—</span><small> rpm</small></strong></div>
-                            <div><span>POTENCIA</span><strong><span id="cockpit-power">—</span><small> W</small></strong></div>
+                            <div id="cockpit-sensor-hr">
+                                <span><svg class="cockpit-sensor-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"></path></svg>PULSO</span>
+                                <strong><span id="cockpit-heart-rate">—</span><small> bpm</small></strong>
+                            </div>
+                            <div id="cockpit-sensor-cadence">
+                                <span><svg class="cockpit-sensor-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 1-6.5 4.5M4 5v4h4M12 9v3l2.2 1.3"></path></svg>CADENCIA</span>
+                                <strong><span id="cockpit-cadence">—</span><small> rpm</small></strong>
+                            </div>
+                            <div id="cockpit-sensor-power">
+                                <span><svg class="cockpit-sensor-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-3 8h6l-5 12 1-9H6l7-11Z"></path></svg>POTENCIA</span>
+                                <strong><span id="cockpit-power">—</span><small> W</small></strong>
+                            </div>
                             <div><span>MEDIA</span><strong><span id="cockpit-avg-speed">—</span><small> km/h</small></strong></div>
                         </div>
                     </article>
@@ -1011,7 +1020,6 @@
 
                 <section class="cockpit-controls" aria-label="Controles de grabación">
                     <div>
-                        <span class="eyebrow">CONTROLES DE SALIDA</span>
                         <p>La grabación usa el GPS y los sensores conectados.</p>
                     </div>
                     <div class="cockpit-control-buttons">

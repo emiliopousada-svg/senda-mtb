@@ -5,6 +5,17 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.5] - 2026-11-17
+
+### Añadido
+* **Cockpit:** el velocímetro cambia de color según la velocidad (azul, verde, amarillo, naranja y rojo), con transiciones suaves; los iconos de pulso, cadencia y potencia se iluminan al conectar sus sensores.
+* **Compañeros cerca:** avatares con nombre; al pulsar uno, el mapa centra y abre la posición de ese compañero.
+
+### Cambiado
+* **Cockpit:** encabezado rediseñado, estado de grabación visible en verde y controles de Inicio alineados con los indicadores.
+* **Mapa:** panel de métricas y perfil de altitud en directo más compactos; la atribución cartográfica permanece visible.
+* **Navegación:** Inicio aparece primero al abrir la app y el orden del carrusel sigue el menú inferior.
+
 ## [0.2.4] - 2026-11-17
 
 ### Añadido
