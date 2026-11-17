@@ -64,10 +64,11 @@ test('profile renders account-backed identity and keeps unavailable social servi
         'profile-hr-max', 'profile-ftp', 'profile-followers-count', 'profile-following-count',
         'profile-shared-routes-count'
     ]) assert.ok(profilePage.includes(`id="${id}"`), `${id} must be present in Profile`);
-    for (const provider of ['Strava', 'Garmin Connect', 'Komoot', 'Apple Salud']) {
+    for (const provider of ['Garmin Connect', 'Komoot', 'Apple Salud']) {
         assert.match(profilePage, new RegExp(`${provider}[\\s\\S]*Próximamente`));
     }
-    assert.equal((profilePage.match(/class="profile-service-toggle" type="checkbox" disabled/g) || []).length, 4);
+    assert.match(profilePage, /Strava[\s\S]*Herramientas → Social/);
+    assert.equal((profilePage.match(/class="profile-service-toggle" type="checkbox" disabled/g) || []).length, 3);
     assert.match(profilePage, /solo en este dispositivo y no se comparte automáticamente/);
     assert.match(source, /published = true/);
     assert.match(navigation, /profileRender\(\)[\s\S]*profileRefreshSharedRoutes\(\)/);

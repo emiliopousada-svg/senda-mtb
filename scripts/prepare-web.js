@@ -83,6 +83,15 @@ require('esbuild').buildSync({
   outfile: path.join(www, 'lib/native-app.js')
 });
 
+require('esbuild').buildSync({
+  entryPoints: [path.join(root, 'src', 'strava-browser.mjs')],
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  target: 'es2019',
+  outfile: path.join(www, 'lib/strava-browser.js')
+});
+
 const file = path.join(www, 'index.html');
 let html = fs.readFileSync(file, 'utf8');
 const versionLabel = /(<strong id="app-version">)v\d+\.\d+\.\d+ \(build [^)]+\)(<\/strong>)/;

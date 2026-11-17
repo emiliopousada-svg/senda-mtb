@@ -763,9 +763,9 @@
                                             <h2 id="profile-connections-title">Cuentas vinculadas</h2>
                                         </div>
                                     </div>
-                                    <p class="profile-panel-note">Las conexiones externas aún no están disponibles.</p>
+                                    <p class="profile-panel-note">Gestiona la conexión y las subidas a Strava desde Herramientas → Social. Otras conexiones deportivas llegarán más adelante.</p>
                                     <ul class="profile-services">
-                                        <li><span>Strava</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Strava, conexión próximamente"></span></li>
+                                        <li><span>Strava</span><span class="profile-service-status">Herramientas → Social</span></li>
                                         <li><span>Garmin Connect</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Garmin Connect, conexión próximamente"></span></li>
                                         <li><span>Komoot</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Komoot, conexión próximamente"></span></li>
                                         <li><span>Apple Salud</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Apple Salud, conexión próximamente"></span></li>
@@ -1163,8 +1163,27 @@
                     <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
                     <section class="card">
                         <h2 id="social-title">🔗 Social</h2>
-                        <p>Este espacio se prepara para conectar tus salidas con Strava y otras plataformas deportivas.</p>
-                        <p class="hint">Las integraciones aún no están disponibles. Cuando se añadan, podrás gestionar desde aquí qué servicios conectas y qué actividades compartes.</p>
+                        <p>Conecta Strava y comparte manualmente las salidas grabadas con senda-mtb.</p>
+                        <p class="hint">Cada actividad se envía solo cuando pulsas «Subir a Strava». La privacidad inicial es «Solo yo» y puedes cambiarla antes de subir.</p>
+                        <div class="strava-connection" aria-live="polite">
+                            <p id="strava-status" class="hint" role="status">Comprueba tu cuenta para ver el estado de Strava.</p>
+                            <div class="community-dialog-actions">
+                                <button id="strava-connect" class="btn" type="button">Conectar con Strava</button>
+                                <button id="strava-disconnect" class="btn secondary" type="button" hidden>Desconectar</button>
+                                <button id="strava-refresh" class="btn secondary" type="button">Actualizar estado</button>
+                            </div>
+                        </div>
+                        <div id="strava-upload-panel" hidden>
+                            <label for="strava-activity">Salida grabada</label>
+                            <select id="strava-activity"></select>
+                            <label for="strava-visibility">Privacidad en Strava</label>
+                            <select id="strava-visibility">
+                                <option value="only_me">Solo yo</option>
+                                <option value="followers_only">Seguidores</option>
+                            </select>
+                            <button id="strava-upload" class="btn" type="button">Subir a Strava</button>
+                            <p id="strava-upload-status" class="hint" role="status" aria-live="polite"></p>
+                        </div>
                     </section>
                 </section>
                 <section id="misc-settings-workspace" class="tools-control-workspace" aria-labelledby="misc-settings-title" hidden>
@@ -1500,8 +1519,10 @@
     <script src="app/tools.js"></script>
     <script src="app/ui.js"></script>
     <script src="lib/native-app.js"></script>
+    <script src="lib/strava-browser.js"></script>
     <script src="app/cloud-preferences.js"></script>
     <script src="app/cloud.js"></script>
+    <script src="app/strava.js"></script>
     <script src="app/profile.js"></script>
     <script src="app/community-social.js"></script>
     <script src="app/community-performance-ui.js"></script>

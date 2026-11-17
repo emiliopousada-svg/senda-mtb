@@ -48,6 +48,8 @@ const SHELL_URLS = [
   'lib/native-app.js',
   'app/cloud-preferences.js',
   'app/cloud.js',
+  'lib/strava-browser.js',
+  'app/strava.js',
   'app/profile.js',
   'app/community-social.js',
   'app/community-performance-ui.js',
