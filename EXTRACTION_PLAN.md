@@ -2,7 +2,7 @@
 
 ## Decisiones de proyecto
 
-- Repositorio destino: `emiliopousada-svg/MTBPro` (privado, rama `main`, ya creado).
+- Repositorio destino: `emiliopousada-svg/senda-mtb` (privado, rama `main`, ya creado).
 - El repositorio original `senda-mtb` se consulta en modo solo lectura y no recibe cambios.
 - Plataformas: web y Android primero; el scaffold iOS se conserva para una segunda fase.
 - Actividad: exclusivamente MTB.
@@ -55,5 +55,5 @@ Capacitor 8, Leaflet, Chart.js, `fit-file-parser`, plugins de geolocalización e
 ## Referencias
 
 - Política oficial de teselas OSM: https://operations.osmfoundation.org/policies/tiles/
-- Repositorio PRO: https://github.com/emiliopousada-svg/MTBPro
+- Repositorio PRO: https://github.com/emiliopousada-svg/senda-mtb
 

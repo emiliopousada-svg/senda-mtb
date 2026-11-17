@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.9] - 2026-11-17
+
+### Cambiado
+* **Repositorio:** se actualizan el enlace de soporte de la app y la documentación a `emiliopousada-svg/senda-mtb`.
+
 ## [0.2.8] - 2026-11-17
 
 ### Cambiado

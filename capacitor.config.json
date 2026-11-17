@@ -2,7 +2,7 @@
   "appId": "com.emiliopousada.sendamtb",
   "appName": "senda-mtb",
   "webDir": "www",
-  "appendUserAgent": "senda-mtb (+https://github.com/emiliopousada-svg/MTBPro)",
+  "appendUserAgent": "senda-mtb (+https://github.com/emiliopousada-svg/senda-mtb)",
   "server": {
     "androidScheme": "https"
   },
