@@ -5,6 +5,17 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.6] - 2026-11-17
+
+### Añadido
+* **Calendario:** vista mensual y creación local de eventos para rutas, quedadas y mantenimiento.
+* **Perfil deportivo:** actividad histórica, bicicleta del Garaje, logros verificables, datos de rendimiento y localidad guardada en el dispositivo.
+* **Centro de control:** espacio Social para futuras integraciones y acceso unificado a grabación, sensores, cartografía, mapas sin conexión y ajustes.
+
+### Cambiado
+* **Seguridad:** los contactos se gestionan desde un formulario plegable y el primero guardado queda preseleccionado para preparar el SOS; la ubicación en directo se configura en Ajustes varios.
+* **Navegación y comunidad:** se ajusta el carrusel entre pantallas y se muestran avatares con nombre para compañeros conectados.
+
 ## [0.2.5] - 2026-11-17
 
 ### Añadido

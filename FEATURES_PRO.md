@@ -29,11 +29,12 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 | Mapas offline por regiones | Disponible desde el Centro de control para regiones de España y Portugal mediante el proveedor IGN compatible. La cobertura mundial depende de proveedores que autoricen descarga y uso offline. |
 | Comparación de rutas | Implementada: compara perfiles de altitud y métricas de dos rutas guardadas. |
 | Récords y logros | Ya disponible para récords personales y medallas. |
+| Perfil deportivo | Totales desde Stats, bicicleta y kilómetros desde Garaje, logros por hitos verificables y parámetros de entrenamiento. La localidad es local; las rutas compartidas se consultan con sesión y conexión. Seguidores, seguidos e integraciones externas aún no están disponibles. |
 | Panel de sensores Bluetooth | Ya disponible; necesita un sensor BLE compatible y permisos del dispositivo. |
 | Sincronización de preferencias | Sincronización privada por cuenta para ajustes de mapa, panel, métricas y entrenamiento; requiere aplicar la migración PocketBase `mtb_user_preferences`. |
 | Clasificaciones de grupos | Ya disponible cuando se configura un backend PocketBase propio y la cuenta tiene acceso. |
 | Menú Comunidad | Implementado con seis pestañas: Ranking, Segmentos, Desafíos, Mi grupo, Logros y Actividad. |
-| Navegación principal | Seis accesos inferiores (Inicio, Rutas, Mapa, Comunidad, Stats y Perfil); el Centro de control reúne Seguridad, Garaje, Calendario, panel de grabación, sensores Bluetooth, mapas sin conexión y ajustes varios. SENDA AI sigue pendiente. |
+| Navegación principal | Seis accesos inferiores (Inicio, Rutas, Mapa, Comunidad, Stats y Perfil); el Centro de control reúne Seguridad, Garaje, Calendario, panel de grabación, sensores Bluetooth, mapas sin conexión, cartografía, Social (integraciones futuras) y ajustes varios. Social aún no conecta servicios externos. SENDA AI sigue pendiente. |
 | Liga privada de cuatro semanas | Diseño y puntuación base documentados; requiere desplegar colecciones, validadores, temporadas e historial del módulo competitivo en PocketBase antes de habilitar escrituras. |
 | Modo nocturno automático | Pendiente de programación horaria; la interfaz actual mantiene el tema oscuro. |
 | Transiciones entre pantallas | Disponibles en el carrusel de páginas, con soporte de movimiento reducido del sistema. |

@@ -131,6 +131,8 @@ test('control center contains recording, sensor, map and miscellaneous settings 
     assert.match(toolsPage, /data-tool="sensors"[\s\S]*Sensores Bluetooth/);
     assert.match(toolsPage, /data-tool="offline-maps"[\s\S]*Mapas sin conexión/);
     assert.match(toolsPage, /data-tool="map-style"[\s\S]*Cartografía del mapa/);
+    assert.match(toolsPage, /data-tool="social"[\s\S]*Social/);
+    assert.match(toolsPage, /id="social-workspace"[\s\S]*Strava[\s\S]*integraciones aún no están disponibles/);
     assert.match(toolsPage, /data-tool="misc-settings"[\s\S]*Ajustes varios/);
     for (const id of ['recording-metric-config', 'settings-sensors', 'offline-panel', 'map-style-select', 'setting-route-sound', 'app-version']) {
         assert.ok(toolsPage.includes(`id="${id}"`), `${id} must be in the control center`);
@@ -138,6 +140,7 @@ test('control center contains recording, sensor, map and miscellaneous settings 
     }
     assert.match(toolsPage, /tools-app-version[\s\S]*Aplicación[\s\S]*Versión instalada/);
     assert.match(toolsSource, /case 'offline-maps'[\s\S]*openOfflineMaps\(\)/);
+    assert.match(toolsSource, /case 'social':[\s\S]*toolsOpenWorkspace\('social-workspace'\)/);
 });
 
 test('home network status glows online and switches to offline state', () => {

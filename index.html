@@ -646,72 +646,196 @@
         <div class="page content-panel" id="page-settings">
             <header class="page-intro">
                 <span class="eyebrow"><i></i> senda-mtb · PERSONALIZACIÓN</span>
-                <h1>Perfil</h1>
-                <p>Gestiona tu cuenta y tu perfil personal.</p>
-            </header>
-            <div class="card">
-                <h2>☁️ Cuenta y sincronización</h2>
-                <p class="hint" id="acc-status">Sin sesión: tus rutas se guardan solo en este móvil.</p>
-                <p class="hint" id="acc-preferences-status" role="status" aria-live="polite">Inicia sesión para sincronizar tus ajustes entre dispositivos.</p>
-                <p class="hint">Se sincronizan tus preferencias de uso. La ubicación GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
-                <div id="acc-server-status" class="account-server-status" role="status" aria-live="polite" aria-label="Estado del servidor">
-                    <span>Estado del servidor</span>
-                    <i aria-hidden="true"></i>
-                </div>
-                <form id="acc-form" novalidate>
-                    <label for="acc-nickname">Apodo</label>
-                    <input type="text" id="acc-nickname" name="nickname" maxlength="32" autocomplete="nickname" placeholder="Obligatorio al crear cuenta">
-                    <label for="acc-email">Correo</label>
-                    <input type="email" id="acc-email" name="email" placeholder="tu@correo.com" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
-                    <label for="acc-pass">Contraseña</label>
-                    <input type="password" id="acc-pass" name="password" placeholder="Mínimo 8 caracteres" autocomplete="current-password" minlength="8" required>
-                    <label for="acc-weight">Peso (kg)</label>
-                    <input type="number" id="acc-weight" name="weight" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Se guarda en tu cuenta">
-                    <label for="acc-age">Edad (años)</label>
-                    <input type="number" id="acc-age" name="age" min="10" max="100" step="1" inputmode="numeric" placeholder="Para estimar la FC máxima">
-                    <p class="hint">Se guardan en tu cuenta. Si ya completaste tu perfil, no hace falta volver a introducirlos.</p>
-                    <button class="btn" id="acc-login" type="submit">Entrar</button>
-                    <button class="btn secondary" id="acc-register" type="button">Crear cuenta</button>
-                </form>
-                <div id="acc-logged" style="display:none;">
-                    <div id="acc-nickname-setup" hidden>
-                        <p class="hint">Elige un apodo para completar tu cuenta y sincronizar tus rutas.</p>
-                        <label for="acc-account-nickname">Apodo</label>
-                        <input type="text" id="acc-account-nickname" maxlength="32" autocomplete="nickname" required>
-                        <button class="btn" id="acc-nickname-save" type="button">Guardar apodo</button>
-                        <button class="btn secondary" id="acc-logout-incomplete" type="button">Cerrar sesión</button>
-                    </div>
-                    <div id="acc-ready" hidden>
-                        <p id="acc-nickname-summary" class="hint"></p>
-                        <button class="btn" id="acc-sync" type="button">Sincronizar ahora</button>
-                        <details class="account-options">
-                            <summary>Perfil y sesión</summary>
-                            <div class="account-profile">
-                                <div class="account-avatar" id="acc-avatar" aria-label="Avatar del usuario">
-                                    <span id="acc-avatar-placeholder" aria-hidden="true">👤</span>
-                                    <img id="acc-avatar-image" alt="Avatar del usuario" hidden>
-                                </div>
-                                <div class="account-profile-content">
-                                    <p class="hint" id="acc-profile-summary" hidden></p>
-                                    <div id="acc-profile-editor">
-                                        <label for="acc-profile-weight">Peso (kg)</label>
-                                        <input type="number" id="acc-profile-weight" min="25" max="250" step="0.1" inputmode="decimal">
-                                        <label for="acc-profile-age">Edad (años)</label>
-                                        <input type="number" id="acc-profile-age" min="10" max="100" step="1" inputmode="numeric">
-                                        <label for="acc-avatar-file">Foto de perfil (opcional)</label>
-                                        <input type="file" id="acc-avatar-file" accept="image/jpeg,image/png,image/webp">
-                                        <p class="hint">Se ajusta a 512 × 512 y se comprime a un máximo de 256 KB.</p>
-                                        <button class="btn secondary" id="acc-profile-save" type="button">Guardar perfil</button>
-                                        <button class="btn secondary" id="acc-profile-cancel" type="button" hidden>Cancelar</button>
+                <div class="profile-page-title">
+                                    <div>
+                                        <h1>Perfil</h1>
+                                        <p>Tu actividad, tu bicicleta y tus logros.</p>
                                     </div>
-                                    <button class="btn secondary" id="acc-profile-edit" type="button" hidden>Modificar perfil</button>
-                                </div>
-                            </div>
-                            <button class="btn secondary" id="acc-logout" type="button">Cerrar sesión</button>
-                        </details>
-                    </div>
+                                    <button class="profile-edit-button" id="profile-edit-button" type="button" aria-expanded="false" aria-controls="profile-editor" aria-label="Editar perfil" title="Editar perfil">✎</button>
                 </div>
-            </div>
+            </header>
+            <main class="profile-page-content">
+                <section class="profile-hero" aria-labelledby="profile-name">
+                                    <div class="profile-identity">
+                                        <div class="profile-avatar">
+                                            <img id="profile-avatar-image" alt="Foto de perfil" hidden>
+                                            <span id="profile-avatar-placeholder" aria-hidden="true">👤</span>
+                                        </div>
+                                        <div class="profile-identity-copy">
+                                            <span class="profile-kicker">CICLISTA MTB</span>
+                                            <h2 id="profile-name">Biker</h2>
+                                            <p><span aria-hidden="true">📍</span> <span id="profile-location">Añade tu localidad habitual</span></p>
+                                        </div>
+                                    </div>
+                                    <div class="profile-social-grid" aria-label="Actividad en la comunidad">
+                                        <div class="profile-social-stat"><strong id="profile-followers-count" aria-label="Seguidores no disponibles">—</strong><span>Seguidores</span></div>
+                                        <div class="profile-social-stat"><strong id="profile-following-count" aria-label="Seguidos no disponibles">—</strong><span>Seguidos</span></div>
+                                        <div class="profile-social-stat"><strong id="profile-shared-routes-count" aria-label="Rutas compartidas no disponibles">—</strong><span>Rutas compartidas</span></div>
+                                    </div>
+                                    <p class="profile-social-note">Los seguidores y seguidos estarán disponibles cuando se activen las funciones sociales.</p>
+                                    <p class="profile-social-note" id="profile-shared-routes-note" role="status" aria-live="polite">Inicia sesión para consultar tus rutas publicadas.</p>
+                </section>
+
+                <form class="profile-editor" id="profile-editor" hidden>
+                                    <label for="profile-location-input">Localidad habitual</label>
+                                    <input type="text" id="profile-location-input" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">
+                                    <p class="profile-editor-note">Se guarda solo en este dispositivo y no se comparte automáticamente.</p>
+                                    <div class="profile-editor-actions">
+                                        <button class="btn" type="submit">Guardar ubicación</button>
+                                        <button class="btn secondary" id="profile-account-edit" type="button">Editar foto y datos físicos</button>
+                                    </div>
+                </form>
+
+                <section class="profile-stat-grid" aria-label="Totales históricos">
+                                    <button class="profile-stat-card profile-stat-distance" type="button" data-page="1">
+                                        <span class="profile-stat-icon" aria-hidden="true">↗</span>
+                                        <span class="profile-stat-label">DISTANCIA TOTAL</span>
+                                        <strong id="profile-total-distance">0,0 km</strong>
+                                    </button>
+                                    <button class="profile-stat-card profile-stat-ascent" type="button" data-page="1">
+                                        <span class="profile-stat-icon" aria-hidden="true">⛰</span>
+                                        <span class="profile-stat-label">DESNIVEL POSITIVO</span>
+                                        <strong id="profile-total-ascent">—</strong>
+                                    </button>
+                                    <button class="profile-stat-card profile-stat-time" type="button" data-page="1">
+                                        <span class="profile-stat-icon" aria-hidden="true">◷</span>
+                                        <span class="profile-stat-label">TIEMPO EN MOVIMIENTO</span>
+                                        <strong id="profile-total-time">0 h 0 min</strong>
+                                    </button>
+                                    <p class="profile-ride-count" id="profile-ride-count">0 salidas registradas</p>
+                </section>
+
+                <section class="profile-bike-card" aria-labelledby="profile-bike-title">
+                                    <div class="profile-section-heading">
+                                        <div>
+                                            <span class="profile-kicker">TU GARAJE</span>
+                                            <h2 id="profile-bike-title">Mi bici principal</h2>
+                                        </div>
+                                        <button class="profile-link-button" id="profile-open-garage" type="button">Abrir Garaje <span aria-hidden="true">→</span></button>
+                                    </div>
+                                    <div class="profile-bike-content">
+                                        <div class="profile-bike-photo">
+                                            <img id="profile-bike-image" alt="Foto de la bicicleta guardada en el Garaje" hidden>
+                                            <span id="profile-bike-placeholder" aria-hidden="true">🚵</span>
+                                        </div>
+                                        <div class="profile-bike-copy">
+                                            <strong id="profile-bike-name">Añade tu bicicleta en Garaje</strong>
+                                            <span><b id="profile-bike-distance">0 km</b> en salidas guardadas</span>
+                                            <small>El kilometraje todavía no se asigna por bicicleta.</small>
+                                        </div>
+                                    </div>
+                </section>
+
+                <div class="profile-detail-grid">
+                                    <section class="profile-panel" aria-labelledby="profile-achievements-title">
+                                        <div class="profile-section-heading">
+                                            <div>
+                                                <span class="profile-kicker">HITOS DE RUTA</span>
+                                                <h2 id="profile-achievements-title">Logros desbloqueados</h2>
+                                            </div>
+                                            <span class="profile-count-badge" id="profile-achievement-count">0</span>
+                                        </div>
+                                        <div class="profile-achievements" id="profile-achievements" aria-live="polite"></div>
+                                        <p class="profile-panel-note" id="profile-achievements-empty">Completa tu primera salida para desbloquear una insignia.</p>
+                                    </section>
+
+                                    <section class="profile-panel" aria-labelledby="profile-performance-title">
+                                        <div class="profile-section-heading">
+                                            <div>
+                                                <span class="profile-kicker">ENTRENAMIENTO</span>
+                                                <h2 id="profile-performance-title">Zonas de rendimiento</h2>
+                                            </div>
+                                        </div>
+                                        <div class="profile-performance-grid">
+                                            <div><span>Frecuencia cardíaca máxima</span><strong id="profile-hr-max">Sin configurar</strong></div>
+                                            <div><span>Umbral de potencia (FTP)</span><strong id="profile-ftp">Sin configurar</strong></div>
+                                        </div>
+                                        <button class="profile-link-button" type="button" data-page="1">Configurar en Stats <span aria-hidden="true">→</span></button>
+                                    </section>
+                </div>
+
+                <section class="profile-panel" aria-labelledby="profile-connections-title">
+                                    <div class="profile-section-heading">
+                                        <div>
+                                            <span class="profile-kicker">SERVICIOS EXTERNOS</span>
+                                            <h2 id="profile-connections-title">Cuentas vinculadas</h2>
+                                        </div>
+                                    </div>
+                                    <p class="profile-panel-note">Las conexiones externas aún no están disponibles.</p>
+                                    <ul class="profile-services">
+                                        <li><span>Strava</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Strava, conexión próximamente"></span></li>
+                                        <li><span>Garmin Connect</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Garmin Connect, conexión próximamente"></span></li>
+                                        <li><span>Komoot</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Komoot, conexión próximamente"></span></li>
+                                        <li><span>Apple Salud</span><span class="profile-service-status">Próximamente<input class="profile-service-toggle" type="checkbox" disabled aria-label="Apple Salud, conexión próximamente"></span></li>
+                                    </ul>
+                </section>
+
+                <details class="profile-account-details" id="profile-account-details">
+                                    <summary>☁️ Cuenta y sincronización <span>Acceso, foto de perfil y ajustes</span></summary>
+                                    <section class="card">
+                                        <p class="hint" id="acc-status">Sin sesión: tus rutas se guardan solo en este móvil.</p>
+                                        <p class="hint" id="acc-preferences-status" role="status" aria-live="polite">Inicia sesión para sincronizar tus ajustes entre dispositivos.</p>
+                                        <p class="hint">Se sincronizan tus preferencias de uso. La ubicación GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
+                                        <div id="acc-server-status" class="account-server-status" role="status" aria-live="polite" aria-label="Estado del servidor">
+                                            <span>Estado del servidor</span>
+                                            <i aria-hidden="true"></i>
+                                        </div>
+                                        <form id="acc-form" novalidate>
+                                            <label for="acc-nickname">Apodo</label>
+                                            <input type="text" id="acc-nickname" name="nickname" maxlength="32" autocomplete="nickname" placeholder="Obligatorio al crear cuenta">
+                                            <label for="acc-email">Correo</label>
+                                            <input type="email" id="acc-email" name="email" placeholder="tu@correo.com" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+                                            <label for="acc-pass">Contraseña</label>
+                                            <input type="password" id="acc-pass" name="password" placeholder="Mínimo 8 caracteres" autocomplete="current-password" minlength="8" required>
+                                            <label for="acc-weight">Peso (kg)</label>
+                                            <input type="number" id="acc-weight" name="weight" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Se guarda en tu cuenta">
+                                            <label for="acc-age">Edad (años)</label>
+                                            <input type="number" id="acc-age" name="age" min="10" max="100" step="1" inputmode="numeric" placeholder="Para estimar la FC máxima">
+                                            <p class="hint">Se guardan en tu cuenta. Si ya completaste tu perfil, no hace falta volver a introducirlos.</p>
+                                            <button class="btn" id="acc-login" type="submit">Entrar</button>
+                                            <button class="btn secondary" id="acc-register" type="button">Crear cuenta</button>
+                                        </form>
+                                        <div id="acc-logged" style="display:none;">
+                                            <div id="acc-nickname-setup" hidden>
+                                                <p class="hint">Elige un apodo para completar tu cuenta y sincronizar tus rutas.</p>
+                                                <label for="acc-account-nickname">Apodo</label>
+                                                <input type="text" id="acc-account-nickname" maxlength="32" autocomplete="nickname" required>
+                                                <button class="btn" id="acc-nickname-save" type="button">Guardar apodo</button>
+                                                <button class="btn secondary" id="acc-logout-incomplete" type="button">Cerrar sesión</button>
+                                            </div>
+                                            <div id="acc-ready" hidden>
+                                                <p id="acc-nickname-summary" class="hint"></p>
+                                                <button class="btn" id="acc-sync" type="button">Sincronizar ahora</button>
+                                                <details class="account-options">
+                                                    <summary>Perfil y sesión</summary>
+                                                    <div class="account-profile">
+                                                        <div class="account-avatar" id="acc-avatar" aria-label="Avatar del usuario">
+                                                            <span id="acc-avatar-placeholder" aria-hidden="true">👤</span>
+                                                            <img id="acc-avatar-image" alt="Avatar del usuario" hidden>
+                                                        </div>
+                                                        <div class="account-profile-content">
+                                                            <p class="hint" id="acc-profile-summary" hidden></p>
+                                                            <div id="acc-profile-editor">
+                                                                <label for="acc-profile-weight">Peso (kg)</label>
+                                                                <input type="number" id="acc-profile-weight" min="25" max="250" step="0.1" inputmode="decimal">
+                                                                <label for="acc-profile-age">Edad (años)</label>
+                                                                <input type="number" id="acc-profile-age" min="10" max="100" step="1" inputmode="numeric">
+                                                                <label for="acc-avatar-file">Foto de perfil (opcional)</label>
+                                                                <input type="file" id="acc-avatar-file" accept="image/jpeg,image/png,image/webp">
+                                                                <p class="hint">Se ajusta a 512 × 512 y se comprime a un máximo de 256 KB.</p>
+                                                                <button class="btn secondary" id="acc-profile-save" type="button">Guardar perfil</button>
+                                                                <button class="btn secondary" id="acc-profile-cancel" type="button" hidden>Cancelar</button>
+                                                            </div>
+                                                            <button class="btn secondary" id="acc-profile-edit" type="button" hidden>Modificar perfil</button>
+                                                        </div>
+                                                    </div>
+                                                    <button class="btn secondary" id="acc-logout" type="button">Cerrar sesión</button>
+                                                </details>
+                                            </div>
+                                        </div>
+                                    </section>
+                </details>
+            </main>
         </div>
 
         <!-- INICIO / DASHBOARD senda-mtb -->
@@ -930,6 +1054,7 @@
                         <button class="tool-card" type="button" data-tool="sensors"><span aria-hidden="true">📡</span><strong>Sensores Bluetooth</strong></button>
                         <button class="tool-card" type="button" data-tool="offline-maps"><span aria-hidden="true">🗺</span><strong>Mapas sin conexión</strong></button>
                         <button class="tool-card" type="button" data-tool="map-style"><span aria-hidden="true">🌐</span><strong>Cartografía del mapa</strong></button>
+                        <button class="tool-card" type="button" data-tool="social"><span aria-hidden="true">🔗</span><strong>Social</strong></button>
                         <button class="tool-card" type="button" data-tool="misc-settings"><span aria-hidden="true">⚙</span><strong>Ajustes varios</strong></button>
                     </div>
                     <section class="tools-app-version" aria-labelledby="tools-app-version-title">
@@ -1030,6 +1155,14 @@
                             <option value="ign">📥 Topográfico IGN (mapas descargados)</option>
                         </select>
                         <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexión se usa el mapa elegido; sin conexión, el IGN descargado.</p>
+                    </section>
+                </section>
+                <section id="social-workspace" class="tools-control-workspace" aria-labelledby="social-title" hidden>
+                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
+                    <section class="card">
+                        <h2 id="social-title">🔗 Social</h2>
+                        <p>Este espacio se prepara para conectar tus salidas con Strava y otras plataformas deportivas.</p>
+                        <p class="hint">Las integraciones aún no están disponibles. Cuando se añadan, podrás gestionar desde aquí qué servicios conectas y qué actividades compartes.</p>
                     </section>
                 </section>
                 <section id="misc-settings-workspace" class="tools-control-workspace" aria-labelledby="misc-settings-title" hidden>
@@ -1367,6 +1500,7 @@
     <script src="lib/native-app.js"></script>
     <script src="app/cloud-preferences.js"></script>
     <script src="app/cloud.js"></script>
+    <script src="app/profile.js"></script>
     <script src="app/community-social.js"></script>
     <script src="app/community-performance-ui.js"></script>
     <script src="app/community-segments.js"></script>

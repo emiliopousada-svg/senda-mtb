@@ -12,12 +12,14 @@ function dashboardUpdateGreeting() {
 
     const avatar = $('home-avatar');
     const placeholder = $('home-avatar-placeholder');
-    if (!avatar || !placeholder) return;
-    const avatarUrl = typeof getAccountAvatarUrl === 'function' ? getAccountAvatarUrl() : '';
-    avatar.hidden = !avatarUrl;
-    placeholder.hidden = Boolean(avatarUrl);
-    if (avatarUrl) avatar.src = avatarUrl;
-    else avatar.removeAttribute('src');
+    if (avatar && placeholder) {
+        const avatarUrl = typeof getAccountAvatarUrl === 'function' ? getAccountAvatarUrl() : '';
+        avatar.hidden = !avatarUrl;
+        placeholder.hidden = Boolean(avatarUrl);
+        if (avatarUrl) avatar.src = avatarUrl;
+        else avatar.removeAttribute('src');
+    }
+    if (typeof profileRender === 'function') profileRender();
 }
 
 function dashboardUpdateNav(page = currentPage) {

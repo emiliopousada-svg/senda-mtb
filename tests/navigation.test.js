@@ -98,6 +98,7 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
         ['sensors-workspace', new FakeElement(false)],
         ['offline-maps-workspace', new FakeElement(false)],
         ['map-style-workspace', new FakeElement(false)],
+        ['social-workspace', new FakeElement(false)],
         ['misc-settings-workspace', new FakeElement(false)],
         ['calendar-create-dialog', new FakeElement(false)]
     ]);
@@ -120,6 +121,7 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
     assert.equal(elements.get('sensors-workspace').hidden, true);
     assert.equal(elements.get('offline-maps-workspace').hidden, true);
     assert.equal(elements.get('map-style-workspace').hidden, true);
+    assert.equal(elements.get('social-workspace').hidden, true);
     assert.equal(elements.get('misc-settings-workspace').hidden, true);
     assert.equal(elements.get('calendar-create-dialog').open, false);
 });
@@ -134,7 +136,8 @@ test('opening a control-center workspace hides the hub and shows only the chosen
     const workspaceIds = [
         'safety-workspace', 'garage-workspace', 'calendar-workspace',
         'recording-settings-workspace', 'sensors-workspace',
-        'offline-maps-workspace', 'map-style-workspace', 'misc-settings-workspace'
+        'offline-maps-workspace', 'map-style-workspace', 'social-workspace',
+        'misc-settings-workspace'
     ];
     const elements = new Map([
         ['.tools-grid', new FakeElement()],
