@@ -35,3 +35,20 @@ test('account profile treats PocketBase zero defaults as unset', () => {
     assert.equal(inputs['acc-profile-weight'].value, '72.5');
     assert.equal(inputs['acc-profile-age'].value, '34');
 });
+
+test('account avatar URL works before cloud.js defines Cloud', () => {
+    const storage = {
+        mtb_pro_avatar_last_uid: 'user-1',
+        'mtb_pro_avatar_user-1': 'data:image/jpeg;base64,avatar'
+    };
+    const context = vm.createContext({
+        document: { activeElement: null },
+        $: () => null,
+        localStorage: { getItem: key => storage[key] ?? null }
+    });
+    vm.runInContext(
+        fs.readFileSync(path.join(__dirname, '..', 'app', 'account-avatar.js'), 'utf8'),
+        context
+    );
+    assert.equal(context.getAccountAvatarUrl(), 'data:image/jpeg;base64,avatar');
+});

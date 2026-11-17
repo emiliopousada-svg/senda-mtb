@@ -124,3 +124,32 @@ test('home network status glows online and switches to offline state', () => {
     assert.equal(network.classes.offline, true);
     assert.match(network.innerHTML, /Sin conexión/);
 });
+
+test('dashboard loads before cloud.js without errors and keeps network listeners', () => {
+    const listeners = [];
+    const greeting = { textContent: '' };
+    const network = {
+        classList: { toggle() {} },
+        setAttribute() {},
+        innerHTML: ''
+    };
+    const context = vm.createContext({
+        currentPage: 5,
+        activeStatsSlide: 0,
+        navigator: { onLine: true },
+        window: { addEventListener(type) { listeners.push(type); } },
+        document: {
+            addEventListener() {},
+            querySelectorAll() { return []; }
+        },
+        $(id) {
+            if (id === 'home-greeting') return greeting;
+            if (id === 'dashboard-network-status') return network;
+            return null;
+        }
+    });
+    assert.doesNotThrow(() => vm.runInContext(dashboardSource, context));
+    assert.equal(greeting.textContent, '¡Hola, Biker!');
+    assert.ok(listeners.includes('online'), 'falta el listener online');
+    assert.ok(listeners.includes('offline'), 'falta el listener offline');
+});

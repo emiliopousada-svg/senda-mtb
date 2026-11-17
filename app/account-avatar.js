@@ -14,7 +14,9 @@ function accountAvatarPendingKey(uid) { return `${ACCOUNT_AVATAR_PENDING_PREFIX}
 function resetAccountProfileCache() { accountProfileLoadedUid = ''; }
 
 function getAccountAvatarUrl() {
-    const uid = Cloud.uid || localStorage.getItem('mtb_pro_avatar_last_uid') || '';
+    // Puede llamarse desde dashboard.js antes de que cloud.js defina Cloud.
+    const cloudUid = typeof Cloud !== 'undefined' ? Cloud.uid : '';
+    const uid = cloudUid || localStorage.getItem('mtb_pro_avatar_last_uid') || '';
     if (!uid) return '';
     try { return localStorage.getItem(accountAvatarKey(uid)) || ''; }
     catch (error) { return ''; }
