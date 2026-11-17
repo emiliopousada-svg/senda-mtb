@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.1] - 2026-11-17
+
+Primera release publicada de la serie 0.2. Incluye todos los cambios de 0.2.0; la compilación de la etiqueta `v0.2.0` falló en las pruebas por la codificación rota de `index.html` y el BOM de `package.json`, ya corregidos.
+
+---
+
 ## [0.2.0] - 2026-11-17
 
 ### Cambiado
