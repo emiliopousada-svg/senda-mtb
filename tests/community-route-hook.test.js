@@ -15,7 +15,8 @@ test('community route create hook trims the track and calculates its bounds', ()
                 assert.equal(collection, 'users');
                 assert.equal(id, 'user123');
                 return { getString: name => name === 'nickname' ? 'Rider' : '' };
-            }
+            },
+            findRecordsByFilter() { return []; }
         },
         onRecordCreateRequest(handler, name) {
             if (name === 'community_routes') createHandler = handler;
@@ -112,4 +113,9 @@ test('community route hook rejects publishing the same route twice', () => {
 test('community route hook accepts a route that is not yet published', () => {
     const create = communityRouteHookWith(() => []);
     assert.equal(create(duplicateRouteValues()), true);
+});
+
+test('community route hook aborts publishing when the duplicate check fails', () => {
+    const create = communityRouteHookWith(() => { throw new Error('db busy'); });
+    assert.throws(() => create(duplicateRouteValues()), /db busy/);
 });

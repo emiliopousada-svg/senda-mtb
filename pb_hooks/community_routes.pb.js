@@ -150,9 +150,8 @@ function indexCommunityRouteBounds(e) {
         filter += " || (movingTimeSec = {:moving} && distanceKm >= {:dmin} && distanceKm <= {:dmax})";
     }
     filter += ")";
-    let duplicates = [];
-    try { duplicates = $app.findRecordsByFilter("community_routes", filter, "", 1, 0, params) || []; }
-    catch (error) { duplicates = []; }
+    // Si la consulta falla, la publicación se aborta: no se acepta sin comprobar duplicados.
+    const duplicates = $app.findRecordsByFilter("community_routes", filter, "", 1, 0, params) || [];
     if (duplicates.length) throw new BadRequestError("Esta ruta ya está publicada en la comunidad.");
     e.next();
 }

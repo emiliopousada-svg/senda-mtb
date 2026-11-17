@@ -588,6 +588,7 @@ async function submitCommunityRoute() {
         console.warn('No se pudo proponer la ruta a la comunidad:', error);
         if (communityIsDuplicateError(error)) {
             communitySetStatus('Esta ruta ya está publicada en la comunidad; no se admiten duplicados.', true);
+            button.disabled = false;
             return null;
         }
         communitySetStatus(error.status === 404

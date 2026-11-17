@@ -344,3 +344,23 @@ test('an old pending snapshot after an account change does not carry the previou
     assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
     assert.equal(holder.body.preferences.safetyContacts.length, 0);
 });
+
+test('a contact added while a new account has no record yet is kept for the follow-up upload', async () => {
+    const holder = {};
+    const added = [{ name: 'Eva', phone: '+34600555444' }];
+    holder.ctx = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: { mtb_pro_preferences_owner: 'https://pb.example\nuser-1' },
+        api: async (url, method) => {
+            if (method) throw new Error('no debería subir los valores por defecto');
+            holder.ctx.values.set('mtb_pro_safety_contacts', JSON.stringify(added));
+            holder.ctx.values.set(holder.key, JSON.stringify({ routeSound: false, safetyContacts: added }));
+            return { items: [] };
+        }
+    });
+    holder.key = holder.ctx.context.cloudPreferencesPendingKey('user-2', 'https://pb.example');
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(holder.ctx.values.get('mtb_pro_safety_contacts')), added);
+    assert.equal(holder.ctx.timers.length, 1);
+});

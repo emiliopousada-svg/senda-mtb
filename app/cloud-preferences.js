@@ -352,13 +352,15 @@ async function syncCloudPreferences() {
             const previousOwner = localStorage.getItem(CLOUD_PREFERENCES_OWNER_KEY);
             const ownerChanged = Boolean(previousOwner && previousOwner !== scope);
 
+            // Un cambio local durante la consulta manda: no se pisa con lo de la cuenta ni con un
+            // pendiente más antiguo; la siguiente pasada sube el cambio nuevo.
+            if (localStorage.getItem(pendingKey) !== submittedPending) {
+                setCloudPreferencesSyncState('pending');
+                succeeded = true;
+                return true;
+            }
+
             if (!pending && record) {
-                // Un cambio local durante la consulta manda: no se pisa con lo de la cuenta y se sube después.
-                if (localStorage.getItem(pendingKey)) {
-                    setCloudPreferencesSyncState('pending');
-                    succeeded = true;
-                    return true;
-                }
                 // Contactos de otra cuenta no se heredan, salvo los añadidos sin sesión en este móvil.
                 if (remoteContacts === null && ownerChanged && !unsyncedContacts) setLocalContacts([]);
                 applyCloudPreferences(record.preferences);
@@ -381,12 +383,6 @@ async function syncCloudPreferences() {
             }
 
             let preferences = pending;
-            if (pending && localStorage.getItem(pendingKey) !== pendingRaw) {
-                // Hubo otro cambio durante la consulta: se sube ese, más reciente, en la siguiente pasada.
-                setCloudPreferencesSyncState('pending');
-                succeeded = true;
-                return true;
-            }
             if (preferences && (!pendingHasContacts || unsyncedContacts)) {
                 // Un pendiente antiguo sin contactos no borra los de la cuenta, y los añadidos sin sesión
                 // se incluyen en la subida.
