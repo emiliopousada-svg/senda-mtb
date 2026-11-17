@@ -477,7 +477,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     backdrop-filter:blur(16px);
 }
 .stats-header h2 { font-size:1.25rem; letter-spacing:-.04em; }
-.stats-header h2::before { content:"senda-brava · PERFORMANCE"; color:#54b6ff; }
+.stats-header h2::before { content:"senda-mtb · PERFORMANCE"; color:#54b6ff; }
 .stats-period-btn,.stats-tab {
     border-color:rgba(255,255,255,.1);
     background:#151b24;

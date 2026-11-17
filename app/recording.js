@@ -167,7 +167,7 @@ function notifyBatteryWarning(message) {
         return ln.schedule({
             notifications: [{
                 id: (Date.now() % 2147483647) + 1,
-                title: 'senda-brava · Batería',
+                title: 'senda-mtb · Batería',
                 body: message,
                 schedule: { at: new Date(Date.now() + 1000) }
             }]
@@ -255,7 +255,7 @@ async function startBgWatcher() {
     try {
         await ensureNotifPermission();
         const id = await bg.addWatcher({
-            backgroundTitle: 'senda-brava',
+            backgroundTitle: 'senda-mtb',
             backgroundMessage: 'Grabando tu ruta…',
             requestPermissions: true,
             stale: false,

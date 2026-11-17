@@ -20,7 +20,7 @@ function safetyBuildWhatsAppUrl(contact, message) {
 
 function safetyBuildSOSMessage(location = {}) {
     const lines = [
-        'SOS de senda-brava: necesito ayuda durante una salida.',
+        'SOS de senda-mtb: necesito ayuda durante una salida.',
         `Hora del aviso: ${new Date().toLocaleString('es-ES')}`
     ];
     const { lat, lon, updatedAt, accuracy } = location;
@@ -307,7 +307,7 @@ async function safetyScheduleNotification(session) {
     await plugin.schedule({
         notifications: [{
             id: SAFETY_NOTIFICATION_ID,
-            title: 'SENDA BRAVA · aviso de ruta',
+            title: 'SENDA MTB · aviso de ruta',
             body: 'Se ha superado la duración prevista más el margen. Abre la aplicación para revisar la salida.',
             schedule: { at: new Date(session.alertAt) },
             extra: { type: 'safety-delay' }
