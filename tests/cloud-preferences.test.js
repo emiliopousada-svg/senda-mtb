@@ -237,3 +237,41 @@ test('switching accounts does not inherit the previous account emergency contact
     assert.deepEqual(JSON.parse(values.get('mtb_pro_safety_contacts')), []);
     assert.equal(timers.length, 0);
 });
+
+test('contacts added while signed out are merged with the account contacts and uploaded', async () => {
+    const { context, values, timers } = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_safety_contacts_unsynced: '1',
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => ({ items: [{ id: 'preferences-2', preferences: {
+            safetyContacts: [{ name: 'Luis', phone: '+34600999888' }, { name: 'Ana bis', phone: '+34600123456' }]
+        } }] })
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    const phones = JSON.parse(values.get('mtb_pro_safety_contacts')).map(contact => contact.phone);
+    assert.deepEqual(phones, ['+34600999888', '+34600123456']);
+    assert.equal(timers.length, 1);
+});
+
+test('a local change made during the request is not overwritten by the account', async () => {
+    const holder = {};
+    holder.ctx = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_route_sound: 'true',
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => {
+            const key = holder.ctx.context.cloudPreferencesPendingKey('user-1', 'https://pb.example');
+            holder.ctx.values.set(key, JSON.stringify({ routeSound: true }));
+            return { items: [{ id: 'preferences-1', preferences: { routeSound: false } }] };
+        }
+    });
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.equal(holder.ctx.values.get('mtb_pro_route_sound'), 'true');
+    assert.equal(holder.ctx.timers.length, 1);
+});

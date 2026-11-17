@@ -31,6 +31,8 @@ const DEFAULT_CLOUD_PREFERENCES = {
 };
 const CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY = 'mtb_pro_safety_contacts';
 const CLOUD_PREFERENCES_MAX_SAFETY_CONTACTS = 5;
+// Marca que hay contactos añadidos o borrados sin sesión que todavía no están en ninguna cuenta.
+const CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY = 'mtb_pro_safety_contacts_unsynced';
 
 // Contactos de emergencia: nombre (1-40) y teléfono internacional, sin duplicados.
 // Devuelve null si el valor no es una lista (registros antiguos sin contactos).
@@ -320,6 +322,9 @@ async function syncCloudPreferences() {
                 }
             }
             submittedPending = pending ? pendingRaw : null;
+            let pendingHasContacts = false;
+            try { pendingHasContacts = Boolean(pending) && Array.isArray(JSON.parse(pendingRaw).safetyContacts); }
+            catch (error) { pendingHasContacts = false; }
 
             const filter = encodeURIComponent(`owner = "${uid}"`);
             const result = await cloudApi(
@@ -329,34 +334,63 @@ async function syncCloudPreferences() {
                 || Cloud.uid !== uid || Cloud.server !== server) return false;
 
             const record = Array.isArray(result.items) ? result.items[0] : null;
+            const remoteContacts = record && record.preferences
+                ? cloudPreferencesSafetyContacts(record.preferences.safetyContacts)
+                : null;
+            const localContacts = () => cloudPreferencesSafetyContacts(
+                cloudPreferencesReadJson(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY)
+            ) || [];
+            const setLocalContacts = contacts => {
+                localStorage.setItem(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY, JSON.stringify(contacts));
+                if (typeof safetySetContacts === 'function') safetySetContacts(contacts);
+            };
+            const unsyncedContacts = localStorage.getItem(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY) === '1';
+            const previousOwner = localStorage.getItem(CLOUD_PREFERENCES_OWNER_KEY);
+            const ownerChanged = Boolean(previousOwner && previousOwner !== scope);
+
             if (!pending && record) {
-                const previousOwner = localStorage.getItem(CLOUD_PREFERENCES_OWNER_KEY);
-                const ownerChanged = Boolean(previousOwner && previousOwner !== scope);
-                const remoteHasContacts = Array.isArray(record.preferences && record.preferences.safetyContacts);
-                // Contactos de otra cuenta no se heredan; los de este móvil se suben si la cuenta aún no tiene.
-                if (!remoteHasContacts && ownerChanged) {
-                    localStorage.setItem(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY, '[]');
-                    if (typeof safetySetContacts === 'function') safetySetContacts([]);
+                // Un cambio local durante la consulta manda: no se pisa con lo de la cuenta y se sube después.
+                if (localStorage.getItem(pendingKey)) {
+                    setCloudPreferencesSyncState('pending');
+                    succeeded = true;
+                    return true;
                 }
+                // Contactos de otra cuenta no se heredan, salvo los añadidos sin sesión en este móvil.
+                const keepLocal = unsyncedContacts ? localContacts() : [];
+                if (remoteContacts === null && ownerChanged && !unsyncedContacts) setLocalContacts([]);
                 applyCloudPreferences(record.preferences);
                 localStorage.setItem(CLOUD_PREFERENCES_OWNER_KEY, scope);
                 cloudPreferencesRetryDelayMs = CLOUD_PREFERENCES_RETRY_INITIAL_MS;
                 cloudPreferencesFailureNotified = false;
                 setCloudPreferencesSyncState('synced');
                 succeeded = true;
-                const localContacts = cloudPreferencesSafetyContacts(
-                    cloudPreferencesReadJson(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY)
-                ) || [];
-                if (!remoteHasContacts && localContacts.length) setTimeout(queueCloudPreferencesSync, 0);
+                let upload = false;
+                if (unsyncedContacts) {
+                    // Se juntan los de la cuenta y los añadidos sin sesión (sin duplicados, máximo 5).
+                    const merged = cloudPreferencesSafetyContacts([...(remoteContacts || []), ...keepLocal]) || [];
+                    setLocalContacts(merged);
+                    upload = true;
+                } else if (remoteContacts === null && localContacts().length) {
+                    upload = true;
+                }
+                if (upload) setTimeout(queueCloudPreferencesSync, 0);
                 return true;
             }
 
             let preferences = pending;
+            if (preferences && !pendingHasContacts) {
+                // Pendiente guardado por una versión anterior, sin contactos: no se borran los de la cuenta.
+                preferences.safetyContacts = remoteContacts || localContacts();
+                setLocalContacts(preferences.safetyContacts);
+            }
             if (!preferences) {
-                const previousOwner = localStorage.getItem(CLOUD_PREFERENCES_OWNER_KEY);
-                if (previousOwner && previousOwner !== scope) {
-                    applyCloudPreferences(DEFAULT_CLOUD_PREFERENCES);
-                    preferences = normalizeCloudPreferences(DEFAULT_CLOUD_PREFERENCES);
+                if (ownerChanged) {
+                    const defaults = {
+                        ...DEFAULT_CLOUD_PREFERENCES,
+                        safetyContacts: unsyncedContacts ? localContacts() : []
+                    };
+                    applyCloudPreferences(defaults);
+                    preferences = normalizeCloudPreferences(defaults);
                 } else preferences = readLocalCloudPreferences();
             }
 
@@ -368,6 +402,7 @@ async function syncCloudPreferences() {
                 || Cloud.uid !== uid || Cloud.server !== server) return false;
 
             localStorage.setItem(CLOUD_PREFERENCES_OWNER_KEY, scope);
+            localStorage.removeItem(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY);
             if (submittedPending && localStorage.getItem(pendingKey) === submittedPending) {
                 localStorage.removeItem(pendingKey);
             }

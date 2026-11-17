@@ -770,7 +770,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
    (métricas arriba del panel, botones Comenzar/Pausar,
    dejar de seguir y finalizar debajo, todo en la misma tarjeta)
    ============================================================ */
-#page-map { --map-top-gap: calc(env(safe-area-inset-top, 0px) + 10px); --map-route-profile-h: 88px; }
+#page-map { --map-top-gap: calc(var(--app-safe-top) + 10px); --map-route-profile-h: 88px; }
 .map-bottom-panel {
     position: absolute;
     z-index: 1000;
@@ -853,7 +853,7 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 
 /* Horizontal: métricas y botones en una sola fila, entre las columnas de iconos. */
 @media (orientation: landscape) and (max-width: 1280px) {
-    #page-map { --map-top-gap: calc(env(safe-area-inset-top, 0px) + 8px); --map-route-profile-h: 50px; }
+    #page-map { --map-top-gap: calc(var(--app-safe-top) + 8px); --map-route-profile-h: 50px; }
     .map-bottom-panel {
         left: calc(env(safe-area-inset-left, 0px) + 72px);
         right: calc(env(safe-area-inset-right, 0px) + 72px);

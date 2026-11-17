@@ -132,3 +132,33 @@ test('turning a sensor off stops reconnection and forgetting removes it', async 
     await ctx.context.disableSensor('hr', { forget: true });
     assert.deepEqual(JSON.parse(ctx.values.get('mtb_pro_ble_sensors_v1')), {});
 });
+
+test('a manual connection supersedes an automatic attempt and closes its stale subscription', async () => {
+    const ctx = sensorsContext({
+        storage: { mtb_pro_ble_sensors_v1: JSON.stringify({ hr: { id: 'HR:01', name: 'Polar H10' } }) }
+    });
+    const closed = [];
+    let releaseAuto;
+    let firstValue;
+    ctx.ble.connect = (id, onValue) => {
+        ctx.connects.push(['hr', id]);
+        if (ctx.connects.length === 1) {
+            firstValue = onValue;
+            return new Promise(resolve => { releaseAuto = () => resolve({ id, stale: true }); });
+        }
+        return Promise.resolve({ id, stale: false });
+    };
+    ctx.ble.disconnectCharacteristic = async (id, service, characteristic, subscription) => { closed.push(subscription); };
+    ctx.context.initSensorConnections();
+    const auto = ctx.runTimers();
+    await new Promise(resolve => setImmediate(resolve));
+    await ctx.context.enableSensor('hr');
+    assert.equal(ctx.elements.get('sensor-hr-status').textContent, 'Conectado: Polar H10');
+    releaseAuto();
+    await auto;
+    assert.equal(closed.length, 1);
+    assert.equal(closed[0].stale, true);
+    firstValue(150);
+    assert.notEqual(ctx.context.$('m-hr').textContent, 150);
+    assert.equal(ctx.elements.get('sensor-hr-status').textContent, 'Conectado: Polar H10');
+});

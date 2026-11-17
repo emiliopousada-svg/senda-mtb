@@ -79,7 +79,8 @@ const SENSOR_RECONNECT_MAX_MS = 30000;
 let nativeBleLoading = null;
 const sensorStates = Object.fromEntries(SENSOR_TYPES.map(type => [type, {
     connected: false, connecting: false, generation: 0, deviceId: null, deviceName: '',
-    subscription: null, lastReadingAt: 0, previous: null, timer: null, attempt: 0, alerted: false
+    subscription: null, lastReadingAt: 0, previous: null, timer: null, attempt: 0, alerted: false,
+    connectingGeneration: null
 }]));
 const sensorConfigs = {
     hr: { service: '0000180d-0000-1000-8000-00805f9b34fb', characteristic: '00002a37-0000-1000-8000-00805f9b34fb', name: 'Pulsómetro', connect: 'connect' },
@@ -168,36 +169,62 @@ function clearSensorTimer(type) {
     state.timer = null;
 }
 
+// Cada operación de conexión (automática o pedida por el usuario) se identifica con la generación del sensor;
+// solo la más reciente puede marcar el sensor como conectado o liberar el indicador de "conectando".
+function beginSensorConnection(type, generation) {
+    const state = sensorStates[type];
+    state.connecting = true;
+    state.connectingGeneration = generation;
+}
+
+function endSensorConnection(type, generation) {
+    const state = sensorStates[type];
+    if (state.connectingGeneration !== generation) return;
+    state.connecting = false;
+    state.connectingGeneration = null;
+    // Si el usuario lo reactivó mientras otra operación terminaba, se vuelve a intentar.
+    const entry = sensorRegistry[type];
+    if (entry && entry.enabled && !state.connected && state.timer === null && generation !== state.generation) {
+        scheduleSensorReconnect(type, 0, 300);
+    }
+}
+
 async function connectSensorDevice(type, device, generation) {
     const state = sensorStates[type], config = sensorConfigs[type];
     const deviceId = device.deviceId || device.id;
     const ble = await loadNativeBle();
     if (generation !== state.generation) return false;
-    state.connecting = true;
-    try {
-        const subscription = await ble[config.connect](
-            deviceId,
-            value => onSensorValue(type, value),
-            () => onSensorDisconnected(type, deviceId, generation)
-        );
+    const subscription = await ble[config.connect](
+        deviceId,
+        // Las lecturas de una conexión ya sustituida no se publican.
+        value => { if (generation === state.generation && state.deviceId === deviceId) onSensorValue(type, value); },
+        () => onSensorDisconnected(type, deviceId, generation)
+    );
+    if (generation !== state.generation) {
+        await ble.disconnectCharacteristic(deviceId, config.service, config.characteristic, subscription);
+        return false;
+    }
+    // Si quedaba otra suscripción activa de este tipo, se cierra antes de sustituirla.
+    const previousId = state.deviceId, previousSubscription = state.subscription;
+    if (previousSubscription && (previousId !== deviceId || previousSubscription !== subscription)) {
+        try { await ble.disconnectCharacteristic(previousId, config.service, config.characteristic, previousSubscription); }
+        catch (error) { console.warn(`No se pudo cerrar la conexión anterior de ${config.name}:`, error); }
         if (generation !== state.generation) {
             await ble.disconnectCharacteristic(deviceId, config.service, config.characteristic, subscription);
             return false;
         }
-        state.deviceId = deviceId;
-        state.subscription = subscription;
-        state.deviceName = device.name || sensorLabel(type);
-        state.lastReadingAt = Date.now();
-        state.previous = null;
-        state.attempt = 0;
-        state.alerted = false;
-        sensorRegistry[type] = { id: deviceId, name: device.name || (sensorRegistry[type] && sensorRegistry[type].name) || '', enabled: true };
-        saveSensorRegistry();
-        setSensorStatus(type, true, `Conectado: ${state.deviceName}`);
-        return true;
-    } finally {
-        state.connecting = false;
     }
+    state.deviceId = deviceId;
+    state.subscription = subscription;
+    state.deviceName = device.name || sensorLabel(type);
+    state.lastReadingAt = Date.now();
+    state.previous = null;
+    state.attempt = 0;
+    state.alerted = false;
+    sensorRegistry[type] = { id: deviceId, name: device.name || (sensorRegistry[type] && sensorRegistry[type].name) || '', enabled: true };
+    saveSensorRegistry();
+    setSensorStatus(type, true, `Conectado: ${state.deviceName}`);
+    return true;
 }
 
 function onSensorDisconnected(type, deviceId, generation) {
@@ -240,6 +267,7 @@ async function attemptSensorReconnect(type) {
         return;
     }
     const generation = state.generation;
+    beginSensorConnection(type, generation);
     try {
         const ble = await loadNativeBle();
         await ble.init();
@@ -256,6 +284,8 @@ async function attemptSensorReconnect(type) {
         }
     } catch (error) {
         console.warn(`${sensorConfigs[type].name} no disponible todavía:`, error);
+    } finally {
+        endSensorConnection(type, generation);
     }
     if (generation !== state.generation || state.connected || !sensorRegistry[type] || !sensorRegistry[type].enabled) return;
     setSensorStatus(type, false, `Esperando a ${sensorLabel(type)}…`);
@@ -280,13 +310,16 @@ async function enableSensor(type) {
         return;
     }
     const state = sensorStates[type], config = sensorConfigs[type];
-    if (state.connected || state.connecting) return;
+    // La intención del usuario se guarda antes de nada, aunque haya otra conexión en curso.
+    const saved = sensorRegistry[type];
+    if (saved && !saved.enabled) { saved.enabled = true; saveSensorRegistry(); }
+    if (state.connected) return;
     clearSensorTimer(type);
+    // Sustituye cualquier intento automático en curso: esta operación pasa a ser la única activa.
     const generation = ++state.generation;
+    beginSensorConnection(type, generation);
     const toggle = $(`sensor-${type}-enabled`);
     toggle.disabled = true;
-    const saved = sensorRegistry[type];
-    if (saved) { saved.enabled = true; saveSensorRegistry(); }
     try {
         const ble = await loadNativeBle();
         await ble.init(); // pide los permisos de Bluetooth la primera vez
@@ -326,6 +359,7 @@ async function enableSensor(type) {
         }
     } finally {
         toggle.disabled = false;
+        endSensorConnection(type, generation);
     }
 }
 

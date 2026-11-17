@@ -111,19 +111,24 @@ function safetyLoadState() {
 
 // Limpia una protección temporizada que hubiera quedado guardada de versiones anteriores.
 function safetyClearLegacySession() {
-    try {
-        if (localStorage.getItem(SAFETY_LEGACY_SESSION_KEY) === null) return;
-        localStorage.removeItem(SAFETY_LEGACY_SESSION_KEY);
-    } catch (error) {
-        console.warn('No se pudo borrar la protección antigua guardada:', error);
-        return;
-    }
-    const plugin = typeof window !== 'undefined'
-        && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
-    if (plugin && typeof plugin.cancel === 'function') {
-        Promise.resolve(plugin.cancel({ notifications: [{ id: SAFETY_LEGACY_NOTIFICATION_ID }] }))
-            .catch(error => console.warn('No se pudo cancelar el aviso antiguo de seguridad:', error));
-    }
+    let pending = false;
+    try { pending = localStorage.getItem(SAFETY_LEGACY_SESSION_KEY) !== null; }
+    catch (error) { return; }
+    if (!pending) return;
+    const capacitor = typeof window !== 'undefined' ? window.Capacitor : null;
+    const native = Boolean(capacitor && typeof capacitor.isNativePlatform === 'function' && capacitor.isNativePlatform());
+    const plugin = capacitor && capacitor.Plugins && capacitor.Plugins.LocalNotifications;
+    const forget = () => {
+        try { localStorage.removeItem(SAFETY_LEGACY_SESSION_KEY); }
+        catch (error) { console.warn('No se pudo borrar la protección antigua guardada:', error); }
+    };
+    // Fuera de la app nativa no hay avisos programados que cancelar.
+    if (!native) { forget(); return; }
+    // En la app se conserva la marca hasta cancelar el aviso, para reintentarlo en el próximo arranque.
+    if (!plugin || typeof plugin.cancel !== 'function') return;
+    Promise.resolve(plugin.cancel({ notifications: [{ id: SAFETY_LEGACY_NOTIFICATION_ID }] }))
+        .then(forget)
+        .catch(error => console.warn('No se pudo cancelar el aviso antiguo de seguridad:', error));
 }
 
 // Los contactos viajan con las preferencias privadas de la cuenta (cloud-preferences.js).
@@ -135,6 +140,8 @@ function safetySetContacts(contacts) {
 
 function safetyPersistContacts() {
     safetySaveJson(SAFETY_CONTACTS_KEY, safetyContacts);
+    // Sin sesión se marca para subirlos (y juntarlos con los de la cuenta) al iniciar sesión.
+    if (!safetyAccountReady()) localStorage.setItem('mtb_pro_safety_contacts_unsynced', '1');
     if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
 }
 
@@ -161,6 +168,7 @@ function safetyGroupTrackingEnabled() {
 }
 
 async function safetySetGroupTracking(enabled) {
+    let failed = false;
     safetySettings.groupLiveTracking = enabled === true;
     try {
         safetyPersistSettings();
@@ -177,10 +185,14 @@ async function safetySetGroupTracking(enabled) {
         safetySettings.groupLiveTracking = !enabled;
         const toggle = safetyElement('safety-group-sharing');
         if (toggle) toggle.checked = safetySettings.groupLiveTracking;
+        failed = true;
+    }
+    safetyRender();
+    // El aviso de error se muestra después del estado normal para que no quede tapado.
+    if (failed) {
         const groupStatus = safetyElement('safety-group-status');
         if (groupStatus) groupStatus.textContent = 'No se pudo cambiar el seguimiento en directo. Inténtalo de nuevo.';
     }
-    safetyRender();
 }
 
 function safetyUpdateGroupStatus() {
