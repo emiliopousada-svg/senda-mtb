@@ -26,8 +26,30 @@ const DEFAULT_CLOUD_PREFERENCES = {
     maxHeartRate: null,
     ftpWatts: null,
     recordingMetricOrder: CLOUD_PREFERENCE_RECORDING_METRICS.slice(),
-    recordingVisibleMetrics: CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice()
+    recordingVisibleMetrics: CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice(),
+    safetyContacts: []
 };
+const CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY = 'mtb_pro_safety_contacts';
+const CLOUD_PREFERENCES_MAX_SAFETY_CONTACTS = 5;
+
+// Contactos de emergencia: nombre (1-40) y teléfono internacional, sin duplicados.
+// Devuelve null si el valor no es una lista (registros antiguos sin contactos).
+function cloudPreferencesSafetyContacts(value) {
+    if (!Array.isArray(value)) return null;
+    const seen = new Set();
+    const result = [];
+    value.forEach(contact => {
+        if (result.length >= CLOUD_PREFERENCES_MAX_SAFETY_CONTACTS || !contact || typeof contact.name !== 'string') return;
+        const name = contact.name.trim().slice(0, 40);
+        const compact = String(contact.phone || '').trim().replace(/[\s()-]/g, '');
+        if (!name || !/^\+?[1-9]\d{6,14}$/.test(compact)) return;
+        const phone = compact.startsWith('+') ? compact : `+${compact}`;
+        if (seen.has(phone)) return;
+        seen.add(phone);
+        result.push({ name, phone });
+    });
+    return result;
+}
 let cloudPreferencesTimer = null;
 let cloudPreferencesSyncPromise = null;
 let cloudPreferencesGeneration = 0;
@@ -103,7 +125,8 @@ function normalizeCloudPreferences(value) {
             CLOUD_PREFERENCE_RECORDING_METRICS,
             CLOUD_PREFERENCE_RECORDING_METRICS
         ),
-        recordingVisibleMetrics: visible.length ? visible : CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice()
+        recordingVisibleMetrics: visible.length ? visible : CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice(),
+        safetyContacts: cloudPreferencesSafetyContacts(source.safetyContacts) || []
     };
 }
 
@@ -129,7 +152,8 @@ function readLocalCloudPreferences() {
         maxHeartRate: localStorage.getItem('mtb_pro_stats_hr_max'),
         ftpWatts: localStorage.getItem('mtb_pro_stats_ftp'),
         recordingMetricOrder: cloudPreferencesReadJson('mtb_pro_recording_panel_v1'),
-        recordingVisibleMetrics: visibleMetrics
+        recordingVisibleMetrics: visibleMetrics,
+        safetyContacts: cloudPreferencesReadJson(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY)
     });
 }
 
@@ -156,6 +180,8 @@ function renderCloudPreferencesStatus() {
 
 function applyCloudPreferences(value) {
     const preferences = normalizeCloudPreferences(value);
+    // Un registro anterior a los contactos en la cuenta no los trae: se conservan los del móvil.
+    const remoteHasContacts = Array.isArray(value && value.safetyContacts);
     cloudPreferencesApplyingRemote = true;
     try {
         const localValues = {
@@ -176,6 +202,10 @@ function applyCloudPreferences(value) {
         else localStorage.setItem('mtb_pro_stats_hr_max', String(preferences.maxHeartRate));
         if (preferences.ftpWatts === null) localStorage.removeItem('mtb_pro_stats_ftp');
         else localStorage.setItem('mtb_pro_stats_ftp', String(preferences.ftpWatts));
+        if (remoteHasContacts) {
+            localStorage.setItem(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY, JSON.stringify(preferences.safetyContacts));
+            if (typeof safetySetContacts === 'function') safetySetContacts(preferences.safetyContacts);
+        }
 
         const controls = [
             ['setting-route-sound', preferences.routeSound],
@@ -300,12 +330,24 @@ async function syncCloudPreferences() {
 
             const record = Array.isArray(result.items) ? result.items[0] : null;
             if (!pending && record) {
+                const previousOwner = localStorage.getItem(CLOUD_PREFERENCES_OWNER_KEY);
+                const ownerChanged = Boolean(previousOwner && previousOwner !== scope);
+                const remoteHasContacts = Array.isArray(record.preferences && record.preferences.safetyContacts);
+                // Contactos de otra cuenta no se heredan; los de este móvil se suben si la cuenta aún no tiene.
+                if (!remoteHasContacts && ownerChanged) {
+                    localStorage.setItem(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY, '[]');
+                    if (typeof safetySetContacts === 'function') safetySetContacts([]);
+                }
                 applyCloudPreferences(record.preferences);
                 localStorage.setItem(CLOUD_PREFERENCES_OWNER_KEY, scope);
                 cloudPreferencesRetryDelayMs = CLOUD_PREFERENCES_RETRY_INITIAL_MS;
                 cloudPreferencesFailureNotified = false;
                 setCloudPreferencesSyncState('synced');
                 succeeded = true;
+                const localContacts = cloudPreferencesSafetyContacts(
+                    cloudPreferencesReadJson(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY)
+                ) || [];
+                if (!remoteHasContacts && localContacts.length) setTimeout(queueCloudPreferencesSync, 0);
                 return true;
             }
 

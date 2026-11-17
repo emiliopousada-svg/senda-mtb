@@ -130,8 +130,6 @@
 .safety-field-row { display:grid; gap:7px; }
 .safety-toggle { display:flex; align-items:flex-start; gap:9px; color:#e1e7ee; font-size:.77rem; line-height:1.45; }
 .safety-toggle input { flex:0 0 auto; width:18px; height:18px; margin:1px 0 0; accent-color:#38c976; }
-.safety-unavailable { color:#929eac; }
-.safety-unavailable input { accent-color:#777; }
 .safety-note { margin:0; color:#9eabb9; font-size:.72rem; line-height:1.5; }
 .safety-note[data-state="error"] { color:#ff9b91; }
 .safety-note[data-state="success"] { color:#80e6a8; }
@@ -142,7 +140,6 @@
 .safety-contact-list { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
 .safety-contact-item { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-radius:10px; background:#202630; color:#e6ebf0; font-size:.76rem; }
 .safety-contact-item button { flex:0 0 auto; border:0; background:transparent; color:#ffaaa2; font:inherit; font-size:.7rem; }
-.safety-countdown { color:#76e3a0; font-size:1.65rem; font-variant-numeric:tabular-nums; font-weight:850; letter-spacing:.03em; }
 .safety-location-link { color:#66c2ff; font-size:.77rem; }
 .safety-active-card { border-color:rgba(52,200,121,.25); }
 @media (min-width:850px) { .safety-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .safety-active-card { grid-column:1 / -1; } }

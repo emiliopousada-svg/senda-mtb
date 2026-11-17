@@ -20,6 +20,7 @@ function preferencesSyncContext({ api, initialStorage = {}, online = true, uid =
     const calls = [];
     const status = { textContent: '' };
     const warnings = [];
+    const timers = [];
     const context = vm.createContext({
         localStorage: {
             getItem(key) { return values.has(key) ? values.get(key) : null; },
@@ -39,13 +40,15 @@ function preferencesSyncContext({ api, initialStorage = {}, online = true, uid =
             return api(...args);
         },
         console: { warn(...args) { warnings.push(args.map(value => String(value))); } },
-        toast() {}
+        toast() {},
+        setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+        clearTimeout() {}
     });
     vm.runInContext(
         fs.readFileSync(path.join(__dirname, '..', 'app', 'cloud-preferences.js'), 'utf8'),
         context
     );
-    return { context, values, calls, status, warnings };
+    return { context, values, calls, status, warnings, timers };
 }
 
 test('cloud preferences reject invalid values and fill safe defaults', () => {
@@ -151,4 +154,86 @@ test('offline preference sync makes no PocketBase request', async () => {
     assert.equal(await context.syncCloudPreferences(), false);
     assert.equal(calls.length, 0);
     assert.equal(status.textContent, 'Ajustes guardados en este dispositivo; la sincronización está pendiente.');
+});
+
+test('cloud preferences keep only valid, unique emergency contacts', () => {
+    const preferences = normalizePreferences({
+        safetyContacts: [
+            { name: '  Ana  ', phone: '+34 600 123 456' },
+            { name: 'Duplicado', phone: '+34600123456' },
+            { name: '', phone: '+34600000001' },
+            { name: 'Sin prefijo', phone: '0600123456' },
+            { name: 'Luis', phone: '34611222333' },
+            'texto',
+            { name: 'C3', phone: '+34600000003' },
+            { name: 'C4', phone: '+34600000004' },
+            { name: 'C5', phone: '+34600000005' },
+            { name: 'C6', phone: '+34600000006' }
+        ]
+    });
+    assert.deepEqual(preferences.safetyContacts, [
+        { name: 'Ana', phone: '+34600123456' },
+        { name: 'Luis', phone: '+34611222333' },
+        { name: 'C3', phone: '+34600000003' },
+        { name: 'C4', phone: '+34600000004' },
+        { name: 'C5', phone: '+34600000005' }
+    ]);
+    assert.deepEqual(normalizePreferences({}).safetyContacts, []);
+});
+
+test('signed-in sync restores the emergency contacts saved in the account', async () => {
+    const contacts = [{ name: 'Ana', phone: '+34600123456' }];
+    const { context, values } = preferencesSyncContext({
+        api: async () => ({ items: [{ id: 'preferences-1', preferences: { safetyContacts: contacts } }] })
+    });
+    let applied = null;
+    context.safetySetContacts = list => { applied = JSON.parse(JSON.stringify(list)); };
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(values.get('mtb_pro_safety_contacts')), contacts);
+    assert.deepEqual(applied, contacts);
+});
+
+test('first sync uploads the emergency contacts stored on the device', async () => {
+    let createdRecord = null;
+    const { context } = preferencesSyncContext({
+        initialStorage: { mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]) },
+        api: async (path, method, body) => {
+            if (method === 'POST') createdRecord = body;
+            return method === 'POST' ? { id: 'created' } : { items: [] };
+        }
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(JSON.stringify(createdRecord.preferences.safetyContacts)), [{ name: 'Ana', phone: '+34600123456' }]);
+});
+
+test('an older account record without contacts keeps device contacts and schedules an upload', async () => {
+    const local = [{ name: 'Ana', phone: '+34600123456' }];
+    const { context, values, timers } = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify(local),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => ({ items: [{ id: 'preferences-1', preferences: { routeSound: false } }] })
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(values.get('mtb_pro_safety_contacts')), local);
+    assert.equal(timers.length, 1);
+});
+
+test('switching accounts does not inherit the previous account emergency contacts', async () => {
+    const { context, values, timers } = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => ({ items: [{ id: 'preferences-2', preferences: { routeSound: false } }] })
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(values.get('mtb_pro_safety_contacts')), []);
+    assert.equal(timers.length, 0);
 });

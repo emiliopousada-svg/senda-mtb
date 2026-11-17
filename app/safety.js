@@ -2,14 +2,31 @@
 
 const SAFETY_CONTACTS_KEY = 'mtb_pro_safety_contacts';
 const SAFETY_SETTINGS_KEY = 'mtb_pro_safety_settings';
-const SAFETY_SESSION_KEY = 'mtb_pro_safety_session';
-const SAFETY_NOTIFICATION_ID = 2480116;
+// Restos del antiguo "Aviso de salida" (temporizador y aviso local), que ya no existe.
+const SAFETY_LEGACY_SESSION_KEY = 'mtb_pro_safety_session';
+const SAFETY_LEGACY_NOTIFICATION_ID = 2480116;
 const SAFETY_MAX_CONTACTS = 5;
 
 function safetyNormalizePhone(value) {
     const compact = String(value || '').trim().replace(/[\s()-]/g, '');
     if (!/^\+?[1-9]\d{6,14}$/.test(compact)) return null;
     return compact.startsWith('+') ? compact : `+${compact}`;
+}
+
+// Lista de contactos válida: hasta SAFETY_MAX_CONTACTS, nombre de 1-40 caracteres, teléfono internacional y sin duplicados.
+function safetyNormalizeContacts(value) {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    const result = [];
+    value.forEach(contact => {
+        if (result.length >= SAFETY_MAX_CONTACTS || !contact || typeof contact.name !== 'string') return;
+        const name = contact.name.trim().slice(0, 40);
+        const phone = safetyNormalizePhone(contact.phone);
+        if (!name || !phone || seen.has(phone)) return;
+        seen.add(phone);
+        result.push({ name, phone });
+    });
+    return result;
 }
 
 function safetyBuildWhatsAppUrl(contact, message) {
@@ -40,9 +57,7 @@ function safetyBuildSOSMessage(location = {}) {
 }
 
 let safetyContacts = [];
-let safetySettings = { durationMinutes: 180, graceMinutes: 15, groupLiveTracking: true, armed: false };
-let safetySession = null;
-let safetyOverdueToastShown = false;
+let safetySettings = { groupLiveTracking: true };
 
 function safetyElement(id) {
     return document.getElementById(id);
@@ -60,60 +75,81 @@ function safetySaveJson(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
+function safetyAccountReady() {
+    return typeof Cloud !== 'undefined' && typeof Cloud.loggedIn === 'function' && Cloud.loggedIn();
+}
+
+function safetyReadStoredContacts() {
+    const value = localStorage.getItem(SAFETY_CONTACTS_KEY);
+    if (!value) return [];
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) throw new Error('La lista de contactos guardada no es válida.');
+    return parsed;
+}
+
 function safetyLoadState() {
-    let loadWarning = '';
     try {
-        const contactsValue = localStorage.getItem(SAFETY_CONTACTS_KEY);
-        const settingsValue = localStorage.getItem(SAFETY_SETTINGS_KEY);
-        const sessionValue = localStorage.getItem(SAFETY_SESSION_KEY);
-        if (contactsValue) {
-            const parsedContacts = JSON.parse(contactsValue);
-            if (!Array.isArray(parsedContacts)) throw new Error('La lista de contactos guardada no es válida.');
-            safetyContacts = parsedContacts.slice(0, SAFETY_MAX_CONTACTS).filter(contact =>
-                contact && typeof contact.name === 'string' && safetyNormalizePhone(contact.phone)
-            ).map(contact => ({
-                name: contact.name.trim().slice(0, 40),
-                phone: safetyNormalizePhone(contact.phone)
-            })).filter(contact => contact.name);
-            if (safetyContacts.length !== parsedContacts.length) {
-                loadWarning = 'Se omitieron contactos guardados que no tenían datos válidos o superaban el límite permitido.';
-            }
+        const stored = safetyReadStoredContacts();
+        safetyContacts = safetyNormalizeContacts(stored);
+        if (safetyContacts.length !== stored.length) {
+            safetyShowStatus('Se omitieron contactos guardados que no tenían datos válidos o superaban el límite permitido.', 'error');
         }
+        const settingsValue = localStorage.getItem(SAFETY_SETTINGS_KEY);
         if (settingsValue) {
             const parsedSettings = JSON.parse(settingsValue);
             if (!parsedSettings || typeof parsedSettings !== 'object') throw new Error('La configuración de seguridad guardada no es válida.');
-            const durationMinutes = Number.isInteger(parsedSettings.durationMinutes)
-                && parsedSettings.durationMinutes >= 15 && parsedSettings.durationMinutes <= 720
-                ? parsedSettings.durationMinutes
-                : 180;
-            const graceMinutes = Number.isInteger(parsedSettings.graceMinutes)
-                && parsedSettings.graceMinutes >= 5 && parsedSettings.graceMinutes <= 120
-                ? parsedSettings.graceMinutes
-                : 15;
-            if (durationMinutes !== parsedSettings.durationMinutes || graceMinutes !== parsedSettings.graceMinutes) {
-                loadWarning = 'Se restauraron valores seguros para una duración o margen guardado no válido.';
-            }
             safetySettings = {
-                durationMinutes,
-                graceMinutes,
-                groupLiveTracking: typeof parsedSettings.groupLiveTracking === 'boolean' ? parsedSettings.groupLiveTracking : true,
-                armed: parsedSettings.armed === true
+                groupLiveTracking: typeof parsedSettings.groupLiveTracking === 'boolean' ? parsedSettings.groupLiveTracking : true
             };
         }
-        if (sessionValue) {
-            const parsedSession = JSON.parse(sessionValue);
-            if (parsedSession && Number.isFinite(parsedSession.startedAt)
-                && Number.isFinite(parsedSession.plannedEndAt) && Number.isFinite(parsedSession.alertAt)) {
-                safetySession = parsedSession;
-            } else {
-                throw new Error('La sesión de seguridad guardada no es válida.');
-            }
-        }
-        if (loadWarning) safetyShowStatus(loadWarning, 'error');
     } catch (error) {
         console.error('No se pudo cargar la configuración de seguridad:', error);
         safetyShowStatus('No se pudieron leer todos los datos guardados. Revisa el almacenamiento local de esta aplicación.', 'error');
     }
+    safetyClearLegacySession();
+}
+
+// Limpia una protección temporizada que hubiera quedado guardada de versiones anteriores.
+function safetyClearLegacySession() {
+    try {
+        if (localStorage.getItem(SAFETY_LEGACY_SESSION_KEY) === null) return;
+        localStorage.removeItem(SAFETY_LEGACY_SESSION_KEY);
+    } catch (error) {
+        console.warn('No se pudo borrar la protección antigua guardada:', error);
+        return;
+    }
+    const plugin = typeof window !== 'undefined'
+        && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+    if (plugin && typeof plugin.cancel === 'function') {
+        Promise.resolve(plugin.cancel({ notifications: [{ id: SAFETY_LEGACY_NOTIFICATION_ID }] }))
+            .catch(error => console.warn('No se pudo cancelar el aviso antiguo de seguridad:', error));
+    }
+}
+
+// Los contactos viajan con las preferencias privadas de la cuenta (cloud-preferences.js).
+function safetySetContacts(contacts) {
+    safetyContacts = safetyNormalizeContacts(contacts);
+    safetySaveJson(SAFETY_CONTACTS_KEY, safetyContacts);
+    safetyRenderContacts();
+}
+
+function safetyPersistContacts() {
+    safetySaveJson(SAFETY_CONTACTS_KEY, safetyContacts);
+    if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
+}
+
+function safetyContactsSavedMessage(action) {
+    return safetyAccountReady()
+        ? `${action}. Se sincroniza con tu cuenta.`
+        : `${action} en este móvil. Inicia sesión para guardarlo en tu cuenta.`;
+}
+
+function safetyRenderStorageNote() {
+    const note = safetyElement('safety-contacts-storage');
+    if (!note) return;
+    note.textContent = safetyAccountReady()
+        ? 'Se guardan en tu cuenta: al iniciar sesión en otro móvil los tendrás disponibles.'
+        : 'Sin sesión se guardan solo en este móvil. Inicia sesión para guardarlos en tu cuenta.';
 }
 
 function safetyPersistSettings() {
@@ -136,18 +172,13 @@ async function safetySetGroupTracking(enabled) {
             await publishMyLocation(true);
         }
         safetyUpdateGroupStatus();
-        safetyShowStatus(
-            safetySettings.groupLiveTracking
-                ? 'Seguimiento en directo activado para las grabaciones en grupo.'
-                : 'Seguimiento en directo desactivado; se intentará retirar la última posición publicada.',
-            'success'
-        );
     } catch (error) {
         console.error('No se pudo actualizar el seguimiento en directo:', error);
         safetySettings.groupLiveTracking = !enabled;
         const toggle = safetyElement('safety-group-sharing');
         if (toggle) toggle.checked = safetySettings.groupLiveTracking;
-        safetyShowStatus('No se pudo cambiar el seguimiento en directo. Inténtalo de nuevo.', 'error');
+        const groupStatus = safetyElement('safety-group-status');
+        if (groupStatus) groupStatus.textContent = 'No se pudo cambiar el seguimiento en directo. Inténtalo de nuevo.';
     }
     safetyRender();
 }
@@ -236,158 +267,20 @@ function safetyRenderLocation() {
     }
 }
 
-function safetyFormatRemaining(milliseconds) {
-    const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainder = seconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
-}
-
 function safetyRender() {
     if (typeof document === 'undefined') return;
-    const now = Date.now();
-    const status = safetyElement('safety-session-status');
-    const countdown = safetyElement('safety-countdown');
-    const cancelButton = safetyElement('safety-cancel-alert');
-    const endButton = safetyElement('safety-end-session');
-    if (safetySession) {
-        const remaining = safetySession.plannedEndAt - now;
-        if (countdown) countdown.textContent = safetyFormatRemaining(remaining);
-        if (status) {
-            status.textContent = now >= safetySession.alertAt
-                ? 'Se superó la duración y el margen previstos. El aviso es local: nadie ha sido contactado.'
-                : now >= safetySession.plannedEndAt
-                    ? 'Se superó la duración prevista. Puedes cancelar el aviso si estás bien.'
-                    : `Protección activa. Hora prevista de regreso: ${new Date(safetySession.plannedEndAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`;
-        }
-        if (cancelButton) cancelButton.hidden = now < safetySession.plannedEndAt;
-        if (endButton) endButton.hidden = false;
-        if (now >= safetySession.alertAt && !safetyOverdueToastShown) {
-            safetyOverdueToastShown = true;
-            if (typeof toast === 'function') toast('Aviso de seguridad: se superó el tiempo previsto. Revisa que todo esté bien.', 6000);
-        }
-    } else {
-        if (countdown) countdown.textContent = '--:--:--';
-        if (status) status.textContent = safetySettings.armed
-            ? 'Preparada: se activará al comenzar una grabación.'
-            : 'Sin protección activa.';
-        if (cancelButton) cancelButton.hidden = true;
-        if (endButton) endButton.hidden = true;
-    }
+    safetyRenderStorageNote();
     safetyUpdateGroupStatus();
     safetyRenderLocation();
 }
 
-function safetyNotificationsPlugin() {
-    return typeof window !== 'undefined'
-        ? window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications
-        : null;
-}
-
-async function safetyCancelNotification() {
-    const plugin = safetyNotificationsPlugin();
-    if (!plugin || typeof plugin.cancel !== 'function') return;
-    await plugin.cancel({ notifications: [{ id: SAFETY_NOTIFICATION_ID }] });
-}
-
-async function safetyScheduleNotification(session) {
-    const plugin = safetyNotificationsPlugin();
-    if (!plugin || typeof plugin.schedule !== 'function') return false;
-    let permissions = typeof plugin.checkPermissions === 'function' ? await plugin.checkPermissions() : { display: 'granted' };
-    if (permissions.display !== 'granted' && typeof plugin.requestPermissions === 'function') {
-        permissions = await plugin.requestPermissions();
-    }
-    if (permissions.display !== 'granted') throw new Error('No se concedió permiso para las notificaciones locales.');
-    await safetyCancelNotification();
-    await plugin.schedule({
-        notifications: [{
-            id: SAFETY_NOTIFICATION_ID,
-            title: 'SENDA MTB · aviso de ruta',
-            body: 'Se ha superado la duración prevista más el margen. Abre la aplicación para revisar la salida.',
-            schedule: { at: new Date(session.alertAt) },
-            extra: { type: 'safety-delay' }
-        }]
-    });
-    return true;
-}
-
-async function safetyStartSession() {
-    if (typeof isRecording === 'undefined' || !isRecording) {
-        safetySettings.armed = true;
-        safetyPersistSettings();
-        safetyShowStatus('Protección preparada; se activará al comenzar una grabación.', 'success');
-        safetyRender();
-        return;
-    }
-    if (safetySession) {
-        safetyShowStatus('Ya hay una protección activa. Finalízala antes de iniciar otra.', 'error');
-        return;
-    }
-    if (!Number.isInteger(safetySettings.durationMinutes) || safetySettings.durationMinutes < 15 || safetySettings.durationMinutes > 720
-        || !Number.isInteger(safetySettings.graceMinutes) || safetySettings.graceMinutes < 5 || safetySettings.graceMinutes > 120) {
-        safetyShowStatus('La duración o el margen guardados no son válidos. Revísalos antes de activar la protección.', 'error');
-        return;
-    }
-    const startedAt = Date.now();
-    const plannedEndAt = startedAt + safetySettings.durationMinutes * 60 * 1000;
-    safetySession = {
-        startedAt,
-        plannedEndAt,
-        alertAt: plannedEndAt + safetySettings.graceMinutes * 60 * 1000
-    };
-    safetySettings.armed = false;
-    safetyOverdueToastShown = false;
-    try {
-        safetyPersistSettings();
-        safetySaveJson(SAFETY_SESSION_KEY, safetySession);
-        const scheduled = await safetyScheduleNotification(safetySession);
-        safetyShowStatus(
-            scheduled
-                ? 'Protección activa y aviso local programado. La alerta no contacta a nadie.'
-                : 'Protección activa en la aplicación. No hay notificaciones locales disponibles en este dispositivo.',
-            scheduled ? 'success' : 'error'
-        );
-    } catch (error) {
-        console.error('No se pudo programar el aviso de seguridad:', error);
-        safetyShowStatus(`Protección activa, pero no se pudo programar el aviso local: ${error.message}`, 'error');
-    }
-    safetyRender();
-}
-
+// La grabación avisa al empezar y terminar; solo se refresca el estado visible.
 async function safetyOnRecordingStarted() {
-    if (safetySettings.armed && !safetySession) await safetyStartSession();
-    else safetyRender();
-}
-
-async function safetyEndSession(message) {
-    safetySession = null;
-    safetyOverdueToastShown = false;
-    let cleanupError = null;
-    try {
-        localStorage.removeItem(SAFETY_SESSION_KEY);
-    } catch (error) {
-        cleanupError = error;
-        console.error('No se pudo borrar la sesión de seguridad guardada:', error);
-    }
-    try {
-        await safetyCancelNotification();
-    } catch (error) {
-        cleanupError = cleanupError || error;
-        console.error('No se pudo cancelar el aviso de seguridad:', error);
-    }
-    safetyShowStatus(
-        cleanupError
-            ? `La protección se ha detenido, pero no se pudo completar toda la limpieza: ${cleanupError.message}`
-            : message,
-        cleanupError ? 'error' : 'success'
-    );
     safetyRender();
 }
 
 async function safetyOnRecordingStopped() {
-    if (safetySession) await safetyEndSession('Protección finalizada al terminar la grabación.');
-    else safetyRender();
+    safetyRender();
 }
 
 function safetyOpenWorkspace() {
@@ -437,25 +330,8 @@ function safetySendSOS() {
     }
 }
 
-function safetyValidateSettings() {
-    const durationMinutes = Number(safetyElement('safety-duration').value);
-    const graceMinutes = Number(safetyElement('safety-grace').value);
-    if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 720) {
-        throw new Error('La duración debe estar entre 15 y 720 minutos.');
-    }
-    if (!Number.isInteger(graceMinutes) || graceMinutes < 5 || graceMinutes > 120) {
-        throw new Error('El margen de aviso debe estar entre 5 y 120 minutos.');
-    }
-    safetySettings.durationMinutes = durationMinutes;
-    safetySettings.graceMinutes = graceMinutes;
-}
-
 function safetyBindUI() {
-    const duration = safetyElement('safety-duration');
-    const grace = safetyElement('safety-grace');
     const groupToggle = safetyElement('safety-group-sharing');
-    if (duration) duration.value = String(safetySettings.durationMinutes);
-    if (grace) grace.value = String(safetySettings.graceMinutes);
     if (groupToggle) {
         groupToggle.checked = safetyGroupTrackingEnabled();
         groupToggle.addEventListener('change', () => safetySetGroupTracking(groupToggle.checked));
@@ -481,11 +357,11 @@ function safetyBindUI() {
         }
         safetyContacts.push({ name, phone });
         try {
-            safetySaveJson(SAFETY_CONTACTS_KEY, safetyContacts);
+            safetyPersistContacts();
             nameInput.value = '';
             phoneInput.value = '';
             safetyRenderContacts();
-            safetyShowStatus('Contacto guardado solo en este dispositivo.', 'success');
+            safetyShowStatus(safetyContactsSavedMessage('Contacto guardado'), 'success');
         } catch (error) {
             safetyContacts.pop();
             console.error('No se pudo guardar el contacto:', error);
@@ -500,9 +376,9 @@ function safetyBindUI() {
         if (!Number.isInteger(index) || index < 0 || index >= safetyContacts.length) return;
         const removed = safetyContacts.splice(index, 1)[0];
         try {
-            safetySaveJson(SAFETY_CONTACTS_KEY, safetyContacts);
+            safetyPersistContacts();
             safetyRenderContacts();
-            safetyShowStatus(`Contacto ${removed.name} eliminado de este dispositivo.`, 'success');
+            safetyShowStatus(safetyContactsSavedMessage(`Contacto ${removed.name} eliminado`), 'success');
         } catch (error) {
             safetyContacts.splice(index, 0, removed);
             console.error('No se pudo eliminar el contacto:', error);
@@ -510,57 +386,19 @@ function safetyBindUI() {
         }
     });
 
-    safetyElement('safety-prepare')?.addEventListener('click', async () => {
-        try {
-            safetyValidateSettings();
-            if (safetySession) {
-                safetyShowStatus('Ya hay una protección activa. Finalízala antes de preparar otra.', 'error');
-                return;
-            }
-            safetyPersistSettings();
-            if (typeof isRecording !== 'undefined' && isRecording) await safetyStartSession();
-            else {
-                safetySettings.armed = true;
-                safetyPersistSettings();
-                safetyShowStatus('Preparada: la protección se activará al comenzar una grabación.', 'success');
-                safetyRender();
-            }
-        } catch (error) {
-            console.error('No se pudo preparar la salida:', error);
-            safetyShowStatus(error.message || 'No se pudo guardar la configuración de seguridad.', 'error');
-        }
-    });
-
     safetyElement('safety-back')?.addEventListener('click', safetyCloseWorkspace);
     safetyElement('safety-send-sos')?.addEventListener('click', safetySendSOS);
-    safetyElement('safety-cancel-alert')?.addEventListener('click', () => safetyEndSession('Aviso cancelado: has indicado que estás bien.'));
-    safetyElement('safety-end-session')?.addEventListener('click', () => safetyEndSession('Protección finalizada.'));
 
     safetyRenderContacts();
     safetyRender();
     window.addEventListener('load', safetyRender, { once: true });
 
-    const plugin = safetyNotificationsPlugin();
-    if (plugin && typeof plugin.addListener === 'function') {
-        try {
-            Promise.resolve(plugin.addListener('localNotificationActionPerformed', event => {
-                if (event && event.notification && event.notification.id === SAFETY_NOTIFICATION_ID) {
-                    if (typeof goToPage === 'function') goToPage(7);
-                    safetyOpenWorkspace();
-                }
-            })).catch(error => {
-                console.error('No se pudo escuchar la apertura de avisos de seguridad:', error);
-            });
-        } catch (error) {
-            console.error('No se pudo escuchar la apertura de avisos de seguridad:', error);
-            safetyShowStatus('No se pudo activar la acción al tocar la notificación de seguridad.', 'error');
-        }
-    }
-    window.setInterval(safetyRender, 1000);
+    // Ubicación y estado del grupo cambian durante la grabación.
+    window.setInterval(safetyRender, 5000);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { safetyNormalizePhone, safetyBuildWhatsAppUrl, safetyBuildSOSMessage };
+    module.exports = { safetyNormalizePhone, safetyNormalizeContacts, safetyBuildWhatsAppUrl, safetyBuildSOSMessage };
 }
 
 if (typeof document !== 'undefined') {

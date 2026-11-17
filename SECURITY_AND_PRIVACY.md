@@ -46,7 +46,8 @@ El modo de seguridad Guardian Mode introduce capacidades críticas de salvaguard
    * Las posiciones transmitidas en vivo (`live_locations`) son temporales y se eliminan inmediatamente tras finalizar la salida o abandonar el grupo.
    * El backend cuenta con un cron de purga (`live_cleanup.pb.js`) que elimina registros que no hayan recibido actualizaciones en 30 minutos.
 3. **Descargo de Responsabilidad SOS:**
-   * La aplicación advierte explícitamente que el botón SOS y la alerta por retraso dependen de cobertura celular y batería suficiente en el terminal móvil. No sustituyen un dispositivo de rescate satelital dedicado (ej. Garmin inReach / SPOT) en zonas remotas sin señal.
+   * Los contactos de emergencia (nombre y teléfono) se guardan en las preferencias privadas de la cuenta (`mtb_user_preferences`, solo accesibles por su propietario) para no tener que volver a introducirlos en otro dispositivo. Sin sesión iniciada se guardan solo en el móvil.
+   * La aplicación advierte explícitamente que el mensaje SOS por WhatsApp depende de cobertura celular y batería suficiente en el terminal móvil. No sustituye un dispositivo de rescate satelital dedicado (ej. Garmin inReach / SPOT) en zonas remotas sin señal.
 
 ---
 

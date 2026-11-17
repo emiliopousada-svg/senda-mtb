@@ -1059,12 +1059,12 @@
                     <header class="safety-heading">
                         <span class="eyebrow">PREPARACIÓN DE RUTA</span>
                         <h2 id="safety-title">Seguridad</h2>
-                        <p>Configura avisos locales y contactos. En una emergencia, WhatsApp se abrirá con el mensaje preparado; tú tendrás que enviarlo.</p>
+                        <p>Guarda tus contactos de emergencia. En una emergencia, WhatsApp se abrirá con el mensaje preparado; tú tendrás que enviarlo.</p>
                     </header>
                     <div class="safety-grid">
                         <section class="safety-card" aria-labelledby="safety-contacts-title">
                             <h3 id="safety-contacts-title">Contactos de emergencia</h3>
-                            <p>Se guardan solo en este dispositivo y no se sincronizan con tu cuenta.</p>
+                            <p id="safety-contacts-storage">Se guardan en tu cuenta: al iniciar sesión en otro móvil los tendrás disponibles.</p>
                             <form id="safety-contact-form" class="safety-contact-form">
                                 <label for="safety-contact-name">Nombre</label>
                                 <input id="safety-contact-name" type="text" maxlength="40" autocomplete="name" required>
@@ -1073,34 +1073,15 @@
                                 <button class="safety-secondary-button" type="submit">Añadir contacto</button>
                             </form>
                             <ul id="safety-contact-list" class="safety-contact-list" aria-label="Contactos guardados"></ul>
+                            <p id="safety-status" class="safety-note" role="status" aria-live="polite"></p>
                         </section>
-                        <section class="safety-card" aria-labelledby="safety-settings-title">
-                            <h3 id="safety-settings-title">Aviso de salida</h3>
-                            <div class="safety-field-row">
-                                <label for="safety-duration">Duración prevista (minutos)</label>
-                                <input id="safety-duration" type="number" min="15" max="720" step="15" value="180">
-                            </div>
-                            <div class="safety-field-row">
-                                <label for="safety-grace">Avisar tras el retraso (minutos)</label>
-                                <input id="safety-grace" type="number" min="5" max="120" step="5" value="15">
-                            </div>
+                        <section class="safety-card safety-active-card" aria-labelledby="safety-active-title">
+                            <h3 id="safety-active-title">Durante la salida</h3>
                             <label class="safety-toggle">
                                 <input id="safety-group-sharing" type="checkbox">
                                 <span>Compartir ubicación en directo con mi grupo mientras grabo</span>
                             </label>
                             <p id="safety-group-status" class="safety-note" role="status" aria-live="polite"></p>
-                            <label class="safety-toggle safety-unavailable">
-                                <input type="checkbox" disabled>
-                                <span>Detección de caídas</span>
-                            </label>
-                            <p class="safety-note">No disponible: esta versión no tiene un detector de caídas validado para tu dispositivo.</p>
-                            <button id="safety-prepare" class="safety-primary-button" type="button">Preparar próxima salida</button>
-                            <p id="safety-status" class="safety-note" role="status" aria-live="polite"></p>
-                        </section>
-                        <section class="safety-card safety-active-card" aria-labelledby="safety-active-title">
-                            <h3 id="safety-active-title">Durante la salida</h3>
-                            <p id="safety-session-status" class="safety-note" role="status" aria-live="polite">Sin protección activa.</p>
-                            <div id="safety-countdown" class="safety-countdown">--:--</div>
                             <p id="safety-last-location" class="safety-note">Última ubicación conocida: no disponible.</p>
                             <a id="safety-location-link" class="safety-location-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación en el mapa</a>
                             <label class="safety-field-row" for="safety-sos-contact">
@@ -1108,9 +1089,7 @@
                                 <select id="safety-sos-contact"></select>
                             </label>
                             <button id="safety-send-sos" class="safety-sos-button" type="button">Preparar mensaje SOS</button>
-                            <button id="safety-cancel-alert" class="safety-secondary-button" type="button" hidden>Estoy bien · cancelar aviso</button>
-                            <button id="safety-end-session" class="safety-secondary-button" type="button" hidden>Finalizar protección</button>
-                            <p class="safety-note">El SOS no se envía automáticamente. El aviso por retraso es local y no contacta a nadie si no puedes responder.</p>
+                            <p class="safety-note">El SOS no se envía automáticamente: WhatsApp se abre con el mensaje y tu ubicación, y tú pulsas Enviar.</p>
                         </section>
                     </div>
                 </section>
