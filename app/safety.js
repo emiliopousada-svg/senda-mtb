@@ -155,10 +155,21 @@ function safetyTrackSignedOutContacts(previous) {
     else localStorage.removeItem(SAFETY_CONTACTS_UNSYNCED_KEY);
 }
 
+// Con sesión no se apuntan altas nuevas, pero un contacto borrado deja de estar pendiente de subir.
+function safetyForgetDeletedSignedOutContacts() {
+    const marked = safetyReadContactList(SAFETY_CONTACTS_UNSYNCED_KEY);
+    if (!marked.length) return;
+    const current = new Set(safetyContacts.map(contact => contact.phone));
+    const kept = marked.filter(contact => current.has(contact.phone));
+    if (kept.length) safetySaveJson(SAFETY_CONTACTS_UNSYNCED_KEY, kept);
+    else localStorage.removeItem(SAFETY_CONTACTS_UNSYNCED_KEY);
+}
+
 function safetyPersistContacts() {
     const previous = safetyReadContactList(SAFETY_CONTACTS_KEY);
     safetySaveJson(SAFETY_CONTACTS_KEY, safetyContacts);
     if (!safetyAccountReady()) safetyTrackSignedOutContacts(previous);
+    else safetyForgetDeletedSignedOutContacts();
     if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
 }
 

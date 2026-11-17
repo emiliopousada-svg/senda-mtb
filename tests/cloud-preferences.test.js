@@ -301,3 +301,46 @@ test('a pending upload includes the contacts added while signed out', async () =
     assert.equal(holder.ctx.values.has('mtb_pro_safety_contacts_unsynced'), false);
     assert.equal(holder.ctx.values.has(key), false);
 });
+
+test('a pending snapshot replaced during the request does not overwrite newer local contacts', async () => {
+    const holder = {};
+    const newer = [{ name: 'Eva', phone: '+34600555444' }];
+    holder.ctx = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify(newer),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async (url, method) => {
+            if (method) throw new Error('no debería subir el pendiente antiguo');
+            holder.ctx.values.set(holder.key, JSON.stringify({ routeSound: false, safetyContacts: newer }));
+            return { items: [{ id: 'preferences-1', preferences: { safetyContacts: [] } }] };
+        }
+    });
+    holder.key = holder.ctx.context.cloudPreferencesPendingKey('user-1', 'https://pb.example');
+    holder.ctx.values.set(holder.key, JSON.stringify({ routeSound: false }));
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(holder.ctx.values.get('mtb_pro_safety_contacts')), newer);
+    assert.equal(holder.ctx.timers.length, 1);
+});
+
+test('an old pending snapshot after an account change does not carry the previous account contacts', async () => {
+    const holder = {};
+    holder.ctx = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async (url, method, body) => {
+            if (!method) return { items: [] };
+            holder.body = body;
+            return { id: 'preferences-2' };
+        }
+    });
+    const key = holder.ctx.context.cloudPreferencesPendingKey('user-2', 'https://pb.example');
+    holder.ctx.values.set(key, JSON.stringify({ routeSound: false }));
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.equal(holder.body.preferences.safetyContacts.length, 0);
+});

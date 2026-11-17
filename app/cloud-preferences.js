@@ -381,10 +381,18 @@ async function syncCloudPreferences() {
             }
 
             let preferences = pending;
+            if (pending && localStorage.getItem(pendingKey) !== pendingRaw) {
+                // Hubo otro cambio durante la consulta: se sube ese, más reciente, en la siguiente pasada.
+                setCloudPreferencesSyncState('pending');
+                succeeded = true;
+                return true;
+            }
             if (preferences && (!pendingHasContacts || unsyncedContacts)) {
                 // Un pendiente antiguo sin contactos no borra los de la cuenta, y los añadidos sin sesión
                 // se incluyen en la subida.
-                const base = pendingHasContacts ? preferences.safetyContacts : (remoteContacts || localContacts());
+                const base = pendingHasContacts
+                    ? preferences.safetyContacts
+                    : (remoteContacts || (ownerChanged ? [] : localContacts()));
                 preferences.safetyContacts = withSignedOut(base);
                 setLocalContacts(preferences.safetyContacts);
             }
