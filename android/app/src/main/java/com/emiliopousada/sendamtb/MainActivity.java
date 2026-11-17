@@ -1,4 +1,4 @@
-package com.emiliopousada.mtbcamboyapro;
+package com.emiliopousada.sendamtb;
 
 import android.app.AlertDialog;
 import android.os.Bundle;

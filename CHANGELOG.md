@@ -11,6 +11,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * **Renombrado de la app:** `senda-brava` / `MTBPro` → **`senda-mtb`** en todos los archivos del proyecto (HTML, JS, CSS, JSON, Markdown, workflows de CI/CD).
 * **AI renombrada:** `Camboya AI` → `Senda AI` en interfaz, documentación y casos de prueba.
 * **Workflows de GitHub Actions actualizados:** `mtbpro-checks.yml` renombrado a `senda-mtb-checks.yml`; artefactos y títulos de release actualizados al nuevo nombre.
+* **Identificador de la app:** `com.emiliopousada.mtbcamboyapro` → `com.emiliopousada.sendamtb` en `android/app/build.gradle` (`namespace` y `applicationId`), `capacitor.config.json`, `strings.xml`, paquete Java y bundle id de iOS. Android la trata como una app nueva: no actualiza la instalada con el identificador anterior ni conserva sus datos locales.
 
 ### Añadido
 * **Banner de servidor caído:** Al arrancar, la app comprueba la disponibilidad del servidor PocketBase (`/api/health`) y muestra un aviso rojo persistente si no hay conexión, con reintento automático cada 30 s.
