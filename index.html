@@ -44,54 +44,6 @@
 
         <!-- PÁGINA 1: MAPA Y CONTROLES DIRECTOS -->
         <div class="page" id="page-map">
-            <div class="metrics-bar">
-                <div class="m-box" data-metric="speed" role="button">
-                    <div class="m-val" id="m-speed">0.0</div>
-                    <div class="m-lbl">KM/H</div>
-                </div>
-                <div class="m-box" data-metric="dist" role="button">
-                    <div class="m-val" id="m-dist">0.00</div>
-                    <div class="m-lbl">DISTANCIA</div>
-                </div>
-                <div class="m-box" data-metric="elev" role="button">
-                    <div class="m-val" id="m-elevation">0</div>
-                    <div class="m-lbl">Desnivel</div>
-                </div>
-                <div class="m-box" data-metric="hr" role="button">
-                    <div class="m-val" id="m-hr" style="color: #ef5350;">--</div>
-                    <div class="m-lbl">BPM</div>
-                </div>
-                <div class="m-box" data-metric="cadence" data-default-visible="false" role="button">
-                    <div class="m-val" id="m-cadence">--</div>
-                    <div class="m-lbl">RPM</div>
-                </div>
-                <div class="m-box" data-metric="power" data-default-visible="false" role="button">
-                    <div class="m-val" id="m-power">--</div>
-                    <div class="m-lbl">VATIOS</div>
-                </div>
-                <div class="m-box" data-metric="avg-speed" data-default-visible="false" role="button">
-                    <div class="m-val" id="m-avg-speed">0.0</div>
-                    <div class="m-lbl">MEDIA KM/H</div>
-                </div>
-                <div class="m-box" data-metric="moving" role="button">
-                    <div class="m-val" id="m-moving">00:00</div>
-                    <div class="m-lbl">T. MOVIM.</div>
-                </div>
-                <div class="m-box" data-metric="time" role="button">
-                    <div class="m-val" id="m-time">00:00</div>
-                    <div class="m-lbl">T. TOTAL</div>
-                </div>
-            </div>
-
-            <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
-                <div><span>PERFIL EN DIRECTO</span><strong id="recording-live-altitude">-- m</strong></div>
-                <svg viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
-                    <path id="recording-live-area"></path>
-                    <path id="recording-live-line"></path>
-                </svg>
-                <small id="recording-live-hint">Esperando lecturas de altitud</small>
-            </div>
-
             <div id="ride-status" role="status" aria-live="polite">
                 <span class="ride-status-item" id="ride-battery">🔋 --</span>
             </div>
@@ -107,6 +59,15 @@
                     <line id="map-route-cursor-line" x1="0" y1="7" x2="0" y2="60" style="display:none"></line>
                     <circle id="map-route-cursor" cx="0" cy="0" r="5" style="display:none"></circle>
                 </svg>
+            </div>
+
+            <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
+                <div><span>PERFIL EN DIRECTO</span><strong id="recording-live-altitude">-- m</strong></div>
+                <svg viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
+                    <path id="recording-live-area"></path>
+                    <path id="recording-live-line"></path>
+                </svg>
+                <small id="recording-live-hint">Esperando lecturas de altitud</small>
             </div>
 
             <div id="map"></div>
@@ -161,22 +122,60 @@
                     </svg>
                 </button>
             </div>
-            <div class="controls-overlay">
-                <button class="btn-main-action" id="btn-start">
-                    <span id="ico-start">▶️</span> <span id="lbl-start">COMENZAR RUTA</span>
-                </button>
-                <div id="ride-safety-actions" class="ride-safety-actions" hidden>
-                    <button class="btn-icon-only ride-safety-open" id="safety-ride-open" type="button" aria-label="Abrir seguridad de ruta" title="Seguridad de ruta">⬡</button>
-                    <button class="btn-icon-only ride-safety-sos" id="safety-ride-sos" type="button" aria-label="Preparar SOS por WhatsApp" title="Preparar SOS por WhatsApp">SOS</button>
+            <div class="map-bottom-panel" id="map-bottom-panel">
+                <div class="metrics-bar">
+                    <div class="m-box" data-metric="speed" role="button">
+                        <div class="m-val" id="m-speed">0.0</div>
+                        <div class="m-lbl">KM/H</div>
+                    </div>
+                    <div class="m-box" data-metric="dist" role="button">
+                        <div class="m-val" id="m-dist">0.00</div>
+                        <div class="m-lbl">DISTANCIA</div>
+                    </div>
+                    <div class="m-box" data-metric="elev" role="button">
+                        <div class="m-val" id="m-elevation">0</div>
+                        <div class="m-lbl">Desnivel</div>
+                    </div>
+                    <div class="m-box" data-metric="hr" role="button">
+                        <div class="m-val" id="m-hr" style="color: #ef5350;">--</div>
+                        <div class="m-lbl">BPM</div>
+                    </div>
+                    <div class="m-box" data-metric="cadence" data-default-visible="false" role="button">
+                        <div class="m-val" id="m-cadence">--</div>
+                        <div class="m-lbl">RPM</div>
+                    </div>
+                    <div class="m-box" data-metric="power" data-default-visible="false" role="button">
+                        <div class="m-val" id="m-power">--</div>
+                        <div class="m-lbl">VATIOS</div>
+                    </div>
+                    <div class="m-box" data-metric="avg-speed" data-default-visible="false" role="button">
+                        <div class="m-val" id="m-avg-speed">0.0</div>
+                        <div class="m-lbl">MEDIA KM/H</div>
+                    </div>
+                    <div class="m-box" data-metric="moving" role="button">
+                        <div class="m-val" id="m-moving">00:00</div>
+                        <div class="m-lbl">T. MOVIM.</div>
+                    </div>
                 </div>
-                <button class="btn-unfollow-map" id="btn-unfollow" type="button" style="display:none;">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 19V5l6-2 4 2 6-2v11M4 5l6 2 4-2 6 2M10 7v11m4-13v8M16 17l5 5m0-5-5 5"></path>
-                    </svg>
-                    <span>Dejar de seguir ruta</span>
-                </button>
-                <button class="btn-icon-only btn-danger-stop" id="btn-stop" title="Finalizar ruta">⏹️</button>
+                <div class="controls-overlay">
+                    <button class="btn-main-action" id="btn-start">
+                        <span id="ico-start">▶️</span> <span id="lbl-start">COMENZAR RUTA</span>
+                    </button>
+                    <div id="ride-safety-actions" class="ride-safety-actions" hidden>
+                        <button class="btn-icon-only ride-safety-open" id="safety-ride-open" type="button" aria-label="Abrir seguridad de ruta" title="Seguridad de ruta">⬡</button>
+                        <button class="btn-icon-only ride-safety-sos" id="safety-ride-sos" type="button" aria-label="Preparar SOS por WhatsApp" title="Preparar SOS por WhatsApp">SOS</button>
+                    </div>
+                    <button class="btn-unfollow-map" id="btn-unfollow" type="button" style="display:none;">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 19V5l6-2 4 2 6-2v11M4 5l6 2 4-2 6 2M10 7v11m4-13v8M16 17l5 5m0-5-5 5"></path>
+                        </svg>
+                        <span>Dejar de seguir ruta</span>
+                    </button>
+                    <button class="btn-icon-only btn-danger-stop" id="btn-stop" title="Finalizar ruta">⏹️</button>
+                </div>
             </div>
+            <!-- El tiempo total ya no se muestra en el mapa; recording.js lo sigue escribiendo aquí para el Cockpit. -->
+            <span id="m-time" hidden>00:00</span>
         </div>
 
         <!-- PÁGINA 2: ESTADÍSTICAS -->

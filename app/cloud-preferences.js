@@ -7,10 +7,10 @@ const CLOUD_PREFERENCES_DEBOUNCE_MS = 700;
 const CLOUD_PREFERENCES_RETRY_INITIAL_MS = 5000;
 const CLOUD_PREFERENCES_RETRY_MAX_MS = 60000;
 const CLOUD_PREFERENCE_RECORDING_METRICS = [
-    'speed', 'dist', 'elev', 'hr', 'cadence', 'power', 'avg-speed', 'moving', 'time'
+    'speed', 'dist', 'elev', 'hr', 'cadence', 'power', 'avg-speed', 'moving'
 ];
 const CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS = [
-    'speed', 'dist', 'elev', 'hr', 'moving', 'time'
+    'speed', 'dist', 'elev', 'hr', 'moving'
 ];
 const DEFAULT_CLOUD_PREFERENCES = {
     version: 1,

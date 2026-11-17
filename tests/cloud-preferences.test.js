@@ -66,7 +66,7 @@ test('cloud preferences reject invalid values and fill safe defaults', () => {
     assert.equal(preferences.weeklyGoalKm, 100);
     assert.equal(preferences.maxHeartRate, null);
     assert.equal(preferences.ftpWatts, null);
-    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist', 'elev', 'hr', 'moving', 'time']);
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist', 'elev', 'hr', 'moving']);
     assert.equal(Object.hasOwn(preferences, 'dashboardCardOrder'), false);
     assert.equal(Object.hasOwn(preferences, 'adminToken'), false);
 });
@@ -90,8 +90,18 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
     assert.equal(preferences.maxHeartRate, 190);
     assert.equal(preferences.ftpWatts, 250);
     assert.equal(preferences.recordingMetricOrder[0], 'power');
-    assert.equal(preferences.recordingMetricOrder.length, 9);
+    assert.equal(preferences.recordingMetricOrder.length, 8);
     assert.deepEqual(preferences.recordingVisibleMetrics, ['power']);
+});
+
+test('cloud preferences drop the retired total-time map metric', () => {
+    const preferences = normalizePreferences({
+        recordingMetricOrder: ['time', 'speed', 'dist'],
+        recordingVisibleMetrics: ['speed', 'time', 'dist']
+    });
+    assert.equal(preferences.recordingMetricOrder.includes('time'), false);
+    assert.equal(preferences.recordingMetricOrder[0], 'speed');
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist']);
 });
 
 test('signed-in sync applies the owner preferences returned by PocketBase', async () => {

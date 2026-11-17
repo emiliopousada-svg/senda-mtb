@@ -13,6 +13,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * Ajustes muestra el entorno junto a la versión cuando no es producción.
 * Pruebas `tests/app-config.test.js`.
 
+### Cambiado
+* **Mapa: panel inferior único.** Las métricas (km/h, distancia, desnivel, pulso, tiempo en movimiento…) pasan de la parte superior a un panel abajo, encima de la navegación, que incluye también Comenzar/Pausar ruta, seguridad y SOS, Dejar de seguir ruta y Finalizar. En horizontal, métricas y botones van en una sola fila.
+* Hasta 5 métricas se muestran en una fila; con más, en dos filas equilibradas.
+* Botones laterales, zoom y perfiles suben a la parte superior del mapa; la atribución del mapa queda siempre visible encima del panel.
+* En horizontal las columnas de iconos se compactan para no quedar bajo la barra de navegación.
+
+### Eliminado
+* **Tiempo total en el mapa:** ya no se muestra ni se puede elegir en las métricas del mapa (las preferencias guardadas con él se limpian solas). El Cockpit y las estadísticas siguen mostrando el tiempo total.
+
 ### Corregido
 * **Inicio en móvil:** la tarjeta de bienvenida quedaba detrás de la barra de estado del teléfono (hora, batería, notch). Ahora deja libre la altura real de la barra en cada dispositivo, usando `env(safe-area-inset-top)` y la variable `--safe-area-inset-top` que inyecta Capacitor.
 
