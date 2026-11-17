@@ -20,6 +20,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ### Corregido
 * **Codificación de `index.html`:** el renombrado guardó el archivo con doble codificación (textos como `Â¡Hola`, `prÃ³xima` e iconos rotos); se restaura UTF-8 correcto.
+* **Logo del menú lateral:** muestra `senda-mtb` en lugar de `senda-brava`.
 * **Avatar en Inicio:** pasa a la esquina superior derecha de la tarjeta principal y crece de 64 a 84 px en móvil y de 68 a 96 px en pantallas grandes.
 * **CI con la suite completa:** `senda-mtb checks` ejecuta `npm test` en cada push y PR, incluida la prueba de consistencia de versión.
 * **Versión unificada en 0.2.0:** README, `app/config.js` y `package-lock.json` coinciden con `package.json`; se elimina el BOM de `package.json` que hacía fallar la prueba de consistencia de versión.
