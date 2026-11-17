@@ -12,6 +12,12 @@ const toolsWorkspaceIds = [
     'misc-settings-workspace'
 ];
 
+function toolsScrollToTop() {
+    // La página de herramientas es una lámina dentro de un carrusel horizontal.
+    // scrollIntoView() también puede desplazar ese carrusel y desalinear las pestañas.
+    document.querySelector('.tools-page')?.scrollTo({ top: 0, behavior: 'auto' });
+}
+
 function toolsOpenWorkspace(id) {
     const workspace = document.getElementById(id);
     const hub = document.querySelector('.tools-hub');
@@ -28,7 +34,7 @@ function toolsOpenWorkspace(id) {
     hub.hidden = true;
     heading.hidden = true;
     workspace.hidden = false;
-    workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toolsScrollToTop();
 }
 
 function toolsCloseWorkspaces() {
@@ -86,6 +92,6 @@ document.querySelector('.tools-grid')?.addEventListener('click', event => {
 document.querySelector('.tools-page')?.addEventListener('click', event => {
     if (event.target.closest('[data-tools-back]')) {
         toolsCloseWorkspaces();
-        document.querySelector('.tools-hub')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toolsScrollToTop();
     }
 });

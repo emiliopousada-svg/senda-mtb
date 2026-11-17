@@ -83,7 +83,7 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
 
         addEventListener() {}
         close() { this.open = false; }
-        scrollIntoView() {}
+        scrollTo() {}
     }
 
     const elements = new Map([
@@ -128,9 +128,12 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
 
 test('opening a control-center workspace hides the hub and shows only the chosen panel', () => {
     class FakeElement {
-        constructor(hidden = false) { this.hidden = hidden; }
+        constructor(hidden = false) {
+            this.hidden = hidden;
+            this.scrollCalls = [];
+        }
         addEventListener() {}
-        scrollIntoView() {}
+        scrollTo(options) { this.scrollCalls.push(options); }
     }
 
     const workspaceIds = [
@@ -162,4 +165,7 @@ test('opening a control-center workspace hides the hub and shows only the chosen
     for (const id of workspaceIds) {
         assert.equal(elements.get(id).hidden, id !== 'sensors-workspace');
     }
+    const [scrollCall] = elements.get('.tools-page').scrollCalls;
+    assert.equal(scrollCall.top, 0);
+    assert.equal(scrollCall.behavior, 'auto');
 });

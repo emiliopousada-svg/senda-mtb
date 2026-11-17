@@ -288,7 +288,7 @@ function garageOpenWorkspace() {
 
 function garageCloseWorkspace() {
     toolsCloseWorkspaces();
-    document.querySelector('.tools-hub')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (typeof toolsScrollToTop === 'function') toolsScrollToTop();
 }
 
 function garagePhotoToDataUrl(file) {
