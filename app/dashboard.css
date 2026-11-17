@@ -16,6 +16,12 @@
 .route-card-map-line { stroke:#168cff; }
 .route-card-map-start { stroke:#168cff; }
 .route-card-map-end { fill:#168cff; }
+/* Altura real de la barra de estado / notch del teléfono.
+   - iOS y Android con WebView 140+: env(safe-area-inset-top) (index.html usa viewport-fit=cover).
+   - Capacitor 8 (SystemBars) inyecta además --safe-area-inset-top con el valor medido por Android.
+   - En WebView antiguos Capacitor ya separa el contenido de la barra y ambos valen 0.
+   Se usa el mayor de los dos para que valga en cualquier teléfono. */
+:root { --app-safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
 .dashboard-content { min-height: 100%; padding: 14px 14px calc(84px + env(safe-area-inset-bottom, 0px)); }
 .dashboard-hero {
     position: relative; isolation: isolate; min-height: 170px; display: flex; align-items: flex-end;
@@ -193,7 +199,7 @@
 .explore-button span { font-size:1rem; }
 
 @media (min-width: 720px) {
-    .dashboard-content { padding:20px 22px 26px; }
+    .dashboard-content { padding:calc(20px + var(--app-safe-top)) 22px 26px; }
     .dashboard-hero { min-height:190px; padding:27px 30px; }
     .dashboard-kpis { grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px; }
     .dashboard-kpi { min-height:144px; padding:15px 16px; }
@@ -225,7 +231,7 @@
     .swiper-wrapper { width:max-content; height:100dvh; margin-left:244px; }
     .page { width:calc(100vw - 244px); height:100dvh; }
     .mobile-nav { display:none; }
-    .dashboard-content { max-width:1750px; margin:0 auto; padding:22px clamp(22px,2vw,36px) 28px; }
+    .dashboard-content { max-width:1750px; margin:0 auto; padding:calc(22px + var(--app-safe-top)) clamp(22px,2vw,36px) 28px; }
     .dashboard-hero { min-height:206px; padding:30px 34px; border-radius:22px; }
     .dashboard-hero::after { position:absolute; z-index:0; right:0; bottom:0; width:50%; height:100%; content:""; background:radial-gradient(ellipse at 84% 70%,rgba(8,16,22,.02),rgba(9,13,18,.1) 46%,rgba(9,13,18,.55)); }
     .dashboard-hero h1 { font-size:2.75rem; }
@@ -248,7 +254,7 @@
     .mobile-nav .nav-btn { min-width:0; padding:3px 1px; font-size:.59rem; }
     .mobile-nav .nav-btn .icon { color:inherit; font-size:1.15rem; }
     .mobile-nav .nav-btn.active { color:var(--mtb-blue); }
-    .dashboard-content { padding-top:10px; }
+    .dashboard-content { padding-top:calc(10px + var(--app-safe-top)); }
     .dashboard-hero { min-height:156px; flex-direction:column; align-items:flex-start; justify-content:flex-end; padding:20px 17px; }
     .hero-copy h1 { font-size:1.85rem; }
     .hero-copy { --hero-avatar-size:84px; }

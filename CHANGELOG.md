@@ -13,6 +13,9 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * Ajustes muestra el entorno junto a la versión cuando no es producción.
 * Pruebas `tests/app-config.test.js`.
 
+### Corregido
+* **Inicio en móvil:** la tarjeta de bienvenida quedaba detrás de la barra de estado del teléfono (hora, batería, notch). Ahora deja libre la altura real de la barra en cada dispositivo, usando `env(safe-area-inset-top)` y la variable `--safe-area-inset-top` que inyecta Capacitor.
+
 ---
 
 ## [0.2.2] - 2026-11-17
