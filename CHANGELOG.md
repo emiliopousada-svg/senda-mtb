@@ -5,10 +5,25 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
-## [Sin publicar]
+## [0.2.4] - 2026-11-17
+
+### Añadido
+* **Garaje:** en Más herramientas, con la foto de tu bici arriba y su nombre. Registra revisiones y mantenimiento (revisión general, cadena, frenos, neumáticos, suspensión, transmisión, líquido tubeless, lavado y engrase u otro) con fecha, coste y notas. Cuenta los kilómetros desde la última revisión general con las salidas grabadas, avisa cuando toca según el intervalo que elijas (1000 km por defecto) y muestra los kilómetros desde el último cambio de cada pieza. Los datos se guardan en el móvil.
+* **Relieve 3D en "Tu mapa":** la pantalla de inicio muestra la última ruta como un relieve en 3D que se puede girar; si la ruta no tiene altitud, se mantiene el trazado en 2D.
+* Pruebas `tests/garage.test.js`, `tests/route-relief.test.js`, `tests/status-bar.test.js` y `tests/dashboard-greeting.test.js`.
+
+### Cambiado
+* **Barra de estado:** una franja negra bajo la barra del teléfono deja siempre visibles la hora, la cobertura y la batería. El mapa y las páginas empiezan debajo, y en Android los iconos de la barra son siempre claros (SystemBars `DARK`).
+* **Caché sin conexión:** el service worker incluye también `recording-panel.js`, `cockpit.js`, `safety.js`, `route-relief.js`, `garage.js` y `tools.js`.
+* **Cuenta:** el formulario de acceso funciona con Intro, evita envíos dobles y tiene etiquetas y autocompletado.
+* Se añade el icono `icon-192.png` y `icon-512.png` pasa a medir 512 px.
+
+### Eliminado
+* **Senda AI:** se quitan la tarjeta y el panel de ejemplo de Más herramientas.
+* **Sitios de comida en el mapa:** ya no se pueden marcar. Los que ya estaban guardados se siguen viendo y se pueden borrar.
 
 ### Corregido
-* **Saludo de inicio:** al arrancar la app ya no aparece el error «Cloud is not defined». El saludo y la foto de perfil se mostraban antes de que se cargara la sesión; ahora usan el apodo y la foto guardados. Además, el error impedía activar el indicador de conexión, que ya vuelve a funcionar.
+* **Saludo de inicio:** al arrancar la app ya no aparece el error «Cloud is not defined». Mientras carga la sesión, el saludo y la foto de perfil usan el apodo y la foto guardados. El error también impedía activar el indicador de conexión, que vuelve a funcionar.
 
 ## [0.2.3] - 2026-11-17
 
