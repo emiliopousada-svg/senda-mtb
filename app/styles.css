@@ -569,7 +569,7 @@ html, body {
 .btn.secondary { background: #444; }
 .btn:disabled { opacity: 0.5; }
 
-input[type="file"], input[type="text"], input[type="password"], input[type="number"], select {
+input[type="file"], input[type="text"], input[type="password"], input[type="number"], input[type="email"], select {
     width: 100%;
     padding: 12px;
     border-radius: 10px;

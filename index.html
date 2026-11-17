@@ -658,19 +658,21 @@
                 <p class="hint">Se sincronizan tus preferencias de uso. La ubicación GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
                 <p class="hint">Servidor de sincronización:</p>
                 <code id="acc-server" class="server-address" aria-live="polite">Sin servidor configurado</code>
-                <div id="acc-form">
+                <form id="acc-form" novalidate>
                     <label for="acc-nickname">Apodo</label>
-                    <input type="text" id="acc-nickname" maxlength="32" autocomplete="nickname" placeholder="Obligatorio al crear cuenta">
-                    <input type="text" id="acc-email" placeholder="Correo" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
-                    <input type="password" id="acc-pass" placeholder="Contraseña (mínimo 8 caracteres)" autocomplete="current-password">
+                    <input type="text" id="acc-nickname" name="nickname" maxlength="32" autocomplete="nickname" placeholder="Obligatorio al crear cuenta">
+                    <label for="acc-email">Correo</label>
+                    <input type="email" id="acc-email" name="email" placeholder="tu@correo.com" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+                    <label for="acc-pass">Contraseña</label>
+                    <input type="password" id="acc-pass" name="password" placeholder="Mínimo 8 caracteres" autocomplete="current-password" minlength="8" required>
                     <label for="acc-weight">Peso (kg)</label>
-                    <input type="number" id="acc-weight" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Se guarda en tu cuenta">
+                    <input type="number" id="acc-weight" name="weight" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Se guarda en tu cuenta">
                     <label for="acc-age">Edad (años)</label>
-                    <input type="number" id="acc-age" min="10" max="100" step="1" inputmode="numeric" placeholder="Para estimar la FC máxima">
+                    <input type="number" id="acc-age" name="age" min="10" max="100" step="1" inputmode="numeric" placeholder="Para estimar la FC máxima">
                     <p class="hint">Se guardan en tu cuenta. Si ya completaste tu perfil, no hace falta volver a introducirlos.</p>
-                    <button class="btn" id="acc-login">Entrar</button>
-                    <button class="btn secondary" id="acc-register">Crear cuenta</button>
-                </div>
+                    <button class="btn" id="acc-login" type="submit">Entrar</button>
+                    <button class="btn secondary" id="acc-register" type="button">Crear cuenta</button>
+                </form>
                 <div id="acc-logged" style="display:none;">
                     <div id="acc-nickname-setup" hidden>
                         <p class="hint">Elige un apodo para completar tu cuenta y sincronizar tus rutas.</p>
@@ -681,7 +683,7 @@
                     </div>
                     <div id="acc-ready" hidden>
                         <p id="acc-nickname-summary" class="hint"></p>
-                        <button class="btn" id="acc-sync">Sincronizar ahora</button>
+                        <button class="btn" id="acc-sync" type="button">Sincronizar ahora</button>
                         <details class="account-options">
                             <summary>Perfil y sesión</summary>
                             <div class="account-profile">
@@ -699,13 +701,13 @@
                                         <label for="acc-avatar-file">Foto de perfil (opcional)</label>
                                         <input type="file" id="acc-avatar-file" accept="image/jpeg,image/png,image/webp">
                                         <p class="hint">Se ajusta a 512 × 512 y se comprime a un máximo de 256 KB.</p>
-                                        <button class="btn secondary" id="acc-profile-save">Guardar perfil</button>
+                                        <button class="btn secondary" id="acc-profile-save" type="button">Guardar perfil</button>
                                         <button class="btn secondary" id="acc-profile-cancel" type="button" hidden>Cancelar</button>
                                     </div>
                                     <button class="btn secondary" id="acc-profile-edit" type="button" hidden>Modificar perfil</button>
                                 </div>
                             </div>
-                            <button class="btn secondary" id="acc-logout">Cerrar sesión</button>
+                            <button class="btn secondary" id="acc-logout" type="button">Cerrar sesión</button>
                         </details>
                     </div>
                 </div>
@@ -1122,8 +1124,8 @@
             <p id="modal-msg"></p>
             <input type="text" id="modal-input">
             <div class="modal-actions">
-                <button class="btn secondary" id="modal-cancel">Cancelar</button>
-                <button class="btn" id="modal-ok">Aceptar</button>
+                <button class="btn secondary" id="modal-cancel" type="button">Cancelar</button>
+                <button class="btn" id="modal-ok" type="button">Aceptar</button>
             </div>
         </div>
     </div>

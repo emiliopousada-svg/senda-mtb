@@ -388,7 +388,7 @@ body { background:var(--mtb-graphite); color:var(--text); }
 .btn.danger,.btn-small.danger { background:linear-gradient(145deg,#682b35,#48212a); color:#ffdce0; }
 .btn:not(:disabled):hover,.btn-small:not(:disabled):hover { filter:brightness(1.08); }
 .btn:focus-visible,.btn-small:focus-visible,.routes-add-button:focus-visible,.nav-btn:focus-visible { outline:2px solid #42aaff; outline-offset:2px; }
-input[type="file"],input[type="text"],input[type="password"],input[type="number"],input[type="search"],select,textarea {
+input[type="file"],input[type="text"],input[type="password"],input[type="number"],input[type="search"],input[type="email"],select,textarea {
     border:1px solid rgba(255,255,255,.11);
     border-radius:11px;
     background:#0e131a;

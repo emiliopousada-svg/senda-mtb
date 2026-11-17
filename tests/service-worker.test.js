@@ -61,3 +61,27 @@ test('service worker does not cache private, no-store, or vary-star responses', 
         headers: { Vary: '*' }
     })), false);
 });
+
+test('service worker precaches every local script and stylesheet loaded by index.html', () => {
+    const root = path.join(__dirname, '..');
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+    const shellUrls = new Set([...sw.matchAll(/^\s*'([^']+)',?$/gm)].map(match => match[1]));
+    const localAssets = [
+        ...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/gi),
+        ...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/gi)
+    ].map(match => match[1]).filter(asset => !/^https?:\/\//i.test(asset));
+    const missing = localAssets.filter(asset => !shellUrls.has(asset));
+    assert.deepEqual(missing, [], `Faltan en SHELL_URLS de sw.js: ${missing.join(', ')}`);
+});
+
+test('manifest icons exist with the declared sizes', () => {
+    const root = path.join(__dirname, '..');
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8').replace(/^\uFEFF/, ''));
+    for (const icon of manifest.icons.filter(item => item.type === 'image/png')) {
+        const file = fs.readFileSync(path.join(root, icon.src));
+        const width = file.readUInt32BE(16);
+        const height = file.readUInt32BE(20);
+        assert.equal(`${width}x${height}`, icon.sizes, `${icon.src} no mide ${icon.sizes}`);
+    }
+});

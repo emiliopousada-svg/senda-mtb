@@ -322,6 +322,22 @@ function renderAccountServer() {
     }
 }
 
+// Evita peticiones duplicadas si se pulsa varias veces mientras se autentica.
+let accAuthInFlight = false;
+async function accAuthOnce(register) {
+    if (accAuthInFlight) return;
+    accAuthInFlight = true;
+    const buttons = [$('acc-login'), $('acc-register')];
+    buttons.forEach(button => { if (button) button.disabled = true; });
+    // Indica a los gestores de contraseñas si es una contraseña nueva.
+    $('acc-pass').autocomplete = register ? 'new-password' : 'current-password';
+    try { await accAuth(register); }
+    finally {
+        accAuthInFlight = false;
+        buttons.forEach(button => { if (button) button.disabled = false; });
+    }
+}
+
 async function accAuth(register) {
     const server = Cloud.server;
     const nickname = $('acc-nickname').value.trim().slice(0, ROUTE_NICKNAME_LIMIT);
@@ -840,8 +856,12 @@ function initAccount() {
         });
     }
 
-    $('acc-login').addEventListener('click', () => accAuth(false));
-    $('acc-register').addEventListener('click', () => accAuth(true));
+    // El formulario evita recargar la página: Intro y "Entrar" inician sesión.
+    $('acc-form').addEventListener('submit', event => {
+        event.preventDefault();
+        accAuthOnce(false);
+    });
+    $('acc-register').addEventListener('click', () => accAuthOnce(true));
     $('acc-nickname-save').addEventListener('click', saveAccountNickname);
     $('acc-sync').addEventListener('click', async () => {
         await syncCloudPreferences();
