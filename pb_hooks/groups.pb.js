@@ -10,7 +10,9 @@ routerAdd("POST", "/api/mtb/groups/create", (e) => {
         const name = String(body.name || "").trim().slice(0, 40);
         if (!name) return e.json(400, { message: "Escribe un nombre para el grupo." });
         const nickname = requireNickname(user.getString("nickname"));
-        const iconFiles = e.findUploadedFiles("icon");
+        // Sin icono la app envía JSON; findUploadedFiles falla si la petición no es multipart.
+        let iconFiles = [];
+        try { iconFiles = e.findUploadedFiles("icon") || []; } catch (_) { iconFiles = []; }
 
         group = new Record($app.findCollectionByNameOrId("mtb_groups"));
         group.set("name", name);
@@ -222,7 +224,7 @@ routerAdd("GET", "/api/mtb/groups/live", (e) => {
 }, $apis.requireAuth("users"));
 
 routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
-    const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries, getSeasonInfo } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries, getSeasonInfo, segmentLeadsByUser } = require(`${__hooks}/groups_utils.js`);
     try {
         const user = $app.findRecordById("users", e.auth.id);
         const groupId = user.getString("groupCode");
@@ -236,6 +238,14 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
         const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "");
         const entries = findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + safeGroupId + '"', "");
         const rankingsByUser = groupRankingSummaryFromEntries(entries, { season });
+        // Lideratos de segmentos: mejor tiempo del grupo en cada segmento comunitario.
+        const memberIds = memberships.map(membership => requireSafeValue(membership.getString("user"), "userId"));
+        const segmentEfforts = [];
+        for (let index = 0; index < memberIds.length; index += 25) {
+            const ownerFilter = memberIds.slice(index, index + 25).map(id => 'owner = "' + id + '"').join(" || ");
+            if (ownerFilter) segmentEfforts.push(...findAllRecordsByFilter("community_segment_efforts", ownerFilter, ""));
+        }
+        const segmentLeads = segmentLeadsByUser(segmentEfforts);
         const members = memberships.map((membership) => {
             const userId = membership.getString("user");
             const member = $app.findRecordById("users", userId);
@@ -250,7 +260,8 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
                 bestMovingTimeSec: ranking.bestMovingTimeSec ?? null,
                 maxSpeedKmh: ranking.maxSpeedKmh ?? null,
                 activityCount: ranking.activityCount ?? 0,
-                leaguePoints: ranking.leaguePoints ?? 0
+                leaguePoints: ranking.leaguePoints ?? 0,
+                segmentLeads: segmentLeads[userId] || 0
             };
         });
         return e.json(200, {
@@ -391,7 +402,8 @@ routerAdd("POST", "/api/mtb/groups/icon", (e) => {
         const safeGroupId = requireSafeValue(groupId, "groupId");
         const group = $app.findRecordById("mtb_groups", safeGroupId);
         if (group.getString("owner") !== user.id) return e.json(403, { message: "Solo el administrador puede cambiar el logo del grupo." });
-        const iconFiles = e.findUploadedFiles("icon");
+        let iconFiles = [];
+        try { iconFiles = e.findUploadedFiles("icon") || []; } catch (_) { iconFiles = []; }
         if (!iconFiles.length) return e.json(400, { message: "Selecciona un logo para el grupo." });
         group.set("icon", iconFiles);
         $app.save(group);
