@@ -18,6 +18,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * **Migración esqueleto para retos/temporadas:** `pb_migrations/PENDING_1794836000_create_competition_collections.js` — colecciones `mtb_group_competitions`, `mtb_group_competition_entries`, `mtb_group_seasons` y `mtb_group_season_awards` listas para activar cuando el módulo esté implementado.
 
 ### Corregido
+* **CI con la suite completa:** `senda-mtb checks` ejecuta `npm test` en cada push y PR, incluida la prueba de consistencia de versión.
 * **Versión unificada en 0.2.0:** README, `app/config.js` y `package-lock.json` coinciden con `package.json`; se elimina el BOM de `package.json` que hacía fallar la prueba de consistencia de versión.
 * **Sincronización de preferencias:** El error cuando falta la colección `mtb_user_preferences` ya muestra un toast específico en lugar de fallar silenciosamente.
 * **Hooks de grupos:** Crear grupo, unirse, renovar código y eliminar grupo muestran mensajes de error claros y accionables ante cualquier fallo de red o de hooks del servidor.
