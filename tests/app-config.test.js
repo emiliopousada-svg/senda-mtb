@@ -80,3 +80,15 @@ test('un APP_ENV desconocido en tiempo de ejecución vuelve a producción', () =
     assert.equal(APP_CONFIG.env, 'production');
     assert.equal(DEFAULT_CLOUD_SERVER, 'https://mtbpro.ddns.net');
 });
+
+test('los caracteres $ de la URL se copian literalmente en config.js', () => {
+    for (const server of ['https://pruebas.example.com/$&', 'https://pruebas.example.com/a$$b', "https://pruebas.example.com/$'"]) {
+        const env = { MTB_APP_ENV: 'staging', MTB_CLOUD_SERVER: server };
+        if (server.endsWith("'")) {
+            assert.throws(() => resolveBuildEnvironment(env, configSource), /no permitidos/);
+            continue;
+        }
+        const { DEFAULT_CLOUD_SERVER } = loadRuntime(buildConfig(env));
+        assert.equal(DEFAULT_CLOUD_SERVER, server);
+    }
+});

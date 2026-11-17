@@ -64,9 +64,10 @@ function applyBuildEnvironment(configText, { name, serverOverride }) {
     const serverLine = /const APP_CLOUD_SERVER_OVERRIDE = '[^']*';/;
     if (!envLine.test(configText)) throw new Error('No se pudo encontrar APP_ENV en app/config.js');
     if (!serverLine.test(configText)) throw new Error('No se pudo encontrar APP_CLOUD_SERVER_OVERRIDE en app/config.js');
+    // Funciones de reemplazo: así `$&`, `$$`… de la URL se copian literalmente.
     return configText
-        .replace(envLine, `const APP_ENV = '${name}';`)
-        .replace(serverLine, `const APP_CLOUD_SERVER_OVERRIDE = '${serverOverride}';`);
+        .replace(envLine, () => `const APP_ENV = '${name}';`)
+        .replace(serverLine, () => `const APP_CLOUD_SERVER_OVERRIDE = '${serverOverride}';`);
 }
 
 module.exports = { loadEnvironments, resolveBuildEnvironment, applyBuildEnvironment };
