@@ -242,8 +242,11 @@ test('contacts added while signed out are merged with the account contacts and u
     const { context, values, timers } = preferencesSyncContext({
         uid: 'user-2',
         initialStorage: {
-            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
-            mtb_pro_safety_contacts_unsynced: '1',
+            mtb_pro_safety_contacts: JSON.stringify([
+                { name: 'Eva', phone: '+34600555444' },
+                { name: 'Ana', phone: '+34600123456' }
+            ]),
+            mtb_pro_safety_contacts_unsynced: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
             mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
         },
         api: async () => ({ items: [{ id: 'preferences-2', preferences: {
@@ -274,4 +277,27 @@ test('a local change made during the request is not overwritten by the account',
     assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
     assert.equal(holder.ctx.values.get('mtb_pro_route_sound'), 'true');
     assert.equal(holder.ctx.timers.length, 1);
+});
+
+test('a pending upload includes the contacts added while signed out', async () => {
+    const holder = {};
+    holder.ctx = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_safety_contacts_unsynced: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async (url, method, body) => {
+            if (!method) return { items: [{ id: 'preferences-1', preferences: { safetyContacts: [] } }] };
+            holder.body = body;
+            return { id: 'preferences-1' };
+        }
+    });
+    const key = holder.ctx.context.cloudPreferencesPendingKey('user-1', 'https://pb.example');
+    holder.ctx.values.set(key, JSON.stringify({ routeSound: false, safetyContacts: [{ name: 'Luis', phone: '+34600999888' }] }));
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(JSON.stringify(holder.body.preferences.safetyContacts.map(contact => contact.phone))), ['+34600999888', '+34600123456']);
+    assert.equal(holder.ctx.values.has('mtb_pro_safety_contacts_unsynced'), false);
+    assert.equal(holder.ctx.values.has(key), false);
 });

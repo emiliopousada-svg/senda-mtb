@@ -138,10 +138,27 @@ function safetySetContacts(contacts) {
     safetyRenderContacts();
 }
 
+const SAFETY_CONTACTS_UNSYNCED_KEY = 'mtb_pro_safety_contacts_unsynced';
+
+function safetyReadContactList(key) {
+    try { return safetyNormalizeContacts(JSON.parse(localStorage.getItem(key) || '[]')); }
+    catch (error) { return []; }
+}
+
+// Sin sesión solo se apuntan los contactos añadidos en ese momento; al iniciar sesión se suman a la
+// cuenta. Los que ya estaban (de una cuenta anterior) nunca pasan a otra cuenta.
+function safetyTrackSignedOutContacts(previous) {
+    const before = new Set(previous.map(contact => contact.phone));
+    const marked = new Set(safetyReadContactList(SAFETY_CONTACTS_UNSYNCED_KEY).map(contact => contact.phone));
+    const added = safetyContacts.filter(contact => marked.has(contact.phone) || !before.has(contact.phone));
+    if (added.length) safetySaveJson(SAFETY_CONTACTS_UNSYNCED_KEY, added);
+    else localStorage.removeItem(SAFETY_CONTACTS_UNSYNCED_KEY);
+}
+
 function safetyPersistContacts() {
+    const previous = safetyReadContactList(SAFETY_CONTACTS_KEY);
     safetySaveJson(SAFETY_CONTACTS_KEY, safetyContacts);
-    // Sin sesión se marca para subirlos (y juntarlos con los de la cuenta) al iniciar sesión.
-    if (!safetyAccountReady()) localStorage.setItem('mtb_pro_safety_contacts_unsynced', '1');
+    if (!safetyAccountReady()) safetyTrackSignedOutContacts(previous);
     if (typeof queueCloudPreferencesSync === 'function') queueCloudPreferencesSync();
 }
 

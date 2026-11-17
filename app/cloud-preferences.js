@@ -344,7 +344,11 @@ async function syncCloudPreferences() {
                 localStorage.setItem(CLOUD_PREFERENCES_SAFETY_CONTACTS_KEY, JSON.stringify(contacts));
                 if (typeof safetySetContacts === 'function') safetySetContacts(contacts);
             };
-            const unsyncedContacts = localStorage.getItem(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY) === '1';
+            // Solo los contactos añadidos sin sesión se suman a esta cuenta.
+            const signedOutRaw = localStorage.getItem(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY);
+            const signedOutAdded = cloudPreferencesSafetyContacts(cloudPreferencesReadJson(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY)) || [];
+            const unsyncedContacts = signedOutAdded.length > 0;
+            const withSignedOut = base => cloudPreferencesSafetyContacts([...(base || []), ...signedOutAdded]) || [];
             const previousOwner = localStorage.getItem(CLOUD_PREFERENCES_OWNER_KEY);
             const ownerChanged = Boolean(previousOwner && previousOwner !== scope);
 
@@ -356,7 +360,6 @@ async function syncCloudPreferences() {
                     return true;
                 }
                 // Contactos de otra cuenta no se heredan, salvo los añadidos sin sesión en este móvil.
-                const keepLocal = unsyncedContacts ? localContacts() : [];
                 if (remoteContacts === null && ownerChanged && !unsyncedContacts) setLocalContacts([]);
                 applyCloudPreferences(record.preferences);
                 localStorage.setItem(CLOUD_PREFERENCES_OWNER_KEY, scope);
@@ -367,8 +370,8 @@ async function syncCloudPreferences() {
                 let upload = false;
                 if (unsyncedContacts) {
                     // Se juntan los de la cuenta y los añadidos sin sesión (sin duplicados, máximo 5).
-                    const merged = cloudPreferencesSafetyContacts([...(remoteContacts || []), ...keepLocal]) || [];
-                    setLocalContacts(merged);
+                    const base = remoteContacts !== null ? remoteContacts : (ownerChanged ? [] : localContacts());
+                    setLocalContacts(withSignedOut(base));
                     upload = true;
                 } else if (remoteContacts === null && localContacts().length) {
                     upload = true;
@@ -378,16 +381,18 @@ async function syncCloudPreferences() {
             }
 
             let preferences = pending;
-            if (preferences && !pendingHasContacts) {
-                // Pendiente guardado por una versión anterior, sin contactos: no se borran los de la cuenta.
-                preferences.safetyContacts = remoteContacts || localContacts();
+            if (preferences && (!pendingHasContacts || unsyncedContacts)) {
+                // Un pendiente antiguo sin contactos no borra los de la cuenta, y los añadidos sin sesión
+                // se incluyen en la subida.
+                const base = pendingHasContacts ? preferences.safetyContacts : (remoteContacts || localContacts());
+                preferences.safetyContacts = withSignedOut(base);
                 setLocalContacts(preferences.safetyContacts);
             }
             if (!preferences) {
                 if (ownerChanged) {
                     const defaults = {
                         ...DEFAULT_CLOUD_PREFERENCES,
-                        safetyContacts: unsyncedContacts ? localContacts() : []
+                        safetyContacts: withSignedOut([])
                     };
                     applyCloudPreferences(defaults);
                     preferences = normalizeCloudPreferences(defaults);
@@ -402,7 +407,9 @@ async function syncCloudPreferences() {
                 || Cloud.uid !== uid || Cloud.server !== server) return false;
 
             localStorage.setItem(CLOUD_PREFERENCES_OWNER_KEY, scope);
-            localStorage.removeItem(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY);
+            if (signedOutRaw !== null && localStorage.getItem(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY) === signedOutRaw) {
+                localStorage.removeItem(CLOUD_PREFERENCES_SAFETY_UNSYNCED_KEY);
+            }
             if (submittedPending && localStorage.getItem(pendingKey) === submittedPending) {
                 localStorage.removeItem(pendingKey);
             }
