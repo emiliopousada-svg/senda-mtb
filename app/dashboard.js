@@ -3,9 +3,10 @@
 function dashboardUpdateGreeting() {
     const greeting = $('home-greeting');
     if (greeting) {
-        // dashboard.js se carga antes que cloud.js: hasta entonces no hay apodo disponible.
+        // dashboard.js se carga antes que cloud.js: si Cloud aún no existe se lee el apodo guardado.
         // cloud.js vuelve a pintar el saludo al cargar y al cambiar la sesión.
-        const nickname = typeof Cloud !== 'undefined' ? String(Cloud.nickname || '').trim() : '';
+        const stored = typeof Cloud !== 'undefined' ? Cloud.nickname : localStorage.getItem('mtb_pro_nickname');
+        const nickname = String(stored || '').trim();
         greeting.textContent = `¡Hola, ${nickname || 'Biker'}!`;
     }
 

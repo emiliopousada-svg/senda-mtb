@@ -137,6 +137,7 @@ test('dashboard loads before cloud.js without errors and keeps network listeners
         currentPage: 5,
         activeStatsSlide: 0,
         navigator: { onLine: true },
+        localStorage: { getItem: () => null },
         window: { addEventListener(type) { listeners.push(type); } },
         document: {
             addEventListener() {},

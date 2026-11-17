@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [Sin publicar]
+
+### Corregido
+* **Saludo de inicio:** al arrancar la app ya no aparece el error «Cloud is not defined». El saludo y la foto de perfil se mostraban antes de que se cargara la sesión; ahora usan el apodo y la foto guardados. Además, el error impedía activar el indicador de conexión, que ya vuelve a funcionar.
+
 ## [0.2.3] - 2026-11-17
 
 ### Añadido
