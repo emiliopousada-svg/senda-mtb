@@ -539,12 +539,12 @@ async function submitCommunityRoute() {
         }
         if (route.communityRouteId) {
             try {
-                record = await cloudApi(`${collectionPath}/${encodeURIComponent(route.communityRouteId)}`, 'PATCH', formData);
+                record = await cloudApi(`${collectionPath}/${encodeURIComponent(route.communityRouteId)}`, 'PATCH', formData, { timeoutMs: 60000 });
             } catch (error) {
                 if (error.status !== 404) throw error;
             }
         }
-        if (!record) record = await cloudApi(collectionPath, 'POST', formData);
+        if (!record) record = await cloudApi(collectionPath, 'POST', formData, { timeoutMs: 60000 });
         if (!record || typeof record.id !== 'string' || !record.id) {
             throw new Error('El servidor no devolvió el identificador de la ruta publicada.');
         }

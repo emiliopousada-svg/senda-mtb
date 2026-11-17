@@ -92,7 +92,7 @@ async function syncPendingAccountAvatar(record = null) {
     }
     if (pending.weightKg !== undefined && pending.weightKg !== '') form.append('weightKg', pending.weightKg);
     if (pending.age !== undefined && pending.age !== '') form.append('age', pending.age);
-    const updated = await cloudApi(`/api/collections/users/records/${encodeURIComponent(uid)}`, 'PATCH', form);
+    const updated = await cloudApi(`/api/collections/users/records/${encodeURIComponent(uid)}`, 'PATCH', form, { timeoutMs: 60000 });
     localStorage.removeItem(key);
     if (updated && updated.avatar) localStorage.setItem(`${ACCOUNT_AVATAR_REMOTE_PREFIX}${uid}`, updated.avatar);
     if (updated) renderAccountProfile(updated, true);

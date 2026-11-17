@@ -4,6 +4,7 @@
 // ============================================================
 let groupJoined = false, groupSyncAvailable = false, friendsTimer = null, restoreGroupPending = false;
 let friendsRefreshPending = false, lastLivePush = 0, lastFriendsRefreshAt = 0, livePushPending = false;
+let lastGroupAuthRefreshAt = 0, lastGroupMembershipCheckAt = 0;
 let pendingLiveLocation = null, pendingLiveLocationLoaded = false;
 let pendingLiveLocationLoadPromise = null, pendingLiveLocationWrite = Promise.resolve();
 let pendingLiveLocationRevision = 0, liveLocationRetryTimer = null;
@@ -16,6 +17,8 @@ const LIVE_PENDING_KEY = 'pendingLiveLocation';
 const LIVE_PENDING_TTL_MS = FRIEND_STALE_MS;
 const LIVE_RETRY_BASE_MS = 5000, LIVE_RETRY_MAX_MS = 60000;
 const FRIENDS_IDLE_REFRESH_MS = 30000;
+const GROUP_AUTH_REFRESH_MS = 5 * 60 * 1000;
+const GROUP_MEMBERSHIP_CHECK_MS = 5 * 60 * 1000;
 
 let groupInfo = null, groupChoices = [];
 
@@ -560,17 +563,33 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
     const wasSyncAvailable = groupSyncAvailable;
     try {
         const expectedGroup = groupName();
-        const auth = await cloudApi('/api/collections/users/auth-refresh', 'POST');
-        const stillAuthorized = auth.record.groupCode === expectedGroup && Boolean(expectedGroup);
-        Cloud.setSession(auth.token, auth.record);
-        if (!stillAuthorized) {
-            groupJoined = false;
-            localStorage.removeItem('mtb_pro_group_joined');
-            await removeMyLiveLocation();
-            await loadMyGroup();
-            renderFriends();
-            toast('El administrador ha revocado tu acceso a este grupo.');
-            return;
+        const now = Date.now();
+        if (now - lastGroupAuthRefreshAt >= GROUP_AUTH_REFRESH_MS) {
+            const auth = await cloudApi('/api/collections/users/auth-refresh', 'POST');
+            Cloud.setSession(auth.token, auth.record);
+            lastGroupAuthRefreshAt = now;
+            if (auth.record.groupCode !== expectedGroup || !expectedGroup) {
+                groupJoined = false;
+                localStorage.removeItem('mtb_pro_group_joined');
+                await removeMyLiveLocation();
+                await loadMyGroup();
+                renderFriends();
+                toast('El administrador ha revocado tu acceso a este grupo.');
+                return;
+            }
+        }
+        if (now - lastGroupMembershipCheckAt >= GROUP_MEMBERSHIP_CHECK_MS) {
+            const membership = await cloudApi('/api/mtb/groups/my');
+            lastGroupMembershipCheckAt = now;
+            if (membership.activeGroupId !== expectedGroup || !expectedGroup) {
+                groupJoined = false;
+                localStorage.removeItem('mtb_pro_group_joined');
+                await removeMyLiveLocation();
+                await loadMyGroup();
+                renderFriends();
+                toast('El administrador ha revocado tu acceso a este grupo.');
+                return;
+            }
         }
         const f = encodeURIComponent('groupCode = "' + expectedGroup + '"');
         let res;
@@ -605,6 +624,7 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
             try {
                 const auth = await cloudApi('/api/collections/users/auth-refresh', 'POST');
                 Cloud.setSession(auth.token, auth.record);
+                lastGroupAuthRefreshAt = Date.now();
                 await refreshFriends(false, true);
             } catch (refreshError) {
                 console.warn('No se pudo renovar la sesión del grupo:', refreshError);
@@ -790,7 +810,7 @@ async function connectGroup(action) {
                 const form = new FormData();
                 form.append('name', name);
                 form.append('icon', iconBlob, 'group-icon.jpg');
-                result = await cloudApi('/api/mtb/groups/create', 'POST', form);
+                result = await cloudApi('/api/mtb/groups/create', 'POST', form, { timeoutMs: 60000 });
             } else {
                 result = await cloudApi('/api/mtb/groups/create', 'POST', { name });
             }
@@ -833,7 +853,7 @@ $('btn-update-group-icon').addEventListener('click', async () => {
         const iconBlob = await accountAvatarToJpeg(file);
         const form = new FormData();
         form.append('icon', iconBlob, 'group-icon.jpg');
-        const result = await cloudApi('/api/mtb/groups/icon', 'POST', form);
+        const result = await cloudApi('/api/mtb/groups/icon', 'POST', form, { timeoutMs: 60000 });
         groupInfo.icon = result.group.icon;
         const choice = groupChoices.find(group => group.id === groupInfo.id);
         if (choice) choice.icon = result.group.icon;

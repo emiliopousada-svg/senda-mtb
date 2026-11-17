@@ -216,7 +216,10 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
     if (body instanceof FormData) payload = body;
     else if (body) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
     const url = new URL(Cloud.server + path);
-    if (url.protocol !== 'https:' || url.username || url.password) {
+    const isLocalHttp = APP_CONFIG.allowLocalHttpServer
+        && url.protocol === 'http:'
+        && (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]');
+    if ((url.protocol !== 'https:' && !isLocalHttp) || url.username || url.password) {
         throw new Error('El servidor debe usar una dirección HTTPS válida.');
     }
 
@@ -384,7 +387,7 @@ async function accAuth(register) {
     } catch (e) {
         console.warn('Auth:', e);
         toast(e.status === undefined
-            ? 'No se pudo conectar con el servidor. Revisa la dirección.'
+            ? 'No se pudo conectar; comprueba tu conexión.'
             : (register ? 'No se pudo crear la cuenta: ' : 'No se pudo entrar: ') + e.message, 6000);
     }
 }
@@ -638,7 +641,7 @@ async function syncRoutes(manual = false) {
                     name: r.name,
                     ...(r.createdBy ? { createdBy: String(r.createdBy).slice(0, ROUTE_NICKNAME_LIMIT) } : {})
                 });
-                else rec = await cloudApi('/api/collections/routes/records', 'POST', routeForm(r));
+                else rec = await cloudApi('/api/collections/routes/records', 'POST', routeForm(r), { timeoutMs: 60000 });
                 r.remoteId = rec.id;
                 r.dirty = false;
                 if (r.kind === 'recorded' && Cloud.groupCode) await syncRouteRanking(r);
