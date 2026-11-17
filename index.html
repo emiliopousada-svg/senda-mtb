@@ -105,7 +105,6 @@
                 <button class="btn-icon-only" id="btn-poi-bar" title="Marcar parada en un bar">
                     <img src="estrella-galicia.svg" alt="Parada en un bar" class="btn-logo">
                 </button>
-                <button class="btn-icon-only" id="btn-poi-food" title="Marcar un sitio de comida">🍽️</button>
                 <button class="btn-icon-only active" id="btn-center" type="button" title="Centrar y seguir mi posición" aria-label="Centrar y seguir mi posición">
                     <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="8.5"></circle>
@@ -1034,29 +1033,70 @@
                     <div class="tools-grid">
                         <button class="tool-card" type="button" data-tool="safety"><span aria-hidden="true">⬡</span><strong>Seguridad</strong></button>
                         <button class="tool-card" type="button" data-tool="garage"><span aria-hidden="true">♧</span><strong>Garaje</strong></button>
-                        <button class="tool-card" type="button" data-tool="ai"><span aria-hidden="true">✳</span><strong>Senda AI</strong></button>
                         <button class="tool-card" type="button" data-tool="calendar"><span aria-hidden="true">▦</span><strong>Calendario</strong></button>
                         <button class="tool-card" type="button" data-tool="settings"><span aria-hidden="true">⚙</span><strong>Ajustes</strong></button>
                     </div>
                 </section>
-                <section class="dashboard-panel ai-preview" aria-labelledby="ai-preview-title">
-                    <div class="ai-preview-heading">
-                        <div class="ai-brand-mark" aria-hidden="true">✳</div>
-                        <div class="ai-brand-copy"><h2 id="ai-preview-title">Senda AI</h2><span>Tu asistente inteligente MTB</span></div>
-                        <span class="ai-concept-badge">Concepto</span>
+                <section id="garage-workspace" class="safety-workspace garage-workspace" aria-labelledby="garage-title" hidden>
+                    <button id="garage-back" class="safety-back" type="button">← Más herramientas</button>
+                    <header class="safety-heading">
+                        <span class="eyebrow">TU BICI</span>
+                        <h2 id="garage-title">Garaje</h2>
+                        <p>Apunta las revisiones y el mantenimiento. Los kilómetros se cuentan solos con las salidas que grabas.</p>
+                    </header>
+                    <section class="garage-bike" aria-label="Foto de la bici">
+                        <div class="garage-photo" id="garage-photo-frame">
+                            <img id="garage-photo" alt="Foto de tu bici" hidden>
+                            <label id="garage-photo-placeholder" class="garage-photo-placeholder" for="garage-photo-input">
+                                <span aria-hidden="true">📷</span><strong>Añadir foto de la bici</strong><small>JPEG, PNG o WebP</small>
+                            </label>
+                        </div>
+                        <div class="garage-photo-actions">
+                            <label class="safety-secondary-button garage-file-button" for="garage-photo-input" id="garage-photo-change">Cambiar foto</label>
+                            <button id="garage-photo-remove" class="safety-secondary-button" type="button" hidden>Quitar foto</button>
+                            <input id="garage-photo-input" class="garage-file-input" type="file" accept="image/jpeg,image/png,image/webp">
+                        </div>
+                        <label class="safety-field-row garage-bike-name" for="garage-bike-name">Nombre de la bici
+                            <input id="garage-bike-name" type="text" maxlength="60" placeholder="Ej.: Orbea Oiz" autocomplete="off">
+                        </label>
+                    </section>
+                    <div class="safety-grid garage-grid">
+                        <section class="safety-card garage-summary-card" aria-labelledby="garage-summary-title">
+                            <h3 id="garage-summary-title">Próxima revisión</h3>
+                            <p id="garage-summary-text">Aún no has registrado ninguna revisión.</p>
+                            <div class="garage-progress" aria-hidden="true"><span id="garage-progress-bar"></span></div>
+                            <dl class="garage-stats">
+                                <div><dt>Desde la última revisión</dt><dd id="garage-km-since">—</dd></div>
+                                <div><dt>Total registrado</dt><dd id="garage-km-total">0 km</dd></div>
+                                <div><dt>Gastado en mantenimiento</dt><dd id="garage-cost-total">0 €</dd></div>
+                            </dl>
+                            <label class="safety-field-row" for="garage-interval">Revisión cada (km)
+                                <input id="garage-interval" type="number" min="50" max="20000" step="50" inputmode="numeric">
+                            </label>
+                            <ul id="garage-components" class="garage-components" aria-label="Kilómetros desde el último cambio de cada pieza"></ul>
+                        </section>
+                        <section class="safety-card" aria-labelledby="garage-form-title">
+                            <h3 id="garage-form-title">Añadir mantenimiento</h3>
+                            <form id="garage-form" class="safety-contact-form">
+                                <label for="garage-type">Tipo</label>
+                                <select id="garage-type" required></select>
+                                <label for="garage-date">Fecha</label>
+                                <input id="garage-date" type="date" required>
+                                <label for="garage-cost">Coste (€, opcional)</label>
+                                <input id="garage-cost" type="number" min="0" max="100000" step="0.01" inputmode="decimal">
+                                <label for="garage-notes">Notas (opcional)</label>
+                                <input id="garage-notes" type="text" maxlength="200" placeholder="Ej.: pastillas Shimano, taller Ponte" autocomplete="off">
+                                <button class="safety-primary-button" type="submit">Guardar</button>
+                            </form>
+                            <p id="garage-status" class="safety-note" role="status" aria-live="polite"></p>
+                        </section>
+                        <section class="safety-card garage-history-card" aria-labelledby="garage-history-title">
+                            <h3 id="garage-history-title">Historial</h3>
+                            <p id="garage-history-empty">Todavía no hay registros.</p>
+                            <ul id="garage-history" class="garage-history"></ul>
+                        </section>
                     </div>
-                    <div class="ai-conversation" aria-label="Ejemplo de conversación">
-                        <p class="ai-message ai-message-user">¿Cómo ha sido mi rendimiento este mes?</p>
-                        <p class="ai-message ai-message-assistant">Cuando conectemos el asistente, podrá resumir tu evolución usando tus actividades registradas y señalar qué periodo compara.</p>
-                        <p class="ai-message ai-message-user">Encuéntrame una ruta de 35 km con dificultad media.</p>
-                        <p class="ai-message ai-message-assistant">Podrá buscar rutas con distancia y dificultad disponibles. La dificultad técnica solo aparecerá si tenemos datos fiables.</p>
-                    </div>
-                    <form id="ai-preview-form" class="ai-preview-form">
-                        <label class="sr-only" for="ai-preview-input">Pregunta a Senda AI</label>
-                        <input id="ai-preview-input" type="text" maxlength="240" placeholder="Pregunta sobre tus rutas o rendimiento…" autocomplete="off">
-                        <button class="ai-send-button" type="submit">Probar</button>
-                    </form>
-                    <p id="ai-preview-status" class="ai-preview-footnote" role="status" aria-live="polite">Ejemplo ilustrativo. El servicio aún no está conectado y no se envían datos.</p>
+                    <p class="safety-note">Los datos del garaje se guardan en este móvil.</p>
                 </section>
                 <section id="safety-workspace" class="safety-workspace" aria-labelledby="safety-title" hidden>
                     <button id="safety-back" class="safety-back" type="button">← Más herramientas</button>
@@ -1231,12 +1271,13 @@
     <script src="app/stats.js"></script>
     <script src="app/route-relief.js"></script>
     <script src="app/dashboard.js"></script>
-    <script src="app/ai-preview.js"></script>
     <script src="app/sensors.js"></script>
     <script src="app/pois.js"></script>
     <script src="app/group-rankings.js"></script>
     <script src="app/groups.js"></script>
     <script src="app/safety.js"></script>
+    <script src="app/garage.js"></script>
+    <script src="app/tools.js"></script>
     <script src="app/ui.js"></script>
     <script src="lib/native-app.js"></script>
     <script src="app/cloud-preferences.js"></script>

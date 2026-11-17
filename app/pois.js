@@ -50,6 +50,7 @@ function poiSyncStorageKey(name) {
 const POI_TYPES = {
     fountain: { emoji: '🚰', defaultName: 'Fuente de Agua', ask: false, confirm: '¿Eliminar esta fuente guardada?' },
     bar:      { emoji: '🍺', defaultName: 'Bar', ask: true, prompt: 'Nombre del bar donde paras:', confirm: '¿Eliminar esta parada?' },
+    // Ya no se pueden añadir sitios de comida, pero los guardados se siguen mostrando y se pueden borrar.
     food:     { emoji: '🍽️', defaultName: 'Sitio de comida', ask: true, prompt: 'Nombre del sitio de comida:', confirm: '¿Eliminar este sitio de comida?' }
 };
 const IMPORTED_POI_CATEGORIES = {
@@ -356,7 +357,6 @@ async function addPoi(type) {
 
 $('btn-poi-fountain').addEventListener('click', () => addPoi('fountain'));
 $('btn-poi-bar').addEventListener('click', () => addPoi('bar'));
-$('btn-poi-food').addEventListener('click', () => addPoi('food'));
 window.addEventListener('online', syncSharedPois);
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') syncSharedPois();

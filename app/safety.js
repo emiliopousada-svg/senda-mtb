@@ -326,10 +326,8 @@ async function safetyOnRecordingStopped() {
 function safetyOpenWorkspace() {
     const workspace = safetyElement('safety-workspace');
     const hub = document.querySelector('.tools-hub');
-    const aiPreview = document.querySelector('.ai-preview');
-    if (!workspace || !hub || !aiPreview) return;
+    if (!workspace || !hub) return;
     hub.hidden = true;
-    aiPreview.hidden = true;
     workspace.hidden = false;
     safetyRender();
     workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -338,11 +336,9 @@ function safetyOpenWorkspace() {
 function safetyCloseWorkspace() {
     const workspace = safetyElement('safety-workspace');
     const hub = document.querySelector('.tools-hub');
-    const aiPreview = document.querySelector('.ai-preview');
-    if (!workspace || !hub || !aiPreview) return;
+    if (!workspace || !hub) return;
     workspace.hidden = true;
     hub.hidden = false;
-    aiPreview.hidden = false;
     hub.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
