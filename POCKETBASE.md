@@ -30,7 +30,7 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 
 ## Hooks del repositorio
 
-`pb_hooks/` incluye hooks para apodos, POIs, grupos, limpieza de posiciones, rutas comunitarias, segmentos, rendimiento e interacciones sociales. Cada handler se ejecuta en un contexto aislado: los helpers deben definirse dentro del handler o cargarse con `require()` desde él. Revísalos y pruébalos junto a las reglas de colección de `https://mtbpro.ddns.net`. Las colecciones de temporadas y desafíos siguen pendientes de despliegue; el código de cliente por sí solo no es una frontera de seguridad.
+`pb_hooks/` incluye hooks para apodos, POIs, grupos, limpieza de posiciones, rutas comunitarias, segmentos, rendimiento e interacciones sociales. Cada handler se ejecuta en un contexto aislado: los helpers deben definirse dentro del handler o cargarse con `require()` desde él. Revísalos y pruébalos junto a las reglas de colección de `https://mtbpro.ddns.net`. La colección de desafíos y el hook de la liga de grupo están desplegados en producción desde la versión 0.2.2; el código de cliente por sí solo no es una frontera de seguridad.
 
 La migración `pb_migrations/1794829123_create_mtb_user_preferences.js` crea `mtb_user_preferences` con reglas que limitan lectura, creación, modificación y borrado al propietario autenticado. Despliega la migración en el directorio de datos de PocketBase y ejecútala con `pocketbase migrate up` (o inicia PocketBase con las migraciones automáticas habilitadas) antes de publicar la versión web que la utiliza.
 
