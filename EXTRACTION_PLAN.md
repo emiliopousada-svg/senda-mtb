@@ -16,7 +16,7 @@ El repositorio MTBPro existente partió de una base funcional previa. Esta tabla
 
 | Área / origen candidato | Destino actual en PRO | Decisión | Estado |
 | --- | --- | --- | --- |
-| `config.js` | `app/config.js` | Adaptar | Identidad y valores MTB aislados; pendiente separar configuración por entorno. |
+| `config.js` | `app/config.js` | Adaptado | Identidad y valores MTB aislados; configuración por entorno (`production`, `staging`, `development`) elegida en compilación con `MTB_APP_ENV`. |
 | `state.js` | `app/state.js` | Adaptar | Reutilizado; revisar modelos de actividad y recuperación de grabaciones. |
 | `storage.js` | `app/storage.js` | Adaptar | Nueva base IndexedDB y fotos de ruta; revisar ciclo de migraciones y fallos. |
 | `gps.js` | `app/gps.js` | Reutilizar y auditar | Integrado; falta matriz de precisión, pérdida de señal y segundo plano en dispositivos. |

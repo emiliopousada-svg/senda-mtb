@@ -268,8 +268,18 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
 }
 
 function normalizeServer(v) {
+    // Se declara dentro de la función: Cloud la llama al cargar el script, antes de esta línea.
+    const LOCAL_HTTP_SERVER = /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?(?:\/.*)?$/i;
     v = String(v || '').trim().replace(/\/+$/, '');
     if (!v) return '';
+    // Solo en desarrollo se admite un PocketBase local sin TLS; en el resto de entornos se exige HTTPS.
+    if (APP_CONFIG.allowLocalHttpServer && LOCAL_HTTP_SERVER.test(v)) {
+        const local = new URL(v);
+        if (local.username || local.password || local.search || local.hash) {
+            throw new Error('La dirección del servidor no es válida.');
+        }
+        return `${local.origin}${local.pathname}`.replace(/\/+$/, '');
+    }
     if (/^http:\/\//i.test(v)) v = v.replace(/^http:/i, 'https:');
     else if (/^[a-z][a-z\d+.-]*:\/\//i.test(v) && !/^https:\/\//i.test(v)) {
         throw new Error('El servidor debe usar HTTPS.');
@@ -787,7 +797,7 @@ function initSettings() {
     mapRotation.addEventListener('change', () => setMapRotationMode(mapRotation.checked));
     initRecordingPanelSettings();
     initSensorConnections();
-    $('app-version').textContent = `v${APP_VERSION} (build ${APP_BUILD})`;
+    $('app-version').textContent = `v${APP_VERSION} (build ${APP_BUILD})` + (APP_CONFIG.isProduction ? '' : ` · ${APP_CONFIG.label}`);
 }
 
 async function syncWhenOnline() {
