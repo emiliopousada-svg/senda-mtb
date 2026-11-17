@@ -26,7 +26,7 @@ fs.mkdirSync(path.join(www, 'lib', 'leaflet'), { recursive: true });
 for (const f of ['index.html', 'manifest.json', 'icon.svg']) {
   fs.copyFileSync(path.join(root, f), path.join(www, f));
 }
-for (const f of ['icon-192.png', 'icon-512.png', 'estrella-galicia.svg']) {
+for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'estrella-galicia.svg']) {
   const source = path.join(root, f);
   if (fs.existsSync(source)) fs.copyFileSync(source, path.join(www, f));
 }

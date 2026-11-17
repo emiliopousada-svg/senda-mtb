@@ -5,6 +5,17 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.8] - 2026-11-17
+
+### Cambiado
+* **Icono de la app:** se adopta el emblema de montaña, sendero y rueda en Android, iOS, la PWA y el acceso de la barra lateral. Se añade una variante con margen seguro para máscaras adaptables y se renueva la caché web.
+
+## [0.2.7] - 2026-11-17
+
+### Cambiado
+* **Consumo y sincronización:** las ubicaciones de grupo se consultan cuando se abre el mapa o la comunidad; los puntos compartidos se sondean periódicamente solo con el mapa visible y se elimina el refresco global de Seguridad.
+* **GPS:** tras descartar un salto imposible se reinicia el punto de referencia para recuperar una velocidad válida en la siguiente lectura.
+
 ## [0.2.6] - 2026-11-17
 
 ### Añadido
