@@ -113,7 +113,7 @@ test('cockpit sits between home and tools and maps back to the existing map navi
     const home = html.indexOf('id="page-home"');
     const cockpit = html.indexOf('id="page-cockpit"');
     const tools = html.indexOf('id="page-tools"');
-    const mapControls = html.match(/<div class="side-controls">([\s\S]*?)<\/div>\s*<div class="controls-overlay">/);
+    const mapControls = html.match(/<div class="side-controls">([\s\S]*?)<\/div>\s*<div class="map-bottom-panel" id="map-bottom-panel">/);
     assert.ok(home < cockpit && cockpit < tools);
     assert.match(html, /data-page="6"[^>]*>Cockpit<\/button>/);
     assert.match(html, /id="page-cockpit"[\s\S]*data-page="0">Abrir mapa/);

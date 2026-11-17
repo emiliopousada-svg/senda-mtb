@@ -13,8 +13,7 @@ const METRICS = {
     cadence: { src: 'm-cadence', label: 'Cadencia', unit: 'rpm', color: '#48c7a0' },
     power: { src: 'm-power', label: 'Potencia', unit: 'W', color: '#e8c34a' },
     'avg-speed': { src: 'm-avg-speed', label: 'Velocidad media', unit: 'km/h', color: '#55baff' },
-    moving: { src: 'm-moving',   label: 'Tiempo en movimiento', unit: '' },
-    time:  { src: 'm-time',      label: 'Tiempo total',       unit: '' }
+    moving: { src: 'm-moving',   label: 'Tiempo en movimiento', unit: '' }
 };
 let expandedMetric = null;
 
@@ -63,6 +62,28 @@ function initMetricPanel() {
         else expandMetric(key);
     });
     $('big-metric').addEventListener('click', collapseMetric);
+
+    // El panel inferior (métricas + botones) cambia de alto según las métricas y los botones visibles:
+    // se publica como --map-panel-h para que la atribución del mapa y los controles no queden debajo.
+    const panel = $('map-bottom-panel');
+    if (panel && typeof ResizeObserver === 'function') {
+        const page = $('page-map');
+        const routeProfile = $('map-route-profile');
+        const liveProfile = $('recording-live-profile');
+        const observer = new ResizeObserver(() => {
+            page.style.setProperty('--map-panel-h', `${Math.ceil(panel.getBoundingClientRect().height)}px`);
+            // Alto real del perfil de la ruta seguida, para apilar encima el perfil en directo.
+            const profileH = routeProfile ? Math.ceil(routeProfile.getBoundingClientRect().height) : 0;
+            if (profileH > 0) page.style.setProperty('--map-route-profile-h', `${profileH}px`);
+            // Alto de todo lo apilado abajo (panel + perfiles visibles), para colocar la atribución encima.
+            const pageBottom = page.getBoundingClientRect().bottom;
+            const stackTop = [panel, routeProfile, liveProfile]
+                .filter(el => el && el.offsetParent !== null)
+                .reduce((top, el) => Math.min(top, el.getBoundingClientRect().top), pageBottom);
+            page.style.setProperty('--map-stack-h', `${Math.ceil(pageBottom - stackTop)}px`);
+        });
+        [panel, routeProfile, liveProfile].forEach(el => el && observer.observe(el));
+    }
 
     // La vista grande copia en vivo el valor de la métrica original
     const obs = new MutationObserver(syncBigMetric);

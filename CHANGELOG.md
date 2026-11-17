@@ -5,15 +5,32 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
-## [Sin publicar]
+## [0.2.3] - 2026-11-17
 
 ### Añadido
 * **Configuración por entorno:** `app/config.js` define los entornos `production`, `staging` y `development` (servidor PocketBase, uso de http local y modo depuración). `scripts/prepare-web.js` elige el entorno con `MTB_APP_ENV` y, opcionalmente, el servidor con `MTB_CLOUD_SERVER`; por defecto compila para producción. Ver la sección Entornos del README.
 * La compilación rechaza entornos desconocidos, URLs no válidas y releases (`vX.Y.Z`) que no sean de producción.
 * Ajustes muestra el entorno junto a la versión cuando no es producción.
 * Pruebas `tests/app-config.test.js`.
+* **Sensores Bluetooth registrados:** pulsómetro, cadencia, potenciómetro y velocímetro recuerdan el último dispositivo conectado. Mientras estén activados se conectan solos al abrir la app, al volver a ella, al empezar a grabar y tras perder la conexión (reintentos cada 5-30 s, sin abrir el selector ni gastar batería con la app en segundo plano sin grabar). Ajustes > Sensores muestra los registrados con la opción Olvidar para elegir otro. El pulsómetro guardado por versiones anteriores se conserva.
+* Pruebas `tests/sensors.test.js`.
+
+### Cambiado
+* **Mapa: panel inferior único.** Las métricas (km/h, distancia, desnivel, pulso, tiempo en movimiento…) pasan de la parte superior a un panel abajo, encima de la navegación, que incluye también Comenzar/Pausar ruta, Dejar de seguir ruta y Finalizar. En horizontal, métricas y botones van en una sola fila.
+* Hasta 5 métricas se muestran en una fila; con más, en dos filas equilibradas.
+* Los gráficos de desnivel (perfil de la ruta seguida y perfil en directo) van justo encima del panel; los botones laterales y el zoom quedan arriba. La atribución del mapa se coloca siempre encima de todo lo apilado abajo.
+* **Contactos de emergencia en la cuenta:** se guardan en tus preferencias privadas de PocketBase y se recuperan al iniciar sesión en otro móvil. Los que ya tenías en el móvil se suben la primera vez; al cambiar de cuenta no se heredan los de otro usuario.
+* El interruptor "Compartir ubicación en directo con mi grupo" pasa a la tarjeta "Durante la salida".
+* **Grabar exige cuenta:** para comenzar una ruta hay que tener la sesión iniciada y el apodo elegido; si falta, se ofrece ir directamente a Ajustes > Cuenta.
+* En horizontal las columnas de iconos se compactan para no quedar bajo la barra de navegación.
+
+### Eliminado
+* **Aviso de salida (Seguridad):** se quitan la duración prevista, el margen de retraso, el temporizador, el aviso local programado y la casilla de detección de caídas (no disponible). Una protección pendiente de versiones anteriores se cancela sola.
+* **Botones de seguridad y SOS del mapa:** ya no aparecen al grabar. La seguridad de ruta sigue disponible en Herramientas.
+* **Tiempo total en el mapa:** ya no se muestra ni se puede elegir en las métricas del mapa (las preferencias guardadas con él se limpian solas). El Cockpit y las estadísticas siguen mostrando el tiempo total.
 
 ### Corregido
+* **Rutas duplicadas en la comunidad:** una ruta ya publicada no se puede volver a publicar; la app actualiza la publicación existente y el hook `community_routes.pb.js` rechaza duplicados del mismo autor (mismo trazado, o misma distancia y tiempo en movimiento).
 * **Inicio en móvil:** la tarjeta de bienvenida quedaba detrás de la barra de estado del teléfono (hora, batería, notch). Ahora deja libre la altura real de la barra en cada dispositivo, usando `env(safe-area-inset-top)` y la variable `--safe-area-inset-top` que inyecta Capacitor.
 
 ---

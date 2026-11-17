@@ -20,6 +20,7 @@ function preferencesSyncContext({ api, initialStorage = {}, online = true, uid =
     const calls = [];
     const status = { textContent: '' };
     const warnings = [];
+    const timers = [];
     const context = vm.createContext({
         localStorage: {
             getItem(key) { return values.has(key) ? values.get(key) : null; },
@@ -39,13 +40,15 @@ function preferencesSyncContext({ api, initialStorage = {}, online = true, uid =
             return api(...args);
         },
         console: { warn(...args) { warnings.push(args.map(value => String(value))); } },
-        toast() {}
+        toast() {},
+        setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+        clearTimeout() {}
     });
     vm.runInContext(
         fs.readFileSync(path.join(__dirname, '..', 'app', 'cloud-preferences.js'), 'utf8'),
         context
     );
-    return { context, values, calls, status, warnings };
+    return { context, values, calls, status, warnings, timers };
 }
 
 test('cloud preferences reject invalid values and fill safe defaults', () => {
@@ -66,7 +69,7 @@ test('cloud preferences reject invalid values and fill safe defaults', () => {
     assert.equal(preferences.weeklyGoalKm, 100);
     assert.equal(preferences.maxHeartRate, null);
     assert.equal(preferences.ftpWatts, null);
-    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist', 'elev', 'hr', 'moving', 'time']);
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist', 'elev', 'hr', 'moving']);
     assert.equal(Object.hasOwn(preferences, 'dashboardCardOrder'), false);
     assert.equal(Object.hasOwn(preferences, 'adminToken'), false);
 });
@@ -90,8 +93,18 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
     assert.equal(preferences.maxHeartRate, 190);
     assert.equal(preferences.ftpWatts, 250);
     assert.equal(preferences.recordingMetricOrder[0], 'power');
-    assert.equal(preferences.recordingMetricOrder.length, 9);
+    assert.equal(preferences.recordingMetricOrder.length, 8);
     assert.deepEqual(preferences.recordingVisibleMetrics, ['power']);
+});
+
+test('cloud preferences drop the retired total-time map metric', () => {
+    const preferences = normalizePreferences({
+        recordingMetricOrder: ['time', 'speed', 'dist'],
+        recordingVisibleMetrics: ['speed', 'time', 'dist']
+    });
+    assert.equal(preferences.recordingMetricOrder.includes('time'), false);
+    assert.equal(preferences.recordingMetricOrder[0], 'speed');
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist']);
 });
 
 test('signed-in sync applies the owner preferences returned by PocketBase', async () => {
@@ -141,4 +154,213 @@ test('offline preference sync makes no PocketBase request', async () => {
     assert.equal(await context.syncCloudPreferences(), false);
     assert.equal(calls.length, 0);
     assert.equal(status.textContent, 'Ajustes guardados en este dispositivo; la sincronización está pendiente.');
+});
+
+test('cloud preferences keep only valid, unique emergency contacts', () => {
+    const preferences = normalizePreferences({
+        safetyContacts: [
+            { name: '  Ana  ', phone: '+34 600 123 456' },
+            { name: 'Duplicado', phone: '+34600123456' },
+            { name: '', phone: '+34600000001' },
+            { name: 'Sin prefijo', phone: '0600123456' },
+            { name: 'Luis', phone: '34611222333' },
+            'texto',
+            { name: 'C3', phone: '+34600000003' },
+            { name: 'C4', phone: '+34600000004' },
+            { name: 'C5', phone: '+34600000005' },
+            { name: 'C6', phone: '+34600000006' }
+        ]
+    });
+    assert.deepEqual(preferences.safetyContacts, [
+        { name: 'Ana', phone: '+34600123456' },
+        { name: 'Luis', phone: '+34611222333' },
+        { name: 'C3', phone: '+34600000003' },
+        { name: 'C4', phone: '+34600000004' },
+        { name: 'C5', phone: '+34600000005' }
+    ]);
+    assert.deepEqual(normalizePreferences({}).safetyContacts, []);
+});
+
+test('signed-in sync restores the emergency contacts saved in the account', async () => {
+    const contacts = [{ name: 'Ana', phone: '+34600123456' }];
+    const { context, values } = preferencesSyncContext({
+        api: async () => ({ items: [{ id: 'preferences-1', preferences: { safetyContacts: contacts } }] })
+    });
+    let applied = null;
+    context.safetySetContacts = list => { applied = JSON.parse(JSON.stringify(list)); };
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(values.get('mtb_pro_safety_contacts')), contacts);
+    assert.deepEqual(applied, contacts);
+});
+
+test('first sync uploads the emergency contacts stored on the device', async () => {
+    let createdRecord = null;
+    const { context } = preferencesSyncContext({
+        initialStorage: { mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]) },
+        api: async (path, method, body) => {
+            if (method === 'POST') createdRecord = body;
+            return method === 'POST' ? { id: 'created' } : { items: [] };
+        }
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(JSON.stringify(createdRecord.preferences.safetyContacts)), [{ name: 'Ana', phone: '+34600123456' }]);
+});
+
+test('an older account record without contacts keeps device contacts and schedules an upload', async () => {
+    const local = [{ name: 'Ana', phone: '+34600123456' }];
+    const { context, values, timers } = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify(local),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => ({ items: [{ id: 'preferences-1', preferences: { routeSound: false } }] })
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(values.get('mtb_pro_safety_contacts')), local);
+    assert.equal(timers.length, 1);
+});
+
+test('switching accounts does not inherit the previous account emergency contacts', async () => {
+    const { context, values, timers } = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => ({ items: [{ id: 'preferences-2', preferences: { routeSound: false } }] })
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(values.get('mtb_pro_safety_contacts')), []);
+    assert.equal(timers.length, 0);
+});
+
+test('contacts added while signed out are merged with the account contacts and uploaded', async () => {
+    const { context, values, timers } = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([
+                { name: 'Eva', phone: '+34600555444' },
+                { name: 'Ana', phone: '+34600123456' }
+            ]),
+            mtb_pro_safety_contacts_unsynced: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => ({ items: [{ id: 'preferences-2', preferences: {
+            safetyContacts: [{ name: 'Luis', phone: '+34600999888' }, { name: 'Ana bis', phone: '+34600123456' }]
+        } }] })
+    });
+
+    assert.equal(await context.syncCloudPreferences(), true);
+    const phones = JSON.parse(values.get('mtb_pro_safety_contacts')).map(contact => contact.phone);
+    assert.deepEqual(phones, ['+34600999888', '+34600123456']);
+    assert.equal(timers.length, 1);
+});
+
+test('a local change made during the request is not overwritten by the account', async () => {
+    const holder = {};
+    holder.ctx = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_route_sound: 'true',
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async () => {
+            const key = holder.ctx.context.cloudPreferencesPendingKey('user-1', 'https://pb.example');
+            holder.ctx.values.set(key, JSON.stringify({ routeSound: true }));
+            return { items: [{ id: 'preferences-1', preferences: { routeSound: false } }] };
+        }
+    });
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.equal(holder.ctx.values.get('mtb_pro_route_sound'), 'true');
+    assert.equal(holder.ctx.timers.length, 1);
+});
+
+test('a pending upload includes the contacts added while signed out', async () => {
+    const holder = {};
+    holder.ctx = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_safety_contacts_unsynced: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async (url, method, body) => {
+            if (!method) return { items: [{ id: 'preferences-1', preferences: { safetyContacts: [] } }] };
+            holder.body = body;
+            return { id: 'preferences-1' };
+        }
+    });
+    const key = holder.ctx.context.cloudPreferencesPendingKey('user-1', 'https://pb.example');
+    holder.ctx.values.set(key, JSON.stringify({ routeSound: false, safetyContacts: [{ name: 'Luis', phone: '+34600999888' }] }));
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(JSON.stringify(holder.body.preferences.safetyContacts.map(contact => contact.phone))), ['+34600999888', '+34600123456']);
+    assert.equal(holder.ctx.values.has('mtb_pro_safety_contacts_unsynced'), false);
+    assert.equal(holder.ctx.values.has(key), false);
+});
+
+test('a pending snapshot replaced during the request does not overwrite newer local contacts', async () => {
+    const holder = {};
+    const newer = [{ name: 'Eva', phone: '+34600555444' }];
+    holder.ctx = preferencesSyncContext({
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify(newer),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async (url, method) => {
+            if (method) throw new Error('no debería subir el pendiente antiguo');
+            holder.ctx.values.set(holder.key, JSON.stringify({ routeSound: false, safetyContacts: newer }));
+            return { items: [{ id: 'preferences-1', preferences: { safetyContacts: [] } }] };
+        }
+    });
+    holder.key = holder.ctx.context.cloudPreferencesPendingKey('user-1', 'https://pb.example');
+    holder.ctx.values.set(holder.key, JSON.stringify({ routeSound: false }));
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(holder.ctx.values.get('mtb_pro_safety_contacts')), newer);
+    assert.equal(holder.ctx.timers.length, 1);
+});
+
+test('an old pending snapshot after an account change does not carry the previous account contacts', async () => {
+    const holder = {};
+    holder.ctx = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: {
+            mtb_pro_safety_contacts: JSON.stringify([{ name: 'Ana', phone: '+34600123456' }]),
+            mtb_pro_preferences_owner: 'https://pb.example\nuser-1'
+        },
+        api: async (url, method, body) => {
+            if (!method) return { items: [] };
+            holder.body = body;
+            return { id: 'preferences-2' };
+        }
+    });
+    const key = holder.ctx.context.cloudPreferencesPendingKey('user-2', 'https://pb.example');
+    holder.ctx.values.set(key, JSON.stringify({ routeSound: false }));
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.equal(holder.body.preferences.safetyContacts.length, 0);
+});
+
+test('a contact added while a new account has no record yet is kept for the follow-up upload', async () => {
+    const holder = {};
+    const added = [{ name: 'Eva', phone: '+34600555444' }];
+    holder.ctx = preferencesSyncContext({
+        uid: 'user-2',
+        initialStorage: { mtb_pro_preferences_owner: 'https://pb.example\nuser-1' },
+        api: async (url, method) => {
+            if (method) throw new Error('no debería subir los valores por defecto');
+            holder.ctx.values.set('mtb_pro_safety_contacts', JSON.stringify(added));
+            holder.ctx.values.set(holder.key, JSON.stringify({ routeSound: false, safetyContacts: added }));
+            return { items: [] };
+        }
+    });
+    holder.key = holder.ctx.context.cloudPreferencesPendingKey('user-2', 'https://pb.example');
+
+    assert.equal(await holder.ctx.context.syncCloudPreferences(), true);
+    assert.deepEqual(JSON.parse(holder.ctx.values.get('mtb_pro_safety_contacts')), added);
+    assert.equal(holder.ctx.timers.length, 1);
 });

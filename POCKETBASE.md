@@ -9,7 +9,7 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 | Colección o recurso | Uso |
 | --- | --- |
 | `users` (auth) | Inicio de sesión, apodo, avatar JPEG, peso y edad. La migración de perfil limita listado/lectura/edición al titular y evita que el cliente asigne `groupCode`. |
-| `mtb_user_preferences` | Un registro privado por usuario con sus preferencias de uso, sincronizadas entre dispositivos. No almacena credenciales, ubicaciones GPS, identificadores BLE ni teselas offline. |
+| `mtb_user_preferences` | Un registro privado por usuario con sus preferencias de uso, sincronizadas entre dispositivos. Incluye los contactos de emergencia (nombre y teléfono). No almacena credenciales, ubicaciones GPS, identificadores BLE ni teselas offline. |
 | `routes` | Rutas y actividades privadas sincronizadas por propietario. |
 | `map_pois` | Puntos de interés sincronizados por propietario. |
 | `live_locations` | Ubicación temporal de participantes de grupo durante una grabación. |
@@ -59,7 +59,7 @@ La migración `pb_migrations/1794836000_create_group_challenges.js` añade los c
 3. Ejecuta `pocketbase migrate up` (o reinicia con las migraciones automáticas activas).
 4. Reinicia PocketBase y comprueba que `GET /api/mtb/groups/challenges` responde `401` sin sesión y `200` con un usuario que pertenece a un grupo.
 
-La app conserva estas preferencias localmente y las sincroniza al iniciar sesión y cuando cambian: avisos de ruta, vibración, rotación y estilo del mapa, controles grandes, circunferencia de rueda, objetivo semanal, FTP y FC máxima, y orden/visibilidad de métricas. Si hay cambios simultáneos, prevalece la última escritura sincronizada. Las ubicaciones recientes, los dispositivos Bluetooth y los mapas descargados siguen siendo específicos del dispositivo.
+La app conserva estas preferencias localmente y las sincroniza al iniciar sesión y cuando cambian: avisos de ruta, vibración, rotación y estilo del mapa, controles grandes, circunferencia de rueda, objetivo semanal, FTP y FC máxima, orden/visibilidad de métricas y contactos de emergencia (nombre y teléfono, hasta 5). Si hay cambios simultáneos, prevalece la última escritura sincronizada. Las ubicaciones recientes, los dispositivos Bluetooth y los mapas descargados siguen siendo específicos del dispositivo.
 
 Los tracks comunitarios son datos públicos. El hook de rutas comunitarias recorta 150 m de los extremos y rechaza POIs próximos a esos extremos; reduce la exposición de domicilios pero no garantiza anonimato. Las fotos se procesan en el cliente; la instancia debe validar y limpiar metadatos del lado del servidor.
 

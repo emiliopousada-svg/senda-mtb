@@ -10,8 +10,7 @@ const RECORDING_PANEL_METRICS = [
     { id: 'cadence', label: 'Cadencia' },
     { id: 'power', label: 'Potencia' },
     { id: 'avg-speed', label: 'Velocidad media' },
-    { id: 'moving', label: 'Tiempo en movimiento' },
-    { id: 'time', label: 'Tiempo total' }
+    { id: 'moving', label: 'Tiempo en movimiento' }
 ];
 let recordingPanelPreferences = RECORDING_PANEL_METRICS.map(metric => metric.id);
 
@@ -31,7 +30,8 @@ function applyRecordingPanelPreferences() {
         document.querySelector(`.m-box[data-metric="${id}"]`)?.dataset.metricVisible !== 'false'
     );
     const count = Math.max(1, visible.length);
-    const columns = count <= 2 ? count : 3;
+    // Panel inferior del mapa: hasta 5 métricas en una fila; con más, dos filas equilibradas.
+    const columns = count <= 5 ? count : Math.ceil(count / 2);
     bar.style.setProperty('--recording-metric-columns', String(columns));
     recordingPanelPreferences.forEach((id, index) => {
         const box = bar.querySelector(`.m-box[data-metric="${id}"]`);
