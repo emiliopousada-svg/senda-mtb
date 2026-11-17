@@ -7,8 +7,25 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Sin publicar]
 
+### Añadido
+* **Comunidad operativa:** las pestañas Desafíos, Logros y Actividad ya funcionan con datos del servidor.
+  * **Desafíos de grupo:** cualquier miembro crea retos de distancia, desnivel, salidas o tiempo con fecha de fin; se muestra el progreso de cada miembro. El creador o el administrador del grupo pueden borrarlos.
+  * **Temporada activa:** clasificación de la temporada de cuatro semanas con barra de progreso y días restantes.
+  * **Títulos y palmarés:** campeón, King of the Mountain, Fastest Rider, Climbing Beast y Most Consistent, historial de las últimas 12 temporadas y medallero.
+  * **Actividad del grupo:** salidas compartidas, récords del grupo y desafíos creados o completados.
+  * **Ranking de segmentos:** la categoría de segmentos muestra cuántos segmentos lidera cada miembro.
+* Hook `pb_hooks/group_league.pb.js` y migración `1794836000_create_group_challenges.js` (ver POCKETBASE.md).
+
 ### Cambiado
 * **Nombre senda-mtb en Android:** nombre de la app bajo el icono y título de la actividad (`strings.xml`), diálogo de salida (`MainActivity.java`), notificaciones de grabación en segundo plano, batería, SOS y aviso de ruta, encabezado de estadísticas, aviso de actualización, creador de los GPX exportados y comentario del service worker.
+
+### Corregido
+* El ranking de temporada salía siempre a cero porque `mtb_group_ranking_entries` no tenía fecha de creación; ahora se usa la fecha de la salida.
+* Crear un grupo sin icono fallaba en el servidor ("request Content-Type isn't multipart/form-data").
+* `app/community-hub.js` no estaba en la caché offline del service worker.
+
+### Eliminado
+* Migración pendiente `PENDING_1794836000_create_competition_collections.js`, sustituida por la nueva.
 
 ---
 
