@@ -581,6 +581,7 @@ function startRecording(activityType) {
         safetyOnRecordingStarted().catch(error => console.error('No se pudo activar la protección de ruta:', error));
     }
     if (typeof safetyRender === 'function') safetyRender();
+    if (typeof sensorsReconnectNow === 'function') sensorsReconnectNow();
     publishMyLocation(true);
     beginTracking(true);
 }

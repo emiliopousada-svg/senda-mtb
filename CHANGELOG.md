@@ -5,13 +5,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
-## [Sin publicar]
+## [0.2.3] - 2026-11-17
 
 ### Añadido
 * **Configuración por entorno:** `app/config.js` define los entornos `production`, `staging` y `development` (servidor PocketBase, uso de http local y modo depuración). `scripts/prepare-web.js` elige el entorno con `MTB_APP_ENV` y, opcionalmente, el servidor con `MTB_CLOUD_SERVER`; por defecto compila para producción. Ver la sección Entornos del README.
 * La compilación rechaza entornos desconocidos, URLs no válidas y releases (`vX.Y.Z`) que no sean de producción.
 * Ajustes muestra el entorno junto a la versión cuando no es producción.
 * Pruebas `tests/app-config.test.js`.
+* **Sensores Bluetooth registrados:** pulsómetro, cadencia, potenciómetro y velocímetro recuerdan el último dispositivo conectado. Mientras estén activados se conectan solos al abrir la app, al volver a ella, al empezar a grabar y tras perder la conexión (reintentos cada 5-30 s, sin abrir el selector ni gastar batería con la app en segundo plano sin grabar). Ajustes > Sensores muestra los registrados con la opción Olvidar para elegir otro. El pulsómetro guardado por versiones anteriores se conserva.
+* Pruebas `tests/sensors.test.js`.
 
 ### Cambiado
 * **Mapa: panel inferior único.** Las métricas (km/h, distancia, desnivel, pulso, tiempo en movimiento…) pasan de la parte superior a un panel abajo, encima de la navegación, que incluye también Comenzar/Pausar ruta, Dejar de seguir ruta y Finalizar. En horizontal, métricas y botones van en una sola fila.

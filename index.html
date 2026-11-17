@@ -746,6 +746,8 @@
                     <input type="checkbox" id="sensor-speed-enabled">
                     <span><strong>🚴 Velocímetro</strong><span class="hint" id="sensor-speed-status">Desconectado</span></span>
                 </label>
+                <ul id="sensor-registered" class="sensor-registered" aria-label="Sensores registrados" hidden></ul>
+                <p class="hint">Los sensores conectados quedan registrados: mientras estén activados se conectan solos cuando estén encendidos y cerca. Pulsa Olvidar para elegir otro.</p>
                 <label for="sensor-wheel-circumference" class="hint">Circunferencia de rueda para velocímetro (mm)</label>
                 <input type="number" id="sensor-wheel-circumference" min="500" max="3000" step="1" value="2100" aria-label="Circunferencia de rueda en milímetros">
                 <p class="hint">Las lecturas de pulso, cadencia, potencia y velocidad se guardan en las rutas grabadas. Si no llega velocidad Bluetooth, se usa el GPS.</p>
