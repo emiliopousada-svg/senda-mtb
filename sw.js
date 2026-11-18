@@ -55,6 +55,7 @@ const SHELL_URLS = [
   'app/community-performance-ui.js',
   'app/community-segments.js',
   'app/community-routes.js',
+  'app/galicia-routes.js',
   'app/community-league.js',
   'app/community-hub.js',
   'app/screen-activity.js',
