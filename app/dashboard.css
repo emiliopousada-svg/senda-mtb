@@ -1123,29 +1123,40 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 }
 .map-bottom-panel .controls-overlay #btn-stop { box-shadow: none; }
 
-/* Con el panel abajo, los controles van arriba y los perfiles de desnivel justo encima del panel. */
+/* Con el panel abajo, los controles quedan arriba. */
 #page-map .side-controls,
 #page-map .map-zoom-controls { top: var(--map-top-gap); }
-#page-map #map-route-profile,
-#page-map #recording-live-profile {
+#page-map #map-route-profile {
     top: auto;
     bottom: calc(var(--map-panel-h, 140px) + 18px);
     left: calc(env(safe-area-inset-left, 0px) + 10px);
     right: calc(env(safe-area-inset-right, 0px) + 10px);
     width: auto;
 }
-#page-map #recording-live-profile { left: 50%; right: auto; width: min(76vw, 360px); transform: translateX(-50%); }
-/* Si se sigue una ruta, el perfil en directo se apila encima del perfil de la ruta. */
-#page-map #map-route-profile.show ~ #recording-live-profile { bottom: calc(var(--map-panel-h, 140px) + var(--map-route-profile-h) + 26px); }
 /* La atribución del mapa (licencia) queda siempre visible encima del panel. */
 #page-map .leaflet-bottom { bottom: calc(var(--map-stack-h, 150px) + 4px); }
-/* En vertical, el perfil en directo apilado sobre el de la ruta va entre las columnas de iconos. */
+/* En vertical, el perfil en directo queda arriba, entre las columnas de controles. */
 @media (orientation: portrait) {
-    #page-map #map-route-profile.show ~ #recording-live-profile {
-        left: calc(env(safe-area-inset-left, 0px) + 66px);
+    #page-map #recording-live-profile {
+        top: calc(env(safe-area-inset-top, 0px) + 4px);
         right: calc(env(safe-area-inset-right, 0px) + 66px);
+        bottom: auto;
+        left: calc(env(safe-area-inset-left, 0px) + 66px);
         width: auto;
+        max-width: none;
+        padding: 3px 8px 2px;
+        border-radius: 8px;
         transform: none;
+    }
+    #page-map #recording-live-profile > div { font-size: .45rem; line-height: 1; }
+    #page-map #recording-live-altitude { font-size: .58rem; }
+    #page-map #recording-live-profile svg { height: 12px; margin-top: 1px; }
+    #page-map #recording-live-hint {
+        overflow: hidden;
+        font-size: .42rem;
+        line-height: 1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     /* La atribución puede subir hasta la columna de iconos derecha: se separa de ella. */
     #page-map .leaflet-bottom.leaflet-right { right: calc(env(safe-area-inset-right, 0px) + 62px); }
@@ -1192,6 +1203,26 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
     }
     #page-map #map-route-profile .route-profile-head { font-size: .58rem; }
     #page-map #map-route-svg { height: 24px; }
+    #page-map #recording-live-profile {
+        top: calc(env(safe-area-inset-top, 0px) + 4px);
+        right: calc(env(safe-area-inset-right, 0px) + 72px);
+        bottom: auto;
+        left: calc(env(safe-area-inset-left, 0px) + 72px);
+        width: auto;
+        max-width: none;
+        padding: 3px 8px 2px;
+        border-radius: 8px;
+        transform: none;
+    }
+    #page-map #recording-live-profile > div { font-size: .48rem; line-height: 1; }
+    #page-map #recording-live-profile svg { height: 14px; margin-top: 1px; }
+    #page-map #recording-live-hint {
+        overflow: hidden;
+        font-size: .45rem;
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
     #page-map #recording-live-profile {
         top: calc(env(safe-area-inset-top, 0px) + 4px);
         right: calc(env(safe-area-inset-right, 0px) + 72px);

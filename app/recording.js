@@ -387,6 +387,7 @@ function setBtnState(s) {
 function recordingUpdateLiveProfile() {
     const svgLine = $('recording-live-line');
     const svgArea = $('recording-live-area');
+    const svgCursor = $('recording-live-cursor');
     const hint = $('recording-live-hint');
     if (!svgLine || !svgArea || !hint) return;
     const samples = points.slice(-240).filter(point => Array.isArray(point) && Number.isFinite(point[2]));
@@ -395,15 +396,26 @@ function recordingUpdateLiveProfile() {
     if (samples.length < 2) {
         svgLine.setAttribute('d', '');
         svgArea.setAttribute('d', '');
+        if (svgCursor) svgCursor.setAttribute('display', 'none');
         hint.textContent = 'Esperando lecturas de altitud';
         return;
     }
     const values = samples.map(point => point[2]);
     const min = Math.min(...values), max = Math.max(...values);
     const range = Math.max(1, max - min);
-    const path = values.map((value, index) => `${index ? 'L' : 'M'}${(index / (values.length - 1) * 320).toFixed(1)},${(43 - (value - min) / range * 36).toFixed(1)}`).join(' ');
+    const coordinates = values.map((value, index) => ({
+        x: (index / (values.length - 1) * 320).toFixed(1),
+        y: (43 - (value - min) / range * 36).toFixed(1)
+    }));
+    const path = coordinates.map((point, index) => `${index ? 'L' : 'M'}${point.x},${point.y}`).join(' ');
     svgLine.setAttribute('d', path);
     svgArea.setAttribute('d', `${path} L320,48 L0,48 Z`);
+    if (svgCursor) {
+        const latestPoint = coordinates[coordinates.length - 1];
+        svgCursor.setAttribute('cx', latestPoint.x);
+        svgCursor.setAttribute('cy', latestPoint.y);
+        svgCursor.setAttribute('display', 'inline');
+    }
     hint.textContent = `${Math.round(min)}–${Math.round(max)} m · últimas lecturas`;
 }
 

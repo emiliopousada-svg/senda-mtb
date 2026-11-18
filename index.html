@@ -66,12 +66,16 @@
             </div>
 
             <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
-                <div><span>PERFIL EN DIRECTO</span><strong id="recording-live-altitude">-- m</strong></div>
-                <svg viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
+                <div class="live-profile-head">
+                    <span class="live-profile-label">PERFIL EN DIRECTO</span>
+                    <strong id="recording-live-altitude">--<span class="unit"> m</span></strong>
+                </div>
+                <svg id="recording-live-svg" viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
                     <path id="recording-live-area"></path>
                     <path id="recording-live-line"></path>
+                    <circle id="recording-live-cursor" r="4"></circle>
                 </svg>
-                <small id="recording-live-hint">Esperando lecturas de altitud</small>
+                <div id="recording-live-hint">Esperando lecturas de altitud</div>
             </div>
 
             <div id="map"></div>
