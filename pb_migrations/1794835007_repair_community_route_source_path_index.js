@@ -8,7 +8,9 @@ migrate((app) => {
         throw new Error("community_routes.sourcePath must be a text field")
     }
     collection.indexes = collection.indexes.filter((index) => !index.includes("idx_community_routes_source_path"))
-    collection.indexes.push("CREATE UNIQUE INDEX idx_community_routes_source_path ON community_routes (sourcePath)")
+    // Las publicaciones normales no usan sourcePath y comparten el valor vacío.
+    // Solo los registros importados desde archivos necesitan unicidad.
+    collection.indexes.push("CREATE UNIQUE INDEX idx_community_routes_source_path ON community_routes (sourcePath) WHERE sourcePath != ''")
     app.save(collection)
 }, (app) => {
     const collection = app.findCollectionByNameOrId("community_routes")
