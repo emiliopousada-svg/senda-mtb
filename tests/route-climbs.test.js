@@ -65,13 +65,15 @@ describe('detectClimbs', () => {
     });
 
     it('detecta dos subidas separadas por un descenso', () => {
-        // subida 1: puntos 0-15 (+150 m)
-        // bajada: puntos 15-20 (−30 m)  — se rompe la subida
-        // subida 2: puntos 20-35 (+150 m)
+        // subida 1: puntos 0-15 (+150 m en 1,5 km)
+        // bajada: puntos 15-22 (−84 m en 700 m) — valle realista MTB
+        // subida 2: puntos 22-37 (+150 m en 1,5 km)
+        // El suavizado de ventana=7 no difumina un descenso de 84 m:
+        // la diferencia suavizada pico-valle supera los 50 m >> dropTolerance (15 m).
         const alts = [
             ...Array.from({ length: 16 }, (_, i) => 300 + i * 10),  // 300–450
-            ...Array.from({ length: 5  }, (_, i) => 450 - i * 7),   // 450–422 (bajada)
-            ...Array.from({ length: 16 }, (_, i) => 422 + i * 10)   // 422–572
+            ...Array.from({ length: 8  }, (_, i) => 450 - i * 12),  // 450–366 (−84 m)
+            ...Array.from({ length: 16 }, (_, i) => 366 + i * 10)   // 366–516
         ];
         const pts = makePoints(alts, 100);
         const result = detectClimbs(pts, { minGainM: 80, minLengthM: 400, minGradePercent: 3 });
