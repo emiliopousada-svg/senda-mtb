@@ -25,7 +25,8 @@
     "@capacitor/share": "^8.0.3",
     "chart.js": "4.4.1",
     "fit-file-parser": "^6.2.7",
-    "leaflet": "1.9.4"
+    "leaflet": "1.9.4",
+    "maplibre-gl": "6.19.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
