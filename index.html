@@ -65,6 +65,13 @@
                 </svg>
             </div>
 
+            <!-- Mini ClimbPro: progreso de la subida activa -->
+            <div id="climb-progress" hidden aria-live="polite" aria-label="Progreso de subida">
+                <span id="climb-label"></span>
+                <div class="climb-bar-track" aria-hidden="true"><div id="climb-bar-fill"></div></div>
+                <span id="climb-remaining"></span>
+            </div>
+
             <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
                 <div class="live-profile-head">
                     <span class="live-profile-label">PERFIL EN DIRECTO</span>
@@ -1517,6 +1524,7 @@
     <script src="app/recording.js"></script>
     <script src="app/cockpit.js"></script>
     <script src="app/route-following.js"></script>
+    <script src="app/route-climbs.js"></script>
     <script src="app/route-dem.js"></script>
     <script src="app/routes.js"></script>
     <script src="lib/fit.js"></script>

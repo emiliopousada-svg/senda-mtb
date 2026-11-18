@@ -170,6 +170,19 @@ function followRoute(r) {
         gainCum: gainCumulative(r.points),
         progressIndex: 0
     };
+    // ── Mini ClimbPro: detectar subidas una sola vez ──────────
+    if (typeof detectClimbs === 'function' && typeof setRouteClimbs === 'function') {
+        try {
+            const climbs = detectClimbs(r.points);
+            setRouteClimbs(climbs);
+            if (climbs.length > 0) {
+                const totalGain = climbs.reduce((s, c) => s + c.gainM, 0);
+                toast(`⛰️ ${climbs.length} subida${climbs.length > 1 ? 's' : ''} detectada${climbs.length > 1 ? 's' : ''} · +${Math.round(totalGain)} m desnivel`, 4000);
+            }
+        } catch (e) {
+            console.warn('ClimbPro: error al detectar subidas', e);
+        }
+    }
     showRoutePoisOnMap([...(isRecording ? recordingPois : []), ...followedRoute.pois]);
     renderMapRouteProfile(r);
     if (lastLat !== null && lastLon !== null) {
@@ -212,6 +225,8 @@ function unfollowRoute() {
     $('map-route-profile').classList.remove('show');
     $('btn-unfollow').style.display = 'none';
     if (!isRecording) $('m-elevation').textContent = '0';
+    // ── Mini ClimbPro: limpiar subidas al dejar de seguir ─────
+    if (typeof clearClimbProgress === 'function') clearClimbProgress();
     refreshGpsMode();
 }
 $('btn-unfollow').addEventListener('click', () => { unfollowRoute(); toast('Has dejado de seguir la ruta.'); });

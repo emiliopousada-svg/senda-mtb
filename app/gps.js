@@ -138,6 +138,10 @@ function renderGpsVisualUpdate(state) {
         $('m-dist').textContent = totalDistance.toFixed(2);
         $('m-elevation').textContent = Math.round(elev.gain);
     }
+    // ── Mini ClimbPro: actualizar progreso de subida activa ───
+    if (typeof renderClimbProgress === 'function' && followedRoute) {
+        renderClimbProgress(totalDistance * 1000); // km → m
+    }
 }
 
 function clearGpsWatch() {
