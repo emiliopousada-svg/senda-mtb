@@ -11,7 +11,7 @@ function stravaConfig() {
     const clientSecret = $os.getenv("STRAVA_CLIENT_SECRET")
     const redirectUri = $os.getenv("STRAVA_REDIRECT_URI")
     const encryptionKey = $os.getenv("STRAVA_TOKEN_ENCRYPTION_KEY")
-    if (!clientId || !clientSecret || !redirectUri || encryptionKey.length !== 32) {
+    if (!clientId || !clientSecret || !redirectUri || !encryptionKey || encryptionKey.length !== 32) {
         throw new Error("Strava aún no está configurado en el servidor.")
     }
     if (!/^https:\/\/[^/?#]+\/api\/mtb\/strava\/callback$/.test(redirectUri)) {

@@ -23,12 +23,15 @@ function climbRoute(count = 60, gain = 240) {
     ]);
 }
 
-test('relief model needs enough altitude readings', () => {
+test('relief model needs enough coordinates and handles routes without elevation', () => {
     const { routeReliefModel } = reliefContext();
     assert.equal(routeReliefModel([]), null);
-    assert.equal(routeReliefModel(climbRoute().map(point => [point[0], point[1], null])), null);
+    assert.equal(routeReliefModel([[42, -8, null]]), null);
+    const noAltitude = routeReliefModel(climbRoute().map(point => [point[0], point[1], null]));
+    assert.ok(noAltitude);
+    assert.equal(noAltitude.hasElevation, false);
     const flat = climbRoute().map(point => [point[0], point[1], 120]);
-    assert.equal(routeReliefModel(flat), null, 'sin desnivel no se dibuja relieve');
+    assert.equal(routeReliefModel(flat).hasElevation, false, 'una ruta plana mantiene el trazado 3D sin fingir desnivel');
 });
 
 test('relief model normalises the route and reports real altitudes', () => {

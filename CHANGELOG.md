@@ -5,6 +5,20 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.13] - 2026-11-18
+
+### Añadido
+* **Strava:** conexión OAuth desde herramientas sociales, almacenamiento cifrado de credenciales en PocketBase y subida de salidas grabadas como GPX.
+* **Rutas comunitarias de Galicia:** importación automática desde carpetas del servidor, incluyendo subcarpetas; se amplía la lectura de tracks y archivos GPX grandes.
+* **Inicio:** vista de la última ruta sobre terreno satélite con relieve 3D.
+
+### Cambiado
+* **Rutas:** las fichas se adaptan al ancho de la pantalla móvil.
+* **Importación:** el escaneo de rutas de Galicia se ejecuta desde una tarea programada y muestra diagnósticos en el registro.
+
+### Corregido
+* **Strava:** se valida correctamente la ausencia de la clave de cifrado y se escapa el mensaje del callback antes de mostrarlo en HTML.
+
 ## [0.2.9] - 2026-11-17
 
 ### Cambiado

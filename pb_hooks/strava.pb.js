@@ -47,9 +47,16 @@ routerAdd("GET", "/api/mtb/strava/callback", (e) => {
     const code = String(e.request.url.query().get("code") || "")
     const grantedScope = String(e.request.url.query().get("scope") || "")
     const denied = String(e.request.url.query().get("error") || "")
+    const escapeHtml = (value) => String(value).replace(/[&<>\"']/g, (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;",
+    })[character])
     const finish = (ok, message) => e.html(ok ? 200 : 400,
         "<!doctype html><html lang=\"es\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>senda-mtb · Strava</title><body style=\"font:16px system-ui;background:#121212;color:#fff;padding:2rem;max-width:34rem;margin:auto\"><h1>" +
-        (ok ? "Strava conectado" : "No se pudo conectar Strava") + "</h1><p>" + message + "</p><p>Vuelve a senda-mtb y pulsa «Actualizar estado».</p></body></html>")
+        (ok ? "Strava conectado" : "No se pudo conectar Strava") + "</h1><p>" + escapeHtml(message) + "</p><p>Vuelve a senda-mtb y pulsa «Actualizar estado».</p></body></html>")
     if (denied) return finish(false, "Has cancelado o rechazado el permiso.")
     if (!state || !code) return finish(false, "Falta la confirmación de Strava.")
     if (!grantedScope.split(/[\s,]+/).includes("activity:write")) {
