@@ -7,6 +7,10 @@ let galiciaRoutesCatalogCache = null;
 let galiciaRoutesCatalogLoadedAt = 0;
 let galiciaRoutesCatalogRequest = null;
 
+function getGaliciaRoutesCatalogCount() {
+    return Array.isArray(galiciaRoutesCatalogCache) ? galiciaRoutesCatalogCache.length : 0;
+}
+
 function galiciaRoutesStatus(message, isError = false) {
     const status = $('galicia-routes-status');
     if (!status) return;
@@ -140,6 +144,7 @@ async function loadGaliciaRouteCatalog() {
     try {
         const routes = await fetchGaliciaRoutesCatalog();
         renderGaliciaRoutes(routes);
+        updateCommunityRoutesCount();
         galiciaRoutesStatus(routes.length
             ? `${routes.length} rutas oficiales disponibles. Los tracks se descargan solo al guardarlos.`
             : 'El catálogo está instalado, pero todavía no contiene tracks.');

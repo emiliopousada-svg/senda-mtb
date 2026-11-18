@@ -104,6 +104,13 @@ function communitySetStatus(message, isError = false) {
     });
 }
 
+function updateCommunityRoutesCount(communityCount = communityCatalogRoutes.length) {
+    const officialCount = typeof getGaliciaRoutesCatalogCount === 'function'
+        ? getGaliciaRoutesCatalogCount()
+        : 0;
+    $('routes-count-community').textContent = String(Math.max(0, communityCount) + officialCount);
+}
+
 function communityFillActivities(select) {
     select.replaceChildren(new Option('Todas las actividades', ''));
     Object.entries(ACTIVITY_TYPES).forEach(([type, activity]) => {
@@ -842,7 +849,7 @@ function renderCommunityRoutes(records) {
         empty.className = 'community-empty';
         empty.textContent = 'No hay rutas publicadas con estos filtros.';
         list.append(empty);
-        $('routes-count-community').textContent = '0';
+        updateCommunityRoutesCount(0);
         return;
     }
     const sortedRecords = records.slice().sort((a, b) => {
@@ -917,7 +924,7 @@ function renderCommunityRoutes(records) {
         list.append(card);
         visibleCount++;
     });
-    $('routes-count-community').textContent = String(visibleCount);
+    updateCommunityRoutesCount(visibleCount);
 }
 
 function escapeCommunityFilterValue(value) {
