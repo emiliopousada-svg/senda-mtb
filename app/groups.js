@@ -731,7 +731,7 @@ async function sendPendingLiveLocation(snapshot) {
             const own = await cloudApi(`/api/collections/live_locations/records?filter=${f}&perPage=1`);
             myLiveRecordId = own.items[0] ? own.items[0].id : null;
         }
-        if (myLiveRecordId) await cloudApi(`/api/collections/live_locations/records/${myLiveRecordId}`, 'PATCH', payload);
+        if (myLiveRecordId) await cloudApi(`/api/collections/live_locations/records/${encodeURIComponent(myLiveRecordId)}`, 'PATCH', payload);
         else {
             const rec = await cloudApi('/api/collections/live_locations/records', 'POST', payload);
             myLiveRecordId = rec.id;
@@ -792,7 +792,7 @@ async function removeMyLiveLocation() {
     const id = myLiveRecordId;
     myLiveRecordId = null;
     if (id && Cloud.loggedIn()) {
-        try { await cloudApi(`/api/collections/live_locations/records/${id}`, 'DELETE'); }
+        try { await cloudApi(`/api/collections/live_locations/records/${encodeURIComponent(id)}`, 'DELETE'); }
         catch (e) { console.warn('No se pudo retirar la posición:', e); }
     }
     renderFriends();

@@ -553,7 +553,7 @@ async function syncRoutes(manual = false) {
         catch (e) { pendingDeletesAvailable = false; noteSyncFailure(`No se pudo leer la cola de borrados: ${e.message}`); console.warn('No se pudo leer la cola de borrados:', e); }
         const rest = [];
         for (const rid of pend) {
-            try { await cloudApi(`/api/collections/routes/records/${rid}`, 'DELETE'); }
+            try { await cloudApi(`/api/collections/routes/records/${encodeURIComponent(rid)}`, 'DELETE'); }
             catch (e) {
                 if (e.status !== 404) {
                     rest.push(rid);
@@ -608,7 +608,7 @@ async function syncRoutes(manual = false) {
                 const remoteCreator = nickname;
                 if (remoteCreator && matched.createdBy !== remoteCreator) {
                     try {
-                        await cloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', { createdBy: remoteCreator });
+                        await cloudApi(`/api/collections/routes/records/${encodeURIComponent(r.remoteId)}`, 'PATCH', { createdBy: remoteCreator });
                         matched.createdBy = remoteCreator;
                     } catch (e) {
                         noteSyncFailure(`No se pudo actualizar el apodo de «${r.name || 'ruta'}»: ${e.message}`, e);
@@ -637,7 +637,7 @@ async function syncRoutes(manual = false) {
             }
             try {
                 let rec;
-                if (r.remoteId) rec = await cloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', {
+                if (r.remoteId) rec = await cloudApi(`/api/collections/routes/records/${encodeURIComponent(r.remoteId)}`, 'PATCH', {
                     name: r.name,
                     ...(r.createdBy ? { createdBy: String(r.createdBy).slice(0, ROUTE_NICKNAME_LIMIT) } : {})
                 });
@@ -682,7 +682,7 @@ async function syncRoutes(manual = false) {
                     const dlTimer = setTimeout(() => dlController.abort(), 15000);
                     let res;
                     try {
-                        res = await fetch(`${Cloud.server}/api/files/routes/${rec.id}/${encodeURIComponent(rec.track)}?token=${encodeURIComponent(fileToken)}`, { signal: dlController.signal });
+                        res = await fetch(`${Cloud.server}/api/files/routes/${encodeURIComponent(rec.id)}/${encodeURIComponent(rec.track)}?token=${encodeURIComponent(fileToken)}`, { signal: dlController.signal });
                     } catch (error) {
                         if (error && (error.status === undefined || error.name === 'AbortError')) error.retryable = true;
                         throw error;

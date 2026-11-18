@@ -136,7 +136,7 @@ async function communityLoadFavorite(route, container, isCurrent) {
 async function communityLoadComments(route, container, form, isCurrent) {
     try {
         const filter = `route = "${route.id}"`;
-        const response = await cloudApi(`/api/collections/community_route_comments/records?page=1&perPage=100&sort=-id&fields=id,owner,alias,comment&filter=${encodeURIComponent(filter)}`);
+        const response = await cloudApi(`/api/collections/community_route_comments/records?page=1&perPage=100&sort=-created,-id&fields=id,owner,alias,comment&filter=${encodeURIComponent(filter)}`);
         if (!isCurrent()) return;
         container.replaceChildren();
         const records = Array.isArray(response.items) ? response.items : [];

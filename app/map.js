@@ -17,6 +17,7 @@ function initMap() {
 
     const supportsRotation = typeof L.Map.prototype.setBearing === 'function';
     map = L.map('map', {
+        preferCanvas: true,
         zoomControl: false,
         attributionControl: false,
         minZoom: 5,
