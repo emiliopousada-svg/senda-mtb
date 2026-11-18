@@ -155,12 +155,6 @@ function dashboardRender() {
     dashboardUpdateNetworkStatus();
 }
 
-$('home-open-map')?.addEventListener('click', () => {
-    const latest = dashboardLatestRecordedRoute();
-    if (latest) openLastRideOnMap(latest);
-    else goToPage(0);
-});
-
 function dashboardOpenLatestRouteDetail() {
     const latest = dashboardLatestRecordedRoute();
     if (latest) openSavedRouteDetail(latest, {
