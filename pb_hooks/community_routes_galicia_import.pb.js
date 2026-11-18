@@ -14,6 +14,27 @@ function run() {
     }
     function plainText(value) { return decodeXml(String(value || "").replace(/<[^>]*>/g, "")).trim(); }
     function cleanName(name) { return String(name || "Ruta de Galicia").trim().slice(0, 100) || "Ruta de Galicia"; }
+    function readUtf8(path) {
+        const data = $os.readFile(path);
+        if (typeof data === "string") return data;
+        if (!data || typeof data.length !== "number") throw new Error("no se pudo leer el archivo como texto");
+        const chunks = [];
+        for (let i = 0; i < data.length;) {
+            const first = Number(data[i++]) & 255;
+            let codePoint;
+            if (first < 0x80) codePoint = first;
+            else if ((first & 0xe0) === 0xc0 && i < data.length) codePoint = ((first & 0x1f) << 6) | ((Number(data[i++]) & 0x3f));
+            else if ((first & 0xf0) === 0xe0 && i + 1 < data.length) codePoint = ((first & 0x0f) << 12) | ((Number(data[i++]) & 0x3f) << 6) | (Number(data[i++]) & 0x3f);
+            else if ((first & 0xf8) === 0xf0 && i + 2 < data.length) codePoint = ((first & 0x07) << 18) | ((Number(data[i++]) & 0x3f) << 12) | ((Number(data[i++]) & 0x3f) << 6) | (Number(data[i++]) & 0x3f);
+            else throw new Error("el archivo contiene texto UTF-8 inválido");
+            if (codePoint <= 0xffff) chunks.push(String.fromCharCode(codePoint));
+            else {
+                codePoint -= 0x10000;
+                chunks.push(String.fromCharCode(0xd800 + (codePoint >> 10), 0xdc00 + (codePoint & 0x3ff)));
+            }
+        }
+        return chunks.join("");
+    }
     function point(lat, lng, ele) {
         lat = Number(lat); lng = Number(lng); ele = Number(ele);
         if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new Error("coordenada fuera de rango");
@@ -108,7 +129,7 @@ function run() {
     }
     function importFile(owner, relativePath, root, ownerNickname, maxPoints, sourcePrefix) {
         const lower = relativePath.toLowerCase();
-        const text = String($os.readFile($filepath.join(root, relativePath)));
+        const text = readUtf8($filepath.join(root, relativePath));
         const fallback = relativePath.split("/").pop().replace(/\.[^.]+$/, "");
         const parsed = lower.endsWith(".gpx") ? parseGpx(text, fallback) : lower.endsWith(".kml") ? parseKml(text, fallback) : parseGeoJson(text, fallback);
         const raw = [];
