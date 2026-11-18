@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "region": "Galicia",
+  "updatedAt": "2026-11-18",
+  "routes": [
+    {
+      "id": "pr-g-001",
+      "title": "PR-G 001 · A Pasaxe",
+      "province": "Galicia",
+      "track": "tracks/PRXG0001-00E000-0-pr-g-001-a-pasaxe-a-pasaxe.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-002",
+      "title": "PR-G 002 · Refugio Miguel Regueira Monte Aloia",
+      "province": "Galicia",
+      "track": "tracks/PRXG0002-00E000-0-pr-g-002-refugio-miguel-regueira-monte-aloia.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-004",
+      "title": "PR-G 004 · Esgos",
+      "province": "Galicia",
+      "track": "tracks/PRXG0004-00E000-0-pr-g-004-esgos-esgos.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-086",
+      "title": "PR-G 086 · San Miguel De Rosende Os Chancis",
+      "province": "Galicia",
+      "track": "tracks/PRXG0086-00E000-0-pr-g-086-san-miguel-de-rosende-os-chancis.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-093",
+      "title": "PR-G 093 · Ponte Basebe Cruce Pista Carretera De San Pedro De Ribeira",
+      "province": "Galicia",
+      "track": "tracks/PRXG0093-00E000-0-pr-g-093-ponte-basebe-cruce-pista-carretera-de-san-pedro-de-ribeira.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-094",
+      "title": "PR-G 094 · A Ponte Das Penas",
+      "province": "Galicia",
+      "track": "tracks/PRXG0094-00E000-0-pr-g-094-a-ponte-das-penas-a-ponte-das-penas.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-095",
+      "title": "PR-G 095 · Rectoral De Fofe Playa Fluvial De Maceira",
+      "province": "Galicia",
+      "track": "tracks/PRXG0095-00E000-0-pr-g-095-rectoral-de-fofe-playa-fluvial-de-maceira.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-098",
+      "title": "PR-G 098 · Praza Do Barquilleiro",
+      "province": "Galicia",
+      "track": "tracks/PRXG0098-00E000-0-pr-g-098-praza-do-barquilleiro-praza-do-barquilleiro.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-099",
+      "title": "PR-G 099 · Ponte De Santo Alberto Pardinas",
+      "province": "Galicia",
+      "track": "tracks/PRXG0099-00E000-0-pr-g-099-ponte-de-santo-alberto--pardinas.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-100",
+      "title": "PR-G 100 · Mosteiro De Aciveiro",
+      "province": "Galicia",
+      "track": "tracks/PRXG0100-00E000-0-pr-g-100-mosteiro-de-aciveiro-mosteiro-de-aciveiro.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-102",
+      "title": "PR-G 102 · Casa Cultura De Riomaior Muino De Miguel Lois",
+      "province": "Galicia",
+      "track": "tracks/PRXG0102-00E000-0-pr-g-102-casa-cultura-de-riomaior-muino-de-miguel-lois.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-103",
+      "title": "PR-G 103 · Areeiros Vilaboa",
+      "province": "Galicia",
+      "track": "tracks/PRXG0103-00E000-0-pr-g-103-areeiros-vilaboa-areeiros-vilaboa.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-105",
+      "title": "PR-G 105 · Zona De Aparcamiento Del Parque Da Naturaleza Do Rio Barosa Ponte De San Breixo",
+      "province": "Galicia",
+      "track": "tracks/PRXG0105-00E000-0-pr-g-105-zona-de-aparcamiento-del-parque-da-naturaleza-do-rio-barosa-ponte-de-san-breixo.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-114",
+      "title": "PR-G 114 · Laxe Lagoa De Traba",
+      "province": "Galicia",
+      "track": "tracks/PRXG0114-00E000-0-pr-g-114-laxe-lagoa-de-traba.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-119",
+      "title": "PR-G 119 · Paranos Covelo",
+      "province": "Galicia",
+      "track": "tracks/PRXG0119-00E000-0-pr-g-119-paranos-covelo-paranos-covelo.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-124",
+      "title": "PR-G 124 · Fonte Dos Buxos De Parada De Cameixa Silleda",
+      "province": "Galicia",
+      "track": "tracks/PRXG0124-00E000-0-pr-g-124-fonte-dos-buxos-de-parada-de-cameixa-silleda-fonte-dos-buxos-de-parada-de-cameixa-silleda.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-126",
+      "title": "PR-G 126 · Andras Vilanova De Arousa Monte Lobeira Vilanova De Arousa",
+      "province": "Galicia",
+      "track": "tracks/PRXG0126-00E000-0-pr-g-126-andras-vilanova-de-arousa-monte-lobeira-vilanova-de-arousa.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-128",
+      "title": "PR-G 128 · Guxinde Entrimo A Casa Do Frade Entrimo",
+      "province": "Galicia",
+      "track": "tracks/PRXG0128-00E000-0-pr-g-128-guxinde-entrimo-a-casa-do-frade-entrimo.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-132",
+      "title": "PR-G 132 · Alto Do Confurco O Porrino Area Recreativa Das Conforcadas Salceda De Caselas",
+      "province": "Galicia",
+      "track": "tracks/PRXG0132-00E000-0-pr-g-132-alto-do-confurco-o-porrino-area-recreativa-das-conforcadas-salceda-de-caselas.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-133",
+      "title": "PR-G 133 · Francelos Castroverde A Veiga Castroverde",
+      "province": "Galicia",
+      "track": "tracks/PRXG0133-00E000-0-pr-g-133-francelos-castroverde-a-veiga-castroverde.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-137",
+      "title": "PR-G 137 · San Miguel De Bidueira Manzaneda",
+      "province": "Galicia",
+      "track": "tracks/PRXG0137-00E000-0-pr-g-137-san-miguel-de-bidueira-manzaneda-san-miguel-de-bidueira-manzaneda.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-142",
+      "title": "PR-G 142 · A Brea Capilla De San Paio",
+      "province": "Galicia",
+      "track": "tracks/PRXG0142-00E000-0-pr-g-142-a-brea-capilla-de-san-paio.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    },
+    {
+      "id": "pr-g-156",
+      "title": "PR-G 156 · Playa De Area Grande Playa De Caolin",
+      "province": "Galicia",
+      "track": "tracks/PRXG0156-00E000-0-pr-g-156-playa-de-area-grande-playa-de-caolin.kml",
+      "source": "https://centrodedescargas.cnig.es/CentroDescargas/senderos-fedme-kml",
+      "attribution": "Obra derivada de FEDME 2020-2026 CC-BY 4.0 FEDME",
+      "license": "CC BY 4.0",
+      "notice": "Sendero homologado para senderismo; idoneidad para MTB no verificada. Comprueba restricciones y estado antes de circular."
+    }
+  ]
+}

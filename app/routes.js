@@ -386,6 +386,7 @@ function setRoutesTab(tab) {
             : 'Explora rutas publicadas por la comunidad.';
     renderSavedRoutes();
     if (communityTab && typeof loadCommunityRoutes === 'function') loadCommunityRoutes();
+    if (communityTab && typeof loadGaliciaRouteCatalog === 'function') loadGaliciaRouteCatalog();
 }
 document.querySelectorAll('[data-routes-tab]').forEach(b => b.addEventListener('click', () => setRoutesTab(b.dataset.routesTab)));
 
