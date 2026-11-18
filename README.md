@@ -2,11 +2,11 @@
 
 App de ciclismo de montaña con GPS, registro de actividades, mapas offline, rutas GPX/KML/GeoJSON, estadísticas, sensores Bluetooth y funciones sociales.
 
-Versión indicada en el proyecto: **0.2.19**
+Versión indicada en el proyecto: **0.2.20**
 
 ## Identidad y alcance
 
-senda-mtb 0.2.19 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
+senda-mtb 0.2.20 es un proyecto independiente y dedicado a MTB. Usa negro grafito y naranja deportivo, con azul eléctrico para navegación y trazados del mapa. El almacenamiento local usa `mtb_camboya_pro_db` y claves `mtb_pro_*`; no importa ni limpia datos de otras apps.
 
 ## Documentación del proyecto
 
@@ -77,7 +77,7 @@ MTB_APP_ENV=development npm run prepare-web
 $env:MTB_APP_ENV = 'staging'; $env:MTB_CLOUD_SERVER = 'https://pruebas.example.com'; npm run build
 ```
 
-La compilación falla si el entorno no existe, si `staging` no tiene servidor o si la URL no es válida. Las etiquetas `vX.Y.Z` solo se compilan en producción y sin `MTB_CLOUD_SERVER`. Fuera de producción, Ajustes muestra el entorno junto a la versión (por ejemplo, `v0.2.19 (build local) · Pruebas`). Android bloquea el tráfico `http://`, así que en el móvil usa `staging` con un servidor HTTPS; `development` es para el navegador. Si sirves `index.html` sin compilar, la app usa producción.
+La compilación falla si el entorno no existe, si `staging` no tiene servidor o si la URL no es válida. Las etiquetas `vX.Y.Z` solo se compilan en producción y sin `MTB_CLOUD_SERVER`. Fuera de producción, Ajustes muestra el entorno junto a la versión (por ejemplo, `v0.2.20 (build local) · Pruebas`). Android bloquea el tráfico `http://`, así que en el móvil usa `staging` con un servidor HTTPS; `development` es para el navegador. Si sirves `index.html` sin compilar, la app usa producción.
 
 ## iOS
 
