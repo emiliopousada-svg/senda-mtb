@@ -51,6 +51,14 @@ function toolsCloseWorkspaces() {
     if (heading) heading.hidden = false;
 }
 
+function toolsHandleBackButton() {
+    const hub = document.querySelector('.tools-hub');
+    if (!hub || !hub.hidden) return false;
+    toolsCloseWorkspaces();
+    toolsScrollToTop();
+    return true;
+}
+
 // Centro de control: cada tarjeta abre su espacio de trabajo.
 document.querySelector('.tools-grid')?.addEventListener('click', event => {
     const button = event.target.closest('[data-tool]');

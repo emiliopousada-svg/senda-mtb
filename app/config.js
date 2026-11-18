@@ -150,19 +150,40 @@ function toast(msg, ms = 3500) {
 }
 
 // Diálogo propio (sustituye a confirm/prompt). Con `input` devuelve texto o null.
-function modal({ message, input = null, ok = 'Aceptar', cancel = 'Cancelar' }) {
+function modal({
+    message,
+    title = null,
+    eyebrow = null,
+    input = null,
+    ok = 'Aceptar',
+    cancel = 'Cancelar',
+    variant = null,
+    state = null
+}) {
     return new Promise(resolve => {
         const m = $('modal'), inp = $('modal-input'), bOk = $('modal-ok'), bCancel = $('modal-cancel');
+        const eyebrowElement = $('modal-eyebrow');
+        const titleElement = $('modal-title');
+        eyebrowElement.textContent = eyebrow || '';
+        eyebrowElement.hidden = !eyebrow;
+        titleElement.textContent = title || '';
+        titleElement.hidden = !title;
         $('modal-msg').textContent = message;
+        m.setAttribute('aria-label', title || message);
+        m.dataset.variant = variant || '';
+        m.dataset.state = state || '';
         inp.style.display = input !== null ? 'block' : 'none';
         if (input !== null) inp.value = input;
         bOk.textContent = ok;
         bCancel.textContent = cancel;
         m.classList.add('show');
         if (input !== null) setTimeout(() => { inp.focus(); inp.select(); }, 50);
+        else if (variant === 'exit') setTimeout(() => bCancel.focus(), 50);
 
         const done = v => {
             m.classList.remove('show');
+            m.dataset.variant = '';
+            m.dataset.state = '';
             bOk.onclick = bCancel.onclick = inp.onkeydown = null;
             resolve(v);
         };

@@ -84,6 +84,14 @@ function goBackPage() {
 // Android delega aquí el botón Atrás para navegar por las páginas antes de salir.
 // Devolver true significa que la pulsación quedó atendida por la aplicación.
 window.mtbHandleHardwareBack = function () {
+    const modalDialog = $('modal');
+    if (modalDialog && modalDialog.classList && modalDialog.classList.contains('show')) {
+        $('modal-cancel').click();
+        return true;
+    }
+    if (currentPage === 7 && typeof toolsHandleBackButton === 'function' && toolsHandleBackButton()) {
+        return true;
+    }
     if (currentPage > 0) {
         const previousPage = currentPage === 5 ? 0
             : currentPage === 6 || currentPage === 7 ? 5
@@ -91,8 +99,8 @@ window.mtbHandleHardwareBack = function () {
         goToPage(previousPage);
         return true;
     }
-    if (isRecording) {
-        toast('La grabación sigue activa. Finalízala antes de salir de la aplicación.', 5000);
+    if (typeof window.mtbRequestAppExit === 'function') {
+        window.mtbRequestAppExit();
         return true;
     }
     return false;

@@ -11,6 +11,7 @@ const toolsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'tools.js'
 
 function navigationContext(offsets, widths) {
     const wrapperLeft = 244;
+    const elements = new Map();
     const swiper = {
         getBoundingClientRect: () => ({ left: wrapperLeft }),
         children: offsets.map((offsetLeft, index) => ({
@@ -20,26 +21,38 @@ function navigationContext(offsets, widths) {
         style: {}
     };
     const context = vm.createContext({
-        $: () => swiper,
+        $: selector => elements.get(selector) || swiper,
         document: {
             addEventListener() {},
             querySelectorAll() { return []; },
             documentElement: { clientWidth: widths[0] },
             body: { dataset: {} }
         },
-        window: {
-            addEventListener() {},
-            innerWidth: widths[0]
-        },
+        map: null,
         statsNeedsRefresh: false,
         requestAnimationFrame(callback) { callback(); },
         ResizeObserver: undefined,
         toolsCloseWorkspaces() { context.closedToolWorkspaces += 1; },
         closedToolWorkspaces: 0,
+        toolsHandleBackButton() {
+            context.toolsBackCalls += 1;
+            if (!context.closeToolsWorkspaceOnBack) return false;
+            context.toolsCloseWorkspaces();
+            return true;
+        },
+        toolsBackCalls: 0,
+        closeToolsWorkspaceOnBack: false,
+        exitPromptCalls: 0,
+        isRecording: false,
+        window: {
+            addEventListener() {},
+            innerWidth: widths[0],
+            mtbRequestAppExit() { context.exitPromptCalls += 1; }
+        },
         console: { error() {}, warn() {} }
     });
     vm.runInContext(navigationSource, context);
-    return { context, swiper };
+    return { context, swiper, elements };
 }
 
 test('page navigation translates to each page actual offset', () => {
@@ -72,6 +85,40 @@ test('navigating away from tools closes its nested workspaces', () => {
     assert.equal(context.closedToolWorkspaces, 0);
     context.goToPage(3);
     assert.equal(context.closedToolWorkspaces, 1);
+});
+
+test('hardware back closes an open control-center workspace before leaving tools', () => {
+    const { context } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(7);
+    context.closeToolsWorkspaceOnBack = true;
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(vm.runInContext('currentPage', context), 7);
+    assert.equal(context.closedToolWorkspaces, 1);
+});
+
+test('hardware back requests exit confirmation at home, including during recording', () => {
+    const { context } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(0);
+    context.isRecording = true;
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(context.exitPromptCalls, 1);
+});
+
+test('hardware back dismisses an open modal instead of requesting app exit', () => {
+    const { context, elements } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(0);
+    let cancelClicked = false;
+    elements.set('modal', { classList: { contains: () => true } });
+    elements.set('modal-cancel', { click() { cancelClicked = true; } });
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(cancelClicked, true);
+    assert.equal(context.exitPromptCalls, 0);
 });
 
 test('closing tool workspaces restores the hub and closes the calendar dialog', () => {
@@ -110,7 +157,7 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
     });
     vm.runInContext(toolsSource, context);
 
-    context.toolsCloseWorkspaces();
+    assert.equal(context.toolsHandleBackButton(), true);
 
     assert.equal(elements.get('.tools-hub').hidden, false);
     assert.equal(elements.get('.tools-page-heading').hidden, false);
@@ -124,6 +171,7 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
     assert.equal(elements.get('social-workspace').hidden, true);
     assert.equal(elements.get('misc-settings-workspace').hidden, true);
     assert.equal(elements.get('calendar-create-dialog').open, false);
+    assert.equal(context.toolsHandleBackButton(), false);
 });
 
 test('opening a control-center workspace hides the hub and shows only the chosen panel', () => {

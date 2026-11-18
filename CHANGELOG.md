@@ -5,10 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
-## [Sin publicar]
+## [0.2.14] - 2026-11-18
 
 ### Cambiado
 * **Inicio:** la cabecera del saludo se reorganiza: marca y estados de red/GPS arriba, avatar junto al saludo con un resumen de la última salida y accesos a Centro de control y Cockpit con el mismo ancho.
+* **Navegación:** el botón Atrás Android cierra primero las ventanas abiertas del Centro de control y los diálogos antes de navegar hacia atrás.
+* **Salida:** al volver a Inicio se pide confirmación antes de cerrar la app y se informa claramente si hay una grabación activa.
 
 ## [0.2.13] - 2026-11-18
 
