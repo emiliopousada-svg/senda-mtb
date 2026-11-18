@@ -11,15 +11,37 @@ function dashboardUpdateGreeting() {
     }
 
     const avatar = $('home-avatar');
+    const avatarImage = $('home-avatar-image');
     const placeholder = $('home-avatar-placeholder');
-    if (avatar && placeholder) {
+    if (avatar && avatarImage && placeholder) {
         const avatarUrl = typeof getAccountAvatarUrl === 'function' ? getAccountAvatarUrl() : '';
         avatar.hidden = !avatarUrl;
         placeholder.hidden = Boolean(avatarUrl);
-        if (avatarUrl) avatar.src = avatarUrl;
-        else avatar.removeAttribute('src');
+        if (avatarUrl) avatarImage.src = avatarUrl;
+        else avatarImage.removeAttribute('src');
     }
     if (typeof profileRender === 'function') profileRender();
+}
+
+function dashboardInitAvatarViewer() {
+    const trigger = $('home-avatar');
+    const source = $('home-avatar-image');
+    const dialog = $('home-avatar-dialog');
+    const preview = $('home-avatar-dialog-image');
+    const closeButton = $('home-avatar-dialog-close');
+    if (!trigger || !source || !dialog || !preview || !closeButton) return;
+
+    trigger.addEventListener('click', () => {
+        if (trigger.hidden || !source.src || dialog.open) return;
+        preview.src = source.src;
+        dialog.showModal();
+    });
+    preview.addEventListener('click', () => dialog.close());
+    closeButton.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => {
+        if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => preview.removeAttribute('src'));
 }
 
 function dashboardUpdateNav(page = currentPage) {
@@ -407,6 +429,7 @@ document.querySelectorAll('[data-recording]').forEach(button => {
     });
 });
 
+dashboardInitAvatarViewer();
 dashboardUpdateNav(currentPage);
 dashboardUpdateGreeting();
 dashboardUpdateNetworkStatus();

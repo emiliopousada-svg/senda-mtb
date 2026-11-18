@@ -121,6 +121,18 @@ test('hardware back dismisses an open modal instead of requesting app exit', () 
     assert.equal(context.exitPromptCalls, 0);
 });
 
+test('hardware back closes the enlarged avatar before navigating away', () => {
+    const { context, elements } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(5);
+    const avatarDialog = { open: true, close() { this.open = false; } };
+    elements.set('home-avatar-dialog', avatarDialog);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(avatarDialog.open, false);
+    assert.equal(vm.runInContext('currentPage', context), 5);
+});
+
 test('closing tool workspaces restores the hub and closes the calendar dialog', () => {
     class FakeElement {
         constructor(hidden = true) {

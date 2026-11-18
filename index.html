@@ -864,7 +864,9 @@
                                 <h1 id="home-greeting">¡Hola, Biker!</h1>
                                 <p id="home-last-ride" class="dashboard-last-ride">Tu primera salida aparecerá aquí.</p>
                             </div>
-                            <img id="home-avatar" class="dashboard-avatar" alt="Avatar del usuario" hidden>
+                            <button id="home-avatar" class="dashboard-avatar" type="button" aria-label="Ampliar foto de perfil" aria-haspopup="dialog" hidden>
+                                <img id="home-avatar-image" alt="">
+                            </button>
                             <span id="home-avatar-placeholder" class="dashboard-avatar-placeholder" aria-hidden="true">👤</span>
                         </div>
                         <div class="hero-actions">
@@ -1043,17 +1045,6 @@
                     </section>
                 </section>
 
-                <section class="cockpit-controls" aria-label="Controles de grabación">
-                    <div>
-                        <p>La grabación usa el GPS y los sensores conectados.</p>
-                    </div>
-                    <div class="cockpit-control-buttons">
-                        <button id="cockpit-toggle" class="cockpit-toggle" type="button">
-                            <span id="cockpit-toggle-icon" aria-hidden="true">▶</span><span id="cockpit-toggle-label">Iniciar salida</span>
-                        </button>
-                        <button id="cockpit-finish" class="cockpit-finish" type="button" hidden>Finalizar y guardar</button>
-                    </div>
-                </section>
             </main>
         </div>
 
@@ -1394,7 +1385,10 @@
 
     </div>
 
-
+    <dialog id="home-avatar-dialog" class="dashboard-avatar-dialog" aria-label="Foto de perfil ampliada">
+        <button id="home-avatar-dialog-close" class="dashboard-avatar-dialog-close" type="button" aria-label="Cerrar foto ampliada">×</button>
+        <img id="home-avatar-dialog-image" alt="Foto de perfil ampliada">
+    </dialog>
 
     <!-- NAVEGACIÓN DE PESTAÑAS INFERIOR -->
     <nav class="mobile-nav" aria-label="Navegación principal">

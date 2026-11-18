@@ -106,16 +106,6 @@ function cockpitRender() {
         state.dataset.state = !active ? 'idle' : paused ? 'paused' : 'recording';
         state.textContent = !active ? 'Sin grabar' : paused ? 'Grabación pausada' : 'Grabando ruta';
     }
-    const toggleLabel = $('cockpit-toggle-label');
-    if (toggleLabel) toggleLabel.textContent = !active ? 'Iniciar salida' : paused ? 'Reanudar salida' : 'Pausar salida';
-    const toggleIcon = $('cockpit-toggle-icon');
-    if (toggleIcon) toggleIcon.textContent = active && !paused ? 'Ⅱ' : '▶';
-    const finish = $('cockpit-finish');
-    if (finish) {
-        finish.hidden = !active;
-        finish.disabled = !active;
-    }
-
     const gpsSource = $('dashboard-gps-status');
     const gpsTarget = $('cockpit-gps-status');
     if (gpsSource && gpsTarget) {
@@ -150,9 +140,6 @@ function cockpitRender() {
 
     cockpitRenderRoute();
 }
-
-$('cockpit-toggle')?.addEventListener('click', () => $('btn-start')?.click());
-$('cockpit-finish')?.addEventListener('click', () => $('btn-stop')?.click());
 
 if (typeof MutationObserver !== 'undefined') {
     const cockpitObserver = new MutationObserver(cockpitRender);

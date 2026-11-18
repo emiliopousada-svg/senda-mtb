@@ -10,7 +10,6 @@ const cockpitSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'cockpit
 
 function cockpitContext() {
     const elements = new Map();
-    const clicks = { start: 0, finish: 0 };
     const observers = [];
     const makeElement = (textContent = '') => {
         const attributes = {};
@@ -44,20 +43,16 @@ function cockpitContext() {
         ['cockpit-heart-rate'], ['cockpit-cadence'], ['cockpit-power'], ['cockpit-speed'],
         ['cockpit-sensor-hr'], ['cockpit-sensor-cadence'], ['cockpit-sensor-power'],
         ['sensor-hr-status'], ['sensor-cadence-status'], ['sensor-power-status'],
-        ['cockpit-speed-panel'], ['cockpit-speed-gauge'], ['cockpit-recording-state'], ['cockpit-toggle-label'], ['cockpit-toggle-icon'],
-        ['cockpit-finish'], ['cockpit-gps-status'], ['cockpit-network-status'], ['cockpit-network-label'],
+        ['cockpit-speed-panel'], ['cockpit-speed-gauge'], ['cockpit-recording-state'],
+        ['cockpit-gps-status'], ['cockpit-network-status'], ['cockpit-network-label'],
         ['cockpit-profile-altitude'], ['cockpit-elevation-range'], ['cockpit-profile-line'],
         ['cockpit-profile-area'], ['cockpit-profile-empty'], ['cockpit-route-line'], ['cockpit-route-start'],
-        ['cockpit-route-end'], ['cockpit-route-empty'], ['cockpit-route-title'], ['cockpit-toggle'],
-        ['btn-start'], ['btn-stop']
+        ['cockpit-route-end'], ['cockpit-route-empty'], ['cockpit-route-title']
     ].forEach(([id, text]) => elements.set(id, makeElement(text)));
     elements.get('dashboard-gps-status').classList.toggle('ready', true);
     elements.get('dashboard-network-status').classList.toggle('connected', true);
     elements.get('recording-live-line').setAttribute('d', 'M0,40 L320,10');
     elements.get('recording-live-area').setAttribute('d', 'M0,40 L320,10 L320,48 L0,48 Z');
-    elements.get('btn-start').click = () => { clicks.start += 1; };
-    elements.get('btn-stop').click = () => { clicks.finish += 1; };
-
     const context = vm.createContext({
         $: id => elements.get(id) || null,
         points: [[12.1, 104.1], [12.2, 104.3]],
@@ -74,7 +69,7 @@ function cockpitContext() {
         }
     });
     vm.runInContext(cockpitSource, context);
-    return { context, elements, clicks, observers };
+    return { context, elements, observers };
 }
 
 test('cockpit mirrors ride metrics, live status and route into its own view', () => {
@@ -91,8 +86,6 @@ test('cockpit mirrors ride metrics, live status and route into its own view', ()
     observers[0].callback();
     assert.equal(elements.get('cockpit-sensor-cadence').classList.contains('connected'), true);
     assert.equal(elements.get('cockpit-recording-state').textContent, 'Grabando ruta');
-    assert.equal(elements.get('cockpit-toggle-label').textContent, 'Pausar salida');
-    assert.equal(elements.get('cockpit-finish').hidden, false);
     assert.equal(elements.get('cockpit-gps-status').textContent, 'GPS · Buena');
     assert.equal(elements.get('cockpit-network-label').textContent, 'En línea');
     assert.equal(elements.get('cockpit-network-status').classList.contains('connected'), true);
@@ -120,17 +113,11 @@ test('cockpit speedometer changes color band at each speed threshold', () => {
     });
 });
 
-test('cockpit forwards recording controls and reflects paused state', () => {
-    const { context, elements, clicks } = cockpitContext();
-    elements.get('cockpit-toggle').handlers.click();
-    elements.get('cockpit-finish').handlers.click();
-    assert.equal(clicks.start, 1);
-    assert.equal(clicks.finish, 1);
-
+test('cockpit reflects paused recording state without showing recording controls', () => {
+    const { context, elements } = cockpitContext();
     context.isPaused = true;
     context.cockpitRender();
     assert.equal(elements.get('cockpit-recording-state').textContent, 'Grabación pausada');
-    assert.equal(elements.get('cockpit-toggle-label').textContent, 'Reanudar salida');
 });
 
 test('cockpit switches the connection indicator to offline styling when disconnected', () => {
@@ -158,6 +145,29 @@ test('cockpit sits between home and tools and maps back to the existing map navi
     assert.match(html, /<div class="cockpit-status-row"[^>]*>\s*<button class="cockpit-back"[^>]*data-page="5">← Inicio<\/button>/);
     assert.match(html, /data-page="6"[^>]*>Cockpit<\/button>/);
     assert.match(html, /id="page-cockpit"[\s\S]*data-page="0">Abrir mapa/);
+    assert.doesNotMatch(html, /class="cockpit-controls"|id="cockpit-toggle"|id="cockpit-finish"|Iniciar salida|Finalizar y guardar/);
     assert.ok(mapControls);
     assert.match(mapControls[1], /id="btn-map-cockpit"[^>]*data-page="6"[^>]*aria-label="Volver al Cockpit"/);
+});
+
+test('cockpit uses compact layout when the phone is in landscape', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
+    assert.match(css, /\.cockpit-title-brand\s*\{[^}]*font-size:clamp\(1rem,5\.5vw,2rem\)/);
+    assert.match(css, /@media \(orientation: landscape\) and \(max-width:1280px\) and \(max-height:600px\)/);
+    assert.match(css, /\.cockpit-speed-gauge\s*\{[\s\S]*?width:min\(21dvh,150px\)/);
+    assert.match(css, /\.cockpit-performance\s*\{[\s\S]*?grid-template-columns:minmax\(210px,\.72fr\)/);
+    assert.match(css, /\.cockpit-visuals\s*\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+});
+
+test('map landscape profiles stay compact and attribution stays above the bottom stack', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
+    assert.match(css, /@media \(orientation: landscape\) and \(max-width: 1280px\)/);
+    assert.match(css, /#page-map #map-route-profile\s*\{[\s\S]*?width: min\(58vw, 520px\)/);
+    assert.match(css, /#page-map #map-route-profile\s*\{[\s\S]*?max-height: 58px/);
+    assert.match(css, /#page-map #map-route-svg\s*\{[\s\S]*?height: 24px/);
+    assert.match(css, /#page-map #recording-live-profile\s*\{[\s\S]*?top: calc\(env\(safe-area-inset-top, 0px\) \+ 4px\)/);
+    assert.match(css, /#page-map #recording-live-profile\s*\{[\s\S]*?width: auto/);
+    assert.match(css, /#page-map #recording-live-profile svg\s*\{[\s\S]*?height: 14px/);
+    assert.match(css, /#page-map \.leaflet-bottom\.leaflet-right\s*\{[\s\S]*?left: 50%/);
+    assert.match(css, /#page-map \.leaflet-control-attribution\s*\{[\s\S]*?font-size: 8px/);
 });

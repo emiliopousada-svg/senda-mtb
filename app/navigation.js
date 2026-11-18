@@ -89,6 +89,11 @@ window.mtbHandleHardwareBack = function () {
         $('modal-cancel').click();
         return true;
     }
+    const avatarDialog = $('home-avatar-dialog');
+    if (avatarDialog && avatarDialog.open) {
+        avatarDialog.close();
+        return true;
+    }
     if (currentPage === 7 && typeof toolsHandleBackButton === 'function' && toolsHandleBackButton()) {
         return true;
     }

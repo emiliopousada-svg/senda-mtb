@@ -12,10 +12,34 @@ function dashboardContext(nickname, avatarUrl = '') {
     const greeting = { textContent: '' };
     const avatar = {
         hidden: true,
+        listeners: {},
+        addEventListener(name, listener) { this.listeners[name] = listener; }
+    };
+    const avatarImage = {
         src: '',
         removeAttribute(name) { if (name === 'src') this.src = ''; }
     };
     const avatarPlaceholder = { hidden: false };
+    const avatarPreview = {
+        src: '',
+        listeners: {},
+        addEventListener(name, listener) { this.listeners[name] = listener; },
+        removeAttribute(name) { if (name === 'src') this.src = ''; }
+    };
+    const avatarDialog = {
+        open: false,
+        listeners: {},
+        addEventListener(name, listener) { this.listeners[name] = listener; },
+        showModal() { this.open = true; },
+        close() {
+            this.open = false;
+            this.listeners.close();
+        }
+    };
+    const avatarCloseButton = {
+        listeners: {},
+        addEventListener(name, listener) { this.listeners[name] = listener; }
+    };
     const gps = {
         attributes: {},
         classList: { toggle() {} },
@@ -53,7 +77,11 @@ function dashboardContext(nickname, avatarUrl = '') {
         $(id) {
             if (id === 'home-greeting') return greeting;
             if (id === 'home-avatar') return avatar;
+            if (id === 'home-avatar-image') return avatarImage;
             if (id === 'home-avatar-placeholder') return avatarPlaceholder;
+            if (id === 'home-avatar-dialog') return avatarDialog;
+            if (id === 'home-avatar-dialog-image') return avatarPreview;
+            if (id === 'home-avatar-dialog-close') return avatarCloseButton;
             if (id === 'dashboard-gps-status') return gps;
             if (id === 'dashboard-network-status') return network;
             if (id === 'acc-server-status') return accountIndicator;
@@ -61,7 +89,7 @@ function dashboardContext(nickname, avatarUrl = '') {
         }
     });
     vm.runInContext(dashboardSource, context);
-    return { context, greeting, avatar, avatarPlaceholder, gps, network, accountIndicator };
+    return { context, greeting, avatar, avatarImage, avatarPlaceholder, avatarPreview, avatarDialog, avatarCloseButton, gps, network, accountIndicator };
 }
 
 test('home greeting uses the account nickname and falls back when signed out', () => {
@@ -73,15 +101,25 @@ test('home greeting uses the account nickname and falls back when signed out', (
 });
 
 test('home shows the cached account avatar beside the greeting or the placeholder', () => {
-    const { context, avatar, avatarPlaceholder } = dashboardContext('TrailRider', 'data:image/jpeg;base64,avatar');
+    const { context, avatar, avatarPlaceholder, avatarPreview } = dashboardContext('TrailRider', 'data:image/jpeg;base64,avatar');
     assert.equal(avatar.hidden, false);
-    assert.equal(avatar.src, 'data:image/jpeg;base64,avatar');
     assert.equal(avatarPlaceholder.hidden, true);
+    avatar.listeners.click();
+    assert.equal(context.$('home-avatar-dialog').open, true);
+    assert.equal(context.$('home-avatar-dialog-image').src, 'data:image/jpeg;base64,avatar');
+    avatarPreview.listeners.click();
+    assert.equal(context.$('home-avatar-dialog').open, false);
+    assert.equal(context.$('home-avatar-dialog-image').src, '');
+
+    avatar.listeners.click();
+    context.$('home-avatar-dialog-close').listeners.click();
+    assert.equal(context.$('home-avatar-dialog').open, false);
+    assert.equal(context.$('home-avatar-dialog-image').src, '');
 
     context.getAccountAvatarUrl = () => '';
     context.dashboardUpdateGreeting();
     assert.equal(avatar.hidden, true);
-    assert.equal(avatar.src, '');
+    assert.equal(context.$('home-avatar-image').src, '');
     assert.equal(avatarPlaceholder.hidden, false);
 });
 
@@ -99,6 +137,8 @@ test('home omits the recording CTA and adventure tagline but keeps its shortcuts
     assert.doesNotMatch(actions[1], /hero-connectivity-status/);
     assert.match(html, /class="hero-topline"[\s\S]*class="eyebrow"[\s\S]*class="hero-connectivity-status"[\s\S]*id="dashboard-network-status"[\s\S]*id="dashboard-gps-status"[\s\S]*class="dashboard-greeting"/);
     assert.match(html, /id="home-greeting"[\s\S]*id="home-last-ride"/);
+    assert.match(html, /id="home-avatar" class="dashboard-avatar" type="button"[^>]*aria-haspopup="dialog"/);
+    assert.match(html, /<dialog id="home-avatar-dialog"[\s\S]*id="home-avatar-dialog-image"/);
     assert.doesNotMatch(html, /class="hero-status"/);
     assert.doesNotMatch(html, /dashboard-arrange-toggle|screen-fullscreen-toggle|fullscreen-exit/);
     assert.doesNotMatch(dashboardSource, /dashboardInitCardArrangement|dashboard-arrange-toggle/);
