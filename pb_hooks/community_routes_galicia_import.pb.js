@@ -41,21 +41,38 @@ function run() {
         return [lat, lng, isFinite(ele) ? ele : null];
     }
     function parseGpx(text, fallback) {
-        const segments = [], trackNames = [];
+        const segments = [];
+        function parsePoints(container, tagName) {
+            const points = [];
+            const pattern = new RegExp("<" + tagName + "\\b([^>]*)>([\\s\\S]*?)<\\/" + tagName + "\\s*>|<" + tagName + "\\b([^>]*)\\/>", "gi");
+            let match;
+            while ((match = pattern.exec(container))) {
+                const attrs = match[1] || match[3] || "", body = match[2] || "";
+                const latMatch = /\blat=[\"']([^\"']+)[\"']/i.exec(attrs);
+                const lngMatch = /\blon=[\"']([^\"']+)[\"']/i.exec(attrs);
+                if (!latMatch || !lngMatch) continue;
+                const elevation = /<ele\b[^>]*>([\s\S]*?)<\/ele\s*>/i.exec(body);
+                points.push(point(latMatch[1], lngMatch[1], elevation ? plainText(elevation[1]) : null));
+            }
+            return points;
+        }
         const segmentPattern = /<trkseg\b[^>]*>([\s\S]*?)<\/trkseg>/gi;
         let segment;
         while ((segment = segmentPattern.exec(text))) {
-            const points = [], pointPattern = /<trkpt\b[^>]*\blat=["']([^"']+)["'][^>]*\blon=["']([^"']+)["'][^>]*>([\s\S]*?)<\/trkpt>|<trkpt\b[^>]*\blon=["']([^"']+)["'][^>]*\blat=["']([^"']+)["'][^>]*>([\s\S]*?)<\/trkpt>/gi;
-            let match;
-            while ((match = pointPattern.exec(segment[1]))) {
-                const lat = match[1] || match[5], lng = match[2] || match[4], body = match[3] || match[6] || "";
-                const elevation = /<ele\b[^>]*>([\s\S]*?)<\/ele>/i.exec(body);
-                points.push(point(lat, lng, elevation ? plainText(elevation[1]) : null));
-            }
+            const points = parsePoints(segment[1], "trkpt");
             if (points.length) segments.push(points);
         }
+        if (!segments.length) {
+            const routePattern = /<rte\b[^>]*>([\s\S]*?)<\/rte\s*>/gi;
+            let route;
+            while ((route = routePattern.exec(text))) {
+                const points = parsePoints(route[1], "rtept");
+                if (points.length) segments.push(points);
+            }
+        }
         const name = /<trk\b[^>]*>[\s\S]*?<name\b[^>]*>([\s\S]*?)<\/name>/i.exec(text);
-        return { name: cleanName(name ? plainText(name[1]) : fallback), segments };
+        const routeName = name || /<rte\b[^>]*>[\s\S]*?<name\b[^>]*>([\s\S]*?)<\/name>/i.exec(text);
+        return { name: cleanName(routeName ? plainText(routeName[1]) : fallback), segments };
     }
     function parseKml(text, fallback) {
         const segments = [], pattern = /<LineString\b[^>]*>[\s\S]*?<coordinates\b[^>]*>([\s\S]*?)<\/coordinates>[\s\S]*?<\/LineString>/gi;
@@ -127,6 +144,23 @@ function run() {
         for (let i = 0; i < result.length; i++) if (result[i].length > 1) filtered.push(result[i]);
         return filtered;
     }
+    function fitTrackJson(lines, maxChars) {
+        let step = 1, json = JSON.stringify(lines);
+        while (json.length > maxChars) {
+            step *= 2;
+            const compact = [];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i], sampled = [];
+                for (let j = 0; j < line.length; j += step) sampled.push(line[j]);
+                if (line.length > 1 && sampled[sampled.length - 1] !== line[line.length - 1]) sampled.push(line[line.length - 1]);
+                if (sampled.length > 1) compact.push(sampled);
+            }
+            if (!compact.length) throw new Error("no se pudo reducir la geometría de la ruta");
+            json = JSON.stringify(compact);
+            lines = compact;
+        }
+        return { lines: lines, json: json };
+    }
     function importFile(owner, relativePath, root, ownerNickname, maxPoints, sourcePrefix) {
         const lower = relativePath.toLowerCase();
         const text = readUtf8($filepath.join(root, relativePath));
@@ -163,6 +197,8 @@ function run() {
         const points = [];
         for (let i = 0; i < lines.length; i++) for (let j = 0; j < lines[i].length; j++) points.push(lines[i][j]);
         if (points.length < 2) throw new Error("ruta demasiado corta después del recorte de privacidad");
+        const fittedTrack = fitTrackJson(lines, 250000);
+        lines = fittedTrack.lines;
         const sourcePath = sourcePrefix + relativePath;
         let record;
         try { record = $app.findFirstRecordByData("community_routes", "sourcePath", sourcePath); }
@@ -172,7 +208,7 @@ function run() {
             minLat = Math.min(minLat, points[i][0]); maxLat = Math.max(maxLat, points[i][0]);
             minLng = Math.min(minLng, points[i][1]); maxLng = Math.max(maxLng, points[i][1]);
         }
-        record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: JSON.stringify(lines), poisJson: "[]", published: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
+        record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: fittedTrack.json, poisJson: "[]", published: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
         $app.save(record);
     }
     function scanAndImport() {
