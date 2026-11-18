@@ -2,7 +2,7 @@
 // Lee pb_public/rutas/galicia cada cinco minutos. Los archivos permanecen en
 // su sitio: sourcePath permite actualizar una ruta al modificar el fichero.
 (function () {
-    const ROOT = $os.getenv("COMMUNITY_IMPORT_DIR") || "pb_public/rutas/galicia";
+    const ROOT = $os.getenv("COMMUNITY_IMPORT_DIR") || $filepath.join($os.getwd(), "pb_public", "rutas", "galicia");
     const OWNER_NICKNAME = "SENDA-MTB";
     const SOURCE_PREFIX = "galicia/";
     const MAX_POINTS = 100000;
@@ -80,9 +80,10 @@
         }
         return result.filter((line) => line.length > 1);
     }
-    function importFile(owner, entry) {
-        const name = entry.name(), lower = name.toLowerCase(), text = String($os.readFile(ROOT + "/" + name));
-        const fallback = name.replace(/\.[^.]+$/, "");
+    function importFile(owner, relativePath) {
+        const lower = relativePath.toLowerCase();
+        const text = String($os.readFile($filepath.join(ROOT, relativePath)));
+        const fallback = relativePath.split("/").pop().replace(/\.[^.]+$/, "");
         const parsed = lower.endsWith(".gpx") ? parseGpx(text, fallback) : lower.endsWith(".kml") ? parseKml(text, fallback) : parseGeoJson(text, fallback);
         const raw = parsed.segments.filter((line) => line.length > 1);
         const count = raw.reduce((total, line) => total + line.length, 0);
@@ -91,7 +92,7 @@
         raw.forEach((line) => line.slice(1).forEach((p, index) => { distanceM += distance(line[index], p); if (p[2] != null && line[index][2] != null && p[2] > line[index][2]) gain += p[2] - line[index][2]; }));
         let lines = trimStart(raw, 150); lines = trimStart(lines.slice().reverse().map((line) => line.slice().reverse()), 150).reverse().map((line) => line.slice().reverse());
         const points = lines.flat(); if (points.length < 2) throw new Error("ruta demasiado corta después del recorte de privacidad");
-        const sourcePath = SOURCE_PREFIX + name;
+        const sourcePath = SOURCE_PREFIX + relativePath;
         let record;
         try { record = $app.findFirstRecordByData("community_routes", "sourcePath", sourcePath); }
         catch (_) { record = new Record($app.findCollectionByNameOrId("community_routes")); }
@@ -102,14 +103,21 @@
         let owner;
         try { owner = $app.findFirstRecordByData("users", "nickname", OWNER_NICKNAME); }
         catch (_) { console.log("[rutas Galicia] falta la cuenta " + OWNER_NICKNAME); return; }
-        let entries;
-        try { entries = $os.readDir(ROOT); } catch (error) { console.log("[rutas Galicia] no se puede leer " + ROOT + ": " + error); return; }
-        entries.forEach((entry) => {
-            const name = entry.name();
-            if (entry.isDir() || !/\.(gpx|kml|geojson|json)$/i.test(name)) return;
-            try { importFile(owner, entry); console.log("[rutas Galicia] importada " + name); }
-            catch (error) { console.log("[rutas Galicia] error en " + name + ": " + error); }
-        });
+        function scan(directory, relativeDirectory) {
+            let entries;
+            try { entries = $os.readDir(directory); }
+            catch (error) { console.log("[rutas Galicia] no se puede leer " + directory + ": " + error); return; }
+            entries.forEach((entry) => {
+                const name = entry.name();
+                const relativePath = relativeDirectory ? relativeDirectory + "/" + name : name;
+                const fullPath = $filepath.join(directory, name);
+                if (entry.isDir()) { scan(fullPath, relativePath); return; }
+                if (!/\.(gpx|kml|geojson|json)$/i.test(name)) return;
+                try { importFile(owner, relativePath); console.log("[rutas Galicia] importada " + relativePath); }
+                catch (error) { console.log("[rutas Galicia] error en " + relativePath + ": " + error); }
+            });
+        }
+        scan(ROOT, "");
     }
     cronAdd("importar_rutas_galicia", "*/5 * * * *", run);
     run();

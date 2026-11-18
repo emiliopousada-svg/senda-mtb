@@ -1,14 +1,15 @@
 // Calcula en PocketBase la caja geográfica que usa el catálogo para filtrar candidatos.
 function indexCommunityRouteBounds(e) {
-    if (e.hasSuperuserAuth()) return e.next();
-    if (!e.auth) throw new BadRequestError("Inicia sesión para publicar una ruta.");
-    if (e.record.getString("owner") !== e.auth.id) {
+    const internalWrite = e.hasSuperuserAuth() || !e.auth;
+    if (!internalWrite && e.record.getString("owner") !== e.auth.id) {
         throw new BadRequestError("El propietario de la ruta no coincide con la sesión.");
     }
-    const user = $app.findRecordById("users", e.auth.id);
+    const ownerId = internalWrite ? e.record.getString("owner") : e.auth.id;
+    if (!ownerId) throw new BadRequestError("La ruta debe tener un propietario.");
+    const user = $app.findRecordById("users", ownerId);
     const nickname = user.getString("nickname").trim();
     if (!nickname) throw new BadRequestError("Configura un apodo antes de publicar rutas.");
-    e.record.set("createdBy", nickname);
+    if (!internalWrite) e.record.set("createdBy", nickname);
 
     const communityRouteTrimMeters = 150;
 
