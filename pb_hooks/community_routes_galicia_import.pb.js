@@ -2,6 +2,7 @@
 // Lee pb_public/rutas/galicia cada cinco minutos. Los archivos permanecen en
 // su sitio: sourcePath permite actualizar una ruta al modificar el fichero.
 (function () {
+function run() {
     const ROOT = $os.getenv("COMMUNITY_IMPORT_DIR") || $filepath.join($os.getwd(), "pb_public", "rutas", "galicia");
     const OWNER_NICKNAME = "SENDA-MTB";
     const SOURCE_PREFIX = "galicia/";
@@ -158,7 +159,7 @@
         record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: JSON.stringify(lines), poisJson: "[]", published: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
         $app.save(record);
     }
-    function run() {
+    function scanAndImport() {
         const root = $os.getenv("COMMUNITY_IMPORT_DIR") || $filepath.join($os.getwd(), "pb_public", "rutas", "galicia");
         const ownerNickname = "SENDA-MTB";
         const maxPoints = 100000;
@@ -175,14 +176,16 @@
                 const name = entry.name();
                 const relativePath = relativeDirectory ? relativeDirectory + "/" + name : name;
                 const fullPath = $filepath.join(directory, name);
-                if (entry.isDir()) { scan(fullPath, relativePath); return; }
-                if (!/\.(gpx|kml|geojson|json)$/i.test(name)) return;
+                if (entry.isDir()) { scan(fullPath, relativePath); continue; }
+                if (!/\.(gpx|kml|geojson|json)$/i.test(name)) continue;
                 try { importFile(owner, relativePath, root, ownerNickname, maxPoints, sourcePrefix); console.log("[rutas Galicia] importada " + relativePath); }
                 catch (error) { console.log("[rutas Galicia] error en " + relativePath + ": " + error); }
             }
         }
         scan(root, "");
     }
+    scanAndImport();
+}
     cronAdd("importar_rutas_galicia", "*/5 * * * *", run);
     run();
 })();
