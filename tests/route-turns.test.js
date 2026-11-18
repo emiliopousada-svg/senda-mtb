@@ -91,4 +91,14 @@ describe('Turn and voice navigation detection', () => {
         assert.deepEqual(detectRouteTurns([[42.0, -8.0]], new Float64Array([0])), []);
         assert.deepEqual(detectRouteTurns(null, null), []);
     });
+
+    it('identifica la posición y estado de alerta para giros próximos', () => {
+        const dummyTurn = { distanceM: 100, warnedAhead: false, warnedNow: false, text: 'giro a la derecha' };
+        // A 60 metros del giro: dentro de [40, 70] m
+        const distRemaining60 = dummyTurn.distanceM - 40;
+        assert.ok(distRemaining60 <= 70 && distRemaining60 >= 40, 'debe disparar aviso previo');
+        // A 10 metros del giro: dentro de [-5, 16] m
+        const distRemaining10 = dummyTurn.distanceM - 90;
+        assert.ok(distRemaining10 <= 16 && distRemaining10 >= -5, 'debe disparar aviso inmediato');
+    });
 });

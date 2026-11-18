@@ -158,12 +158,14 @@ function checkTurnVoicePrompts(currentDistanceM) {
         // Aviso previo: entre 45 y 75 metros
         if (!turn.warnedAhead && distRemaining <= 70 && distRemaining >= 40) {
             turn.warnedAhead = true;
+            if (typeof screenWakeForManeuver === 'function') screenWakeForManeuver(25);
             announceRouteVoice(`En ${Math.round(distRemaining)} metros, ${turn.text}.`);
             break;
         }
         // Aviso en el punto: entre 0 y 16 metros
         if (!turn.warnedNow && distRemaining <= 16 && distRemaining >= -5) {
             turn.warnedNow = true;
+            if (typeof screenWakeForManeuver === 'function') screenWakeForManeuver(15);
             announceRouteVoice(`${turn.text} ahora.`);
             break;
         }
@@ -197,6 +199,7 @@ function checkOffRoute(lat, lon, match) {
     const min = match.distance;
     if (!offRouteState && min > OFFROUTE_M) {
         offRouteState = true;
+        if (typeof screenWakeForManeuver === 'function') screenWakeForManeuver(35);
         toast(`⚠️ Te has salido de la ruta (${Math.round(min)} m)`, 5000);
         announceRouteVoice(`Atención. Estás a unos ${Math.round(min)} metros fuera de la ruta. Comprueba el mapa cuando sea seguro.`);
         playOffRouteSound();
@@ -343,9 +346,45 @@ function unfollowRoute() {
     if (typeof clearClimbProgress === 'function') clearClimbProgress();
     refreshGpsMode();
 }
+function initRouteSettings() {
+    if (typeof $ !== 'function') return;
+    const voiceInput = $('setting-route-voice');
+    if (voiceInput) {
+        voiceInput.checked = localStorage.getItem('mtb_pro_route_voice') !== '0';
+        voiceInput.addEventListener('change', () => {
+            localStorage.setItem('mtb_pro_route_voice', voiceInput.checked ? '1' : '0');
+        });
+    }
+    const soundInput = $('setting-route-sound');
+    if (soundInput) {
+        soundInput.checked = localStorage.getItem('mtb_pro_route_sound') !== '0';
+        soundInput.addEventListener('change', () => {
+            localStorage.setItem('mtb_pro_route_sound', soundInput.checked ? '1' : '0');
+        });
+    }
+    const vibInput = $('setting-route-vibration');
+    if (vibInput) {
+        vibInput.checked = localStorage.getItem('mtb_pro_route_vibration') !== '0';
+        vibInput.addEventListener('change', () => {
+            localStorage.setItem('mtb_pro_route_vibration', vibInput.checked ? '1' : '0');
+        });
+    }
+    const smartWakeInput = $('setting-smart-wake');
+    if (smartWakeInput) {
+        smartWakeInput.checked = localStorage.getItem('mtb_pro_smart_wake') === '1';
+        smartWakeInput.addEventListener('change', () => {
+            localStorage.setItem('mtb_pro_smart_wake', smartWakeInput.checked ? '1' : '0');
+            if (typeof toast === 'function' && smartWakeInput.checked) {
+                toast('⚡ Encendido inteligente: pantalla activa solo en giros y desvíos.', 4000);
+            }
+        });
+    }
+}
+
 if (typeof $ === 'function' && $('btn-unfollow')) {
     $('btn-unfollow').addEventListener('click', () => { unfollowRoute(); toast('Has dejado de seguir la ruta.'); });
 }
+initRouteSettings();
 
 // ============================================================
 if (typeof module !== 'undefined' && module.exports) {

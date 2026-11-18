@@ -969,6 +969,7 @@
 
                 <div class="cockpit-status-row" aria-label="Estado de la actividad">
                     <button class="cockpit-back" type="button" data-page="5">← Inicio</button>
+                    <button id="btn-cockpit-oled" class="cockpit-oled-btn" type="button" title="Modo ahorro de batería OLED (#000000)" aria-pressed="false">⚡ OLED</button>
                     <span id="cockpit-recording-state" class="cockpit-state" data-state="idle">Lista para salir</span>
                     <span id="cockpit-gps-status" class="cockpit-status-chip">GPS · Buscando</span>
                     <span id="cockpit-network-status" class="cockpit-status-chip" aria-live="polite">
@@ -1217,6 +1218,10 @@
                         <label class="setting-toggle" for="setting-route-voice">
                             <input type="checkbox" id="setting-route-voice">
                             <span><strong>Indicaciones por voz</strong><span class="hint">Avisos hablados de giros, subidas, desvíos y kilómetros completados.</span></span>
+                        </label>
+                        <label class="setting-toggle" for="setting-smart-wake">
+                            <input type="checkbox" id="setting-smart-wake">
+                            <span><strong>Ahorro extremo: Encendido inteligente</strong><span class="hint">Atenúa la pantalla en rectas y la despierta automáticamente ~60 m antes de cada giro o al salirte de la ruta.</span></span>
                         </label>
                         <label class="setting-toggle" for="setting-recording-haptics">
                             <input type="checkbox" id="setting-recording-haptics">

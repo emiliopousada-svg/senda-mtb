@@ -164,4 +164,27 @@ if (typeof MutationObserver !== 'undefined') {
     }));
 }
 
+function initCockpitOledMode() {
+    const btn = typeof $ === 'function' && $('btn-cockpit-oled');
+    const page = typeof $ === 'function' && $('page-cockpit');
+    if (!btn || !page) return;
+    const isOled = localStorage.getItem('mtb_pro_cockpit_oled') === '1';
+    page.classList.toggle('oled-mode', isOled);
+    btn.classList.toggle('active', isOled);
+    btn.setAttribute('aria-pressed', String(isOled));
+
+    btn.addEventListener('click', () => {
+        const active = page.classList.toggle('oled-mode');
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+        try {
+            localStorage.setItem('mtb_pro_cockpit_oled', active ? '1' : '0');
+        } catch (e) {}
+        if (typeof toast === 'function') {
+            toast(active ? '⚡ Modo OLED activado (negro puro #000000: píxeles apagados)' : 'Modo normal restaurado', 3000);
+        }
+    });
+}
+
+initCockpitOledMode();
 cockpitRender();

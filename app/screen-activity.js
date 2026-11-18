@@ -78,11 +78,26 @@ function screenReleaseWakeLock() {
     lock.release().catch(error => console.warn('No se pudo liberar el bloqueo de pantalla:', error));
 }
 
+function isSmartWakeEnabled() {
+    return localStorage.getItem('mtb_pro_smart_wake') === '1';
+}
+
+function screenWakeForManeuver(seconds = 20) {
+    screenWakeNow();
+    if (isSmartWakeEnabled()) {
+        clearTimeout(screenIdleTimer);
+        screenIdleTimer = setTimeout(() => screenSetDimmed(true), seconds * 1000);
+    }
+}
+
 function screenScheduleDim() {
     clearTimeout(screenIdleTimer);
     screenIdleTimer = null;
     if (document.visibilityState === 'hidden') return;
-    screenIdleTimer = setTimeout(() => screenSetDimmed(true), SCREEN_IDLE_DELAY_MS);
+    const delay = isSmartWakeEnabled() && (typeof isRecording !== 'undefined' && isRecording || typeof followedRoute !== 'undefined' && followedRoute)
+        ? 35000 // 35 segundos si Smart Wake está activo para ahorrar máxima batería
+        : SCREEN_IDLE_DELAY_MS;
+    screenIdleTimer = setTimeout(() => screenSetDimmed(true), delay);
 }
 
 function screenWakeNow() {
