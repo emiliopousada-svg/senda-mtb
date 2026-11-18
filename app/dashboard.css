@@ -151,15 +151,24 @@ body::before {
 .hero-copy .eyebrow { color:#aab6c7; }
 .eyebrow { display:block; color:#8895a7; font-size:.62rem; font-weight:800; letter-spacing:.15em; }
 .eyebrow i { display:inline-block; width:5px; height:5px; margin:0 6px 1px; border-radius:50%; background:var(--mtb-orange); }
-.dashboard-greeting { display:flex; width:100%; min-width:0; align-items:center; justify-content:space-between; gap:14px; }
-.dashboard-hero h1 { margin-top:8px; color:#f7f8fa; font-size:clamp(1.8rem,5.6vw,2.7rem); font-weight:760; letter-spacing:-.055em; line-height:1.05; }
-.dashboard-greeting h1 { min-width:0; flex:1; }
-/* Avatar en la esquina superior derecha de la tarjeta de inicio */
-.hero-copy { --hero-avatar-size:96px; }
-.hero-copy > .eyebrow,.dashboard-greeting h1,.hero-copy > p { padding-right:calc(var(--hero-avatar-size) + 14px); }
-.dashboard-avatar,.dashboard-avatar-placeholder { position:absolute; top:0; right:0; z-index:3; width:var(--hero-avatar-size); height:var(--hero-avatar-size); flex:0 0 var(--hero-avatar-size); border:2px solid rgba(255,255,255,.2); border-radius:50%; box-shadow:0 6px 18px rgba(0,0,0,.35); }
+/* Cabecera de inicio: marca y estados arriba, avatar junto al saludo y accesos debajo. */
+.hero-topline { display:flex; min-width:0; align-items:center; justify-content:space-between; gap:10px; }
+.hero-topline .eyebrow { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dashboard-greeting { display:flex; width:100%; min-width:0; align-items:center; gap:14px; margin-top:14px; }
+.dashboard-greeting-copy { min-width:0; flex:1; }
+.dashboard-hero h1 { margin-top:0; color:#f7f8fa; font-size:clamp(1.8rem,5.6vw,2.7rem); font-weight:760; letter-spacing:-.055em; line-height:1.05; }
+.dashboard-greeting h1 { min-width:0; overflow-wrap:anywhere; }
+.dashboard-hero p.dashboard-last-ride { margin-top:5px; overflow:hidden; color:#bbc5d2; font-size:.86rem; text-overflow:ellipsis; white-space:nowrap; }
+.dashboard-last-ride strong { color:#fff; font-weight:750; }
+.hero-copy { --hero-avatar-size:64px; }
+.dashboard-avatar,.dashboard-avatar-placeholder { order:-1; width:var(--hero-avatar-size); height:var(--hero-avatar-size); flex:0 0 var(--hero-avatar-size); border:2px solid rgba(255,255,255,.2); border-radius:50%; box-shadow:0 6px 18px rgba(0,0,0,.35); }
 .dashboard-avatar { background:#17202b; object-fit:cover; }
 .dashboard-avatar-placeholder { display:grid; place-items:center; background:linear-gradient(145deg,#263445,#141a22); color:#dce4ee; font-size:calc(var(--hero-avatar-size) * .4); }
+.hero-connectivity-status { flex:0 0 auto; }
+.hero-connectivity-status .status-chip { min-height:30px; gap:7px; padding:0 10px; font-size:.7rem; }
+.hero-connectivity-status .status-chip > i:first-child { width:7px; height:7px; box-shadow:0 0 0 3px rgba(119,130,144,.12); }
+.hero-connectivity-status .status-chip.connected > i:first-child { box-shadow:0 0 0 3px rgba(40,209,124,.18),0 0 10px rgba(40,209,124,.6); }
+.hero-connectivity-status .gps-signal-bars { height:12px; }
 .dashboard-avatar[hidden],.dashboard-avatar-placeholder[hidden] { display:none; }
 .dashboard-hero p { margin-top:9px; color:#bbc5d2; font-size:.94rem; }
 .status-chip { display:inline-flex; align-items:center; gap:9px; min-height:42px; padding:0 14px; border:1px solid rgba(255,255,255,.1); border-radius:999px; background:rgba(8,12,18,.66); color:#d9e0e9; font-size:.8rem; font-weight:750; white-space:nowrap; }
@@ -442,6 +451,8 @@ body::before {
     .dashboard-hero { min-height:206px; padding:30px 34px; border-radius:22px; }
     .dashboard-hero::after { position:absolute; z-index:0; right:0; bottom:0; width:50%; height:100%; content:""; background:radial-gradient(ellipse at 84% 70%,rgba(8,16,22,.02),rgba(9,13,18,.1) 46%,rgba(9,13,18,.55)); }
     .dashboard-hero h1 { font-size:2.75rem; }
+    .hero-copy { --hero-avatar-size:76px; }
+    .dashboard-greeting { gap:16px; margin-top:18px; }
     .dashboard-hero p { font-size:1rem; }
     .dashboard-kpis { gap:14px; margin-top:15px; }
     .dashboard-kpi { min-height:142px; }
@@ -464,10 +475,15 @@ body::before {
     .dashboard-content { padding-top:calc(10px + var(--app-safe-top)); }
     .dashboard-hero { min-height:156px; flex-direction:column; align-items:flex-start; justify-content:flex-end; padding:20px 17px; }
     .hero-copy h1 { font-size:1.85rem; }
-    .hero-copy { --hero-avatar-size:84px; }
+    .hero-copy { --hero-avatar-size:56px; }
+    .hero-connectivity-status .gps-status-detail { display:none; }
+    .dashboard-hero p.dashboard-last-ride { font-size:.78rem; line-height:1.35; white-space:normal; }
+    .dashboard-greeting { gap:12px; }
     .hero-copy p { font-size:.8rem; }
     .status-chip { min-height:37px; gap:7px; padding:0 11px; font-size:.71rem; }
+    .hero-connectivity-status .status-chip { min-height:28px; gap:6px; padding:0 9px; font-size:.68rem; }
     .gps-signal-bars { height:15px; }
+    .hero-connectivity-status .gps-signal-bars { height:12px; }
     .gps-signal-bars i:nth-child(4) { height:14px; }
     .hero-terrain { right:-7%; bottom:-50px; width:65%; }
     .dashboard-kpis { gap:8px; margin-top:9px; }
@@ -773,7 +789,9 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .status-chip.offline i { background:#ff761f; box-shadow:0 0 0 4px rgba(255,118,31,.13); }
 .hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; }
 .hero-action-buttons,.hero-connectivity-status { display:flex; align-items:center; gap:8px; }
-.hero-action-buttons { flex-wrap:wrap; }
+.hero-action-buttons { display:grid; width:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.hero-actions { margin-top:16px; }
+@media (min-width:720px) { .hero-action-buttons { width:auto; grid-template-columns:repeat(2,200px); } }
 .hero-connectivity-status { flex-wrap:wrap; }
 .hero-tools-action,.hero-cockpit-action {
     min-height:40px; display:inline-flex; align-items:center; justify-content:center; padding:0 12px;
@@ -801,11 +819,11 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 #page-cockpit { order:6; }
 #page-tools { order:7; }
 @media (max-width:719px) {
-    .hero-actions { gap:6px; margin-top:9px; }
-    .hero-action-buttons,.hero-connectivity-status { gap:6px; }
-    .hero-tools-action,.hero-cockpit-action { min-height:35px; padding:0 10px; font-size:.65rem; }
-    .hero-actions .status-chip { min-height:36px; gap:7px; padding:0 9px; font-size:.72rem; }
-    .hero-actions .status-chip > i:first-child { width:8px; height:8px; }
+    .hero-actions { gap:6px; margin-top:14px; }
+    .hero-action-buttons { gap:8px; }
+    .hero-connectivity-status { gap:6px; }
+    .hero-tools-action,.hero-cockpit-action { min-height:40px; padding:0 10px; font-size:.74rem; }
+    .hero-connectivity-status .status-chip { min-height:28px; gap:6px; padding:0 9px; font-size:.68rem; }
     .recording-metric-row { padding:8px; }
     .recording-metric-choice { font-size:.76rem; }
 }

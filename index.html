@@ -852,9 +852,18 @@
             <main class="dashboard-content">
                 <header class="dashboard-hero">
                     <div class="hero-copy">
-                        <span class="eyebrow">senda-mtb <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
+                        <div class="hero-topline">
+                            <span class="eyebrow">senda-mtb <i></i> <span class="hero-eyebrow-long">CENTRO DE ACTIVIDAD</span></span>
+                            <div class="hero-connectivity-status">
+                                <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En línea</span>
+                                <span id="dashboard-gps-status" class="status-chip" aria-live="polite"><i></i>GPS · Buscando</span>
+                            </div>
+                        </div>
                         <div class="dashboard-greeting">
-                            <h1 id="home-greeting">¡Hola, Biker!</h1>
+                            <div class="dashboard-greeting-copy">
+                                <h1 id="home-greeting">¡Hola, Biker!</h1>
+                                <p id="home-last-ride" class="dashboard-last-ride">Tu primera salida aparecerá aquí.</p>
+                            </div>
                             <img id="home-avatar" class="dashboard-avatar" alt="Avatar del usuario" hidden>
                             <span id="home-avatar-placeholder" class="dashboard-avatar-placeholder" aria-hidden="true">👤</span>
                         </div>
@@ -862,10 +871,6 @@
                             <div class="hero-action-buttons">
                                 <button class="hero-tools-action" type="button" data-page="7">Centro de control</button>
                                 <button class="hero-cockpit-action" type="button" data-page="6">Cockpit</button>
-                            </div>
-                            <div class="hero-connectivity-status">
-                                <span id="dashboard-network-status" class="status-chip" aria-live="polite"><i></i>En línea</span>
-                                <span id="dashboard-gps-status" class="status-chip" aria-live="polite"><i></i>GPS · Buscando</span>
                             </div>
                         </div>
                     </div>

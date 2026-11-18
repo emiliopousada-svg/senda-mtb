@@ -51,7 +51,7 @@ function dashboardUpdateGpsStatus() {
     status.classList.toggle('ready', quality > 0);
     status.setAttribute('data-gps-quality', String(quality));
     status.setAttribute('aria-label', `Calidad GPS: ${labels[quality]}${quality ? `, ${quality} de 4 barras` : ''}`);
-    status.innerHTML = `<span class="gps-signal-bars" aria-hidden="true">${bars}</span><span>GPS · ${labels[quality]}</span>`;
+    status.innerHTML = `<span class="gps-signal-bars" aria-hidden="true">${bars}</span><span>GPS<span class="gps-status-detail"> · ${labels[quality]}</span></span>`;
 }
 
 function dashboardUpdateNetworkStatus() {
@@ -275,9 +275,41 @@ function dashboardRenderMapPreview(route) {
     container.replaceChildren(empty);
 }
 
+function dashboardLastRideAgo(startedAt) {
+    const started = new Date(startedAt || 0);
+    if (!startedAt || Number.isNaN(started.getTime())) return 'Última salida';
+    const today = new Date();
+    const dayStart = date => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const days = Math.round((dayStart(today) - dayStart(started)) / 86400000);
+    if (days <= 0) return 'Última salida hoy';
+    if (days === 1) return 'Última salida ayer';
+    if (days < 30) return `Última salida hace ${days} días`;
+    return `Última salida el ${started.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`;
+}
+
+function dashboardUpdateLastRide(latest = dashboardLatestRecordedRoute()) {
+    const line = $('home-last-ride');
+    if (!line) return;
+    if (!latest) {
+        line.textContent = 'Tu primera salida aparecerá aquí.';
+        return;
+    }
+    const distance = Number(latest.distanceKm);
+    const ascent = Number(latest.elevationGain);
+    const parts = [document.createTextNode(dashboardLastRideAgo(latest.startedAt))];
+    if (Number.isFinite(distance) && distance > 0) {
+        const strong = document.createElement('strong');
+        strong.textContent = `${distance.toLocaleString('es-ES', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} km`;
+        parts.push(document.createTextNode(' · '), strong);
+    }
+    if (Number.isFinite(ascent) && ascent > 0) parts.push(document.createTextNode(` · +${Math.round(ascent)} m`));
+    line.replaceChildren(...parts);
+}
+
 function dashboardRender() {
     dashboardUpdateGreeting();
     const latest = dashboardLatestRecordedRoute();
+    dashboardUpdateLastRide(latest);
     const routeCount = Array.isArray(savedRoutes) ? savedRoutes.length : 0;
     const count = $('home-routes-count');
     if (count) count.textContent = `${routeCount} ${routeCount === 1 ? 'ruta guardada' : 'rutas guardadas'}`;

@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [Sin publicar]
+
+### Cambiado
+* **Inicio:** la cabecera del saludo se reorganiza: marca y estados de red/GPS arriba, avatar junto al saludo con un resumen de la última salida y accesos a Centro de control y Cockpit con el mismo ancho.
+
 ## [0.2.13] - 2026-11-18
 
 ### Añadido

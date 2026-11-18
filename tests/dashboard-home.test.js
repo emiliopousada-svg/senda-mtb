@@ -96,7 +96,9 @@ test('home omits the recording CTA and adventure tagline but keeps its shortcuts
     assert.doesNotMatch(home, /data-recording|Grabar salida|Tu próxima aventura empieza aquí/);
     assert.match(html, /class="sidebar-link sidebar-record"[^>]*data-recording/);
     assert.doesNotMatch(html, /tools-menu-button|>☷<\/button>/);
-    assert.match(actions[1], /class="hero-connectivity-status"[\s\S]*id="dashboard-network-status"[\s\S]*id="dashboard-gps-status"/);
+    assert.doesNotMatch(actions[1], /hero-connectivity-status/);
+    assert.match(html, /class="hero-topline"[\s\S]*class="eyebrow"[\s\S]*class="hero-connectivity-status"[\s\S]*id="dashboard-network-status"[\s\S]*id="dashboard-gps-status"[\s\S]*class="dashboard-greeting"/);
+    assert.match(html, /id="home-greeting"[\s\S]*id="home-last-ride"/);
     assert.doesNotMatch(html, /class="hero-status"/);
     assert.doesNotMatch(html, /dashboard-arrange-toggle|screen-fullscreen-toggle|fullscreen-exit/);
     assert.doesNotMatch(dashboardSource, /dashboardInitCardArrangement|dashboard-arrange-toggle/);
@@ -108,7 +110,8 @@ test('home GPS status shows signal quality as up to four bars', () => {
     context.lastAccuracy = 4;
     context.dashboardUpdateGpsStatus();
     assert.equal(gps.attributes['data-gps-quality'], '4');
-    assert.match(gps.innerHTML, /GPS · Excelente/);
+    assert.match(gps.innerHTML.replace(/<[^>]+>/g, ''), /GPS · Excelente/);
+    assert.match(gps.innerHTML, /class="gps-status-detail"/);
     assert.equal((gps.innerHTML.match(/class="active"/g) || []).length, 4);
 
     context.lastAccuracy = 25;
@@ -194,4 +197,18 @@ test('dashboard loads before cloud.js without errors and keeps network listeners
     assert.equal(greeting.textContent, '¡Hola, Biker!');
     assert.ok(listeners.includes('online'), 'falta el listener online');
     assert.ok(listeners.includes('offline'), 'falta el listener offline');
+});
+
+test('home hero summarizes how long ago the latest ride was', () => {
+    const { context } = dashboardContext('TrailRider');
+    const daysAgo = days => {
+        const date = new Date();
+        date.setDate(date.getDate() - days);
+        return date.toISOString();
+    };
+    assert.equal(context.dashboardLastRideAgo(daysAgo(0)), 'Última salida hoy');
+    assert.equal(context.dashboardLastRideAgo(daysAgo(1)), 'Última salida ayer');
+    assert.equal(context.dashboardLastRideAgo(daysAgo(3)), 'Última salida hace 3 días');
+    assert.match(context.dashboardLastRideAgo(daysAgo(45)), /^Última salida el /);
+    assert.equal(context.dashboardLastRideAgo(null), 'Última salida');
 });
