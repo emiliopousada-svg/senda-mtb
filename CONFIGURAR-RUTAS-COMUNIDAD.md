@@ -30,3 +30,11 @@ La migración inicial define los límites al crear `community_routes` desde cero
 La publicación y la privacidad de la ruta también dependen de los hooks del repositorio. Copia los archivos necesarios desde `pb_hooks` a la carpeta de hooks configurada en el servidor (por defecto, `pb_hooks`) y reinicia PocketBase para cargarlos. No sobrescribas hooks existentes sin revisar primero los cambios.
 
 `community_routes.pb.js` también impide que un usuario publique dos veces la misma ruta: rechaza la publicación si ya tiene otra con el mismo trazado recortado, o con la misma distancia (±50 m) y el mismo tiempo en movimiento. Tras actualizar el hook, reinicia PocketBase.
+
+## Importación automática de rutas oficiales de Galicia
+
+El hook `community_routes_galicia_import.pb.js` importa al iniciar PocketBase y después cada cinco minutos los archivos GPX, KML y GeoJSON que existan en `pb_public/rutas/galicia`. Si el volumen se monta en otra ruta dentro del contenedor, define `COMMUNITY_IMPORT_DIR` con esa ruta interna.
+
+Las rutas se asignan a la cuenta cuyo apodo exacto es `SENDA-MTB`; créala antes de activar el hook. El archivo se conserva para permitir actualizaciones: al modificarlo, se actualiza su publicación gracias al campo interno `sourcePath`. Los fallos se escriben en el log de PocketBase y no impiden importar los demás archivos.
+
+Instala también la migración `1794835006_add_community_route_source_path.js`, copia el hook al directorio `pb_hooks` del servidor y reinicia el contenedor. De momento solo se procesa Galicia.
