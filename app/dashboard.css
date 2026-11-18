@@ -354,6 +354,8 @@ body::before {
 .period-pill { padding:7px 11px; border:1px solid rgba(22,140,255,.2); border-radius:9px; background:rgba(22,140,255,.1); color:#5bbcff; font-size:.68rem; font-weight:750; }
 #home-map { position:relative; height:255px; overflow:hidden; background:radial-gradient(ellipse at 68% 28%,#364532 0 10%,transparent 46%),radial-gradient(ellipse at 31% 74%,#263e2c,transparent 52%),linear-gradient(142deg,#202b23,#17221d); }
 #home-map .route-card-map { width:100%; height:100%; }
+#home-map .dashboard-terrain-map { position:absolute; inset:0; width:100%; height:100%; background:#202a2b; }
+#home-map .maplibregl-ctrl-attrib { max-width:calc(100vw - 42px); font-size:9px; }
 #home-map .route-relief { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 35%,rgba(22,140,255,.1),transparent 60%),linear-gradient(160deg,#1b2420,#121815); }
 .route-relief-canvas { display:block; width:100%; height:100%; cursor:grab; touch-action:none; outline:none; }
 .route-relief.dragging .route-relief-canvas { cursor:grabbing; }

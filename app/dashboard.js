@@ -78,19 +78,179 @@ function dashboardLatestRecordedRoute() {
         .sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0))[0] || null;
 }
 
+let dashboardTerrainMap = null;
+
+function dashboardTerrainRouteSegments(route) {
+    const points = Array.isArray(route && route.points) ? route.points : [];
+    const segments = [];
+    let segment = [];
+    const finish = () => {
+        if (segment.length > 1) segments.push(segment);
+        segment = [];
+    };
+    const step = Math.max(1, Math.ceil(points.length / 1800));
+    let segmentIndex = 0;
+    points.forEach((point, index) => {
+        if (!Array.isArray(point) || point[0] == null || point[1] == null
+            || !Number.isFinite(Number(point[0])) || !Number.isFinite(Number(point[1]))
+            || Math.abs(Number(point[0])) > 90 || Math.abs(Number(point[1])) > 180) {
+            finish();
+            segmentIndex = 0;
+            return;
+        }
+        if (point[5] === 1) {
+            finish();
+            segmentIndex = 0;
+        }
+        if (segmentIndex % step === 0 || index === points.length - 1) {
+            segment.push([Number(point[1]), Number(point[0])]);
+        }
+        segmentIndex++;
+    });
+    finish();
+    return segments;
+}
+
+function dashboardCreateTerrainMap(route, container, routeKey) {
+    if (!window.maplibregl || !navigator.onLine) return false;
+    const segments = dashboardTerrainRouteSegments(route);
+    if (!segments.length) return false;
+
+    const coordinates = segments.flat();
+    const longitudes = coordinates.map(point => point[0]);
+    const latitudes = coordinates.map(point => point[1]);
+    const minLng = Math.min(...longitudes), maxLng = Math.max(...longitudes);
+    const minLat = Math.min(...latitudes), maxLat = Math.max(...latitudes);
+    const middle = coordinates[Math.floor(coordinates.length / 2)];
+    const mapElement = document.createElement('div');
+    mapElement.className = 'dashboard-terrain-map';
+    mapElement.setAttribute('role', 'img');
+    mapElement.setAttribute('aria-label', `Vista satélite 3D de la ruta ${routeNameWithoutActivity(route) || 'reciente'}`);
+    mapElement.routeReliefKey = routeKey;
+    container.replaceChildren(mapElement);
+
+    const style = {
+        version: 8,
+        sources: {
+            satellite: {
+                type: 'raster',
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                tileSize: 256,
+                maxzoom: 19,
+                attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community'
+            },
+            terrain: {
+                type: 'raster-dem',
+                tiles: ['https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'],
+                tileSize: 512,
+                encoding: 'terrarium',
+                maxzoom: 17,
+                attribution: '&copy; <a href="https://mapterhorn.com/attribution">Mapterhorn</a>'
+            }
+        },
+        layers: [{ id: 'satellite-imagery', type: 'raster', source: 'satellite' }],
+        terrain: { source: 'terrain', exaggeration: 1.35 }
+    };
+
+    let map;
+    try {
+        map = new window.maplibregl.Map({
+            container: mapElement,
+            style,
+            center: middle,
+            zoom: 13,
+            pitch: 64,
+            bearing: 0,
+            maxPitch: 78,
+            attributionControl: true,
+            dragRotate: true,
+            scrollZoom: false,
+            doubleClickZoom: false,
+            cooperativeGestures: true
+        });
+    } catch (error) {
+        console.warn('[Última ruta] no se pudo iniciar el mapa 3D:', error);
+        container.replaceChildren();
+        return false;
+    }
+    dashboardTerrainMap = map;
+    map.once('load', () => {
+        if (dashboardTerrainMap !== map || !map.getContainer().isConnected) return;
+        const routeGeometry = segments.length === 1
+            ? { type: 'LineString', coordinates: segments[0] }
+            : { type: 'MultiLineString', coordinates: segments };
+        map.addSource('latest-route', {
+            type: 'geojson',
+            data: { type: 'Feature', properties: {}, geometry: routeGeometry }
+        });
+        map.addLayer({
+            id: 'latest-route-outline', type: 'line', source: 'latest-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#14202a', 'line-width': 8, 'line-opacity': 0.85 }
+        });
+        map.addLayer({
+            id: 'latest-route-line', type: 'line', source: 'latest-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#ffe84a', 'line-width': 4, 'line-opacity': 1 }
+        });
+        map.addSource('latest-route-points', {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [
+                    { type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: segments[0][0] } },
+                    { type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: segments[segments.length - 1].slice(-1)[0] } }
+                ]
+            }
+        });
+        map.addLayer({
+            id: 'latest-route-markers', type: 'circle', source: 'latest-route-points',
+            paint: {
+                'circle-radius': 5,
+                'circle-color': ['match', ['get', 'kind'], 'start', '#ffffff', '#ffe84a'],
+                'circle-stroke-color': '#17202a',
+                'circle-stroke-width': 2
+            }
+        });
+        const lngPad = Math.max((maxLng - minLng) * 0.08, 0.00015);
+        const latPad = Math.max((maxLat - minLat) * 0.08, 0.00015);
+        map.fitBounds(
+            new window.maplibregl.LngLatBounds([minLng - lngPad, minLat - latPad], [maxLng + lngPad, maxLat + latPad]),
+            { padding: { top: 36, right: 32, bottom: 38, left: 32 }, maxZoom: 16.5, pitch: 64, duration: 0 }
+        );
+        map.resize();
+    });
+    map.on('error', event => {
+        if (event && event.error) console.warn('[Última ruta] error de mapa 3D:', event.error.message || event.error);
+    });
+    return true;
+}
+
 function dashboardRenderMapPreview(route) {
     const container = $('home-map');
     if (!container) return;
     container.dataset.routeAvailable = route ? 'true' : 'false';
-    container.tabIndex = route ? 0 : -1;
-    container.setAttribute('role', route ? 'button' : 'region');
+    container.tabIndex = -1;
+    container.setAttribute('role', 'region');
     container.setAttribute('aria-label', route
-        ? `Abrir ficha completa de ${routeNameWithoutActivity(route) || 'la última ruta'}, relieve 3D interactivo`
-        : 'Relieve 3D de tu última ruta');
+        ? `Vista satélite 3D de ${routeNameWithoutActivity(route) || 'la última ruta'}`
+        : 'Vista satélite 3D de tu última ruta');
+    const routeKey = route && typeof routeReliefKey === 'function'
+        ? routeReliefKey(route)
+        : route ? [route.id, route.points && route.points.length].join('|') : 'empty';
+    const useTerrainMap = Boolean(route && navigator.onLine && window.maplibregl);
+    const key = `${routeKey}|${useTerrainMap ? 'satellite-3d' : 'local-preview'}`;
+    if (container.dataset.previewKey === key) return;
+    container.dataset.previewKey = key;
+    if (dashboardTerrainMap) {
+        dashboardTerrainMap.remove();
+        dashboardTerrainMap = null;
+    }
     // Si la ruta no ha cambiado, se conserva el relieve (y el giro elegido por el usuario).
     const current = container.firstElementChild;
     if (route && current && current.routeReliefKey
-        && typeof routeReliefKey === 'function' && current.routeReliefKey === routeReliefKey(route)) return;
+        && current.routeReliefKey === routeKey && !useTerrainMap) return;
+    if (useTerrainMap && dashboardCreateTerrainMap(route, container, routeKey)) return;
     // Muestra relieve 3D cuando hay altitud; si falta, mantiene el trazado en una vista isométrica.
     const relief = route && typeof createRouteRelief3D === 'function'
         ? createRouteRelief3D(route)
@@ -184,6 +344,7 @@ if (homeRoutePreview) {
         if (previewDragged) window.setTimeout(() => { previewDragged = false; }, 0);
     }, { passive: true });
     homeRoutePreview.addEventListener('click', event => {
+        if (event.target.closest('.maplibregl-canvas, .maplibregl-control-container')) return;
         if (previewDragged || event.target.closest('button,a,input,select')) return;
         const latest = dashboardLatestRecordedRoute();
         if (latest) dashboardOpenLatestRouteDetail();
@@ -217,5 +378,11 @@ document.querySelectorAll('[data-recording]').forEach(button => {
 dashboardUpdateNav(currentPage);
 dashboardUpdateGreeting();
 dashboardUpdateNetworkStatus();
-window.addEventListener('online', dashboardUpdateNetworkStatus);
-window.addEventListener('offline', dashboardUpdateNetworkStatus);
+window.addEventListener('online', () => {
+    dashboardUpdateNetworkStatus();
+    dashboardRenderMapPreview(dashboardLatestRecordedRoute());
+});
+window.addEventListener('offline', () => {
+    dashboardUpdateNetworkStatus();
+    dashboardRenderMapPreview(dashboardLatestRecordedRoute());
+});

@@ -72,6 +72,8 @@ const SHELL_URLS = [
   'lib/chart.umd.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.css',
+  'https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.js',
   'https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js'
 ];
