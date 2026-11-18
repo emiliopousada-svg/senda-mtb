@@ -52,12 +52,121 @@ function announceRouteVoice(message) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(message);
         utterance.lang = 'es-ES';
-        utterance.rate = 1;
+        utterance.rate = 1.05;
         utterance.pitch = 1;
-        utterance.volume = 0.9;
+        utterance.volume = 1.0;
         window.speechSynthesis.speak(utterance);
     } catch (error) {
         console.warn('No se pudo emitir el aviso de navegación por voz:', error);
+    }
+}
+
+function routeHaversineMeters(a, b) {
+    const rad = Math.PI / 180;
+    const dLat = (b[0] - a[0]) * rad;
+    const dLon = (b[1] - a[1]) * rad;
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * 6371000 * Math.asin(Math.sqrt(Math.min(1, s)));
+}
+
+function routeBearingBetween(from, to) {
+    const rad = Math.PI / 180;
+    const lat1 = from[0] * rad, lat2 = to[0] * rad;
+    const dLon = (to[1] - from[1]) * rad;
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function calculateRouteCumulativeDistances(pts) {
+    if (!Array.isArray(pts) || !pts.length) return new Float64Array(0);
+    const cum = new Float64Array(pts.length);
+    for (let i = 1; i < pts.length; i++) {
+        cum[i] = cum[i - 1] + routeHaversineMeters(pts[i - 1], pts[i]);
+    }
+    return cum;
+}
+
+function detectRouteTurns(pts, cumDist) {
+    if (!Array.isArray(pts) || pts.length < 5 || !cumDist || cumDist.length < pts.length) return [];
+    const turns = [];
+    const totalDist = cumDist[pts.length - 1];
+    if (totalDist < 50) return [];
+
+    const windowM = 22; // muestreo hacia atrás y hacia adelante para filtrar micro-quiebros
+    let lastTurnDistM = -100;
+
+    for (let i = 1; i < pts.length - 1; i++) {
+        const curDist = cumDist[i];
+        if (curDist - lastTurnDistM < 45) continue; // no duplicar giros en la misma curva
+
+        // Buscar punto ~windowM atrás
+        let prevIdx = i;
+        while (prevIdx > 0 && curDist - cumDist[prevIdx] < windowM) {
+            prevIdx--;
+        }
+
+        // Buscar punto ~windowM adelante
+        let nextIdx = i;
+        while (nextIdx < pts.length - 1 && cumDist[nextIdx] - curDist < windowM) {
+            nextIdx++;
+        }
+
+        if (curDist - cumDist[prevIdx] < 12 || cumDist[nextIdx] - curDist < 12) continue;
+
+        const bearingIn = routeBearingBetween(pts[prevIdx], pts[i]);
+        const bearingOut = routeBearingBetween(pts[i], pts[nextIdx]);
+        const diff = (bearingOut - bearingIn + 540) % 360 - 180;
+
+        let turnText = null;
+        let turnType = null;
+
+        if (diff >= 115) {
+            turnType = 'sharp-right';
+            turnText = 'curva muy cerrada a la derecha';
+        } else if (diff >= 42) {
+            turnType = 'right';
+            turnText = 'giro a la derecha';
+        } else if (diff <= -115) {
+            turnType = 'sharp-left';
+            turnText = 'curva muy cerrada a la izquierda';
+        } else if (diff <= -42) {
+            turnType = 'left';
+            turnText = 'giro a la izquierda';
+        }
+
+        if (turnText) {
+            turns.push({
+                index: i,
+                distanceM: curDist,
+                angle: Math.round(diff),
+                type: turnType,
+                text: turnText,
+                warnedAhead: false,
+                warnedNow: false
+            });
+            lastTurnDistM = curDist;
+        }
+    }
+    return turns;
+}
+
+function checkTurnVoicePrompts(currentDistanceM) {
+    if (!followedRoute || !Array.isArray(followedRoute.turns) || !Number.isFinite(currentDistanceM)) return;
+    for (const turn of followedRoute.turns) {
+        const distRemaining = turn.distanceM - currentDistanceM;
+        // Aviso previo: entre 45 y 75 metros
+        if (!turn.warnedAhead && distRemaining <= 70 && distRemaining >= 40) {
+            turn.warnedAhead = true;
+            announceRouteVoice(`En ${Math.round(distRemaining)} metros, ${turn.text}.`);
+            break;
+        }
+        // Aviso en el punto: entre 0 y 16 metros
+        if (!turn.warnedNow && distRemaining <= 16 && distRemaining >= -5) {
+            turn.warnedNow = true;
+            announceRouteVoice(`${turn.text} ahora.`);
+            break;
+        }
     }
 }
 
@@ -161,11 +270,16 @@ function updateMapRouteProfilePosition(match) {
 function followRoute(r) {
     unlockOffRouteSound();
     clearLastRideMapPreview();
+    const routePts = r.points.map(p => [p[0], p[1]]);
+    const cumDist = calculateRouteCumulativeDistances(routePts);
+    const turns = detectRouteTurns(routePts, cumDist);
     followedRoute = {
         id: r.id,
         name: r.name,
         kind: r.kind,
-        pts: r.points.map(p => [p[0], p[1]]),
+        pts: routePts,
+        cumDist,
+        turns,
         pois: Array.isArray(r.pois) ? r.pois : [],
         gainCum: gainCumulative(r.points),
         progressIndex: 0
@@ -229,6 +343,18 @@ function unfollowRoute() {
     if (typeof clearClimbProgress === 'function') clearClimbProgress();
     refreshGpsMode();
 }
-$('btn-unfollow').addEventListener('click', () => { unfollowRoute(); toast('Has dejado de seguir la ruta.'); });
+if (typeof $ === 'function' && $('btn-unfollow')) {
+    $('btn-unfollow').addEventListener('click', () => { unfollowRoute(); toast('Has dejado de seguir la ruta.'); });
+}
 
 // ============================================================
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        pointSegDistM,
+        routeHaversineMeters,
+        routeBearingBetween,
+        calculateRouteCumulativeDistances,
+        detectRouteTurns,
+        checkTurnVoicePrompts
+    };
+}

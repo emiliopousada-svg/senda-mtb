@@ -25,6 +25,7 @@ let gpsOneShotPending = false, gpsResumeCheckPending = false;
 let gpsRecenterPending = true;
 let lastGpsSpeedFix = null;
 let lastElevationFix = null;
+let lastVoiceMilestoneKm = 0;
 let pendingGpsVisualState = null, gpsVisualTimer = null, gpsVisualFrame = null;
 let lastGpsVisualUpdateAt = 0;
 let pendingRouteRenderPoints = [];
@@ -394,9 +395,15 @@ function onPos(pos) {
     const visualState = { ll, speedKmh: kmh, heading: visualHeading, followedMatch };
     scheduleGpsVisualUpdate(visualState);
 
+    if (followedMatch) {
+        checkOffRoute(lat, lon, followedMatch);
+        if (typeof checkTurnVoicePrompts === 'function' && followedRoute && followedRoute.cumDist) {
+            checkTurnVoicePrompts(followedRoute.cumDist[followedMatch.index]);
+        }
+    }
+
     if (!isRecording || isPaused) return;
 
-    if (followedMatch) checkOffRoute(lat, lon, followedMatch);
     if (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > MAX_ACC_M) return; // precisión ausente, inválida o señal pobre: no se graba
     const t = pos.timestamp;
     if (!Number.isFinite(t)) return; // sin tiempo fiable no se puede validar el desplazamiento
@@ -423,6 +430,18 @@ function onPos(pos) {
         : null;
 
     totalDistance += add;
+    if (totalDistance >= 5) {
+        const currentMilestone = Math.floor(totalDistance / 5) * 5;
+        if (currentMilestone > lastVoiceMilestoneKm) {
+            lastVoiceMilestoneKm = currentMilestone;
+            const avgKmh = (typeof movingMs === 'number' && movingMs > 0)
+                ? (totalDistance / (movingMs / 3600000))
+                : kmh;
+            if (typeof announceRouteVoice === 'function') {
+                announceRouteVoice(`${currentMilestone} kilómetros completados. Velocidad media ${avgKmh.toFixed(1).replace('.', ' coma ')} kilómetros por hora.`);
+            }
+        }
+    }
     if (brk) elev.reset();
     elev.add(recordedAltitude);
 

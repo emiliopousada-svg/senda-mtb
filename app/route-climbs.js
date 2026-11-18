@@ -182,15 +182,21 @@
 
     // ── Estado interno del módulo (accesible solo aquí) ───────
     let _climbs = [];
+    let _lastActiveClimbNumber = null;
+    let _lastAnnouncedClimbDone = null;
 
     /** Guarda las subidas detectadas (llamado desde route-following.js). */
     function setRouteClimbs(climbs) {
         _climbs = Array.isArray(climbs) ? climbs : [];
+        _lastActiveClimbNumber = null;
+        _lastAnnouncedClimbDone = null;
     }
 
     /** Limpia las subidas al dejar de seguir la ruta. */
     function clearClimbProgress() {
         _climbs = [];
+        _lastActiveClimbNumber = null;
+        _lastAnnouncedClimbDone = null;
         const el = typeof document !== 'undefined' && document.getElementById('climb-progress');
         if (el) el.hidden = true;
     }
@@ -206,11 +212,26 @@
 
         const state = climbProgress(_climbs, currentDistM);
         if (!state.active) {
+            if (_lastActiveClimbNumber !== null) {
+                if (typeof announceRouteVoice === 'function' && _lastAnnouncedClimbDone !== _lastActiveClimbNumber) {
+                    announceRouteVoice('Subida coronada.');
+                    _lastAnnouncedClimbDone = _lastActiveClimbNumber;
+                }
+                _lastActiveClimbNumber = null;
+            }
             el.hidden = true;
             return;
         }
 
         const c   = state.active;
+        if (_lastActiveClimbNumber !== c.number) {
+            _lastActiveClimbNumber = c.number;
+            _lastAnnouncedClimbDone = null;
+            if (typeof announceRouteVoice === 'function') {
+                const kmText = (c.lengthM / 1000).toFixed(1).replace('.', ' coma ');
+                announceRouteVoice(`Comienza subida ${c.number} de ${_climbs.length}. ${kmText} kilómetros al ${Math.round(c.avgGrade)} por ciento.`);
+            }
+        }
         const pct = Math.round(state.percentComplete * 100);
 
         const labelEl     = document.getElementById('climb-label');
