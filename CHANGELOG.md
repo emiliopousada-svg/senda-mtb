@@ -5,6 +5,18 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.19] - 2026-11-18
+
+### Añadido
+* **Mini ClimbPro:** análisis de ruta en O(N) al pulsar «Seguir ruta» que detecta las subidas del recorrido y muestra una barra de progreso en vivo con distancia y desnivel restante hasta coronar.
+* **Estimación física de potencia:** cálculo de vatios post-salida según pendiente, peso y velocidad para usuarios sin potenciómetro, con indicación orientativa `(est.)*`.
+* **Navegación y avisos por voz (TTS):** locuciones nativas con Web Speech API para giros a ~60 m de los cruces, avisos de subidas ClimbPro y marcas cada 5 km.
+* **Modo True Black OLED (#000000):** botón en el Cockpit que apaga los píxeles en pantallas OLED y suspende el renderizado SVG/GPU, reduciendo hasta un 50% el consumo.
+* **Smart Wake:** encendido inteligente de la pantalla solo ante giros o desvíos de ruta, manteniendo la pantalla atenuada en rectas prolongadas.
+* **Calibración DEM:** módulo de elevación topográfica con teselas Terrarium para corregir altitudes ruidosas de tracks GPS.
+
+---
+
 ## [0.2.14] - 2026-11-18
 
 ### Cambiado
