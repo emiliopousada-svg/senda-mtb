@@ -3,9 +3,11 @@
 // Catálogo estático servido desde pb_public/rutas/galicia para no incluir tracks en el APK.
 const GALICIA_ROUTES_CATALOG_PATH = '/rutas/galicia/catalogo.json';
 const GALICIA_ROUTES_CATALOG_CACHE_MS = 10 * 60 * 1000;
+const GALICIA_ROUTE_BUNDLE_CACHE_LIMIT = 3;
 let galiciaRoutesCatalogCache = null;
 let galiciaRoutesCatalogLoadedAt = 0;
 let galiciaRoutesCatalogRequest = null;
+const galiciaRouteBundleCache = new Map();
 
 function getGaliciaRoutesCatalogCount() {
     return Array.isArray(galiciaRoutesCatalogCache) ? galiciaRoutesCatalogCache.length : 0;
@@ -84,30 +86,52 @@ function renderGaliciaRoutes(routes) {
         notice.textContent = route.notice || 'Confirma el estado del camino y las restricciones antes de salir.';
         const actions = document.createElement('div');
         actions.className = 'community-route-actions';
+        const detail = document.createElement('button');
+        detail.type = 'button';
+        detail.className = 'btn';
+        detail.textContent = 'Ficha completa';
+        detail.addEventListener('click', () => openGaliciaRouteDetail(route, detail));
+        const show = document.createElement('button');
+        show.type = 'button';
+        show.className = 'btn secondary';
+        show.textContent = 'Mostrar en mapa';
+        show.addEventListener('click', () => showGaliciaRouteOnMap(route, show));
+        const follow = document.createElement('button');
+        follow.type = 'button';
+        follow.className = 'btn secondary';
+        follow.textContent = 'Seguir';
+        follow.addEventListener('click', () => followGaliciaRoute(route, follow));
         const save = document.createElement('button');
         save.type = 'button';
-        save.className = 'btn';
-        save.textContent = 'Descargar y guardar';
+        save.className = 'btn secondary';
+        save.textContent = 'Guardar';
         save.addEventListener('click', () => downloadGaliciaRoute(route, save));
+        const gpx = document.createElement('button');
+        gpx.type = 'button';
+        gpx.className = 'btn secondary';
+        gpx.textContent = 'Descargar GPX';
+        gpx.addEventListener('click', () => exportGaliciaRoute(route, gpx));
         const source = document.createElement('a');
         source.className = 'btn secondary';
         source.href = route.source;
         source.target = '_blank';
         source.rel = 'noopener noreferrer';
         source.textContent = 'Ver fuente';
-        actions.append(save, source);
+        actions.append(detail, show, follow, save, gpx, source);
         card.append(title, facts, attribution, notice, actions);
         list.append(card);
     });
 }
 
-async function downloadGaliciaRoute(route, button) {
-    if (!Cloud.server || !validGaliciaRouteEntry(route)) {
-        toast('La ruta del catálogo no es válida.');
-        return;
+async function loadGaliciaRouteBundle(route) {
+    if (!Cloud.server || !validGaliciaRouteEntry(route)) throw new Error('La ruta del catálogo no es válida.');
+    const cached = galiciaRouteBundleCache.get(route.id);
+    if (cached) {
+        galiciaRouteBundleCache.delete(route.id);
+        galiciaRouteBundleCache.set(route.id, cached);
+        return cached;
     }
-    button.disabled = true;
-    try {
+    const request = (async () => {
         const root = `${Cloud.server}/rutas/galicia/`;
         const url = new URL(route.track, root);
         if (url.origin !== new URL(root).origin || !url.pathname.startsWith('/rutas/galicia/tracks/')) {
@@ -115,25 +139,118 @@ async function downloadGaliciaRoute(route, button) {
         }
         const response = await fetch(url.href, { headers: { Accept: 'application/gpx+xml, application/xml, text/xml' } });
         if (!response.ok) throw new Error(`No se pudo descargar el track (HTTP ${response.status}).`);
-        const gpx = await response.text();
-        if (gpx.length > 10 * 1024 * 1024) throw new Error('El track supera el límite de 10 MB.');
-        const parsed = parseTrack(gpx, route.track);
+        const content = await response.text();
+        if (content.length > 10 * 1024 * 1024) throw new Error('El track supera el límite de 10 MB.');
+        const parsed = parseTrack(content, route.track);
         parsed.name = route.title;
         const imported = buildImportedRoute(parsed, `${routeActivityPrefix('mtb')}${route.title}`);
         imported.activityType = 'mtb';
         imported.kind = 'imported';
         imported.galiciaCatalogId = route.id;
         imported.source = route.source;
-        if (await saveRoute(imported)) {
-            toast(`«${route.title}» se ha descargado y guardado.`);
-            button.textContent = 'Guardada';
+        imported.province = route.province || 'Galicia';
+        imported.locality = route.locality || '';
+        imported.description = route.notice || '';
+        const lines = communityRawSegments(imported.points);
+        if (!lines.length) throw new Error('El track no contiene un trazado que se pueda mostrar.');
+        return { route: imported, lines };
+    })();
+    galiciaRouteBundleCache.set(route.id, request);
+    try {
+        const bundle = await request;
+        galiciaRouteBundleCache.delete(route.id);
+        galiciaRouteBundleCache.set(route.id, Promise.resolve(bundle));
+        while (galiciaRouteBundleCache.size > GALICIA_ROUTE_BUNDLE_CACHE_LIMIT) {
+            galiciaRouteBundleCache.delete(galiciaRouteBundleCache.keys().next().value);
         }
+        return bundle;
     } catch (error) {
-        console.warn('No se pudo importar una ruta oficial de Galicia:', error);
-        toast(`No se pudo guardar la ruta: ${error.message || 'error de conexión'}`, 5000);
-    } finally {
-        button.disabled = false;
+        galiciaRouteBundleCache.delete(route.id);
+        throw error;
     }
+}
+
+async function withGaliciaRoute(route, button, callback) {
+    if (button) button.disabled = true;
+    try {
+        const bundle = await loadGaliciaRouteBundle(route);
+        return await callback(bundle);
+    } catch (error) {
+        console.warn('No se pudo cargar una ruta oficial de Galicia:', error);
+        toast(error.message || 'No se pudo cargar la ruta.', 5000);
+        return null;
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+function galiciaDetailValues(route, imported) {
+    return [
+        ['Distancia', `${(Number(route.distanceKm) || Number(imported.distanceKm) || 0).toFixed(1)} km`],
+        ['Desnivel', `+${Math.round(Number(route.elevationGain) || Number(imported.elevationGain) || 0)} m`],
+        ['Actividad', 'Bicicleta de montaña'],
+        ['Localidad', route.locality || 'No disponible'],
+        ['Provincia', route.province || 'Galicia'],
+        ['Fuente', route.attribution || 'Xunta de Galicia'],
+        ['Licencia', route.license || 'Consulta las condiciones de la fuente']
+    ];
+}
+
+async function openGaliciaRouteDetail(route, button) {
+    return withGaliciaRoute(route, button, ({ route: imported, lines }) => {
+        openCommunityDetail({ title: route.title, activityType: 'mtb', description: route.notice || '' }, lines, {
+            backLabel: 'Volver a rutas oficiales',
+            onBack: openCommunityCatalog,
+            values: galiciaDetailValues(route, imported),
+            onFollow: () => { closeCommunityDialog(); followRoute(imported); },
+            actions: [
+                ['Guardar', () => downloadGaliciaRoute(route)],
+                ['Descargar GPX', () => download(`${String(route.title || 'ruta').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_')}.gpx`, routeToGpx(imported), 'application/gpx+xml')],
+                ['Ver fuente', () => window.open(route.source, '_blank', 'noopener,noreferrer')]
+            ]
+        });
+    });
+}
+
+async function showGaliciaRouteOnMap(route, button) {
+    return withGaliciaRoute(route, button, ({ route: imported, lines }) => {
+        if (!map) return;
+        const key = `galicia:${route.id}`;
+        const oldLayer = communityVisibleLayers.get(key);
+        if (oldLayer) map.removeLayer(oldLayer);
+        const layer = L.polyline(lines, { color: '#46d6a4', weight: 5, opacity: 0.9 });
+        layer.addTo(map);
+        communityVisibleLayers.set(key, layer);
+        goToPage(0);
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 });
+    });
+}
+
+async function followGaliciaRoute(route, button) {
+    return withGaliciaRoute(route, button, ({ route: imported }) => followRoute(imported));
+}
+
+async function exportGaliciaRoute(route, button) {
+    return withGaliciaRoute(route, button, ({ route: imported }) => {
+        download(`${String(route.title || 'ruta').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_')}.gpx`, routeToGpx(imported), 'application/gpx+xml');
+    });
+}
+
+async function downloadGaliciaRoute(route, button) {
+    return withGaliciaRoute(route, button, async ({ route: imported }) => {
+        if ((savedRoutes || []).some(saved => saved.galiciaCatalogId === route.id)) {
+            toast(`«${route.title}» ya está guardada en este dispositivo.`);
+            if (button) button.textContent = 'Guardada';
+            return false;
+        }
+        const saved = await saveRoute(imported);
+        if (saved) {
+            toast(`«${route.title}» se ha descargado y guardado.`);
+            if (button) button.textContent = 'Guardada';
+        }
+        return saved;
+    });
 }
 
 async function loadGaliciaRouteCatalog() {

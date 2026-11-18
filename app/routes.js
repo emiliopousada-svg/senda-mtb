@@ -559,7 +559,7 @@ $('routes-show-all').addEventListener('click', () => {
     renderSavedRoutes();
 });
 
-async function openSavedRouteDetail(route) {
+async function openSavedRouteDetail(route, options = {}) {
     const returnRoutesTab = routesTab;
     try { await DB.loadRoutePhotos(route); }
     catch (error) { console.warn('No se pudieron cargar las fotos de la ruta:', error); }
@@ -604,12 +604,12 @@ async function openSavedRouteDetail(route) {
     ];
     if (route.description) values.push(['Descripción', route.description]);
     openCommunityDetail({ title: route.name }, lines, {
-        backLabel: 'Volver a mis rutas',
-        onBack: () => {
+        backLabel: options.backLabel || 'Volver a mis rutas',
+        onBack: options.onBack || (() => {
             closeCommunityDialog();
             if (currentPage !== 3) goToPage(3);
             setRoutesTab(returnRoutesTab);
-        },
+        }),
         pois: Array.isArray(route.pois) ? route.pois : [],
         onFollow: () => {
             closeCommunityDialog();

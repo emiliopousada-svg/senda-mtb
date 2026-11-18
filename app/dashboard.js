@@ -81,6 +81,12 @@ function dashboardLatestRecordedRoute() {
 function dashboardRenderMapPreview(route) {
     const container = $('home-map');
     if (!container) return;
+    container.dataset.routeAvailable = route ? 'true' : 'false';
+    container.tabIndex = route ? 0 : -1;
+    container.setAttribute('role', route ? 'button' : 'region');
+    container.setAttribute('aria-label', route
+        ? `Abrir ficha completa de ${routeNameWithoutActivity(route) || 'la última ruta'}, relieve 3D interactivo`
+        : 'Relieve 3D de tu última ruta');
     // Si la ruta no ha cambiado, se conserva el relieve (y el giro elegido por el usuario).
     const current = container.firstElementChild;
     if (route && current && current.routeReliefKey
@@ -135,6 +141,8 @@ function dashboardRender() {
         if (latestAscent) latestAscent.textContent = '— m+';
     }
     const mapLabel = $('home-map-label');
+    const openRouteButton = $('home-open-route');
+    if (openRouteButton) openRouteButton.hidden = !latest;
     if (mapLabel) mapLabel.textContent = latest
         ? `Última ruta · ${routeNameWithoutActivity(latest) || 'MTB'}`
         : 'Sin recorridos realizados';
@@ -152,6 +160,47 @@ $('home-open-map')?.addEventListener('click', () => {
     if (latest) openLastRideOnMap(latest);
     else goToPage(0);
 });
+
+function dashboardOpenLatestRouteDetail() {
+    const latest = dashboardLatestRecordedRoute();
+    if (latest) openSavedRouteDetail(latest, {
+        backLabel: 'Volver a Inicio',
+        onBack: () => closeCommunityDialog()
+    });
+}
+
+$('home-open-route')?.addEventListener('click', dashboardOpenLatestRouteDetail);
+
+const homeRoutePreview = $('home-map');
+if (homeRoutePreview) {
+    let previewPointerStart = null;
+    let previewDragged = false;
+    homeRoutePreview.addEventListener('pointerdown', event => {
+        previewPointerStart = [event.clientX, event.clientY];
+        previewDragged = false;
+    }, { passive: true });
+    homeRoutePreview.addEventListener('pointermove', event => {
+        if (!previewPointerStart) return;
+        if (Math.hypot(event.clientX - previewPointerStart[0], event.clientY - previewPointerStart[1]) > 8) {
+            previewDragged = true;
+        }
+    }, { passive: true });
+    homeRoutePreview.addEventListener('pointerup', () => {
+        previewPointerStart = null;
+        if (previewDragged) window.setTimeout(() => { previewDragged = false; }, 0);
+    }, { passive: true });
+    homeRoutePreview.addEventListener('click', event => {
+        if (previewDragged || event.target.closest('button,a,input,select')) return;
+        const latest = dashboardLatestRecordedRoute();
+        if (latest) dashboardOpenLatestRouteDetail();
+    });
+    homeRoutePreview.addEventListener('keydown', event => {
+        if ((event.key !== 'Enter' && event.key !== ' ') || event.target !== homeRoutePreview) return;
+        event.preventDefault();
+        const latest = dashboardLatestRecordedRoute();
+        if (latest) dashboardOpenLatestRouteDetail();
+    });
+}
 
 document.addEventListener('click', event => {
     const button = event.target.closest('[data-page]');
