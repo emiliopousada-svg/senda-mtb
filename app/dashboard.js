@@ -91,7 +91,7 @@ function dashboardRenderMapPreview(route) {
     const current = container.firstElementChild;
     if (route && current && current.routeReliefKey
         && typeof routeReliefKey === 'function' && current.routeReliefKey === routeReliefKey(route)) return;
-    // Relieve 3D con la altitud de la ruta; si no la tiene, el trazado en 2D.
+    // Muestra relieve 3D cuando hay altitud; si falta, mantiene el trazado en una vista isométrica.
     const relief = route && typeof createRouteRelief3D === 'function'
         ? createRouteRelief3D(route)
         : null;

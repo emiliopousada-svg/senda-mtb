@@ -14,7 +14,7 @@ const ROUTE_RELIEF_HIGH = [255, 122, 26];  // naranja deportivo: zonas altas
 
 /**
  * Convierte los puntos de una ruta en un modelo 3D normalizado.
- * Devuelve null si no hay suficientes altitudes para dibujar un relieve fiable.
+ * Devuelve null si no hay suficientes coordenadas para dibujar el recorrido.
  */
 function routeReliefModel(points) {
     const source = Array.isArray(points) ? points : [];
@@ -28,11 +28,12 @@ function routeReliefModel(points) {
         valid.push({ lat, lon, alt: Number.isFinite(altitude) ? altitude : null, brk: point[5] === 1 });
     });
 
+    if (valid.length < 2) return null;
     const altitudeCount = valid.filter(point => point.alt !== null).length;
-    if (altitudeCount < ROUTE_RELIEF_MIN_ALTITUDE_POINTS) return null;
 
     // Rellena huecos de altitud con el último valor conocido (o el primero, al principio).
-    const firstAltitude = valid.find(point => point.alt !== null).alt;
+    const firstPointWithAltitude = valid.find(point => point.alt !== null);
+    const firstAltitude = firstPointWithAltitude ? firstPointWithAltitude.alt : 0;
     let lastAltitude = firstAltitude;
     valid.forEach(point => {
         if (point.alt === null) point.alt = lastAltitude;
@@ -48,7 +49,8 @@ function routeReliefModel(points) {
     let minAlt = Infinity, maxAlt = -Infinity;
     sampled.forEach(point => { minAlt = Math.min(minAlt, point.alt); maxAlt = Math.max(maxAlt, point.alt); });
     const range = maxAlt - minAlt;
-    if (!(range >= ROUTE_RELIEF_MIN_RANGE_M)) return null;
+    const hasElevation = altitudeCount >= ROUTE_RELIEF_MIN_ALTITUDE_POINTS
+        && range >= ROUTE_RELIEF_MIN_RANGE_M;
 
     const lat0 = sampled.reduce((sum, point) => sum + point.lat, 0) / sampled.length;
     const metersPerDegLat = 110540;
@@ -69,25 +71,30 @@ function routeReliefModel(points) {
     const centerY = (minY + maxY) / 2;
 
     // Exageración vertical: al menos el relieve real, como máximo ×12.
-    const exaggeration = Math.min(ROUTE_RELIEF_MAX_EXAGGERATION,
-        Math.max(1, (ROUTE_RELIEF_TARGET_HEIGHT * extent) / range));
+    const exaggeration = hasElevation
+        ? Math.min(ROUTE_RELIEF_MAX_EXAGGERATION,
+            Math.max(1, (ROUTE_RELIEF_TARGET_HEIGHT * extent) / range))
+        : 1;
 
     const nodes = metric.map(point => ({
         x: (point.x - centerX) / extent,
         y: (point.y - centerY) / extent,
-        z: ((point.alt - minAlt) * exaggeration) / extent,
-        t: (point.alt - minAlt) / range,
+        // Sin altitud fiable, eleva ligeramente el trazado sobre el plano para
+        // mantener la presentación isométrica sin fingir variaciones del terreno.
+        z: hasElevation ? ((point.alt - minAlt) * exaggeration) / extent : 0.035,
+        t: hasElevation ? (point.alt - minAlt) / range : 0.5,
         brk: point.brk
     }));
 
     return {
         nodes,
+        hasElevation,
         minAlt: Math.round(minAlt),
         maxAlt: Math.round(maxAlt),
         exaggeration: Math.round(exaggeration * 10) / 10,
         halfWidth: (maxX - minX) / extent / 2,
         halfDepth: (maxY - minY) / extent / 2,
-        zMax: (range * exaggeration) / extent
+        zMax: hasElevation ? (range * exaggeration) / extent : 0.035
     };
 }
 
@@ -245,7 +252,7 @@ function routeReliefDraw(canvas, model, view) {
 }
 
 /**
- * Crea el elemento con el relieve 3D de la ruta, o null si la ruta no tiene altitudes.
+ * Crea el relieve 3D con altitudes GPS o una vista isométrica del trazado si faltan.
  */
 function createRouteRelief3D(route) {
     const model = routeReliefModel(route && route.points);
@@ -258,19 +265,23 @@ function createRouteRelief3D(route) {
     canvas.tabIndex = 0;
     canvas.setAttribute('role', 'img');
     canvas.setAttribute('aria-label',
-        `Relieve 3D de ${route.name || 'la ruta'}: altitud entre ${model.minAlt} y ${model.maxAlt} m. `
+        (model.hasElevation
+            ? `Relieve 3D de ${route.name || 'la ruta'}: altitud entre ${model.minAlt} y ${model.maxAlt} m. `
+            : `Vista 3D del trazado de ${route.name || 'la ruta'}; altitud GPS no disponible. `)
         + 'Arrastra o usa las flechas para girarlo.');
 
     const badge = document.createElement('span');
     badge.className = 'route-relief-badge';
-    badge.textContent = model.exaggeration > 1.05 ? `3D · relieve ×${model.exaggeration}` : '3D · relieve real';
+    badge.textContent = !model.hasElevation
+        ? '3D · altitud sin datos'
+        : model.exaggeration > 1.05 ? `3D · relieve ×${model.exaggeration}` : '3D · relieve real';
     badge.title = 'La altura se exagera para que el desnivel se aprecie';
 
     const legend = document.createElement('span');
     legend.className = 'route-relief-legend';
     legend.innerHTML = '<i aria-hidden="true"></i>';
     const legendText = document.createElement('span');
-    legendText.textContent = `${model.minAlt}–${model.maxAlt} m`;
+    legendText.textContent = model.hasElevation ? `${model.minAlt}–${model.maxAlt} m` : 'Sin datos de altitud';
     legend.appendChild(legendText);
 
     const hint = document.createElement('span');
