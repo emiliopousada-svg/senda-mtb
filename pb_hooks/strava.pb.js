@@ -1,66 +1,8 @@
 // Integración Strava: credenciales y tokens viven exclusivamente en el servidor.
-const STRAVA_AUTHORIZE_URL = "https://www.strava.com/oauth/authorize"
-const STRAVA_TOKEN_URL = "https://www.strava.com/api/v3/oauth/token"
-const STRAVA_API_URL = "https://www.strava.com/api/v3"
-const STRAVA_MAX_UPLOAD_BYTES = 8 * 1024 * 1024
-const STRAVA_CALLBACK_PATH = "/api/mtb/strava/callback"
-
-function stravaConfig() {
-    const clientId = $os.getenv("STRAVA_CLIENT_ID")
-    const clientSecret = $os.getenv("STRAVA_CLIENT_SECRET")
-    const redirectUri = $os.getenv("STRAVA_REDIRECT_URI")
-    const encryptionKey = $os.getenv("STRAVA_TOKEN_ENCRYPTION_KEY")
-    if (!clientId || !clientSecret || !redirectUri || encryptionKey.length !== 32) {
-        throw new Error("Strava aún no está configurado en el servidor.")
-    }
-    if (!/^https:\/\/[^/?#]+\/api\/mtb\/strava\/callback$/.test(redirectUri)) {
-        throw new Error("STRAVA_REDIRECT_URI debe ser HTTPS y apuntar al callback de Strava configurado.")
-    }
-    return { clientId, clientSecret, redirectUri, encryptionKey }
-}
-
-function stravaPostForm(url, values) {
-    const body = Object.keys(values).map((key) => encodeURIComponent(key) + "=" + encodeURIComponent(String(values[key]))).join("&")
-    return $http.send({
-        url,
-        method: "POST",
-        timeout: 15,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-    })
-}
-
-function stravaFindConnection(userId) {
-    try { return $app.findFirstRecordByData("strava_connections", "owner", userId) }
-    catch (_) { return null }
-}
-
-function stravaSaveConnection(connection) {
-    $app.save(connection)
-    return connection
-}
-
-function stravaGetAccessToken(connection, config) {
-    if (connection.getInt("expiresAt") > Date.now() / 1000 + 60) {
-        return $security.decrypt(connection.getString("accessToken"), config.encryptionKey)
-    }
-    const refreshed = stravaPostForm(STRAVA_TOKEN_URL, {
-            client_id: config.clientId,
-            client_secret: config.clientSecret,
-            grant_type: "refresh_token",
-            refresh_token: $security.decrypt(connection.getString("refreshToken"), config.encryptionKey),
-    })
-    if (refreshed.statusCode < 200 || refreshed.statusCode >= 300 || !refreshed.json?.access_token || !refreshed.json?.refresh_token) {
-        throw new Error("Strava rechazó la renovación del permiso. Vuelve a conectar la cuenta.")
-    }
-    connection.set("accessToken", $security.encrypt(refreshed.json.access_token, config.encryptionKey))
-    connection.set("refreshToken", $security.encrypt(refreshed.json.refresh_token, config.encryptionKey))
-    connection.set("expiresAt", refreshed.json.expires_at)
-    stravaSaveConnection(connection)
-    return refreshed.json.access_token
-}
+// Los helpers están en strava_utils.js y se cargan con require() dentro de cada handler.
 
 routerAdd("GET", "/api/mtb/strava/status", (e) => {
+    const { stravaFindConnection } = require(`${__hooks}/strava_utils.js`)
     try {
         const connection = stravaFindConnection(e.auth.id)
         return e.json(200, {
@@ -73,6 +15,7 @@ routerAdd("GET", "/api/mtb/strava/status", (e) => {
 }, $apis.requireAuth("users"))
 
 routerAdd("POST", "/api/mtb/strava/connect", (e) => {
+    const { STRAVA_AUTHORIZE_URL, stravaConfig, stravaFindConnection, stravaSaveConnection } = require(`${__hooks}/strava_utils.js`)
     try {
         const config = stravaConfig()
         const state = $security.randomStringWithAlphabet(48, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
@@ -98,7 +41,8 @@ routerAdd("POST", "/api/mtb/strava/connect", (e) => {
     }
 }, $apis.requireAuth("users"))
 
-routerAdd("GET", STRAVA_CALLBACK_PATH, (e) => {
+routerAdd("GET", "/api/mtb/strava/callback", (e) => {
+    const { STRAVA_TOKEN_URL, stravaConfig, stravaPostForm, stravaSaveConnection } = require(`${__hooks}/strava_utils.js`)
     const state = String(e.request.url.query().get("state") || "")
     const code = String(e.request.url.query().get("code") || "")
     const grantedScope = String(e.request.url.query().get("scope") || "")
@@ -143,6 +87,7 @@ routerAdd("GET", STRAVA_CALLBACK_PATH, (e) => {
 })
 
 routerAdd("POST", "/api/mtb/strava/upload", (e) => {
+    const { STRAVA_API_URL, STRAVA_MAX_UPLOAD_BYTES, stravaConfig, stravaFindConnection, stravaGetAccessToken } = require(`${__hooks}/strava_utils.js`)
     try {
         const config = stravaConfig()
         const connection = stravaFindConnection(e.auth.id)
@@ -181,6 +126,7 @@ routerAdd("POST", "/api/mtb/strava/upload", (e) => {
 }, $apis.requireAuth("users"))
 
 routerAdd("GET", "/api/mtb/strava/upload/{id}", (e) => {
+    const { STRAVA_API_URL, stravaConfig, stravaFindConnection, stravaGetAccessToken } = require(`${__hooks}/strava_utils.js`)
     try {
         if (!/^\d+$/.test(e.request.pathValue("id"))) return e.json(400, { message: "Subida no válida." })
         const config = stravaConfig()
@@ -190,7 +136,7 @@ routerAdd("GET", "/api/mtb/strava/upload/{id}", (e) => {
         const result = $http.send({
             url: STRAVA_API_URL + "/uploads/" + e.request.pathValue("id"),
             method: "GET",
-            timeout: 15000,
+            timeout: 15,
             headers: { Authorization: "Bearer " + token },
         })
         if (result.statusCode < 200 || result.statusCode >= 300) return e.json(502, { message: "No se pudo consultar el procesamiento de Strava." })
@@ -201,6 +147,7 @@ routerAdd("GET", "/api/mtb/strava/upload/{id}", (e) => {
 }, $apis.requireAuth("users"))
 
 routerAdd("POST", "/api/mtb/strava/disconnect", (e) => {
+    const { stravaConfig, stravaFindConnection } = require(`${__hooks}/strava_utils.js`)
     const connection = stravaFindConnection(e.auth.id)
     if (!connection) return e.json(200, { connected: false })
     try {
@@ -211,7 +158,7 @@ routerAdd("POST", "/api/mtb/strava/disconnect", (e) => {
             $http.send({
                 url: "https://www.strava.com/oauth/deauthorize?access_token=" + encodeURIComponent(token),
                 method: "POST",
-                timeout: 15000,
+                timeout: 15,
             })
         }
     } catch (error) {
