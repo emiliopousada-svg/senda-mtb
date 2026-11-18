@@ -186,6 +186,7 @@ function run() {
     }
     scanAndImport();
 }
+    // Cron jobs run after PocketBase has finished initializing the app context.
+    // Calling run() here executes during hook loading and can panic on $app.
     cronAdd("importar_rutas_galicia", "*/5 * * * *", run);
-    run();
 })();
