@@ -597,13 +597,26 @@ async function openSavedRouteDetail(route, options = {}) {
         ['Velocidad máxima', typeof statsAnalyzeRoute === 'function' && Number.isFinite(statsAnalyzeRoute(route).maxSpeed)
             ? `${statsAnalyzeRoute(route).maxSpeed.toFixed(1)} km/h` : 'No disponible'],
         ['Actividad', activity],
-        ...(route.kind !== 'imported' ? [['Frecuencia cardiaca media',
-            typeof statsAnalyzeRoute === 'function' && Number.isFinite(statsAnalyzeRoute(route).averageHr)
-                ? `${Math.round(statsAnalyzeRoute(route).averageHr)} bpm`
-                : Number(route.hrAvg) > 0 ? `${Math.round(Number(route.hrAvg))} bpm` : 'No disponible']] : []),
+        ...(route.kind !== 'imported' ? [
+            ['Frecuencia cardiaca media',
+                typeof statsAnalyzeRoute === 'function' && Number.isFinite(statsAnalyzeRoute(route).averageHr)
+                    ? `${Math.round(statsAnalyzeRoute(route).averageHr)} bpm`
+                    : Number(route.hrAvg) > 0 ? `${Math.round(Number(route.hrAvg))} bpm` : 'No disponible'],
+            ['Potencia media', (() => {
+                const analysis = typeof statsAnalyzeRoute === 'function' ? statsAnalyzeRoute(route) : null;
+                if (!analysis || !Number.isFinite(analysis.averagePower)) return 'No disponible';
+                return analysis.isPowerEstimated
+                    ? `${Math.round(analysis.averagePower)} W (estimada)*`
+                    : `${Math.round(analysis.averagePower)} W`;
+            })()]
+        ] : []),
         [route.kind === 'imported' ? 'Importada por' : 'Realizada por', creator],
         ['Fecha de realización', performedAt ? fmtDate(performedAt) : 'No disponible']
     ];
+    const routeAnalysis = typeof statsAnalyzeRoute === 'function' ? statsAnalyzeRoute(route) : null;
+    if (routeAnalysis && routeAnalysis.isPowerEstimated && Number.isFinite(routeAnalysis.averagePower)) {
+        values.push(['* Nota potencia', 'Estimación física por pendiente, peso y velocidad. Sin potenciómetro en los pedales es un cálculo orientativo.']);
+    }
     if (route.description) values.push(['Descripción', route.description]);
     openCommunityDetail({ title: route.name }, lines, {
         backLabel: options.backLabel || 'Volver a mis rutas',

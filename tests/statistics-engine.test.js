@@ -212,6 +212,60 @@ test('calculates and aggregates Coggan power-zone time only from valid sensor in
     assert.equal(longGap.powerZoneMeasuredSeconds, 0);
 });
 
+test('estimates cycling power without power sensor using physical model', () => {
+    // Ruta en llano a ~18 km/h (5 m/s): 100 m cada 20 segundos
+    // latStep para 100 m ≈ 100 / 111320
+    const latStep = 100 / 111320;
+    const flatPoints = [];
+    for (let i = 0; i < 10; i++) {
+        flatPoints.push(trackPoint(i * latStep, 0, 200, i * 20));
+    }
+    const flatRoute = {
+        startedAt: new Date(timestamp).toISOString(),
+        movingTimeSec: 180,
+        points: flatPoints
+    };
+    const flatAnalysis = engine.analyzeRoute(flatRoute, { weightKg: 75, bikeWeightKg: 13.5 });
+    assert.equal(flatAnalysis.isPowerEstimated, true);
+    assert.ok(flatAnalysis.averagePower > 50 && flatAnalysis.averagePower < 120,
+        `Potencia en llano esperada ~60-100 W, obtenida: ${flatAnalysis.averagePower}`);
+
+    // Ruta subiendo: 100 m de avance con +6 m de desnivel cada 20 s (6% pendiente a 18 km/h)
+    const climbPoints = [];
+    for (let i = 0; i < 10; i++) {
+        climbPoints.push(trackPoint(i * latStep, 0, 200 + i * 6, i * 20));
+    }
+    const climbRoute = {
+        startedAt: new Date(timestamp).toISOString(),
+        movingTimeSec: 180,
+        points: climbPoints
+    };
+    const climbAnalysis = engine.analyzeRoute(climbRoute, { weightKg: 75, bikeWeightKg: 13.5 });
+    assert.equal(climbAnalysis.isPowerEstimated, true);
+    assert.ok(climbAnalysis.averagePower > flatAnalysis.averagePower,
+        'La potencia subiendo debe ser mayor que en llano');
+    assert.ok(climbAnalysis.averagePower > 250 && climbAnalysis.averagePower < 450,
+        `Potencia subiendo al 6% a 18 km/h esperada ~300-400 W, obtenida: ${climbAnalysis.averagePower}`);
+
+    // Preserva datos reales si el sensor existe
+    const sensorPoints = [];
+    for (let i = 0; i < 10; i++) {
+        sensorPoints.push(trackPoint(i * latStep, 0, 200, i * 20, [null, null, null, null, 250]));
+    }
+    const sensorAnalysis = engine.analyzeRoute({
+        startedAt: new Date(timestamp).toISOString(),
+        movingTimeSec: 180,
+        points: sensorPoints
+    });
+    assert.equal(sensorAnalysis.isPowerEstimated, false);
+    assert.equal(sensorAnalysis.averagePower, 250);
+
+    // Agregación con potencia estimada
+    const summary = engine.aggregate([flatAnalysis, climbAnalysis]);
+    assert.equal(summary.isPowerEstimated, true);
+    assert.ok(summary.averagePower > flatAnalysis.averagePower && summary.averagePower < climbAnalysis.averagePower);
+});
+
 test('rejects invalid activity input explicitly', () => {
     assert.throws(() => engine.analyzeRoute(null), TypeError);
 });
