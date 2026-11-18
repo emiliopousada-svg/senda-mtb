@@ -30,6 +30,7 @@ const SHELL_URLS = [
   'app/recording.js',
   'app/cockpit.js',
   'app/route-following.js',
+  'app/route-dem.js',
   'app/routes.js',
   'lib/fit.js',
   'app/route-files.js',

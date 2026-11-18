@@ -589,7 +589,9 @@ async function openSavedRouteDetail(route, options = {}) {
             ['Comunidad autónoma', autonomousCommunity || 'No disponible']
         ] : autonomousCommunity ? [['Comunidad autónoma', autonomousCommunity]] : []),
         ['Distancia', distanceKm != null ? `${distanceKm.toFixed(1)} km` : 'No disponible'],
-        ['Desnivel', routeHasElevationData(route) ? `+${Math.round(Number(route.elevationGain) || 0)} m` : 'No disponible'],
+        ['Desnivel', routeHasElevationData(route)
+            ? `+${Math.round(Number(route.elevationGain) || 0)} m${route.demCorrected ? ' (DEM)' : ''}`
+            : 'No disponible'],
         ['Tiempo en movimiento', routeMovingTime(route) > 0 ? fmtDur(routeMovingTime(route)) : 'No disponible'],
         ['Velocidad media', Number.isFinite(routeAverageSpeed(route)) ? `${routeAverageSpeed(route).toFixed(1)} km/h` : 'No disponible'],
         ['Velocidad máxima', typeof statsAnalyzeRoute === 'function' && Number.isFinite(statsAnalyzeRoute(route).maxSpeed)
@@ -619,7 +621,42 @@ async function openSavedRouteDetail(route, options = {}) {
         actions: [
             ['Compartir', () => shareSavedRoute(route)],
             ['Exportar GPX', () => download(`${String(route.name || 'ruta').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_')}.gpx`,
-                routeToGpx(route), 'application/gpx+xml')]
+                routeToGpx(route), 'application/gpx+xml')],
+            [route.demCorrected ? '↩️ Restaurar GPS' : '⛰️ Calibrar DEM', async () => {
+                if (typeof MTBDem === 'undefined') {
+                    toast('El módulo de calibración DEM no está cargado.');
+                    return;
+                }
+                if (route.demCorrected) {
+                    try {
+                        MTBDem.revertRouteDem(route);
+                        await DB.put(route);
+                        renderSavedRoutes();
+                        if (typeof refreshStats === 'function') refreshStats();
+                        toast(`Altitud GPS original restaurada: +${Math.round(Number(route.elevationGain) || 0)} m`);
+                        openSavedRouteDetail(route, options);
+                    } catch (err) {
+                        toast(`Error al restaurar altitud: ${err.message || err}`);
+                    }
+                } else {
+                    if (!navigator.onLine) {
+                        toast('⚠️ La calibración con DEM requiere conexión a internet para descargar el relieve.');
+                        return;
+                    }
+                    toast('⛰️ Calibrando altitud con datos DEM...');
+                    try {
+                        await MTBDem.refineRouteWithDem(route);
+                        await DB.put(route);
+                        renderSavedRoutes();
+                        if (typeof refreshStats === 'function') refreshStats();
+                        const prevGain = route.originalElevationGain != null ? ` (antes +${Math.round(Number(route.originalElevationGain))} m)` : '';
+                        toast(`✅ Altitud calibrada con DEM: +${Math.round(Number(route.elevationGain) || 0)} m${prevGain}`, 6000);
+                        openSavedRouteDetail(route, options);
+                    } catch (err) {
+                        toast(`No se pudo calibrar la altitud: ${err.message || err}`);
+                    }
+                }
+            }]
         ]
     });
 }
