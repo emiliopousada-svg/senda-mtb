@@ -4,6 +4,7 @@ const PROFILE_LOCATION_KEY = 'mtb_pro_profile_location';
 const PROFILE_LOCATION_OWNER_KEY = 'mtb_pro_profile_location_owner';
 const PROFILE_LOCATION_USER_PREFIX = 'mtb_pro_profile_location_user_';
 const PROFILE_LOCATION_PENDING_PREFIX = 'mtb_pro_profile_location_pending_';
+const PROFILE_SETUP_COMPLETE_KEY = 'mtb_pro_profile_setup_complete';
 let profileSharedRoutesPromise = null;
 let profileSharedRoutesUid = '';
 let profileLocationSyncPromise = null;
@@ -51,15 +52,33 @@ function profileSetLocationNote(message) {
     if (note) note.textContent = message;
 }
 
+function profileOpenEditorOnFirstVisit() {
+    if (typeof document === 'undefined') return false;
+    const editor = document.getElementById('profile-editor');
+    if (!editor || localStorage.getItem(PROFILE_SETUP_COMPLETE_KEY) === 'true'
+        || profileNormalizeLocation(localStorage.getItem(PROFILE_LOCATION_KEY))) return false;
+
+    editor.hidden = false;
+    const editButton = document.getElementById('profile-edit-button');
+    if (editButton) editButton.setAttribute('aria-expanded', 'true');
+    return true;
+}
+
 async function profileSyncPendingLocation(uid) {
     if (!uid || !navigator.onLine || profileCurrentUid() !== uid) return null;
-    if (profileLocationSyncPromise && profileLocationSyncUid === uid) return profileLocationSyncPromise;
     const pendingKey = profileLocationPendingKey(uid);
-    const pending = localStorage.getItem(pendingKey);
-    if (pending === null) return null;
+    while (true) {
+        if (profileCurrentUid() !== uid) return null;
+        if (profileLocationSyncPromise && profileLocationSyncUid === uid) {
+            await profileLocationSyncPromise;
+            if (profileCurrentUid() !== uid) return null;
+            continue;
+        }
+        const pending = localStorage.getItem(pendingKey);
+        if (pending === null) return null;
 
-    profileLocationSyncUid = uid;
-    const sync = (async () => {
+        profileLocationSyncUid = uid;
+        const sync = (async () => {
         const location = profileNormalizeLocation(pending);
         const updated = await cloudApi(
             `/api/collections/users/records/${encodeURIComponent(uid)}`,
@@ -78,14 +97,16 @@ async function profileSyncPendingLocation(uid) {
         profileDisplayLocation(location);
         profileSetLocationNote('Localidad sincronizada con tu cuenta; no se publica automáticamente.');
         return updated;
-    })();
-    profileLocationSyncPromise = sync;
-    try {
-        return await sync;
-    } finally {
-        if (profileLocationSyncPromise === sync) {
-            profileLocationSyncPromise = null;
-            profileLocationSyncUid = '';
+        })();
+        profileLocationSyncPromise = sync;
+        try {
+            const updated = await sync;
+            if (updated) return updated;
+        } finally {
+            if (profileLocationSyncPromise === sync) {
+                profileLocationSyncPromise = null;
+                profileLocationSyncUid = '';
+            }
         }
     }
 }
@@ -106,7 +127,10 @@ function profileApplyAccountLocation(record) {
     try {
         const pending = localStorage.getItem(profileLocationPendingKey(uid));
         if (pending !== null) {
-            profileDisplayLocation(profileNormalizeLocation(pending));
+            const pendingLocation = profileNormalizeLocation(pending);
+            profileStoreCurrentLocation(pendingLocation);
+            localStorage.setItem(PROFILE_LOCATION_OWNER_KEY, uid);
+            profileDisplayLocation(pendingLocation);
             profileSetLocationNote('Localidad guardada en este dispositivo; sincronizando con tu cuenta.');
             if (navigator.onLine) profileStartLocationSync(uid);
             return;
@@ -124,6 +148,12 @@ function profileApplyAccountLocation(record) {
         const owner = localStorage.getItem(PROFILE_LOCATION_OWNER_KEY) || '';
         const localLocation = profileNormalizeLocation(localStorage.getItem(PROFILE_LOCATION_KEY));
         const accountLocation = localStorage.getItem(profileLocationUserKey(uid));
+        if (hasRemoteLocation && (owner === uid || accountLocation !== null)) {
+            profileStoreAccountLocation(uid, '');
+            profileDisplayLocation('');
+            profileSetLocationNote('Se guarda en tu cuenta al guardar; no se publica automáticamente.');
+            return;
+        }
         if (!hasRemoteLocation && accountLocation !== null) {
             const cached = profileNormalizeLocation(accountLocation);
             profileStoreAccountLocation(uid, cached);
@@ -324,6 +354,7 @@ function profileBindUI() {
             const open = editor.hidden;
             editor.hidden = !open;
             editButton.setAttribute('aria-expanded', String(open));
+            if (!open) localStorage.setItem(PROFILE_SETUP_COMPLETE_KEY, 'true');
             if (open && locationInput) locationInput.focus();
         });
     }
@@ -334,6 +365,7 @@ function profileBindUI() {
         const uid = profileCurrentUid();
         try {
             profileStoreCurrentLocation(location);
+            localStorage.setItem(PROFILE_SETUP_COMPLETE_KEY, 'true');
             if (uid) {
                 localStorage.setItem(profileLocationUserKey(uid), location);
                 localStorage.setItem(PROFILE_LOCATION_OWNER_KEY, uid);

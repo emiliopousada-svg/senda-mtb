@@ -2,7 +2,7 @@
 // - Guarda la app y las librerías para que abra sin conexión.
 // - Los mapas offline (teselas del IGN) se guardan en IndexedDB desde la propia aplicación.
 // prepare-web.js sustituye el marcador con la versión de package.json.
-const SHELL = 'mtbpro-shell-v__APP_VERSION__-v14';
+const SHELL = 'mtbpro-shell-v__APP_VERSION__-v16';
 
 const SHELL_URLS = [
   './',
@@ -83,10 +83,23 @@ const APP_PATHS = new Set(SHELL_URLS
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(SHELL)
-      .then(cache => Promise.allSettled(SHELL_URLS.map(async url => {
-        const response = await fetch(url);
-        if (isCacheableResponse(response)) await cache.put(url, response);
+      .then(cache => Promise.all(SHELL_URLS.map(async url => {
+        const localAsset = !/^https?:\/\//i.test(url);
+        try {
+          const response = await fetch(url);
+          if (!isCacheableResponse(response)) {
+            if (localAsset) throw new Error(`No se pudo almacenar el recurso esencial ${url}`);
+            return;
+          }
+          await cache.put(url, response);
+        } catch (error) {
+          if (localAsset) throw error;
+        }
       })))
+      .catch(async error => {
+        await caches.delete(SHELL);
+        throw error;
+      })
       .then(() => self.skipWaiting())
   );
 });
