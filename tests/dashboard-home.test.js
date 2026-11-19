@@ -175,7 +175,13 @@ test('control center contains recording, sensor, map and miscellaneous settings 
     assert.match(toolsPage, /data-tool="offline-maps"[\s\S]*Mapas sin conexión/);
     assert.match(toolsPage, /data-tool="map-style"[\s\S]*Cartografía del mapa/);
     assert.match(toolsPage, /data-tool="social"[\s\S]*Social/);
-    assert.match(toolsPage, /id="social-workspace"[\s\S]*Conecta Strava[\s\S]*Subir a Strava/);
+    const socialStart = toolsPage.indexOf('<section id="social-workspace"');
+    const socialEnd = toolsPage.indexOf('<section id="misc-settings-workspace"', socialStart);
+    const socialWorkspace = toolsPage.slice(socialStart, socialEnd);
+    for (const platform of ['facebook', 'instagram', 'tiktok']) {
+        assert.match(socialWorkspace, new RegExp(`data-social-platform="${platform}"`));
+    }
+    assert.doesNotMatch(socialWorkspace, /Strava|strava|<a\b/);
     assert.match(toolsPage, /data-tool="misc-settings"[\s\S]*Ajustes varios/);
     for (const id of ['recording-metric-config', 'settings-sensors', 'offline-panel', 'map-style-select', 'setting-route-sound', 'app-version']) {
         assert.ok(toolsPage.includes(`id="${id}"`), `${id} must be in the control center`);

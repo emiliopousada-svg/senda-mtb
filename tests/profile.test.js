@@ -67,7 +67,7 @@ test('profile renders account-backed identity and keeps unavailable social servi
     for (const provider of ['Garmin Connect', 'Komoot', 'Apple Salud']) {
         assert.match(profilePage, new RegExp(`${provider}[\\s\\S]*Próximamente`));
     }
-    assert.match(profilePage, /Strava[\s\S]*Herramientas → Social/);
+    assert.doesNotMatch(profilePage, /Strava|Herramientas → Social/);
     assert.equal((profilePage.match(/class="profile-service-toggle" type="checkbox" disabled/g) || []).length, 3);
     assert.match(profilePage, /solo en este dispositivo y no se comparte automáticamente/);
     assert.match(source, /published = true/);

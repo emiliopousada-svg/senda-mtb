@@ -5,6 +5,18 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.24] - 2026-11-19
+
+### Añadido
+* **Centro de control:** iconos de Facebook, Instagram y TikTok en Social, sin enlaces ni conexiones externas.
+
+### Cambiado
+* **Rutas comunitarias:** se retira el catálogo oficial de Galicia y se conserva el acceso a las rutas favoritas.
+* **PocketBase:** la app recupera la configuración cuando el servidor guardado no es válido.
+
+### Eliminado
+* **Strava:** se retiran la integración, sus hooks y la dependencia del cliente. Se conserva la migración existente y los datos de PocketBase.
+
 ## [0.2.14] - 2026-11-18
 
 ### Cambiado

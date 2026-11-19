@@ -1,8 +1,10 @@
 # Catálogo de rutas de Galicia
 
 PocketBase sirve este directorio como contenido estático desde `pb_public`, bajo
-`https://<servidor>/rutas/galicia/`. La app consulta `catalogo.json` cuando se abre
-la pestaña Comunidad y descarga un track solo cuando se pulsa **Descargar y guardar**.
+`https://<servidor>/rutas/galicia/`. El hook
+`community_routes_galicia_import.pb.js` lee los tracks de este directorio y los
+publica en el catálogo normal de rutas de la comunidad. La app ya no consulta
+`catalogo.json` directamente; se conserva como índice de referencia de los tracks.
 
 El catálogo inicial contiene 23 tracks PR-G del producto Senderos FEDME del
 CNIG. Los tracks originales se conservan en KML y llevan atribución CC BY 4.0.

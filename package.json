@@ -1,6 +1,6 @@
 {
   "name": "senda-mtb",
-  "version": "0.2.16",
+  "version": "0.2.24",
   "private": true,
   "description": "senda-mtb: rutas, GPS, mapas offline y comunidad",
   "scripts": {
@@ -16,7 +16,6 @@
     "@capacitor-community/bluetooth-le": "^8.3.0",
     "@capacitor/android": "^8.6.0",
     "@capacitor/app": "^8.1.2",
-    "@capacitor/browser": "^8.0.5",
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "@capacitor/filesystem": "^8.1.5",
