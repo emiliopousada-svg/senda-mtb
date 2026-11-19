@@ -5,6 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.23] - 2026-11-19
+
+### Eliminado
+* **iOS:** se retira el proyecto nativo y la dependencia de Capacitor para iOS; la release queda dirigida a Web/PWA y Android.
+* **PocketBase:** se eliminan del repositorio los hooks del servidor. Las funciones de comunidad dependen de que sus hooks sigan desplegados; esta versión no contiene su código para instalarlos o actualizarlos.
+* Se retiran las pruebas unitarias de los hooks eliminados; se conserva la prueba de la migración de desafíos.
+
 ## [0.2.19] - 2026-11-18
 
 ### Añadido

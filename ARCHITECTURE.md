@@ -84,7 +84,7 @@ Módulos JavaScript puros, sin acoplamiento a elementos específicos del DOM, fa
 
 ### 2.4. Capa de Servicios Nativos (Capacitor 8)
 * `@capacitor-community/background-geolocation`: Adquisición continua de coordenadas en segundo plano mediante servicios Foreground de Android con notificación persistente.
-* `@capacitor-community/bluetooth-le`: Comunicación directa con chips Bluetooth mediante la pila nativa de Android/iOS.
+* `@capacitor-community/bluetooth-le`: Comunicación directa con chips Bluetooth mediante la pila nativa de Android.
 * `@capacitor/filesystem`: Almacenamiento y exportación de archivos GPX/FIT en el sistema de archivos del dispositivo.
 * `@capacitor/share`: Integración con la hoja de compartir nativa del sistema operativo.
 * `@capacitor/local-notifications`: Alertas locales de Guardian Mode y avisos de mantenimiento.
@@ -93,7 +93,7 @@ Módulos JavaScript puros, sin acoplamiento a elementos específicos del DOM, fa
 * **PocketBase (`https://mtbpro.ddns.net`):**
   * Instancia independiente dedicada en exclusiva a senda-mtb.
   * Autenticación basada en Bearer Token persistente.
-  * Arquitectura de hooks de servidor (`pb_hooks/`) para validación de reglas de negocio en grupos, apodos, clasificación y limpieza de ubicaciones en directo (`live_cleanup.pb.js`).
+  * Los hooks de servidor que implementan endpoints de comunidad deben seguir desplegados en PocketBase; su código fuente no se incluye en el repositorio desde v0.2.23.
 
 ---
 
@@ -124,7 +124,6 @@ senda-mtb/
 │   ├── group-rankings.js    # Clasificaciones y temporadas
 │   ├── community-*.js       # Rutas, segmentos y social
 │   └── ui.js                # Controladores globales de interfaz
-├── pb_hooks/                # Hooks de backend para PocketBase
 ├── scripts/
 │   └── prepare-web.js       # Script de build y empaquetado para Capacitor
 ├── src/

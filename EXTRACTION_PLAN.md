@@ -4,7 +4,7 @@
 
 - Repositorio destino: `emiliopousada-svg/senda-mtb` (privado, rama `main`, ya creado).
 - El repositorio original `senda-mtb` se consulta en modo solo lectura y no recibe cambios.
-- Plataformas: web y Android primero; el scaffold iOS se conserva para una segunda fase.
+- Plataformas: web y Android. El scaffold iOS se retiró del repositorio en v0.2.23.
 - Actividad: exclusivamente MTB.
 - Mapas: cobertura global online; descargas offline solo con proveedores y zonas cuya licencia permita expresamente ese uso.
 - Backend: PocketBase independiente en `https://mtbpro.ddns.net`; la aplicación lo usa como servidor predeterminado y no incluye credenciales.
@@ -29,7 +29,7 @@ El repositorio MTBPro existente partió de una base funcional previa. Esta tabla
 | `groups.js` / `community-*` | `app/groups.js`, `app/community-*` | Evaluar por módulo | Código presente; no activar hasta tener backend PRO, reglas y pruebas de autorización. |
 | `cloud.js` | `app/cloud.js` | No copiar directamente | Cliente heredado adaptado con endpoint vacío; antes del backend, definir contratos y conflictos de sync. |
 | `navigation.js`, `index.html`, estilos, PWA | `app/dashboard.*`, `app/navigation.js`, `index.html`, `app/styles.css`, `manifest.json`, `sw.js` | Reconstruir/adaptar | Interfaz PRO independiente con identidad MTB. |
-| Configuración Capacitor | `capacitor.config.json`, `android/`, `ios/` | Independiente | IDs separados; iOS queda preparado sin validación de build en esta fase. |
+| Configuración Capacitor | `capacitor.config.json`, `android/` | Independiente | IDs separados; el proyecto iOS ya no está incluido. |
 
 ## Dependencias actuales
 
@@ -43,7 +43,7 @@ Capacitor 8, Leaflet, Chart.js, `fit-file-parser`, plugins de geolocalización e
 4. Validar GPX/KML/GeoJSON/FIT, seguimiento, fotos y perfiles.
 5. Consolidar estadísticas y sensores con datos reales.
 6. Instalar y revisar las colecciones y reglas del PocketBase independiente antes de habilitar nuevas funciones competitivas.
-7. Estabilizar web y Android; pasar a iOS en una segunda fase.
+7. Estabilizar y validar web y Android.
 
 ## Riesgos y límites conocidos
 

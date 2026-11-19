@@ -2,6 +2,8 @@
 
 La instancia independiente de senda-mtb está publicada en `https://mtbpro.ddns.net` y es el servidor por defecto de la aplicación. No importes bases de datos, cuentas, ubicaciones, rutas ni rankings del proyecto senda-mtb.
 
+> Desde v0.2.23, este repositorio ya no incluye el código fuente de `pb_hooks/`. Los endpoints descritos aquí solo funcionarán si sus hooks permanecen desplegados por separado en PocketBase. No instales ni actualices un servidor usando las instrucciones de hooks de este documento sin recuperar primero la fuente desde una copia mantenida.
+
 ## Colecciones usadas
 
 Los nombres siguientes se deducen de las llamadas API del cliente y los hooks incluidos. Este repositorio no contiene una configuración/exportación completa de colecciones para importarla directamente.
@@ -28,9 +30,9 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 - Aplicar reglas de propietario a esfuerzos y registros de rendimiento privados. Validar del lado del servidor relaciones, campos numéricos, límites, fechas y tasas de escritura.
 - Mantener TLS, proteger credenciales administrativas, configurar copias de seguridad y actualizar PocketBase. No habilitar reglas públicas genéricas para simplificar la integración.
 
-## Hooks del repositorio
+## Hooks desplegados
 
-`pb_hooks/` incluye hooks para apodos, POIs, grupos, limpieza de posiciones, rutas comunitarias, segmentos, rendimiento e interacciones sociales. Cada handler se ejecuta en un contexto aislado: los helpers deben definirse dentro del handler o cargarse con `require()` desde él. Revísalos y pruébalos junto a las reglas de colección de `https://mtbpro.ddns.net`. La colección de desafíos y el hook de la liga de grupo están desplegados en producción desde la versión 0.2.2; el código de cliente por sí solo no es una frontera de seguridad.
+Los hooks para apodos, POIs, grupos, limpieza de posiciones, rutas comunitarias, segmentos, rendimiento e interacciones sociales se describen aquí como referencia del backend desplegado. Su fuente ya no está en este repositorio desde v0.2.23. Cada handler debe ejecutarse en un contexto aislado y validarse junto a las reglas de colección de `https://mtbpro.ddns.net`. La colección de desafíos y el hook de la liga de grupo están desplegados en producción desde la versión 0.2.2; el código de cliente por sí solo no es una frontera de seguridad.
 
 La migración `pb_migrations/1794829123_create_mtb_user_preferences.js` crea `mtb_user_preferences` con reglas que limitan lectura, creación, modificación y borrado al propietario autenticado. Despliega la migración en el directorio de datos de PocketBase y ejecútala con `pocketbase migrate up` (o inicia PocketBase con las migraciones automáticas habilitadas) antes de publicar la versión web que la utiliza.
 
@@ -38,11 +40,11 @@ La migración `pb_migrations/1794830184_add_private_user_profile_fields.js` aña
 
 La migración `pb_migrations/1794835000_create_mtb_app_collections.js` crea las colecciones activas de rutas privadas, POIs, ubicaciones en vivo, grupos, clasificaciones, rutas comunitarias, segmentos, valoraciones, favoritos, comentarios y marcas. Añade `groupCode` a `users` si falta y mantiene cerradas las colecciones internas de grupos; las lecturas públicas se limitan a rutas comunitarias publicadas y sus marcas/interacciones. Crea solo colecciones que no existan y conserva las ya existentes sin corregir sus campos o reglas. La migración `pb_migrations/1794835001_add_community_route_poi_fields.js` añade los campos `poisJson` y `poiPhotos` a una colección `community_routes` ya creada si faltan. La migración `pb_migrations/1794835003_secure_live_location_access.js` actualiza las reglas existentes de `live_locations` para exigir pertenencia vigente al grupo. La migración `pb_migrations/1794835004_add_live_location_timestamps.js` añade los campos automáticos `created` y `updated` si faltan, necesarios para ordenar y expirar las ubicaciones. Ambas conservan los registros y campos compatibles. Haz una copia de seguridad antes de aplicar migraciones.
 
-La migración `pb_migrations/1794835005_add_author_nicknames.js` añade campos de apodo a rutas, POIs, ubicaciones en vivo, contenido comunitario y membresías de grupo, y actualiza la autoría de los registros existentes usando el apodo actual de su propietario. Despliega también los hooks de `pb_hooks/` para que PocketBase imponga el apodo del usuario autenticado en las nuevas escrituras. El campo `owner` o equivalente sigue siendo el vínculo técnico de permisos y no se sustituye por el apodo. Haz una copia de seguridad y aplica la migración en el servidor antes de desplegar esta versión de la app.
+La migración `pb_migrations/1794835005_add_author_nicknames.js` añade campos de apodo a rutas, POIs, ubicaciones en vivo, contenido comunitario y membresías de grupo, y actualiza la autoría de los registros existentes usando el apodo actual de su propietario. El servidor debe conservar hooks que impongan el apodo del usuario autenticado en las nuevas escrituras; la fuente no se incluye en este repositorio desde v0.2.23. El campo `owner` o equivalente sigue siendo el vínculo técnico de permisos y no se sustituye por el apodo. Haz una copia de seguridad y verifica la instalación actual antes de desplegar una versión de la app.
 
-La app solicita la comunidad autónoma al publicar; conserva el nombre histórico del campo `province` en PocketBase para no romper rutas y clientes existentes. Consulta [CONFIGURAR-RUTAS-COMUNIDAD.md](./CONFIGURAR-RUTAS-COMUNIDAD.md) para desplegar y verificar los campos y hooks.
+La app solicita la comunidad autónoma al publicar; conserva el nombre histórico del campo `province` en PocketBase para no romper rutas y clientes existentes. Consulta [CONFIGURAR-RUTAS-COMUNIDAD.md](./CONFIGURAR-RUTAS-COMUNIDAD.md) para verificar los campos y el estado de los hooks desplegados.
 
-La migración `pb_migrations/1794836000_create_group_challenges.js` añade los campos automáticos `created` y `updated` a `mtb_group_ranking_entries` (las marcas antiguas usan como fecha el `clientId` de la salida) y crea `mtb_group_challenges`. El hook `pb_hooks/group_league.pb.js` publica, para el grupo del usuario autenticado:
+La migración `pb_migrations/1794836000_create_group_challenges.js` añade los campos automáticos `created` y `updated` a `mtb_group_ranking_entries` (las marcas antiguas usan como fecha el `clientId` de la salida) y crea `mtb_group_challenges`. Si el hook de la liga sigue desplegado, publica para el grupo del usuario autenticado:
 
 | Ruta | Uso |
 | --- | --- |
@@ -55,7 +57,7 @@ La migración `pb_migrations/1794836000_create_group_challenges.js` añade los c
 ### Desplegar la liga de grupo
 
 1. Haz una copia de seguridad de `pb_data`.
-2. Copia `pb_hooks/` (incluidos `groups_utils.js`, `groups.pb.js` y `group_league.pb.js`) y `pb_migrations/` al servidor.
+2. Recupera y revisa la fuente mantenida de los hooks antes de desplegarla; este repositorio ya no contiene `pb_hooks/`. Copia las migraciones de `pb_migrations/` al servidor.
 3. Ejecuta `pocketbase migrate up` (o reinicia con las migraciones automáticas activas).
 4. Reinicia PocketBase y comprueba que `GET /api/mtb/groups/challenges` responde `401` sin sesión y `200` con un usuario que pertenece a un grupo.
 
