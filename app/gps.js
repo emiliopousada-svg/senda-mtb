@@ -81,6 +81,10 @@ function scheduleGpsVisualUpdate(state) {
     }, delay);
 }
 
+function clearPendingGpsVisualUpdate() {
+    pendingGpsVisualState = null;
+}
+
 function renderPendingRoutePoints() {
     if (!map || !pendingRouteRenderPoints.length) return;
     const pending = pendingRouteRenderPoints;
@@ -140,8 +144,9 @@ function renderGpsVisualUpdate(state) {
         $('m-elevation').textContent = Math.round(elev.gain);
     }
     // ── Mini ClimbPro: actualizar progreso de subida activa ───
-    if (typeof renderClimbProgress === 'function' && followedRoute) {
-        renderClimbProgress(totalDistance * 1000); // km → m
+    if (typeof renderClimbProgress === 'function' && followedRoute
+        && Number.isFinite(state.followedDistanceM)) {
+        renderClimbProgress(state.followedDistanceM);
     }
 }
 
@@ -332,6 +337,10 @@ function onPos(pos) {
         refreshBatteryStatus();
     }
     const followedMatch = followedRoute ? findFollowedRouteMatch(lat, lon) : null;
+    const followedDistanceM = followedMatch && followedRoute && followedRoute.cumDist
+        && typeof routeDistanceAtMatch === 'function'
+        ? routeDistanceAtMatch(followedMatch, followedRoute.cumDist)
+        : null;
 
     // El GPS nativo puede no incluir rumbo: en ese caso lo calculamos
     // con el desplazamiento entre posiciones fiables mientras avanzamos.
@@ -392,13 +401,16 @@ function onPos(pos) {
         }
     }
 
-    const visualState = { ll, speedKmh: kmh, heading: visualHeading, followedMatch };
+    const visualState = { ll, speedKmh: kmh, heading: visualHeading, followedMatch, followedDistanceM };
     scheduleGpsVisualUpdate(visualState);
 
     if (followedMatch) {
         checkOffRoute(lat, lon, followedMatch);
         if (typeof checkTurnVoicePrompts === 'function' && followedRoute && followedRoute.cumDist) {
-            checkTurnVoicePrompts(followedRoute.cumDist[followedMatch.index]);
+            const routeDistance = Number.isFinite(followedDistanceM)
+                ? followedDistanceM
+                : followedRoute.cumDist[followedMatch.index];
+            checkTurnVoicePrompts(routeDistance, offRouteState, followedRoute);
         }
     }
 

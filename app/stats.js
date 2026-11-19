@@ -194,7 +194,10 @@ function statsRenderPerformance(summary, analyses) {
         ? `${Math.round(summary.averagePower)} W${summary.isPowerEstimated ? ' (est.)*' : ''}`
         : 'Sin datos';
     statsSetText('st-power-average', powerLabel);
-    statsSetText('st-power-max', Number.isFinite(summary.maxPower) ? `${Math.round(summary.maxPower)} W` : 'Sin datos');
+    const maxPowerLabel = Number.isFinite(summary.maxPower)
+        ? `${Math.round(summary.maxPower)} W${summary.isMaxPowerEstimated ? ' (est.)*' : ''}`
+        : 'Sin datos';
+    statsSetText('st-power-max', maxPowerLabel);
 
     if (statsWeightKg === null) {
         statsSetText('st-calories', 'Configura peso');

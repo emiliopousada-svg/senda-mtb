@@ -510,6 +510,15 @@
                 isPowerEstimated = true;
             }
         }
+        const measuredPowerMaxima = analyses
+            .filter(item => item.powerCount > 0 && Number.isFinite(item.maxPower))
+            .map(item => item.maxPower);
+        const estimatedPowerMaxima = analyses
+            .filter(item => item.powerCount === 0 && Number.isFinite(item.estimatedMaxPower))
+            .map(item => item.estimatedMaxPower);
+        const powerMaxima = measuredPowerMaxima.length
+            ? measuredPowerMaxima
+            : (estimatedPowerMaxima.length ? estimatedPowerMaxima : analyses.map(item => item.maxPower).filter(Number.isFinite));
         return {
             distanceKm,
             movingTimeSec,
@@ -532,8 +541,9 @@
             averageCadence: sampleMean('averageCadence', 'cadenceCount'),
             maxCadence: maxOf('maxCadence'),
             averagePower: aggregatedAveragePower,
-            maxPower: maxOf('maxPower'),
+            maxPower: powerMaxima.length ? maximum(powerMaxima) : null,
             isPowerEstimated,
+            isMaxPowerEstimated: !measuredPowerMaxima.length && estimatedPowerMaxima.length > 0,
             meanGrade: weightedMean('meanGrade', 'gradeDistanceKm'),
             maxGrade: maxOf('maxGrade'),
             gradeDistanceKm: sum('gradeDistanceKm'),

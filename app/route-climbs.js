@@ -16,6 +16,7 @@
         const api = factory();
         root.detectClimbs   = api.detectClimbs;
         root.climbProgress  = api.climbProgress;
+        root.setRouteClimbs = api.setRouteClimbs;
         root.renderClimbProgress = api.renderClimbProgress;
         root.clearClimbProgress  = api.clearClimbProgress;
     }
@@ -82,6 +83,7 @@
         const rawClimbs = [];
         let climbStart  = -1;
         let peakAlt     = NaN;
+        let peakIdx     = -1;
         let baseAlt     = NaN;
 
         for (let i = 0; i < n; i++) {
@@ -92,32 +94,40 @@
                 // Inicio potencial de subida
                 climbStart = i;
                 peakAlt    = z;
+                peakIdx    = i;
                 baseAlt    = z;
                 continue;
             }
 
             if (z > peakAlt) {
                 peakAlt = z;
+                peakIdx = i;
             } else if (z < peakAlt - dropTol) {
                 // Bajada significativa: cerrar segmento si cumple criterios
                 const gain   = peakAlt - baseAlt;
-                const length = cumDist[i - 1] - cumDist[climbStart];
+                const length = cumDist[peakIdx] - cumDist[climbStart];
                 if (gain >= minGainM && length >= minLengthM) {
-                    rawClimbs.push({ startIdx: climbStart, endIdx: i - 1 });
+                    rawClimbs.push({ startIdx: climbStart, endIdx: peakIdx });
                 }
                 // Reiniciar desde el valle
                 climbStart = i;
                 peakAlt    = z;
+                peakIdx    = i;
+                baseAlt    = z;
+            } else if (z < baseAlt && peakAlt - baseAlt < minGainM) {
+                // Antes de consolidarse la subida, conserva la vaguada más baja.
+                climbStart = i;
+                peakAlt    = z;
+                peakIdx    = i;
                 baseAlt    = z;
             }
         }
-        // Cerrar el último segmento si llegamos al final subiendo
+        // Cerrar en el último pico, aunque la ruta termine después del descenso.
         if (climbStart !== -1 && Number.isFinite(alts[n - 1])) {
-            const i    = n - 1;
             const gain = peakAlt - baseAlt;
-            const length = cumDist[i] - cumDist[climbStart];
+            const length = cumDist[peakIdx] - cumDist[climbStart];
             if (gain >= minGainM && length >= minLengthM) {
-                rawClimbs.push({ startIdx: climbStart, endIdx: i });
+                rawClimbs.push({ startIdx: climbStart, endIdx: peakIdx });
             }
         }
 

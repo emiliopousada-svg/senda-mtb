@@ -202,7 +202,7 @@ async function syncSharedPois(manual = false) {
                 const updated = Date.parse(record.updated || record.created || '');
                 return Number.isFinite(updated) ? Math.max(value, updated) : value;
             }, 0);
-            const cursorBase = latest || (fullAudit ? 0 : syncStartedAt);
+            const cursorBase = latest || syncStartedAt;
             localStorage.setItem(cursorKey, new Date(Math.max(0, cursorBase - POI_SYNC_CURSOR_OVERLAP_MS)).toISOString());
         }
         if (fullAudit) localStorage.setItem(auditKey, String(Date.now()));

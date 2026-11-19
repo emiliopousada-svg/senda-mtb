@@ -264,6 +264,11 @@ test('estimates cycling power without power sensor using physical model', () => 
     const summary = engine.aggregate([flatAnalysis, climbAnalysis]);
     assert.equal(summary.isPowerEstimated, true);
     assert.ok(summary.averagePower > flatAnalysis.averagePower && summary.averagePower < climbAnalysis.averagePower);
+    assert.equal(summary.isMaxPowerEstimated, true);
+
+    const mixedSummary = engine.aggregate([sensorAnalysis, climbAnalysis]);
+    assert.equal(mixedSummary.maxPower, sensorAnalysis.maxPower);
+    assert.equal(mixedSummary.isMaxPowerEstimated, false);
 });
 
 test('rejects invalid activity input explicitly', () => {

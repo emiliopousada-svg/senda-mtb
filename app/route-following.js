@@ -2,14 +2,18 @@
 
 //  AVISO DE DESVÍO
 // ============================================================
-function pointSegDistM(p, a, b) { // metros de p al segmento a-b (proyección local)
+function pointSegProjection(p, a, b) { // proyección local del punto sobre el segmento
     const k = Math.cos(p[0] * Math.PI / 180);
     const ax = (a[1] - p[1]) * k * 111320, ay = (a[0] - p[0]) * 110540;
     const bx = (b[1] - p[1]) * k * 111320, by = (b[0] - p[0]) * 110540;
     const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
     let t = l2 ? -(ax * dx + ay * dy) / l2 : 0;
     t = Math.max(0, Math.min(1, t));
-    return Math.hypot(ax + t * dx, ay + t * dy);
+    return { distance: Math.hypot(ax + t * dx, ay + t * dy), fraction: t };
+}
+
+function pointSegDistM(p, a, b) {
+    return pointSegProjection(p, a, b).distance;
 }
 
 function unlockOffRouteSound() {
@@ -87,6 +91,19 @@ function calculateRouteCumulativeDistances(pts) {
     return cum;
 }
 
+function routeDistanceAtMatch(match, cumDist) {
+    if (!match || !Number.isInteger(match.index) || !cumDist
+        || match.index < 0 || match.index >= cumDist.length) return NaN;
+    const start = cumDist[match.index];
+    if (!Number.isFinite(start)) return NaN;
+    const end = match.index + 1 < cumDist.length ? cumDist[match.index + 1] : start;
+    if (!Number.isFinite(end)) return start;
+    const fraction = Number.isFinite(match.fraction)
+        ? Math.max(0, Math.min(1, match.fraction))
+        : 0;
+    return start + (end - start) * fraction;
+}
+
 function detectRouteTurns(pts, cumDist) {
     if (!Array.isArray(pts) || pts.length < 5 || !cumDist || cumDist.length < pts.length) return [];
     const turns = [];
@@ -95,19 +112,16 @@ function detectRouteTurns(pts, cumDist) {
 
     const windowM = 22; // muestreo hacia atrás y hacia adelante para filtrar micro-quiebros
     let lastTurnDistM = -100;
+    let prevIdx = 0;
+    let nextIdx = 0;
 
     for (let i = 1; i < pts.length - 1; i++) {
         const curDist = cumDist[i];
         if (curDist - lastTurnDistM < 45) continue; // no duplicar giros en la misma curva
 
-        // Buscar punto ~windowM atrás
-        let prevIdx = i;
-        while (prevIdx > 0 && curDist - cumDist[prevIdx] < windowM) {
-            prevIdx--;
-        }
-
-        // Buscar punto ~windowM adelante
-        let nextIdx = i;
+        // Ambos índices avanzan como máximo una vez por punto de la ruta.
+        while (prevIdx < i && curDist - cumDist[prevIdx + 1] >= windowM) prevIdx++;
+        while (nextIdx < i) nextIdx++;
         while (nextIdx < pts.length - 1 && cumDist[nextIdx] - curDist < windowM) {
             nextIdx++;
         }
@@ -151,9 +165,11 @@ function detectRouteTurns(pts, cumDist) {
     return turns;
 }
 
-function checkTurnVoicePrompts(currentDistanceM) {
-    if (!followedRoute || !Array.isArray(followedRoute.turns) || !Number.isFinite(currentDistanceM)) return;
-    for (const turn of followedRoute.turns) {
+function checkTurnVoicePrompts(currentDistanceM, isOffRoute = false, route = null) {
+    if (isOffRoute || !Number.isFinite(currentDistanceM)) return;
+    const activeRoute = route || (typeof followedRoute !== 'undefined' ? followedRoute : null);
+    if (!activeRoute || !Array.isArray(activeRoute.turns)) return;
+    for (const turn of activeRoute.turns) {
         const distRemaining = turn.distanceM - currentDistanceM;
         // Aviso previo: entre 45 y 75 metros
         if (!turn.warnedAhead && distRemaining <= 70 && distRemaining >= 40) {
@@ -181,8 +197,10 @@ function findFollowedRouteMatch(lat, lon) {
     const scan = (from, to) => {
         let best = { index: from, distance: Infinity };
         for (let i = from; i <= to; i++) {
-            const distance = pointSegDistM([lat, lon], pts[i], pts[i + 1]);
-            if (distance < best.distance) best = { index: i, distance };
+            const projection = pointSegProjection([lat, lon], pts[i], pts[i + 1]);
+            if (projection.distance < best.distance) {
+                best = { index: i, distance: projection.distance, fraction: projection.fraction };
+            }
         }
         return best;
     };
@@ -271,6 +289,7 @@ function updateMapRouteProfilePosition(match) {
 }
 
 function followRoute(r) {
+    clearPendingGpsVisualUpdate();
     unlockOffRouteSound();
     clearLastRideMapPreview();
     const routePts = r.points.map(p => [p[0], p[1]]);
@@ -390,9 +409,11 @@ initRouteSettings();
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         pointSegDistM,
+        pointSegProjection,
         routeHaversineMeters,
         routeBearingBetween,
         calculateRouteCumulativeDistances,
+        routeDistanceAtMatch,
         detectRouteTurns,
         checkTurnVoicePrompts
     };

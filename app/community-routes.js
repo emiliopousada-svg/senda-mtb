@@ -962,7 +962,7 @@ async function communityFetchRouteMetadata(page, filter, includeBounds) {
         'distanceKm', 'elevationGain', 'movingTimeSec'];
     const fields = includeBounds ? [...baseFields, 'minLat', 'maxLat', 'minLng', 'maxLng'] : baseFields;
     const url = requestedFields => '/api/collections/community_routes/records?page=' + page +
-        '&perPage=' + COMMUNITY_PAGE_SIZE + '&sort=-created,-id&fields=' + requestedFields.join(',')
+        '&perPage=' + COMMUNITY_PAGE_SIZE + '&sort=-id&fields=' + requestedFields.join(',')
         + '&filter=' + encodeURIComponent(filter);
     try {
         return await cloudApi(url(['id', 'owner', 'createdBy', 'title', 'province', 'performedAt', 'locality', 'difficulty',
@@ -1083,7 +1083,7 @@ async function loadCommunityRoutes() {
         if (minAscent) legacyFilter.push(`elevationGain >= ${minAscent}`);
         const legacyResult = !searchPosition || metadataWithoutBounds
             ? { items: [], totalItems: 0 }
-            : await cloudApi('/api/collections/community_routes/records?page=1&perPage=100&sort=-created,-id&fields=id,owner,createdBy,title,province,locality,difficulty,activityType,distanceKm,elevationGain,movingTimeSec&filter=' + encodeURIComponent(legacyFilter.join(' && ')));
+            : await cloudApi('/api/collections/community_routes/records?page=1&perPage=100&sort=-id&fields=id,owner,createdBy,title,province,locality,difficulty,activityType,distanceKm,elevationGain,movingTimeSec&filter=' + encodeURIComponent(legacyFilter.join(' && ')));
         const legacyRoutes = (legacyResult.items || []).filter(record => !indexedIds.has(record.id));
         const legacyTruncated = Number(legacyResult.totalItems) > legacyRoutes.length;
 

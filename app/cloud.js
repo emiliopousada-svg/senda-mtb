@@ -355,7 +355,6 @@ async function accAuth(register) {
     if (weightKg && (!Number.isFinite(Number(weightKg)) || Number(weightKg) < 25 || Number(weightKg) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
     localStorage.setItem('mtb_pro_server', server);
-    Cloud.clearSession();
     try {
         if (register) {
             const profile = { email, password: pass, passwordConfirm: pass, nickname };
@@ -383,7 +382,7 @@ async function accAuth(register) {
         // Sincronizaciones post-login: no bloquean ni revierten el login si fallan.
         try { await syncCloudPreferences(); } catch (e) { console.warn('syncCloudPreferences tras login:', e); }
         try { await restoreGroup(); } catch (e) { console.warn('restoreGroup tras login:', e); }
-        if (Cloud.nickname) syncRoutes(true);
+        try { if (Cloud.nickname) syncRoutes(true); } catch (e) { console.warn('syncRoutes tras login:', e); }
         try {
             const poisSynced = await syncSharedPois(true);
             if (!poisSynced && pendingSharedPoiCount()) {

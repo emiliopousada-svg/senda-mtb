@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 
 const {
     bearingBetween,
@@ -153,6 +156,25 @@ test('GPS tracking options configure high accuracy appropriately', () => {
     assert.equal(GPS_ACTIVE_OPTIONS.maximumAge, 0);
     assert.equal(GPS_LOW_POWER_OPTIONS.enableHighAccuracy, false);
     assert.equal(GPS_LOW_POWER_OPTIONS.maximumAge, 10000);
+});
+
+test('clearing a followed route drops any queued GPS visual update', () => {
+    const timers = [];
+    const frames = [];
+    const context = vm.createContext({
+        setTimeout(callback) { timers.push(callback); return timers.length; },
+        requestAnimationFrame(callback) { frames.push(callback); return frames.length; }
+    });
+    const gpsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'gps.js'), 'utf8');
+    vm.runInContext(gpsSource, context);
+    vm.runInContext('scheduleGpsVisualUpdate({ followedDistanceM: 125 })', context);
+    assert.equal(vm.runInContext('pendingGpsVisualState.followedDistanceM', context), 125);
+
+    timers[0]();
+    vm.runInContext('clearPendingGpsVisualUpdate()', context);
+    frames[0]();
+
+    assert.equal(vm.runInContext('pendingGpsVisualState', context), null);
 });
 
 test('recording requires a signed-in account with a nickname', () => {

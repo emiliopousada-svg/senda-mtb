@@ -105,6 +105,21 @@ test('external libraries in index.html use SRI and MapLibre is local', () => {
     assert.ok(fs.existsSync(path.join(root, 'vendor/maplibre-gl/maplibre-gl.js')));
 });
 
+test('prepare-web strips integrity and crossorigin from local bundled scripts for Capacitor', () => {
+    const root = path.join(__dirname, '..');
+    const wwwHtml = path.join(root, 'www', 'index.html');
+    if (!fs.existsSync(wwwHtml)) return;
+    const html = fs.readFileSync(wwwHtml, 'utf8');
+    const localBundledTags = [...html.matchAll(/<(?:script|link)\b[^>]*>/gi)]
+        .map(match => match[0])
+        .filter(tag => /lib\/(?:leaflet|chart)/i.test(tag));
+    assert.ok(localBundledTags.length >= 3, 'Se deben encontrar al menos 3 tags empaquetados locales');
+    localBundledTags.forEach(tag => {
+        assert.equal(/integrity=/i.test(tag), false, `El tag local no debe llevar integrity: ${tag}`);
+        assert.equal(/crossorigin=/i.test(tag), false, `El tag local no debe llevar crossorigin: ${tag}`);
+    });
+});
+
 test('manifest icons exist with the declared sizes', () => {
     const root = path.join(__dirname, '..');
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8').replace(/^\uFEFF/, ''));

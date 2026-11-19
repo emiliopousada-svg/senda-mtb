@@ -2,9 +2,13 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 
 // Cargar módulo en contexto Node.js
 const { detectClimbs, climbProgress } = require('../app/route-climbs.js');
+const routeClimbsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'route-climbs.js'), 'utf8');
 
 // ── Helpers ───────────────────────────────────────────────────
 /**
@@ -56,12 +60,47 @@ describe('detectClimbs', () => {
         assert.ok(result[0].avgGrade >= 3, `avgGrade esperado ≥3, obtenido ${result[0].avgGrade}`);
     });
 
+    it('usa la vaguada reciente como base antes de consolidar la subida', () => {
+        const pts = makePoints([100, 90, 110, 130, 150, 170], 100);
+        const climbs = detectClimbs(pts, {
+            minGainM: 80,
+            minLengthM: 390,
+            minGradePercent: 3,
+            smoothingWindow: 1
+        });
+
+        assert.equal(climbs.length, 1);
+        assert.equal(climbs[0].startAlt, 90);
+        assert.equal(climbs[0].endAlt, 170);
+        assert.equal(climbs[0].gainM, 80);
+    });
+
+    it('termina la subida en el pico y no después del descenso', () => {
+        const pts = makePoints([100, 120, 140, 160, 180, 170, 150, 140], 100);
+        const climbs = detectClimbs(pts, {
+            minGainM: 80,
+            minLengthM: 390,
+            minGradePercent: 3,
+            smoothingWindow: 1
+        });
+
+        assert.equal(climbs.length, 1);
+        assert.equal(climbs[0].endAlt, 180);
+        assert.ok(Math.abs(climbs[0].endDistM - 400) < 2);
+    });
+
     it('ignora repecho pequeño (<80 m ganancia)', () => {
         // 50 m desnivel en 500 m: no supera minGainM=80
         const alts = Array.from({ length: 11 }, (_, i) => 300 + i * 5);
         const pts  = makePoints(alts, 50);
         const result = detectClimbs(pts, { minGainM: 80, minLengthM: 400, minGradePercent: 3 });
         assert.deepEqual(result, []);
+    });
+
+    it('expone setRouteClimbs en el modo de navegador', () => {
+        const context = vm.createContext({});
+        vm.runInContext(routeClimbsSource, context);
+        assert.equal(typeof context.setRouteClimbs, 'function');
     });
 
     it('detecta dos subidas separadas por un descenso', () => {

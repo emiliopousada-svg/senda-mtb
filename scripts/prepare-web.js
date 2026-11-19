@@ -112,14 +112,27 @@ if (!versionLabel.test(html)) {
   throw new Error('No se pudo encontrar la etiqueta de versión en index.html');
 }
 html = html.replace(versionLabel, `$1v${appVersion} (build ${appBuild})$2`);
-const swaps = [
-  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'lib/leaflet/leaflet.css'],
-  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'lib/leaflet/leaflet.js'],
-  ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js', 'lib/chart.umd.js']
+// En el bundle empaquetado para Capacitor (Android/iOS), los scripts y hojas de estilo
+// locales no deben llevar integrity ni crossorigin="anonymous": el servidor local de
+// activos del WebView (WebViewLocalServer) no devuelve cabeceras CORS, lo que bloquearía
+// la carga de librerías locales críticas (Leaflet, Chart.js) por política CORS.
+const localSwaps = [
+  [
+    /<link\s+rel="stylesheet"\s+href="https:\/\/unpkg\.com\/leaflet@1\.9\.4\/dist\/leaflet\.css"[^>]*\/?>/i,
+    '<link rel="stylesheet" href="lib/leaflet/leaflet.css" />'
+  ],
+  [
+    /<script\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js@4\.4\.1\/dist\/chart\.umd\.js"[^>]*><\/script>/i,
+    '<script src="lib/chart.umd.js"></script>'
+  ],
+  [
+    /<script\s+src="https:\/\/unpkg\.com\/leaflet@1\.9\.4\/dist\/leaflet\.js"[^>]*><\/script>/i,
+    '<script src="lib/leaflet/leaflet.js"></script>'
+  ]
 ];
-for (const [from, to] of swaps) {
-  if (!html.includes(from)) throw new Error('No encuentro este enlace en index.html: ' + from);
-  html = html.split(from).join(to);
+for (const [pattern, replacement] of localSwaps) {
+  if (!pattern.test(html)) throw new Error('No encuentro este enlace externo para reemplazar en index.html: ' + pattern);
+  html = html.replace(pattern, replacement);
 }
 fs.writeFileSync(file, html);
 

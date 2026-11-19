@@ -6,7 +6,10 @@ const {
     routeHaversineMeters,
     routeBearingBetween,
     calculateRouteCumulativeDistances,
-    detectRouteTurns
+    detectRouteTurns,
+    pointSegProjection,
+    routeDistanceAtMatch,
+    checkTurnVoicePrompts
 } = require('../app/route-following.js');
 
 describe('Turn and voice navigation detection', () => {
@@ -90,6 +93,28 @@ describe('Turn and voice navigation detection', () => {
         assert.deepEqual(detectRouteTurns([], new Float64Array(0)), []);
         assert.deepEqual(detectRouteTurns([[42.0, -8.0]], new Float64Array([0])), []);
         assert.deepEqual(detectRouteTurns(null, null), []);
+    });
+
+    it('calcula el progreso dentro del segmento en lugar de redondearlo al punto anterior', () => {
+        const projection = pointSegProjection([42, -7.9995], [42, -8], [42, -7.999]);
+        const distance = routeDistanceAtMatch({ index: 1, fraction: projection.fraction }, [0, 100, 200]);
+        assert.ok(Math.abs(projection.fraction - 0.5) < 0.01);
+        assert.ok(Math.abs(distance - 150) < 1);
+    });
+
+    it('no consume avisos de giro mientras el ciclista está fuera de ruta', () => {
+        const turn = { distanceM: 100, warnedAhead: false, warnedNow: false, text: 'giro a la derecha' };
+        const route = { turns: [turn] };
+        global.localStorage = { getItem: () => '0' };
+        try {
+            checkTurnVoicePrompts(50, true, route);
+            assert.equal(turn.warnedAhead, false);
+
+            checkTurnVoicePrompts(50, false, route);
+            assert.equal(turn.warnedAhead, true);
+        } finally {
+            delete global.localStorage;
+        }
     });
 
     it('identifica la posición y estado de alerta para giros próximos', () => {
