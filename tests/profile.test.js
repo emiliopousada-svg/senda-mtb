@@ -22,7 +22,21 @@ test('profile location is trimmed and limited to 80 characters', () => {
 
 function profileLocationContext({ initialStorage = {}, response = null } = {}) {
     const storage = new Map(Object.entries(initialStorage));
+    const listeners = new Map();
+    const saveButton = { disabled: false };
+    const editButton = {
+        attributes: {},
+        addEventListener: (type, handler) => listeners.set(`edit-${type}`, handler),
+        setAttribute(name, value) { this.attributes[name] = value; }
+    };
+    const editor = {
+        hidden: true,
+        addEventListener: (type, handler) => listeners.set(`editor-${type}`, handler),
+        querySelector: () => saveButton
+    };
     const elements = new Map([
+        ['profile-edit-button', editButton],
+        ['profile-editor', editor],
         ['profile-location', { textContent: '' }],
         ['profile-location-input', { value: '' }],
         ['profile-editor-note', { textContent: '' }]
@@ -45,6 +59,12 @@ function profileLocationContext({ initialStorage = {}, response = null } = {}) {
             removeItem: key => storage.delete(key)
         },
         navigator: { onLine: true },
+        savedRoutes: [],
+        statsRangeRides: () => [],
+        statsAggregate: () => ({ distanceKm: 0, ascentSampleCount: 0, ascentM: 0, movingTimeSec: 0, rideCount: 0 }),
+        statsAnalyzeRoute: () => ({}),
+        garageState: null,
+        garageFormatKm: value => String(value),
         cloudApi: async (url, method, body) => {
             calls.push({ url, method, body });
             return response || { homeLocation: body.homeLocation, id: 'user-1' };
@@ -53,8 +73,35 @@ function profileLocationContext({ initialStorage = {}, response = null } = {}) {
         toast() {}
     });
     vm.runInContext(fs.readFileSync(path.join(root, 'app', 'profile.js'), 'utf8'), context);
-    return { context, elements, storage, calls };
+    return { context, elements, storage, calls, listeners, saveButton };
 }
+
+test('profile editor opens on the first visit when no locality has been saved', () => {
+    const { context, elements, storage } = profileLocationContext();
+    assert.equal(context.profileOpenEditorOnFirstVisit(), true);
+    assert.equal(elements.get('profile-editor').hidden, false);
+    assert.equal(elements.get('profile-edit-button').attributes['aria-expanded'], 'true');
+    assert.equal(storage.has('mtb_pro_profile_setup_complete'), false);
+});
+
+test('profile editor stays closed on first visit when a locality already exists', () => {
+    const { context, elements } = profileLocationContext({
+        initialStorage: { mtb_pro_profile_location: 'Ponte Caldelas' }
+    });
+    assert.equal(context.profileOpenEditorOnFirstVisit(), false);
+    assert.equal(elements.get('profile-editor').hidden, true);
+});
+
+test('saving the initial profile closes the editor and does not reopen it', async () => {
+    const { context, elements, storage, listeners } = profileLocationContext();
+    context.profileOpenEditorOnFirstVisit();
+    context.profileRender = () => {};
+    elements.get('profile-location-input').value = 'Ponte Caldelas';
+    await listeners.get('editor-submit')({ preventDefault() {} });
+    assert.equal(elements.get('profile-editor').hidden, true);
+    assert.equal(storage.get('mtb_pro_profile_setup_complete'), 'true');
+    assert.equal(context.profileOpenEditorOnFirstVisit(), false);
+});
 
 test('profile hydrates the account locality after login', () => {
     const { context, elements, storage } = profileLocationContext();
@@ -78,6 +125,24 @@ test('profile syncs a queued locality to the signed-in account', async () => {
     assert.equal(elements.get('profile-location').textContent, 'Ponte Caldelas, Galicia');
 });
 
+test('profile restores the pending account locality as the current stored location', () => {
+    const pendingKey = 'mtb_pro_profile_location_pending_user-1';
+    const { context, elements, storage } = profileLocationContext({
+        initialStorage: {
+            mtb_pro_profile_location: 'Vigo',
+            mtb_pro_profile_location_owner: 'user-2',
+            [pendingKey]: 'Girona'
+        }
+    });
+    context.profileApplyAccountLocation({ homeLocation: '' });
+    assert.equal(storage.get('mtb_pro_profile_location'), 'Girona');
+    assert.equal(storage.get('mtb_pro_profile_location_owner'), 'user-1');
+    assert.equal(storage.get(pendingKey), 'Girona');
+    context.profileRender();
+    assert.equal(elements.get('profile-location').textContent, 'Girona');
+    assert.equal(elements.get('profile-location-input').value, 'Girona');
+});
+
 test('profile migrates a saved device locality to the first signed-in account', async () => {
     const { context, storage, calls } = profileLocationContext({
         initialStorage: { mtb_pro_profile_location: 'Ponte Caldelas, Galicia' }
@@ -87,6 +152,21 @@ test('profile migrates a saved device locality to the first signed-in account', 
     assert.equal(calls.length, 1);
     assert.equal(calls[0].body.homeLocation, 'Ponte Caldelas, Galicia');
     assert.equal(storage.get('mtb_pro_profile_location_owner'), 'user-1');
+});
+
+test('profile honors a remote clear for a locality already associated with this account', () => {
+    const { context, elements, storage } = profileLocationContext({
+        initialStorage: {
+            mtb_pro_profile_location: 'Girona',
+            mtb_pro_profile_location_owner: 'user-1',
+            'mtb_pro_profile_location_user_user-1': 'Girona'
+        }
+    });
+    context.profileApplyAccountLocation({ homeLocation: '' });
+    assert.equal(storage.has('mtb_pro_profile_location'), false);
+    assert.equal(storage.has('mtb_pro_profile_location_user_user-1'), false);
+    assert.equal(storage.has('mtb_pro_profile_location_pending_user-1'), false);
+    assert.equal(elements.get('profile-location').textContent, 'Añade tu localidad habitual');
 });
 
 test('profile does not carry a different account locality into a new account', () => {
@@ -165,6 +245,7 @@ test('profile renders account-backed identity and keeps unavailable social servi
     assert.match(profilePage, /Se guarda en tu cuenta si has iniciado sesión/);
     assert.match(source, /published = true/);
     assert.match(navigation, /profileRender\(\)[\s\S]*profileRefreshSharedRoutes\(\)/);
+    assert.match(navigation, /profileOpenEditorOnFirstVisit\(\)/);
     assert.ok(html.indexOf('app/cloud.js') < html.indexOf('app/profile.js'));
     assert.match(worker, /'app\/profile\.js'/);
 });

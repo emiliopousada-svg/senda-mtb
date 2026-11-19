@@ -748,8 +748,12 @@ async function syncRoutes(manual = false) {
             savedRoutes.sort((a, b) => b.id - a.id);
         }
 
-        localStorage.setItem('mtb_pro_lastsync', String(Date.now()));
-        localStorage.setItem('mtb_pro_sync_failures', String(syncFailures));
+        try {
+            localStorage.setItem('mtb_pro_lastsync', String(Date.now()));
+            localStorage.setItem('mtb_pro_sync_failures', String(syncFailures));
+        } catch (e) {
+            console.warn('No se pudo guardar el estado de sincronización de rutas:', e);
+        }
         if (syncFailures === 0) {
             try {
                 if (remote.length || fullAudit) {
@@ -757,9 +761,6 @@ async function syncRoutes(manual = false) {
                 }
                 if (fullAudit) localStorage.setItem(auditKey, String(Date.now()));
             } catch (e) { console.warn('No se pudo guardar el cursor de sincronización de rutas:', e); }
-        }
-        if (garageUsageChanged && typeof garageRoutesChanged === 'function' && !garageRoutesChanged(savedRoutes)) {
-            toast('Rutas sincronizadas, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
         }
         renderSavedRoutes();
         refreshStats();
@@ -773,6 +774,16 @@ async function syncRoutes(manual = false) {
             toast(e.status === undefined ? 'No se pudo conectar con el servidor' : 'Error al sincronizar: ' + e.message, 6000);
         }
     } finally {
+        if (garageUsageChanged && typeof garageRoutesChanged === 'function') {
+            try {
+                if (!garageRoutesChanged(savedRoutes)) {
+                    toast('Rutas sincronizadas, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
+                }
+            } catch (e) {
+                console.warn('No se pudo actualizar el mantenimiento preventivo tras sincronizar rutas:', e);
+                toast('Rutas sincronizadas, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
+            }
+        }
         const retryQueued = syncRetryQueued;
         syncRetryQueued = false;
         syncing = false;
