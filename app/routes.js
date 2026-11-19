@@ -706,6 +706,9 @@ $('saved-routes-list').addEventListener('click', async e => {
         try { await DB.deleteRoute(id, r.remoteId, rankingDelete); }
         catch (err) { toast('No se pudo eliminar la ruta ni programar su borrado'); return; }
         savedRoutes = savedRoutes.filter(x => x.id !== id);
+        if (typeof garageRoutesChanged === 'function' && !garageRoutesChanged(savedRoutes)) {
+            toast('La ruta se eliminó, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
+        }
         if (followedRoute && followedRoute.id === id) unfollowRoute();
         renderSavedRoutes();
         refreshStats();

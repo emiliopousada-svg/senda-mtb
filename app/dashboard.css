@@ -365,6 +365,13 @@ body::before {
 .garage-components,.garage-history { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
 .garage-components li { display:flex; justify-content:space-between; gap:8px; padding:7px 10px; border-radius:10px; background:#1b212a; color:#e6ebf0; font-size:.74rem; }
 .garage-components li span { color:#aeb8c5; text-align:right; }
+.garage-alerts-title { margin:15px 0 0; color:#c9d3de; font-size:.78rem; }
+.garage-preventive-alerts { display:grid; gap:7px; margin:8px 0 0; padding:0; list-style:none; }
+.garage-preventive-alerts li { display:grid; gap:3px; padding:8px 10px; border-radius:10px; background:#1b212a; color:#e6ebf0; font-size:.74rem; }
+.garage-preventive-alerts li span { color:#aeb8c5; line-height:1.4; }
+.garage-preventive-alerts li[data-state="soon"] { border-left:3px solid #ffb020; }
+.garage-preventive-alerts li[data-state="due"] { border-left:3px solid #ff6a5a; }
+.garage-preventive-alerts li[data-state="unknown"] { border-left:3px solid #758293; }
 .garage-history-item { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:9px 10px; border-radius:10px; background:#202630; color:#e6ebf0; font-size:.76rem; }
 .garage-history-item div { display:grid; gap:2px; min-width:0; }
 .garage-history-item span { color:#aeb8c5; font-size:.7rem; }

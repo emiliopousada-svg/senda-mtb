@@ -38,6 +38,8 @@ When following a route, the app detects significant turns from the route geometr
 
 The Cockpit's optional OLED saver keeps only speed, elapsed time, distance and activity/GPS status on a true-black screen. While the Cockpit is active it dims after 20 seconds, then briefly restores brightness around 40 metres before a detected turn or on a route deviation. This dims rather than powers off the display; mobile operating systems do not reliably allow a web view to wake a fully sleeping screen.
 
+Garage maintenance alerts use local ride history to track chain distance, tubeless-fluid age, suspension moving time and brake-pad descent. Route analysis refreshes when a ride is saved or the route history changes, never during GPS tracking.
+
 `scripts/prepare-web.js` copies this directory into the Capacitor web bundle. The service worker precaches these files for PWA startup without a network connection.
 
 ## APK versions and updates

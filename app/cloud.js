@@ -468,7 +468,7 @@ async function syncRoutes(manual = false) {
     const retryGeneration = cloudSyncRetryGeneration;
     syncing = true;
     $('acc-status').textContent = 'Sincronizando…';
-    let pushed = 0, pulled = 0, syncFailures = 0;
+    let pushed = 0, pulled = 0, syncFailures = 0, garageUsageChanged = false;
     let retryableSyncFailure = false;
     let permanentSyncFailure = false;
     const syncFailureDetails = [];
@@ -599,6 +599,7 @@ async function syncRoutes(manual = false) {
                         : null;
                     await DB.deleteRoute(r.id, null, rankingDelete);
                     savedRoutes = savedRoutes.filter(x => x.id !== r.id);
+                    garageUsageChanged = true;
                     if (rankingDelete) await syncPendingGroupRankingDeletes();
                 } catch (e) {
                     blockedIds.add(r.id);
@@ -738,6 +739,7 @@ async function syncRoutes(manual = false) {
                     await putLocal(r);
                     savedRoutes.push(r);
                     pulled++;
+                    garageUsageChanged = true;
                 } catch (e) {
                     noteSyncFailure(`No se pudo descargar «${rec.name || 'una ruta'}»: ${e.message}`, e);
                     console.warn(`No se pudo descargar la ruta remota ${rec.id}:`, e);
@@ -755,6 +757,9 @@ async function syncRoutes(manual = false) {
                 }
                 if (fullAudit) localStorage.setItem(auditKey, String(Date.now()));
             } catch (e) { console.warn('No se pudo guardar el cursor de sincronización de rutas:', e); }
+        }
+        if (garageUsageChanged && typeof garageRoutesChanged === 'function' && !garageRoutesChanged(savedRoutes)) {
+            toast('Rutas sincronizadas, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
         }
         renderSavedRoutes();
         refreshStats();
