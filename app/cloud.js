@@ -323,6 +323,7 @@ function renderAccountServer() {
         try { serverInput.textContent = Cloud.server || 'Sin servidor configurado'; }
         catch (error) { serverInput.textContent = 'Sin servidor configurado'; }
     }
+    if (typeof dashboardCheckServerHealth === 'function') dashboardCheckServerHealth(true);
 }
 
 // Evita peticiones duplicadas si se pulsa varias veces mientras se autentica.
@@ -371,21 +372,29 @@ async function accAuth(register) {
         }
         try { await syncPendingAccountAvatar(r.record); }
         catch (avatarError) { console.warn('No se pudo sincronizar el avatar pendiente:', avatarError); }
-        await syncCloudPreferences();
+        // Limpiar campos y actualizar UI de inmediato: aunque fallen sincronizaciones
+        // posteriores, el usuario ya está logueado y la pantalla debe reflejarlo.
         $('acc-pass').value = '';
         $('acc-weight').value = '';
         $('acc-age').value = '';
         renderAccount();
         if (!Cloud.nickname && nickname) $('acc-account-nickname').value = nickname;
-        await restoreGroup();
         toast(register ? '✅ Cuenta creada' : '✅ Sesión iniciada');
+        // Sincronizaciones post-login: no bloquean ni revierten el login si fallan.
+        try { await syncCloudPreferences(); } catch (e) { console.warn('syncCloudPreferences tras login:', e); }
+        try { await restoreGroup(); } catch (e) { console.warn('restoreGroup tras login:', e); }
         if (Cloud.nickname) syncRoutes(true);
-        const poisSynced = await syncSharedPois(true);
-        if (!poisSynced && pendingSharedPoiCount()) {
-            toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
-        }
+        try {
+            const poisSynced = await syncSharedPois(true);
+            if (!poisSynced && pendingSharedPoiCount()) {
+                toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
+            }
+        } catch (e) { console.warn('syncSharedPois tras login:', e); }
     } catch (e) {
         console.warn('Auth:', e);
+        // Si la sesión llegó a guardarse (el auth fue OK pero falló algo posterior),
+        // renderizar la cuenta para reflejar el estado real.
+        if (Cloud.loggedIn()) renderAccount();
         toast(e.status === undefined
             ? 'No se pudo conectar; comprueba tu conexión.'
             : (register ? 'No se pudo crear la cuenta: ' : 'No se pudo entrar: ') + e.message, 6000);

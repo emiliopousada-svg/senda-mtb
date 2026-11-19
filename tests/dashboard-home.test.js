@@ -8,7 +8,10 @@ const vm = require('node:vm');
 
 const dashboardSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.js'), 'utf8');
 
-function dashboardContext(nickname, avatarUrl = '') {
+function dashboardContext(nickname, avatarUrl = '', healthFetch = async () => ({
+    ok: true,
+    json: async () => ({ code: 200 })
+})) {
     const greeting = { textContent: '' };
     const avatar = {
         hidden: true,
@@ -58,10 +61,16 @@ function dashboardContext(nickname, avatarUrl = '') {
         classList: { toggle(name, active) { accountIndicator.classes[name] = active; } },
         attributes: {},
         setAttribute(name, value) { this.attributes[name] = value; },
+        statusText: { textContent: 'Estado del servidor' },
+        querySelector(selector) { return selector === 'span' ? this.statusText : null; },
         title: ''
     };
     const context = vm.createContext({
-        Cloud: { nickname },
+        AbortController,
+        setTimeout,
+        clearTimeout,
+        fetch: healthFetch,
+        Cloud: { nickname, server: 'https://mtbpro.ddns.net' },
         getAccountAvatarUrl: () => avatarUrl,
         currentPage: 5,
         activeStatsSlide: 0,
@@ -69,7 +78,7 @@ function dashboardContext(nickname, avatarUrl = '') {
         lastAccuracy: null,
         MAX_ACC_M: 30,
         navigator: { onLine: true },
-        window: { addEventListener() {} },
+        window: { addEventListener() {}, setInterval() { return 1; } },
         document: {
             addEventListener() {},
             querySelectorAll() { return []; }
@@ -186,12 +195,14 @@ test('control center contains recording, sensor, map and miscellaneous settings 
     assert.match(toolsSource, /case 'social':[\s\S]*toolsOpenWorkspace\('social-workspace'\)/);
 });
 
-test('home network status glows online and switches to offline state', () => {
+test('home network and PocketBase statuses are checked independently', async () => {
     const { context, network, accountIndicator } = dashboardContext('TrailRider');
+    await context.dashboardCheckServerHealth(true);
     assert.equal(network.classes.connected, true);
     assert.match(network.innerHTML, /En línea/);
     assert.equal(accountIndicator.classes.connected, true);
-    assert.equal(accountIndicator.attributes['aria-label'], 'Estado del servidor: conectado');
+    assert.equal(accountIndicator.statusText.textContent, 'PocketBase disponible');
+    assert.equal(accountIndicator.attributes['aria-label'], 'Estado del servidor: PocketBase disponible');
 
     context.navigator.onLine = false;
     context.dashboardUpdateNetworkStatus();
@@ -200,7 +211,17 @@ test('home network status glows online and switches to offline state', () => {
     assert.match(network.innerHTML, /Sin conexión/);
     assert.equal(accountIndicator.classes.connected, false);
     assert.equal(accountIndicator.classes.offline, true);
-    assert.equal(accountIndicator.attributes['aria-label'], 'Estado del servidor: sin conexión');
+    assert.equal(accountIndicator.statusText.textContent, 'PocketBase no disponible');
+});
+
+test('internet can be online while PocketBase health check fails', async () => {
+    const { context, network, accountIndicator } = dashboardContext('TrailRider', '', async () => ({ ok: false }));
+    await context.dashboardCheckServerHealth(true);
+
+    assert.equal(network.classes.connected, true);
+    assert.equal(accountIndicator.classes.connected, false);
+    assert.equal(accountIndicator.classes.offline, true);
+    assert.equal(accountIndicator.statusText.textContent, 'PocketBase no disponible');
 });
 
 test('profile hides the synchronization server URL and shows the illuminated server status', () => {
@@ -220,9 +241,13 @@ test('dashboard loads before cloud.js without errors and keeps network listeners
     const context = vm.createContext({
         currentPage: 5,
         activeStatsSlide: 0,
+        AbortController,
+        setTimeout,
+        clearTimeout,
         navigator: { onLine: true },
+        fetch: async () => ({ ok: true, json: async () => ({ code: 200 }) }),
         localStorage: { getItem: () => null },
-        window: { addEventListener(type) { listeners.push(type); } },
+        window: { addEventListener(type) { listeners.push(type); }, setInterval() { return 1; } },
         document: {
             addEventListener() {},
             querySelectorAll() { return []; }
