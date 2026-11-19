@@ -62,6 +62,42 @@ test('service worker does not cache private, no-store, or vary-star responses', 
     })), false);
 });
 
+test('failed service worker install deletes only its new cache and keeps the active shell', async () => {
+    const handlers = new Map();
+    const cacheNames = new Set(['mtbpro-shell-v0.2.25-v15']);
+    let installedShell = '';
+    const self = {
+        registration: { scope: 'https://example.test/mtb/' },
+        addEventListener: (type, handler) => handlers.set(type, handler),
+        skipWaiting: async () => {}
+    };
+    const context = {
+        self,
+        URL,
+        Headers,
+        Response,
+        fetch: async url => url === 'index.html'
+            ? new Response('missing', { status: 404 })
+            : new Response('ok'),
+        caches: {
+            async open(name) {
+                installedShell = name;
+                cacheNames.add(name);
+                return { async put() {} };
+            },
+            async delete(name) { return cacheNames.delete(name); }
+        }
+    };
+    vm.createContext(context);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8'), context);
+
+    let installPromise;
+    handlers.get('install')({ waitUntil: promise => { installPromise = promise; } });
+    await assert.rejects(installPromise);
+    assert.equal(cacheNames.has('mtbpro-shell-v0.2.25-v15'), true);
+    assert.equal(cacheNames.has(installedShell), false);
+});
+
 test('service worker precaches every local script and stylesheet loaded by index.html', () => {
     const root = path.join(__dirname, '..');
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
