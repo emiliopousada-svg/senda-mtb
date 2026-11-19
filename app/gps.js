@@ -328,6 +328,11 @@ function onPos(pos) {
     }
     const followedMatch = followedRoute ? findFollowedRouteMatch(lat, lon) : null;
     if (followedMatch) checkUpcomingRouteTurn(followedMatch);
+    if (followedMatch && !isPaused && (isRecording
+        || (typeof cockpitOledSaverEnabled === 'function' && cockpitOledSaverEnabled()
+            && typeof currentPage !== 'undefined' && currentPage === 6))) {
+        checkOffRoute(lat, lon, followedMatch);
+    }
 
     // El GPS nativo puede no incluir rumbo: en ese caso lo calculamos
     // con el desplazamiento entre posiciones fiables mientras avanzamos.
@@ -393,7 +398,6 @@ function onPos(pos) {
 
     if (!isRecording || isPaused) return;
 
-    if (followedMatch) checkOffRoute(lat, lon, followedMatch);
     if (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > MAX_ACC_M) return; // precisión ausente, inválida o señal pobre: no se graba
     const t = pos.timestamp;
     if (!Number.isFinite(t)) return; // sin tiempo fiable no se puede validar el desplazamiento

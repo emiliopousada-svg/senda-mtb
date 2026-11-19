@@ -44,6 +44,8 @@ function renderPage(index) {
     const navPage = index === 6 ? 0 : index;
     navBtns.forEach(btn => btn.classList.toggle('active', Number(btn.dataset.page) === navPage));
     document.body.dataset.currentPage = String(index);
+    if (typeof cockpitUpdateOledSaver === 'function') cockpitUpdateOledSaver();
+    if (typeof screenScheduleDim === 'function') screenScheduleDim();
     if (typeof dashboardUpdateNav === 'function') dashboardUpdateNav(index);
     if (index === 6 && typeof cockpitRender === 'function') cockpitRender();
     if (index === 1 && statsNeedsRefresh) requestAnimationFrame(refreshStats);

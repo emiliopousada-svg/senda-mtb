@@ -154,6 +154,18 @@ function checkUpcomingRouteTurn(match) {
     const segmentLength = cumulative[match.index + 1] - cumulative[match.index];
     const progress = cumulative[match.index] + segmentLength * match.fraction;
     const maneuvers = followedRoute.maneuvers;
+    while (followedRoute.nextManeuverWakeIndex < maneuvers.length) {
+        const maneuver = maneuvers[followedRoute.nextManeuverWakeIndex];
+        const remaining = maneuver.distanceMeters - progress;
+        if (remaining < -15) {
+            followedRoute.nextManeuverWakeIndex++;
+            continue;
+        }
+        if (remaining > 40) break;
+        followedRoute.nextManeuverWakeIndex++;
+        if (typeof screenWakeForNavigation === 'function') screenWakeForNavigation();
+        break;
+    }
     while (followedRoute.nextManeuverIndex < maneuvers.length) {
         const maneuver = maneuvers[followedRoute.nextManeuverIndex];
         const remaining = maneuver.distanceMeters - progress;
@@ -177,6 +189,7 @@ function checkOffRoute(lat, lon, match) {
     const min = match.distance;
     if (!offRouteState && min > OFFROUTE_M) {
         offRouteState = true;
+        if (typeof screenWakeForNavigation === 'function') screenWakeForNavigation();
         toast(`⚠️ Te has salido de la ruta (${Math.round(min)} m)`, 5000);
         announceRouteVoice(`Atención. Estás a unos ${Math.round(min)} metros fuera de la ruta. Comprueba el mapa cuando sea seguro.`);
         playOffRouteSound();
@@ -260,6 +273,7 @@ function followRoute(r) {
         cumulativeMeters,
         maneuvers: buildRouteManeuvers(points, cumulativeMeters),
         nextManeuverIndex: 0,
+        nextManeuverWakeIndex: 0,
         pois: Array.isArray(r.pois) ? r.pois : [],
         gainCum: gainCumulative(r.points),
         progressIndex: 0

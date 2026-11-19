@@ -36,6 +36,8 @@ The web GPS watch uses low-power mode while the app is idle, switches to fresh h
 
 When following a route, the app detects significant turns from the route geometry and announces the direction about 50 metres ahead when voice guidance is enabled. Turn guidance works offline and complements the existing off-route and return-to-route announcements.
 
+The Cockpit's optional OLED saver keeps only speed, elapsed time, distance and activity/GPS status on a true-black screen. While the Cockpit is active it dims after 20 seconds, then briefly restores brightness around 40 metres before a detected turn or on a route deviation. This dims rather than powers off the display; mobile operating systems do not reliably allow a web view to wake a fully sleeping screen.
+
 `scripts/prepare-web.js` copies this directory into the Capacitor web bundle. The service worker precaches these files for PWA startup without a network connection.
 
 ## APK versions and updates

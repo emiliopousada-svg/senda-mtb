@@ -1,6 +1,8 @@
 'use strict';
 
 const SCREEN_IDLE_DELAY_MS = 5 * 60 * 1000;
+const SCREEN_OLED_IDLE_DELAY_MS = 20 * 1000;
+const SCREEN_NAV_WAKE_DURATION_MS = 20 * 1000;
 let screenIdleTimer = null;
 let screenWakeLock = null;
 let screenWakeRequest = null;
@@ -78,11 +80,28 @@ function screenReleaseWakeLock() {
     lock.release().catch(error => console.warn('No se pudo liberar el bloqueo de pantalla:', error));
 }
 
+function screenIsOledSaverActive() {
+    return !!(document.body.classList
+        && document.body.classList.contains('cockpit-oled-saver'));
+}
+
 function screenScheduleDim() {
     clearTimeout(screenIdleTimer);
     screenIdleTimer = null;
     if (document.visibilityState === 'hidden') return;
-    screenIdleTimer = setTimeout(() => screenSetDimmed(true), SCREEN_IDLE_DELAY_MS);
+    const delay = screenIsOledSaverActive() ? SCREEN_OLED_IDLE_DELAY_MS : SCREEN_IDLE_DELAY_MS;
+    screenIdleTimer = setTimeout(() => screenSetDimmed(true), delay);
+}
+
+function screenWakeForNavigation() {
+    if (!screenIsOledSaverActive() || document.visibilityState === 'hidden') return;
+    clearTimeout(screenIdleTimer);
+    screenSetDimmed(false);
+    screenEnsureAwake();
+    screenIdleTimer = setTimeout(() => {
+        screenIdleTimer = null;
+        if (screenIsOledSaverActive()) screenSetDimmed(true);
+    }, SCREEN_NAV_WAKE_DURATION_MS);
 }
 
 function screenWakeNow() {

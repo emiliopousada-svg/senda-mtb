@@ -41,6 +41,7 @@ function cockpitContext() {
         ['recording-live-line', ''], ['recording-live-area', ''],
         ['cockpit-time'], ['cockpit-distance'], ['cockpit-elevation'], ['cockpit-avg-speed'], ['cockpit-moving'],
         ['cockpit-heart-rate'], ['cockpit-cadence'], ['cockpit-power'], ['cockpit-speed'],
+        ['page-cockpit'], ['cockpit-oled-toggle'], ['cockpit-oled-status'],
         ['cockpit-sensor-hr'], ['cockpit-sensor-cadence'], ['cockpit-sensor-power'],
         ['sensor-hr-status'], ['sensor-cadence-status'], ['sensor-power-status'],
         ['cockpit-speed-panel'], ['cockpit-speed-gauge'], ['cockpit-recording-state'],
@@ -53,8 +54,18 @@ function cockpitContext() {
     elements.get('dashboard-network-status').classList.toggle('connected', true);
     elements.get('recording-live-line').setAttribute('d', 'M0,40 L320,10');
     elements.get('recording-live-area').setAttribute('d', 'M0,40 L320,10 L320,48 L0,48 Z');
+    const body = makeElement();
+    const savedPreferences = new Map();
     const context = vm.createContext({
         $: id => elements.get(id) || null,
+        document: { body },
+        currentPage: 6,
+        localStorage: {
+            getItem(key) { return savedPreferences.get(key) || null; },
+            setItem(key, value) { savedPreferences.set(key, value); }
+        },
+        toast() {},
+        screenScheduleDim() {},
         points: [[12.1, 104.1], [12.2, 104.3]],
         isRecording: true,
         isPaused: false,
@@ -69,7 +80,7 @@ function cockpitContext() {
         }
     });
     vm.runInContext(cockpitSource, context);
-    return { context, elements, observers };
+    return { context, elements, observers, body, savedPreferences };
 }
 
 test('cockpit mirrors ride metrics, live status and route into its own view', () => {
@@ -118,6 +129,27 @@ test('cockpit reflects paused recording state without showing recording controls
     context.isPaused = true;
     context.cockpitRender();
     assert.equal(elements.get('cockpit-recording-state').textContent, 'Grabación pausada');
+});
+
+test('cockpit OLED saver button persists its state and updates its accessible status', () => {
+    const { elements, body, savedPreferences } = cockpitContext();
+    const button = elements.get('cockpit-oled-toggle');
+
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    assert.equal(elements.get('page-cockpit').classList.contains('oled-saver'), false);
+
+    button.handlers.click();
+    assert.equal(savedPreferences.get('mtb_pro_oled_saver'), '1');
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    assert.equal(button.getAttribute('aria-label'), 'Desactivar ahorro OLED');
+    assert.equal(elements.get('cockpit-oled-status').textContent, 'ON');
+    assert.equal(elements.get('page-cockpit').classList.contains('oled-saver'), true);
+    assert.equal(body.classList.contains('cockpit-oled-saver'), true);
+
+    button.handlers.click();
+    assert.equal(savedPreferences.get('mtb_pro_oled_saver'), '0');
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    assert.equal(body.classList.contains('cockpit-oled-saver'), false);
 });
 
 test('cockpit switches the connection indicator to offline styling when disconnected', () => {

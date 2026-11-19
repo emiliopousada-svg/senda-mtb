@@ -866,11 +866,15 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 }
 .cockpit-page { background:radial-gradient(ellipse at 50% -12%,rgba(255,118,31,.13),transparent 40%),#0e1116; }
 .cockpit-content { width:100%; max-width:1420px; min-height:100%; margin:0 auto; padding:24px 22px 34px; }
-.cockpit-header { display:flex; align-items:center; justify-content:center; margin-bottom:15px; text-align:center; }
+.cockpit-header { display:grid; justify-items:center; gap:9px; margin-bottom:15px; text-align:center; }
 .cockpit-title { display:grid; width:100%; justify-items:center; gap:6px; margin:0; }
 .cockpit-title-brand { max-width:100%; color:#f3f5f8; font-size:clamp(1rem,5.5vw,2rem); font-weight:900; letter-spacing:clamp(.02em,.7vw,.075em); line-height:1; text-shadow:0 3px 20px rgba(0,0,0,.35); }
 .cockpit-title-caption { display:flex; align-items:center; gap:clamp(5px,2vw,9px); color:#ff9a5d; font-size:clamp(.5rem,2.2vw,.62rem); font-weight:800; letter-spacing:clamp(.12em,1.3vw,.3em); line-height:1; }
 .cockpit-title-caption::before,.cockpit-title-caption::after { width:26px; height:1px; background:linear-gradient(90deg,transparent,rgba(255,154,93,.7)); content:""; }
+.cockpit-oled-toggle { display:inline-flex; min-height:42px; align-items:center; justify-self:end; gap:8px; padding:0 12px; border:1px solid rgba(255,255,255,.12); border-radius:999px; background:#171c24; color:#d5dce5; font:inherit; font-size:.68rem; font-weight:750; cursor:pointer; }
+.cockpit-oled-toggle strong { padding:3px 6px; border-radius:999px; background:rgba(255,255,255,.08); color:#9aa5b5; font-size:.56rem; letter-spacing:.06em; }
+.cockpit-oled-toggle[aria-pressed="true"] { border-color:rgba(123,223,76,.45); background:#060906; color:#b9f08f; }
+.cockpit-oled-toggle[aria-pressed="true"] strong { background:rgba(123,223,76,.13); color:#a9ed7e; }
 .cockpit-title-caption::after { transform:scaleX(-1); }
 .cockpit-back,.cockpit-map-link { border:1px solid rgba(255,255,255,.12); border-radius:999px; background:rgba(255,255,255,.04); color:#d5dce5; font-size:.68rem; font-weight:700; }
 .cockpit-back { min-height:30px; padding:0 11px; }
@@ -931,6 +935,29 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .cockpit-chart-wrap p,.cockpit-route-preview p { position:absolute; inset:0; display:grid; place-items:center; padding:12px; color:#7f8a98; font-size:.68rem; text-align:center; }
 .cockpit-chart-wrap p[hidden],.cockpit-route-preview p[hidden] { display:none; }
 .cockpit-back:focus-visible,.cockpit-map-link:focus-visible { outline:2px solid #ff9858; outline-offset:2px; }
+.cockpit-oled-toggle:focus-visible { outline:2px solid #a9ed7e; outline-offset:3px; }
+.cockpit-page.oled-saver,
+.cockpit-page.oled-saver .cockpit-content { background:#000; }
+.cockpit-page.oled-saver .cockpit-content { padding-top:12px; padding-bottom:24px; }
+.cockpit-page.oled-saver .cockpit-trip-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.cockpit-page.oled-saver .cockpit-trip-summary > article:nth-child(2),
+.cockpit-page.oled-saver .cockpit-trip-summary > article:nth-child(4),
+.cockpit-page.oled-saver .cockpit-sensor-grid,
+.cockpit-page.oled-saver .cockpit-visuals,
+.cockpit-page.oled-saver #cockpit-network-status { display:none; }
+.cockpit-page.oled-saver .cockpit-summary-card,
+.cockpit-page.oled-saver .cockpit-speed-panel { border-color:#111; background:#000; box-shadow:none; }
+.cockpit-page.oled-saver .cockpit-summary-card > span { color:#737b86; }
+.cockpit-page.oled-saver .cockpit-summary-card strong { color:#f4f6f8; }
+.cockpit-page.oled-saver .cockpit-performance { grid-template-columns:1fr; }
+.cockpit-page.oled-saver .cockpit-speed-panel { padding:8px; }
+.cockpit-page.oled-saver .cockpit-speed-panel > .cockpit-section-heading { display:none; }
+.cockpit-page.oled-saver .cockpit-speed-gauge { width:min(72vw,270px); margin:4px auto 10px; padding:0; background:none; }
+.cockpit-page.oled-saver .cockpit-speed-gauge-inner { border:0; background:#000; }
+.cockpit-page.oled-saver .cockpit-speed-gauge-inner strong { color:#f4f6f8; text-shadow:none; }
+.cockpit-page.oled-saver .cockpit-speed-gauge-inner > span { color:#8d96a2; }
+.cockpit-page.oled-saver .cockpit-live-dot { display:none; }
+body.cockpit-oled-saver .mobile-nav { display:none; }
 @media (max-width:719px) {
     .cockpit-content { padding:calc(10px + max(0px, 24px - var(--app-safe-top))) 13px calc(88px + env(safe-area-inset-bottom,0px)); }
     .cockpit-header { margin-bottom:11px; }

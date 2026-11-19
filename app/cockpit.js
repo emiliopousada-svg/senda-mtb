@@ -15,6 +15,39 @@ const cockpitSensorBindings = [
     ['cadence', 'cockpit-sensor-cadence', 'sensor-cadence-status'],
     ['power', 'cockpit-sensor-power', 'sensor-power-status']
 ];
+const COCKPIT_OLED_SAVER_KEY = 'mtb_pro_oled_saver';
+
+function cockpitOledSaverEnabled() {
+    return localStorage.getItem(COCKPIT_OLED_SAVER_KEY) === '1';
+}
+
+function cockpitUpdateOledSaver() {
+    const page = $('page-cockpit');
+    const button = $('cockpit-oled-toggle');
+    const status = $('cockpit-oled-status');
+    if (!page || !button || !status) return;
+    const enabled = cockpitOledSaverEnabled();
+    page.classList.toggle('oled-saver', enabled);
+    if (document.body.classList) {
+        document.body.classList.toggle('cockpit-oled-saver', enabled && currentPage === 6);
+    }
+    button.setAttribute('aria-pressed', String(enabled));
+    button.setAttribute('aria-label', enabled ? 'Desactivar ahorro OLED' : 'Activar ahorro OLED');
+    status.textContent = enabled ? 'ON' : 'OFF';
+}
+
+function cockpitInitOledSaver() {
+    const button = $('cockpit-oled-toggle');
+    if (!button) return;
+    button.addEventListener('click', () => {
+        const enabled = !cockpitOledSaverEnabled();
+        localStorage.setItem(COCKPIT_OLED_SAVER_KEY, enabled ? '1' : '0');
+        cockpitUpdateOledSaver();
+        if (typeof screenScheduleDim === 'function') screenScheduleDim();
+        toast(enabled ? 'Ahorro OLED activado' : 'Ahorro OLED desactivado');
+    });
+    cockpitUpdateOledSaver();
+}
 
 function cockpitRenderRoute() {
     const line = $('cockpit-route-line');
@@ -140,6 +173,8 @@ function cockpitRender() {
 
     cockpitRenderRoute();
 }
+
+cockpitInitOledSaver();
 
 if (typeof MutationObserver !== 'undefined') {
     const cockpitObserver = new MutationObserver(cockpitRender);

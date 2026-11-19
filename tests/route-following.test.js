@@ -11,11 +11,16 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'app', 'route-followin
 function routeContext() {
     const announcements = [];
     const messages = [];
+    const navigationWakes = [];
     const context = vm.createContext({
         Math,
         Number,
         Array,
         OFFROUTE_M: 60,
+        BACKONROUTE_M: 30,
+        offRouteState: false,
+        offRouteAudioContext: null,
+        navigator: {},
         dist(a, b) {
             const radians = Math.PI / 180;
             const dLat = (b[0] - a[0]) * radians;
@@ -39,6 +44,7 @@ function routeContext() {
         SpeechSynthesisUtterance: class {
             constructor(text) { this.text = text; }
         },
+        screenWakeForNavigation: () => navigationWakes.push(true),
         toast: message => messages.push(message),
         $: () => ({ addEventListener() {} })
     });
@@ -47,7 +53,8 @@ function routeContext() {
         context,
         announcements,
         messages,
-        api: vm.runInContext('({ buildRouteCumulativeDistances, buildRouteManeuvers, checkUpcomingRouteTurn })', context)
+        navigationWakes,
+        api: vm.runInContext('({ buildRouteCumulativeDistances, buildRouteManeuvers, checkUpcomingRouteTurn, checkOffRoute })', context)
     };
 }
 
@@ -80,11 +87,13 @@ test('route maneuver analysis finds left and right turns but ignores straight tr
 });
 
 test('voice guidance announces a turn once when it is within 50 metres and ignores off-route fixes', () => {
-    const { api, context, announcements } = routeContext();
+    const { api, context, announcements, navigationWakes } = routeContext();
     const points = routePoints();
     const cumulativeMeters = api.buildRouteCumulativeDistances(points);
     const maneuvers = api.buildRouteManeuvers(points, cumulativeMeters);
-    context.followedRoute = { pts: points, cumulativeMeters, maneuvers, nextManeuverIndex: 0 };
+    context.followedRoute = {
+        pts: points, cumulativeMeters, maneuvers, nextManeuverIndex: 0, nextManeuverWakeIndex: 0
+    };
 
     function matchAt(progress, distance = 0) {
         const index = cumulativeMeters.findIndex(value => value > progress) - 1;
@@ -96,14 +105,36 @@ test('voice guidance announces a turn once when it is within 50 metres and ignor
     api.checkUpcomingRouteTurn(matchAt(maneuvers[0].distanceMeters - 60));
     assert.equal(announcements.length, 0);
 
+    api.checkUpcomingRouteTurn(matchAt(maneuvers[0].distanceMeters - 50));
+    assert.equal(announcements.length, 1);
+    assert.match(announcements[0], /^Gira a la derecha en 50 metros\.$/);
+    assert.equal(navigationWakes.length, 0);
+
     api.checkUpcomingRouteTurn(matchAt(maneuvers[0].distanceMeters - 40));
     assert.equal(announcements.length, 1);
-    assert.match(announcements[0], /^Gira a la derecha en \d+ metros\.$/);
+    assert.equal(navigationWakes.length, 1);
 
     api.checkUpcomingRouteTurn(matchAt(maneuvers[0].distanceMeters - 35));
     assert.equal(announcements.length, 1);
+    assert.equal(navigationWakes.length, 1);
 
     context.followedRoute.nextManeuverIndex = 0;
+    context.followedRoute.nextManeuverWakeIndex = 0;
     api.checkUpcomingRouteTurn(matchAt(maneuvers[0].distanceMeters - 30, 61));
     assert.equal(announcements.length, 1);
+    assert.equal(navigationWakes.length, 1);
+});
+
+test('route deviation wakes the dimmed OLED cockpit once and return to route keeps the existing voice notice', () => {
+    const { api, context, announcements, navigationWakes } = routeContext();
+    context.followedRoute = {};
+
+    api.checkOffRoute(42, -8, { distance: 61 });
+    api.checkOffRoute(42, -8, { distance: 80 });
+    assert.equal(navigationWakes.length, 1);
+    assert.match(announcements[0], /fuera de la ruta/);
+
+    api.checkOffRoute(42, -8, { distance: 20 });
+    assert.equal(navigationWakes.length, 1);
+    assert.equal(announcements[1], 'Has vuelto a la ruta.');
 });
