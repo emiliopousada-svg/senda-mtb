@@ -125,6 +125,25 @@ test('profile syncs a queued locality to the signed-in account', async () => {
     assert.equal(elements.get('profile-location').textContent, 'Ponte Caldelas, Galicia');
 });
 
+test('profile leaves the former account pending value queued after an account switch', async () => {
+    const pendingKey = 'mtb_pro_profile_location_pending_user-1';
+    const { context, storage, calls } = profileLocationContext({
+        initialStorage: { [pendingKey]: 'Girona' }
+    });
+    let finishRequest;
+    context.cloudApi = (url, method, body) => {
+        calls.push({ url, method, body });
+        return new Promise(resolve => { finishRequest = resolve; });
+    };
+
+    const sync = context.profileSyncPendingLocation('user-1');
+    context.Cloud.uid = 'user-2';
+    finishRequest({ homeLocation: 'Girona', id: 'user-1' });
+    assert.equal(await sync, null);
+    assert.equal(calls.length, 1);
+    assert.equal(storage.get(pendingKey), 'Girona');
+});
+
 test('profile restores the pending account locality as the current stored location', () => {
     const pendingKey = 'mtb_pro_profile_location_pending_user-1';
     const { context, elements, storage } = profileLocationContext({

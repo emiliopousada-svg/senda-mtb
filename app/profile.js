@@ -68,6 +68,7 @@ async function profileSyncPendingLocation(uid) {
     if (!uid || !navigator.onLine || profileCurrentUid() !== uid) return null;
     const pendingKey = profileLocationPendingKey(uid);
     while (true) {
+        if (profileCurrentUid() !== uid) return null;
         if (profileLocationSyncPromise && profileLocationSyncUid === uid) {
             await profileLocationSyncPromise;
             if (profileCurrentUid() !== uid) return null;
