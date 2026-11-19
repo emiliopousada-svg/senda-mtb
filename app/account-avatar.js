@@ -100,7 +100,13 @@ async function syncPendingAccountAvatar(record = null) {
 
 function renderAccountProfile(record = {}, force = false) {
     const uid = Cloud.uid;
-    if (!uid || !record || (!Object.prototype.hasOwnProperty.call(record, 'weightKg') && !Object.prototype.hasOwnProperty.call(record, 'age'))) return;
+    if (!uid || !record
+        || (!Object.prototype.hasOwnProperty.call(record, 'weightKg')
+            && !Object.prototype.hasOwnProperty.call(record, 'age')
+            && !Object.prototype.hasOwnProperty.call(record, 'homeLocation'))) return;
+    if (typeof profileApplyAccountLocation === 'function') profileApplyAccountLocation(record);
+    if (!Object.prototype.hasOwnProperty.call(record, 'weightKg')
+        && !Object.prototype.hasOwnProperty.call(record, 'age')) return;
     if (!force && accountProfileLoadedUid === uid) return;
     const weight = $('acc-profile-weight');
     const age = $('acc-profile-age');

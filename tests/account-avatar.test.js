@@ -11,17 +11,19 @@ function accountProfileContext() {
         'acc-profile-weight': { value: '' },
         'acc-profile-age': { value: '' }
     };
+    const appliedLocations = [];
     const context = vm.createContext({
         Cloud: { uid: 'user-1' },
         document: { activeElement: null },
         $: id => inputs[id] || null,
+        profileApplyAccountLocation: record => appliedLocations.push(record.homeLocation || ''),
         statsApplyAccountProfile() {}
     });
     vm.runInContext(
         fs.readFileSync(path.join(__dirname, '..', 'app', 'account-avatar.js'), 'utf8'),
         context
     );
-    return { context, inputs };
+    return { context, inputs, appliedLocations };
 }
 
 test('account profile treats PocketBase zero defaults as unset', () => {
@@ -34,6 +36,14 @@ test('account profile treats PocketBase zero defaults as unset', () => {
     context.renderAccountProfile({ weightKg: 72.5, age: 34 }, true);
     assert.equal(inputs['acc-profile-weight'].value, '72.5');
     assert.equal(inputs['acc-profile-age'].value, '34');
+});
+
+test('account profile applies the saved locality even without performance fields', () => {
+    const { context, inputs, appliedLocations } = accountProfileContext();
+    context.renderAccountProfile({ homeLocation: 'Ponte Caldelas, Galicia' });
+    assert.deepEqual(appliedLocations, ['Ponte Caldelas, Galicia']);
+    assert.equal(inputs['acc-profile-weight'].value, '');
+    assert.equal(inputs['acc-profile-age'].value, '');
 });
 
 test('account avatar URL works before cloud.js defines Cloud', () => {

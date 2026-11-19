@@ -1,11 +1,151 @@
 'use strict';
 
 const PROFILE_LOCATION_KEY = 'mtb_pro_profile_location';
+const PROFILE_LOCATION_OWNER_KEY = 'mtb_pro_profile_location_owner';
+const PROFILE_LOCATION_USER_PREFIX = 'mtb_pro_profile_location_user_';
+const PROFILE_LOCATION_PENDING_PREFIX = 'mtb_pro_profile_location_pending_';
 let profileSharedRoutesPromise = null;
 let profileSharedRoutesUid = '';
+let profileLocationSyncPromise = null;
+let profileLocationSyncUid = '';
 
 function profileNormalizeLocation(value) {
     return String(value || '').trim().slice(0, 80);
+}
+
+function profileCurrentUid() {
+    return typeof Cloud !== 'undefined' && Cloud.uid
+        && (!Cloud.loggedIn || Cloud.loggedIn())
+        ? String(Cloud.uid)
+        : '';
+}
+
+function profileLocationUserKey(uid) {
+    return `${PROFILE_LOCATION_USER_PREFIX}${encodeURIComponent(uid)}`;
+}
+
+function profileLocationPendingKey(uid) {
+    return `${PROFILE_LOCATION_PENDING_PREFIX}${encodeURIComponent(uid)}`;
+}
+
+function profileStoreCurrentLocation(location) {
+    if (location) localStorage.setItem(PROFILE_LOCATION_KEY, location);
+    else localStorage.removeItem(PROFILE_LOCATION_KEY);
+}
+
+function profileStoreAccountLocation(uid, location) {
+    if (location) localStorage.setItem(profileLocationUserKey(uid), location);
+    else localStorage.removeItem(profileLocationUserKey(uid));
+    profileStoreCurrentLocation(location);
+    localStorage.setItem(PROFILE_LOCATION_OWNER_KEY, uid);
+}
+
+function profileDisplayLocation(location) {
+    profileSetText('profile-location', location || 'Añade tu localidad habitual');
+    const input = document.getElementById('profile-location-input');
+    if (input && document.activeElement !== input) input.value = location;
+}
+
+function profileSetLocationNote(message) {
+    const note = document.getElementById('profile-editor-note');
+    if (note) note.textContent = message;
+}
+
+async function profileSyncPendingLocation(uid) {
+    if (!uid || !navigator.onLine || profileCurrentUid() !== uid) return null;
+    if (profileLocationSyncPromise && profileLocationSyncUid === uid) return profileLocationSyncPromise;
+    const pendingKey = profileLocationPendingKey(uid);
+    const pending = localStorage.getItem(pendingKey);
+    if (pending === null) return null;
+
+    profileLocationSyncUid = uid;
+    const sync = (async () => {
+        const location = profileNormalizeLocation(pending);
+        const updated = await cloudApi(
+            `/api/collections/users/records/${encodeURIComponent(uid)}`,
+            'PATCH',
+            { homeLocation: location }
+        );
+        if (!updated || typeof updated !== 'object'
+            || !Object.prototype.hasOwnProperty.call(updated, 'homeLocation')
+            || profileNormalizeLocation(updated.homeLocation) !== location) {
+            throw new Error('El servidor no confirmó la localidad del perfil.');
+        }
+        if (profileCurrentUid() !== uid || localStorage.getItem(pendingKey) !== pending) return null;
+        profileStoreAccountLocation(uid, location);
+        localStorage.removeItem(pendingKey);
+        if (typeof Cloud.setSession === 'function') Cloud.setSession(Cloud.token, updated);
+        profileDisplayLocation(location);
+        profileSetLocationNote('Localidad sincronizada con tu cuenta; no se publica automáticamente.');
+        return updated;
+    })();
+    profileLocationSyncPromise = sync;
+    try {
+        return await sync;
+    } finally {
+        if (profileLocationSyncPromise === sync) {
+            profileLocationSyncPromise = null;
+            profileLocationSyncUid = '';
+        }
+    }
+}
+
+function profileStartLocationSync(uid) {
+    profileSyncPendingLocation(uid).then(updated => {
+        if (updated) toast('Localidad habitual guardada en tu cuenta.');
+    }).catch(error => {
+        console.warn('La localidad del perfil sigue pendiente de sincronización:', error);
+        profileSetLocationNote(`No se pudo sincronizar; queda pendiente: ${error.message}`);
+        toast('La localidad sigue guardada en este dispositivo y se reintentará al conectar.');
+    });
+}
+
+function profileApplyAccountLocation(record) {
+    const uid = profileCurrentUid();
+    if (!uid || !record) return;
+    try {
+        const pending = localStorage.getItem(profileLocationPendingKey(uid));
+        if (pending !== null) {
+            profileDisplayLocation(profileNormalizeLocation(pending));
+            profileSetLocationNote('Localidad guardada en este dispositivo; sincronizando con tu cuenta.');
+            if (navigator.onLine) profileStartLocationSync(uid);
+            return;
+        }
+
+        const hasRemoteLocation = Object.prototype.hasOwnProperty.call(record, 'homeLocation');
+        const remoteLocation = hasRemoteLocation ? profileNormalizeLocation(record.homeLocation) : '';
+        if (remoteLocation) {
+            profileStoreAccountLocation(uid, remoteLocation);
+            profileDisplayLocation(remoteLocation);
+            profileSetLocationNote('Localidad guardada en tu cuenta; no se publica automáticamente.');
+            return;
+        }
+
+        const owner = localStorage.getItem(PROFILE_LOCATION_OWNER_KEY) || '';
+        const localLocation = profileNormalizeLocation(localStorage.getItem(PROFILE_LOCATION_KEY));
+        const accountLocation = localStorage.getItem(profileLocationUserKey(uid));
+        if (!hasRemoteLocation && accountLocation !== null) {
+            const cached = profileNormalizeLocation(accountLocation);
+            profileStoreAccountLocation(uid, cached);
+            profileDisplayLocation(cached);
+            profileSetLocationNote('Localidad guardada en tu cuenta; no se publica automáticamente.');
+            return;
+        }
+        if ((!owner || owner === uid) && localLocation) {
+            localStorage.setItem(profileLocationPendingKey(uid), localLocation);
+            profileDisplayLocation(localLocation);
+            profileSetLocationNote('Asociando a tu cuenta la localidad que ya estaba guardada en este dispositivo.');
+            if (navigator.onLine) profileStartLocationSync(uid);
+            return;
+        }
+
+        profileStoreAccountLocation(uid, '');
+        profileDisplayLocation('');
+        profileSetLocationNote('Se guarda en tu cuenta al guardar; no se publica automáticamente.');
+    } catch (error) {
+        console.warn('No se pudo cargar la localidad de la cuenta:', error);
+        profileSetLocationNote('No se pudo cargar la localidad de la cuenta.');
+    }
 }
 
 function profileBuildBadges(summary = {}) {
@@ -68,9 +208,7 @@ function profileRender() {
     }
 
     const location = profileNormalizeLocation(localStorage.getItem(PROFILE_LOCATION_KEY));
-    profileSetText('profile-location', location || 'Añade tu localidad habitual');
-    const locationInput = document.getElementById('profile-location-input');
-    if (locationInput && document.activeElement !== locationInput) locationInput.value = location;
+    profileDisplayLocation(location);
 
     const routes = Array.isArray(savedRoutes) ? savedRoutes : [];
     const rides = statsRangeRides('all', routes);
@@ -190,12 +328,19 @@ function profileBindUI() {
         });
     }
 
-    editor?.addEventListener('submit', event => {
+    editor?.addEventListener('submit', async event => {
         event.preventDefault();
         const location = profileNormalizeLocation(locationInput ? locationInput.value : '');
+        const uid = profileCurrentUid();
         try {
-            if (location) localStorage.setItem(PROFILE_LOCATION_KEY, location);
-            else localStorage.removeItem(PROFILE_LOCATION_KEY);
+            profileStoreCurrentLocation(location);
+            if (uid) {
+                localStorage.setItem(profileLocationUserKey(uid), location);
+                localStorage.setItem(PROFILE_LOCATION_OWNER_KEY, uid);
+                localStorage.setItem(profileLocationPendingKey(uid), location);
+            } else {
+                localStorage.setItem(PROFILE_LOCATION_OWNER_KEY, '');
+            }
         } catch (error) {
             console.warn('No se pudo guardar la localidad del perfil:', error);
             toast('No se pudo guardar la ubicación en este dispositivo.');
@@ -204,7 +349,28 @@ function profileBindUI() {
         profileRender();
         editor.hidden = true;
         if (editButton) editButton.setAttribute('aria-expanded', 'false');
-        toast('Ubicación guardada en este dispositivo.');
+        if (!uid) {
+            profileSetLocationNote('Guardada en este dispositivo. Inicia sesión para asociarla a tu cuenta; no se publica.');
+            toast('Localidad guardada en este dispositivo.');
+            return;
+        }
+        if (!navigator.onLine) {
+            profileSetLocationNote('Guardada en este dispositivo; se sincronizará cuando vuelva la conexión.');
+            toast('Localidad guardada en este dispositivo; pendiente de sincronización.');
+            return;
+        }
+        const saveButton = editor.querySelector('button[type="submit"]');
+        if (saveButton) saveButton.disabled = true;
+        try {
+            await profileSyncPendingLocation(uid);
+            toast('Localidad habitual guardada en tu cuenta.');
+        } catch (error) {
+            console.warn('La localidad se guardó localmente, pero no se pudo sincronizar:', error);
+            profileSetLocationNote(`No se pudo sincronizar; queda pendiente: ${error.message}`);
+            toast('La localidad sigue guardada en este dispositivo y se reintentará al conectar.');
+        } finally {
+            if (saveButton) saveButton.disabled = false;
+        }
     });
 
     document.getElementById('profile-account-edit')?.addEventListener('click', () => {
@@ -222,6 +388,12 @@ function profileBindUI() {
 }
 
 if (typeof document !== 'undefined') profileBindUI();
+if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+        const uid = profileCurrentUid();
+        if (uid) profileStartLocationSync(uid);
+    });
+}
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
