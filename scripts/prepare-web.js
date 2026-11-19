@@ -3,6 +3,7 @@
 // para que el APK no dependa de internet para arrancar.
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { resolveBuildEnvironment, applyBuildEnvironment } = require('./app-environment');
 
 const root = path.join(__dirname, '..');
@@ -116,11 +117,12 @@ for (const asset of localAssets) {
 }
 
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+const swHash = crypto.createHash('sha256').update(swSource).digest('hex').slice(0, 12);
 if (!swSource.includes('__APP_VERSION__')) {
   throw new Error('No se encontró el marcador de versión de caché en sw.js');
 }
 fs.writeFileSync(
   path.join(www, 'sw.js'),
-  swSource.replace('__APP_VERSION__', appVersion)
+  swSource.replace('__APP_VERSION__', appVersion).replace('__SW_HASH__', swHash)
 );
 console.log(`www listo (service worker ${appVersion}, entorno ${appEnvironment.name}, servidor ${appEnvironment.cloudServer})`);
