@@ -73,8 +73,16 @@ const Cloud = {
 };
 
 // Fija la instancia propia de MTBPro y descarta cualquier sesión anterior al cambiar de servidor.
-if (DEFAULT_CLOUD_SERVER && Cloud.server !== normalizeServer(DEFAULT_CLOUD_SERVER)) {
-    Cloud.setServer(DEFAULT_CLOUD_SERVER);
+let cloudServerWasResetOnLoad = false;
+if (DEFAULT_CLOUD_SERVER) {
+    try {
+        if (Cloud.server !== normalizeServer(DEFAULT_CLOUD_SERVER)) Cloud.setServer(DEFAULT_CLOUD_SERVER);
+    } catch (error) {
+        console.warn('La dirección de servidor guardada no es válida:', error);
+        localStorage.setItem('mtb_pro_server', DEFAULT_CLOUD_SERVER);
+        Cloud.clearSession();
+        cloudServerWasResetOnLoad = true;
+    }
 }
 
 const CLOUD_TIMEOUT_MS = 10000;
@@ -835,6 +843,10 @@ function initAccount() {
         console.warn('La dirección de servidor guardada no es válida:', error);
         localStorage.setItem('mtb_pro_server', DEFAULT_CLOUD_SERVER);
         Cloud.clearSession();
+        toast('La dirección de servidor guardada no era válida; se ha restaurado el servidor predeterminado.', 6000);
+    }
+    if (cloudServerWasResetOnLoad) {
+        cloudServerWasResetOnLoad = false;
         toast('La dirección de servidor guardada no era válida; se ha restaurado el servidor predeterminado.', 6000);
     }
 

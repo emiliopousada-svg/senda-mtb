@@ -81,6 +81,30 @@ test('un APP_ENV desconocido en tiempo de ejecución vuelve a producción', () =
     assert.equal(DEFAULT_CLOUD_SERVER, 'https://mtbpro.ddns.net');
 });
 
+test('la inicialización recupera un servidor de PocketBase guardado no válido', () => {
+    const initialization = cloudSource.slice(0, cloudSource.indexOf('function renderAccount()'));
+    const values = new Map([
+        ['mtb_pro_server', 'not a url'],
+        ['mtb_pro_token', 'old-token'],
+        ['mtb_pro_uid', 'old-user']
+    ]);
+    const context = vm.createContext({
+        URL,
+        console: { warn() {} },
+        localStorage: {
+            getItem: key => values.has(key) ? values.get(key) : null,
+            setItem: (key, value) => values.set(key, String(value)),
+            removeItem: key => values.delete(key)
+        }
+    });
+
+    vm.runInContext(`${configSource}\n${initialization}\nglobalThis.__cloud = Cloud; globalThis.__serverWasReset = cloudServerWasResetOnLoad;`, context);
+
+    assert.equal(values.get('mtb_pro_server'), 'https://mtbpro.ddns.net');
+    assert.equal(context.__cloud.loggedIn(), false);
+    assert.equal(context.__serverWasReset, true);
+});
+
 test('los caracteres $ de la URL se copian literalmente en config.js', () => {
     for (const server of ['https://pruebas.example.com/$&', 'https://pruebas.example.com/a$$b', "https://pruebas.example.com/$'"]) {
         const env = { MTB_APP_ENV: 'staging', MTB_CLOUD_SERVER: server };
