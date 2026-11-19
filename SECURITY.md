@@ -13,20 +13,18 @@ Report vulnerabilities privately through **Security > Report a vulnerability** i
 
 ## Data access review
 
-Since v0.2.23, this repository no longer contains PocketBase hook source,
-collection exports, live database rules, or a deployed server. Existing
-server-side endpoints must remain deployed independently; do not treat client
-checks as an access-control boundary. Configure and verify the rules on a new,
+This repository contains PocketBase hooks but no collection exports, live
+database rules, or deployed server. Do not treat the hooks or client checks as
+the complete access-control boundary. Configure and verify the rules on a new,
 independent PocketBase instance before enabling sync. The expected collection
 set and access boundaries are documented in [POCKETBASE.md](POCKETBASE.md).
 
-If community routes are enabled, their tracks are public data. The previously
-deployed route hook trims 150 m from both ends before storing a track and
-rejects POIs within 150 m of the submitted endpoints. Its source is no longer
-in this repository, so verify the deployed implementation before relying on
-this behavior. This reduces location exposure but does not guarantee
-anonymity. The client also resizes and re-encodes photos; the server must
-validate or remove EXIF data if that is required.
+If community routes are enabled, their tracks are public data. The included
+route hook trims 150 m from both ends before storing a track and rejects POIs
+within 150 m of the submitted endpoints. This reduces location exposure but
+does not guarantee anonymity. The client also resizes and re-encodes photos;
+the hook does not strip image metadata, so the server must validate or remove
+EXIF data if that is required.
 
 The API bearer token supports persistent sign-in and is stored in browser
 `localStorage`. JavaScript running in the app origin can access it, so script

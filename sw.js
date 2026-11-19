@@ -2,7 +2,7 @@
 // - Guarda la app y las librerías para que abra sin conexión.
 // - Los mapas offline (teselas del IGN) se guardan en IndexedDB desde la propia aplicación.
 // prepare-web.js sustituye el marcador con la versión de package.json.
-const SHELL = 'mtbpro-shell-v__APP_VERSION__-v13';
+const SHELL = 'mtbpro-shell-v__APP_VERSION__-v12';
 
 const SHELL_URLS = [
   './',
@@ -30,8 +30,6 @@ const SHELL_URLS = [
   'app/recording.js',
   'app/cockpit.js',
   'app/route-following.js',
-  'app/route-climbs.js',
-  'app/route-dem.js',
   'app/routes.js',
   'lib/fit.js',
   'app/route-files.js',
@@ -65,17 +63,18 @@ const SHELL_URLS = [
   'lib/ble.js',
   'lib/leaflet/leaflet.css',
   'lib/leaflet/leaflet.js',
+  'lib/leaflet/leaflet-rotate.umd.min.js',
   'lib/leaflet/images/layers.png',
   'lib/leaflet/images/layers-2x.png',
   'lib/leaflet/images/marker-icon.png',
   'lib/leaflet/images/marker-icon-2x.png',
   'lib/leaflet/images/marker-shadow.png',
   'lib/chart.umd.js',
-  'vendor/leaflet-rotate.umd.min.js',
-  'vendor/maplibre-gl/maplibre-gl.css',
-  'vendor/maplibre-gl/maplibre-gl.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.css',
+  'https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.js',
+  'https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js'
 ];
 

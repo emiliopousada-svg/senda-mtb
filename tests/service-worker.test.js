@@ -1,7 +1,6 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
@@ -74,50 +73,6 @@ test('service worker precaches every local script and stylesheet loaded by index
     ].map(match => match[1]).filter(asset => !/^https?:\/\//i.test(asset));
     const missing = localAssets.filter(asset => !shellUrls.has(asset));
     assert.deepEqual(missing, [], `Faltan en SHELL_URLS de sw.js: ${missing.join(', ')}`);
-});
-
-test('external libraries in index.html use SRI and MapLibre is local', () => {
-    const root = path.join(__dirname, '..');
-    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-    const expectedAssets = new Map([
-        ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'node_modules/leaflet/dist/leaflet.css'],
-        ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js', 'node_modules/chart.js/dist/chart.umd.js'],
-        ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'node_modules/leaflet/dist/leaflet.js']
-    ]);
-    const externalTags = [...html.matchAll(/<(?:script|link)\b[^>]*>/gi)]
-        .map(match => match[0])
-        .filter(tag => /\b(?:src|href)=["']https?:\/\//i.test(tag));
-    assert.equal(externalTags.length, expectedAssets.size);
-    externalTags.forEach(tag => {
-        assert.match(tag, /\bintegrity=["']sha384-[A-Za-z0-9+/=]+["']/i);
-        assert.match(tag, /\bcrossorigin=["']anonymous["']/i);
-        const url = tag.match(/\b(?:src|href)=["']([^"']+)["']/i)[1];
-        const integrity = tag.match(/\bintegrity=["']([^"']+)["']/i)[1];
-        const dependencyPath = expectedAssets.get(url);
-        assert.ok(dependencyPath, `Unexpected external asset: ${url}`);
-        const file = fs.readFileSync(path.join(root, dependencyPath));
-        const expectedIntegrity = `sha384-${crypto.createHash('sha384').update(file).digest('base64')}`;
-        assert.equal(integrity, expectedIntegrity, `Incorrect SRI hash for ${url}`);
-    });
-    assert.match(html, /href="vendor\/maplibre-gl\/maplibre-gl\.css"/);
-    assert.match(html, /src="vendor\/maplibre-gl\/maplibre-gl\.js"/);
-    assert.ok(fs.existsSync(path.join(root, 'vendor/maplibre-gl/maplibre-gl.css')));
-    assert.ok(fs.existsSync(path.join(root, 'vendor/maplibre-gl/maplibre-gl.js')));
-});
-
-test('prepare-web strips integrity and crossorigin from local bundled scripts for Capacitor', () => {
-    const root = path.join(__dirname, '..');
-    const wwwHtml = path.join(root, 'www', 'index.html');
-    if (!fs.existsSync(wwwHtml)) return;
-    const html = fs.readFileSync(wwwHtml, 'utf8');
-    const localBundledTags = [...html.matchAll(/<(?:script|link)\b[^>]*>/gi)]
-        .map(match => match[0])
-        .filter(tag => /lib\/(?:leaflet|chart)/i.test(tag));
-    assert.ok(localBundledTags.length >= 3, 'Se deben encontrar al menos 3 tags empaquetados locales');
-    localBundledTags.forEach(tag => {
-        assert.equal(/integrity=/i.test(tag), false, `El tag local no debe llevar integrity: ${tag}`);
-        assert.equal(/crossorigin=/i.test(tag), false, `El tag local no debe llevar crossorigin: ${tag}`);
-    });
 });
 
 test('manifest icons exist with the declared sizes', () => {

@@ -88,7 +88,7 @@ Actualmente el proyecto cuenta con **50 pruebas unitarias automatizadas** que de
 | **9** | **Comunidad & Eventos**| Creación de evento de salida; inscripción de participantes; visualización de punto de encuentro en el mapa con navegación. | Interfaz web y Android. |
 | **10** | **SENDA AI** | Solicitud de análisis de última actividad: respuesta fundamentada estrictamente en los datos de la salida, sin alucinación de métricas. | Casos de prueba de prompts contextuales. |
 | **11** | **QA & Publicación** | Generación de APK Release firmado, análisis de seguridad estático, consumo de batería en grabación continua <8% por hora. | Profiler Android Studio. |
-| **12** | **Adaptación iOS** | No disponible desde v0.2.23: se retiró el proyecto nativo iOS del repositorio. | Fuera del alcance actual. |
+| **12** | **Adaptación iOS** | Compilación y arranque en simulador y dispositivo iPhone con permisos de ubicación en uso / background y Bluetooth validados. | Xcode en macOS. |
 
 ---
 

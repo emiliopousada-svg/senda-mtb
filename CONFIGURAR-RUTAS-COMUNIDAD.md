@@ -2,8 +2,6 @@
 
 La app publica rutas en la colección PocketBase `community_routes`. El selector de publicación solicita la comunidad autónoma (y permite Ceuta y Melilla); para compatibilidad con los registros y el cliente existentes, el valor se guarda en el campo `province`.
 
-> Desde v0.2.23, el repositorio no incluye `pb_hooks/`. Estas instrucciones describen hooks que deben estar desplegados aparte; no es posible instalarlos ni actualizarlos desde este checkout.
-
 ## Campos necesarios para publicar fotos de POI
 
 La colección debe incluir:
@@ -29,7 +27,7 @@ La migración inicial define los límites al crear `community_routes` desde cero
 
 ## Hooks
 
-La publicación y la privacidad de la ruta también dependen de hooks desplegados en el servidor. La fuente de esos hooks ya no está en este repositorio desde v0.2.23; verifica la copia mantenida del servidor y no sobrescribas hooks existentes sin revisar primero los cambios.
+La publicación y la privacidad de la ruta también dependen de los hooks del repositorio. Copia los archivos necesarios desde `pb_hooks` a la carpeta de hooks configurada en el servidor (por defecto, `pb_hooks`) y reinicia PocketBase para cargarlos. No sobrescribas hooks existentes sin revisar primero los cambios.
 
 `community_routes.pb.js` también impide que un usuario publique dos veces la misma ruta: rechaza la publicación si ya tiene otra con el mismo trazado recortado, o con la misma distancia (±50 m) y el mismo tiempo en movimiento. Tras actualizar el hook, reinicia PocketBase.
 
@@ -39,4 +37,4 @@ El hook `community_routes_galicia_import.pb.js` importa al iniciar PocketBase y 
 
 Las rutas se asignan a la cuenta cuyo apodo exacto es `SENDA-MTB`; créala antes de activar el hook. El archivo se conserva para permitir actualizaciones: al modificarlo, se actualiza su publicación gracias al campo interno `sourcePath`. Los fallos se escriben en el log de PocketBase y no impiden importar los demás archivos.
 
-Instala también las migraciones `1794835006_add_community_route_source_path.js` y `1794835007_repair_community_route_source_path_index.js`. Recupera ambos hooks `community_routes.pb.js` y `community_routes_galicia_import.pb.js` desde la copia mantenida del servidor antes de desplegarlos y reinicia el contenedor. De momento solo se procesa Galicia.
+Instala también las migraciones `1794835006_add_community_route_source_path.js` y `1794835007_repair_community_route_source_path_index.js`, copia ambos hooks `community_routes.pb.js` y `community_routes_galicia_import.pb.js` al directorio `pb_hooks` del servidor y reinicia el contenedor. De momento solo se procesa Galicia.

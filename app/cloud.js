@@ -323,7 +323,6 @@ function renderAccountServer() {
         try { serverInput.textContent = Cloud.server || 'Sin servidor configurado'; }
         catch (error) { serverInput.textContent = 'Sin servidor configurado'; }
     }
-    if (typeof dashboardCheckServerHealth === 'function') dashboardCheckServerHealth(true);
 }
 
 // Evita peticiones duplicadas si se pulsa varias veces mientras se autentica.
@@ -355,6 +354,7 @@ async function accAuth(register) {
     if (weightKg && (!Number.isFinite(Number(weightKg)) || Number(weightKg) < 25 || Number(weightKg) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
     localStorage.setItem('mtb_pro_server', server);
+    Cloud.clearSession();
     try {
         if (register) {
             const profile = { email, password: pass, passwordConfirm: pass, nickname };
@@ -371,29 +371,21 @@ async function accAuth(register) {
         }
         try { await syncPendingAccountAvatar(r.record); }
         catch (avatarError) { console.warn('No se pudo sincronizar el avatar pendiente:', avatarError); }
-        // Limpiar campos y actualizar UI de inmediato: aunque fallen sincronizaciones
-        // posteriores, el usuario ya está logueado y la pantalla debe reflejarlo.
+        await syncCloudPreferences();
         $('acc-pass').value = '';
         $('acc-weight').value = '';
         $('acc-age').value = '';
         renderAccount();
         if (!Cloud.nickname && nickname) $('acc-account-nickname').value = nickname;
+        await restoreGroup();
         toast(register ? '✅ Cuenta creada' : '✅ Sesión iniciada');
-        // Sincronizaciones post-login: no bloquean ni revierten el login si fallan.
-        try { await syncCloudPreferences(); } catch (e) { console.warn('syncCloudPreferences tras login:', e); }
-        try { await restoreGroup(); } catch (e) { console.warn('restoreGroup tras login:', e); }
-        try { if (Cloud.nickname) syncRoutes(true); } catch (e) { console.warn('syncRoutes tras login:', e); }
-        try {
-            const poisSynced = await syncSharedPois(true);
-            if (!poisSynced && pendingSharedPoiCount()) {
-                toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
-            }
-        } catch (e) { console.warn('syncSharedPois tras login:', e); }
+        if (Cloud.nickname) syncRoutes(true);
+        const poisSynced = await syncSharedPois(true);
+        if (!poisSynced && pendingSharedPoiCount()) {
+            toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
+        }
     } catch (e) {
         console.warn('Auth:', e);
-        // Si la sesión llegó a guardarse (el auth fue OK pero falló algo posterior),
-        // renderizar la cuenta para reflejar el estado real.
-        if (Cloud.loggedIn()) renderAccount();
         toast(e.status === undefined
             ? 'No se pudo conectar; comprueba tu conexión.'
             : (register ? 'No se pudo crear la cuenta: ' : 'No se pudo entrar: ') + e.message, 6000);
@@ -561,7 +553,7 @@ async function syncRoutes(manual = false) {
         catch (e) { pendingDeletesAvailable = false; noteSyncFailure(`No se pudo leer la cola de borrados: ${e.message}`); console.warn('No se pudo leer la cola de borrados:', e); }
         const rest = [];
         for (const rid of pend) {
-            try { await cloudApi(`/api/collections/routes/records/${encodeURIComponent(rid)}`, 'DELETE'); }
+            try { await cloudApi(`/api/collections/routes/records/${rid}`, 'DELETE'); }
             catch (e) {
                 if (e.status !== 404) {
                     rest.push(rid);
@@ -616,7 +608,7 @@ async function syncRoutes(manual = false) {
                 const remoteCreator = nickname;
                 if (remoteCreator && matched.createdBy !== remoteCreator) {
                     try {
-                        await cloudApi(`/api/collections/routes/records/${encodeURIComponent(r.remoteId)}`, 'PATCH', { createdBy: remoteCreator });
+                        await cloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', { createdBy: remoteCreator });
                         matched.createdBy = remoteCreator;
                     } catch (e) {
                         noteSyncFailure(`No se pudo actualizar el apodo de «${r.name || 'ruta'}»: ${e.message}`, e);
@@ -645,7 +637,7 @@ async function syncRoutes(manual = false) {
             }
             try {
                 let rec;
-                if (r.remoteId) rec = await cloudApi(`/api/collections/routes/records/${encodeURIComponent(r.remoteId)}`, 'PATCH', {
+                if (r.remoteId) rec = await cloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', {
                     name: r.name,
                     ...(r.createdBy ? { createdBy: String(r.createdBy).slice(0, ROUTE_NICKNAME_LIMIT) } : {})
                 });
@@ -690,7 +682,7 @@ async function syncRoutes(manual = false) {
                     const dlTimer = setTimeout(() => dlController.abort(), 15000);
                     let res;
                     try {
-                        res = await fetch(`${Cloud.server}/api/files/routes/${encodeURIComponent(rec.id)}/${encodeURIComponent(rec.track)}?token=${encodeURIComponent(fileToken)}`, { signal: dlController.signal });
+                        res = await fetch(`${Cloud.server}/api/files/routes/${rec.id}/${encodeURIComponent(rec.track)}?token=${encodeURIComponent(fileToken)}`, { signal: dlController.signal });
                     } catch (error) {
                         if (error && (error.status === undefined || error.name === 'AbortError')) error.retryable = true;
                         throw error;

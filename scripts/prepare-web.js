@@ -31,20 +31,6 @@ for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'estre
   if (fs.existsSync(source)) fs.copyFileSync(source, path.join(www, f));
 }
 fs.cpSync(path.join(root, 'app'), path.join(www, 'app'), { recursive: true });
-const maplibreVendor = path.join(root, 'vendor', 'maplibre-gl');
-fs.mkdirSync(maplibreVendor, { recursive: true });
-require('esbuild').buildSync({
-  entryPoints: [path.join(nm, 'maplibre-gl', 'dist', 'maplibre-gl.mjs')],
-  bundle: true,
-  minify: true,
-  format: 'iife',
-  globalName: 'maplibregl',
-  target: 'es2020',
-  outfile: path.join(maplibreVendor, 'maplibre-gl.js')
-});
-fs.copyFileSync(path.join(nm, 'maplibre-gl', 'dist', 'maplibre-gl.css'), path.join(maplibreVendor, 'maplibre-gl.css'));
-fs.copyFileSync(path.join(nm, 'maplibre-gl', 'LICENSE.txt'), path.join(maplibreVendor, 'LICENSE.txt'));
-fs.cpSync(path.join(root, 'vendor'), path.join(www, 'vendor'), { recursive: true });
 const appConfig = path.join(www, 'app', 'config.js');
 const configText = fs.readFileSync(appConfig, 'utf8');
 if (!/const APP_VERSION = '[^']*';/.test(configText)) {
@@ -63,6 +49,7 @@ const versionedConfig = configText.replace(
 fs.writeFileSync(appConfig, applyBuildEnvironment(versionedConfig, appEnvironment));
 fs.copyFileSync(path.join(nm, 'leaflet/dist/leaflet.css'), path.join(www, 'lib/leaflet/leaflet.css'));
 fs.copyFileSync(path.join(nm, 'leaflet/dist/leaflet.js'), path.join(www, 'lib/leaflet/leaflet.js'));
+fs.copyFileSync(path.join(root, 'vendor/leaflet-rotate.umd.min.js'), path.join(www, 'lib/leaflet/leaflet-rotate.umd.min.js'));
 fs.cpSync(path.join(nm, 'leaflet/dist/images'), path.join(www, 'lib/leaflet/images'), { recursive: true });
 fs.copyFileSync(path.join(nm, 'chart.js/dist/chart.umd.js'), path.join(www, 'lib/chart.umd.js'));
 
@@ -112,27 +99,15 @@ if (!versionLabel.test(html)) {
   throw new Error('No se pudo encontrar la etiqueta de versión en index.html');
 }
 html = html.replace(versionLabel, `$1v${appVersion} (build ${appBuild})$2`);
-// En el bundle empaquetado para Capacitor (Android/iOS), los scripts y hojas de estilo
-// locales no deben llevar integrity ni crossorigin="anonymous": el servidor local de
-// activos del WebView (WebViewLocalServer) no devuelve cabeceras CORS, lo que bloquearía
-// la carga de librerías locales críticas (Leaflet, Chart.js) por política CORS.
-const localSwaps = [
-  [
-    /<link\s+rel="stylesheet"\s+href="https:\/\/unpkg\.com\/leaflet@1\.9\.4\/dist\/leaflet\.css"[^>]*\/?>/i,
-    '<link rel="stylesheet" href="lib/leaflet/leaflet.css" />'
-  ],
-  [
-    /<script\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js@4\.4\.1\/dist\/chart\.umd\.js"[^>]*><\/script>/i,
-    '<script src="lib/chart.umd.js"></script>'
-  ],
-  [
-    /<script\s+src="https:\/\/unpkg\.com\/leaflet@1\.9\.4\/dist\/leaflet\.js"[^>]*><\/script>/i,
-    '<script src="lib/leaflet/leaflet.js"></script>'
-  ]
+const swaps = [
+  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'lib/leaflet/leaflet.css'],
+  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'lib/leaflet/leaflet.js'],
+  ['https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js', 'lib/leaflet/leaflet-rotate.umd.min.js'],
+  ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js', 'lib/chart.umd.js']
 ];
-for (const [pattern, replacement] of localSwaps) {
-  if (!pattern.test(html)) throw new Error('No encuentro este enlace externo para reemplazar en index.html: ' + pattern);
-  html = html.replace(pattern, replacement);
+for (const [from, to] of swaps) {
+  if (!html.includes(from)) throw new Error('No encuentro este enlace en index.html: ' + from);
+  html = html.split(from).join(to);
 }
 fs.writeFileSync(file, html);
 

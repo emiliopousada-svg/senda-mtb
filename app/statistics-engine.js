@@ -114,15 +114,10 @@
         const powerZones = Array.isArray(options.powerZones) ? options.powerZones : DEFAULT_POWER_ZONES;
         const heartRateMax = finiteNumber(options.heartRateMax);
         const ftpWatts = finiteNumber(options.ftpWatts);
-        const riderWeightKg = finiteNumber(options.weightKg) || 75;
-        const bikeWeightKg = finiteNumber(options.bikeWeightKg) || 13.5;
-        const totalMassKg = Math.max(40, Math.min(300, riderWeightKg + bikeWeightKg));
         const sourcePoints = Array.isArray(route.points) ? route.points : [];
         const profile = [];
         const mapSegments = [];
         const hrValues = [], cadenceValues = [], powerValues = [], speedValues = [];
-        let estimatedPowerJoules = 0, estimatedPowerMovingSec = 0;
-        const estimatedPowerValues = [];
         const zoneSeconds = Array(hrZones.length).fill(0);
         const powerZoneSeconds = Array(powerZones.length).fill(0);
         const gradeDistributionKm = { steepDownhill: 0, downhill: 0, flat: 0, climb: 0, steepClimb: 0 };
@@ -282,25 +277,6 @@
             }
 
             if (previous && deltaSeconds > 0) {
-                if (legMeters > 0) {
-                    const speedMps = legMeters / deltaSeconds;
-                    if (speedMps >= 0.5 && speedMps <= config.maxPointSpeedMps) {
-                        let deltaAltM = 0;
-                        if (smoothedAltitude !== null && previousSmoothedAltitude !== null) {
-                            deltaAltM = smoothedAltitude - previousSmoothedAltitude;
-                        }
-                        const sinTheta = Math.max(-0.35, Math.min(0.35, deltaAltM / legMeters));
-                        const cosTheta = Math.sqrt(Math.max(0, 1 - sinTheta * sinTheta));
-                        const fGravity = totalMassKg * 9.80665 * sinTheta;
-                        const fRolling = totalMassKg * 9.80665 * cosTheta * 0.008;
-                        const fAero = 0.5 * 1.225 * 0.42 * (speedMps * speedMps);
-                        const pWheel = (fGravity + fRolling + fAero) * speedMps;
-                        const pLegs = pWheel > 0 ? Math.min(1500, pWheel / 0.97) : 0;
-                        estimatedPowerJoules += pLegs * deltaSeconds;
-                        estimatedPowerMovingSec += deltaSeconds;
-                        estimatedPowerValues.push(pLegs);
-                    }
-                }
                 const previousHr = finiteNumber(previous.point[4]);
                 if (previousHr !== null && heartRate !== null && previousHr > 0 && heartRate > 0) {
                     const midpoint = (previousHr + heartRate) / 2;
@@ -387,21 +363,6 @@
             return value !== null && value > 0 && value <= 250 ? Math.max(max, value) : max;
         }, -Infinity);
 
-        const hasRealPower = powerValues.length > 0;
-        const estimatedAveragePower = estimatedPowerMovingSec > 0
-            ? Math.round(estimatedPowerJoules / estimatedPowerMovingSec)
-            : null;
-        const estimatedMaxPower = estimatedPowerValues.length
-            ? Math.round(maximum(estimatedPowerValues))
-            : null;
-        const isPowerEstimated = !hasRealPower && estimatedAveragePower !== null;
-        const averagePower = hasRealPower
-            ? powerValues.reduce((sum, value) => sum + value, 0) / powerValues.length
-            : estimatedAveragePower;
-        const maxPower = hasRealPower
-            ? (powerValues.length ? maximum(powerValues) : null)
-            : estimatedMaxPower;
-
         return {
             route,
             points: sourcePoints,
@@ -425,12 +386,9 @@
             averageCadence: cadenceValues.length ? cadenceValues.reduce((sum, value) => sum + value, 0) / cadenceValues.length : null,
             maxCadence: cadenceValues.length ? maximum(cadenceValues) : null,
             cadenceCount: cadenceValues.length,
-            averagePower,
-            maxPower,
+            averagePower: powerValues.length ? powerValues.reduce((sum, value) => sum + value, 0) / powerValues.length : null,
+            maxPower: powerValues.length ? maximum(powerValues) : null,
             powerCount: powerValues.length,
-            estimatedAveragePower,
-            estimatedMaxPower,
-            isPowerEstimated,
             meanGrade: gradeDistanceKm ? gradeWeightedSum / gradeDistanceKm : null,
             gradeDistanceKm,
             maxGrade,
@@ -499,26 +457,6 @@
         const climbTimeSec = sum('climbTimeSec');
         const downhillTimeSec = sum('downhillTimeSec');
         const vamAscentM = sum('vamAscentM');
-        const realPowerAvg = sampleMean('averagePower', 'powerCount');
-        let aggregatedAveragePower = realPowerAvg;
-        let isPowerEstimated = false;
-        if (aggregatedAveragePower === null) {
-            const estimatedItems = analyses.filter(item => Number.isFinite(item.estimatedAveragePower) && item.movingTimeSec > 0);
-            const totalEstSec = estimatedItems.reduce((total, item) => total + item.movingTimeSec, 0);
-            if (totalEstSec > 0) {
-                aggregatedAveragePower = estimatedItems.reduce((total, item) => total + item.estimatedAveragePower * item.movingTimeSec, 0) / totalEstSec;
-                isPowerEstimated = true;
-            }
-        }
-        const measuredPowerMaxima = analyses
-            .filter(item => item.powerCount > 0 && Number.isFinite(item.maxPower))
-            .map(item => item.maxPower);
-        const estimatedPowerMaxima = analyses
-            .filter(item => item.powerCount === 0 && Number.isFinite(item.estimatedMaxPower))
-            .map(item => item.estimatedMaxPower);
-        const powerMaxima = measuredPowerMaxima.length
-            ? measuredPowerMaxima
-            : (estimatedPowerMaxima.length ? estimatedPowerMaxima : analyses.map(item => item.maxPower).filter(Number.isFinite));
         return {
             distanceKm,
             movingTimeSec,
@@ -540,10 +478,8 @@
             maxHr: maxOf('maxHr'),
             averageCadence: sampleMean('averageCadence', 'cadenceCount'),
             maxCadence: maxOf('maxCadence'),
-            averagePower: aggregatedAveragePower,
-            maxPower: powerMaxima.length ? maximum(powerMaxima) : null,
-            isPowerEstimated,
-            isMaxPowerEstimated: !measuredPowerMaxima.length && estimatedPowerMaxima.length > 0,
+            averagePower: sampleMean('averagePower', 'powerCount'),
+            maxPower: maxOf('maxPower'),
             meanGrade: weightedMean('meanGrade', 'gradeDistanceKm'),
             maxGrade: maxOf('maxGrade'),
             gradeDistanceKm: sum('gradeDistanceKm'),

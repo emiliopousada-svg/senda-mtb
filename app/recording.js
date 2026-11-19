@@ -489,7 +489,6 @@ function resetRecordingState() {
     points = [];
     segments = [];
     totalDistance = 0;
-    if (typeof lastVoiceMilestoneKm !== 'undefined') lastVoiceMilestoneKm = 0;
     elev = makeElevTracker();
     lastAccepted = null;
     resumeBreak = false;

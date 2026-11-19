@@ -2,8 +2,6 @@
 
 La conexión y subida de actividades se gestiona desde **Herramientas → Social**. La app solo sube una actividad grabada cuando la persona pulsa el botón; la privacidad predeterminada es **Solo yo**. No se sincronizan actividades automáticamente.
 
-> Desde v0.2.23, el repositorio no incluye `pb_hooks/strava.pb.js`. La integración solo funciona si sus hooks continúan desplegados por separado; no es posible instalarlos o actualizarlos desde este checkout.
-
 ## Configuración de PocketBase
 
 1. Crea una aplicación en [Strava API Settings](https://www.strava.com/settings/api).
@@ -19,7 +17,7 @@ La conexión y subida de actividades se gestiona desde **Herramientas → Social
 
    Genera la clave de cifrado en el servidor con un gestor de secretos o una fuente criptográfica segura. No la pongas en el repositorio, APK, logs ni respuesta de la API. Conserva una copia segura: cambiarla impide descifrar las conexiones ya guardadas.
 
-4. Recupera y revisa la fuente mantenida de `strava.pb.js` antes de desplegarla; este repositorio ya no incluye el hook. Despliega también las migraciones de `pb_migrations/` y reinicia PocketBase para que cargue los hooks y aplique la migración `strava_connections`.
+4. Despliega `pb_hooks/strava.pb.js` y las migraciones de `pb_migrations/` junto con la versión compatible de PocketBase. Reinicia PocketBase para que cargue los hooks y aplique la migración `strava_connections`.
 5. Comprueba que el callback público responde por HTTPS y que el servidor puede hacer solicitudes salientes a `www.strava.com`.
 
 La colección `strava_connections` no admite acceso directo mediante la API de registros. Los endpoints propios validan la sesión PocketBase y solo operan sobre la conexión de esa persona. Los tokens de acceso y renovación se cifran antes de guardarse. El secreto de Strava nunca llega a la app.

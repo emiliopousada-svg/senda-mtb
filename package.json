@@ -1,6 +1,6 @@
 {
   "name": "senda-mtb",
-  "version": "0.2.24",
+  "version": "0.2.16",
   "private": true,
   "description": "senda-mtb: rutas, GPS, mapas offline y comunidad",
   "scripts": {
@@ -20,12 +20,12 @@
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/ios": "^8.6.2",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.3",
     "chart.js": "4.4.1",
     "fit-file-parser": "^6.2.7",
-    "leaflet": "1.9.4",
-    "maplibre-gl": "6.19.0"
+    "leaflet": "1.9.4"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

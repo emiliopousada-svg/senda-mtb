@@ -1,14 +1,5 @@
 'use strict';
 
-const DASHBOARD_SERVER_HEALTH_INTERVAL_MS = 30000;
-const DASHBOARD_SERVER_HEALTH_TIMEOUT_MS = 5000;
-let dashboardServerHealthPromise = null;
-let dashboardServerHealthPromiseServer = '';
-let dashboardServerHealthGeneration = 0;
-let dashboardServerHealthLastCheckAt = 0;
-let dashboardServerHealthLastResult = false;
-let dashboardServerHealthLastServer = '';
-
 function dashboardUpdateGreeting() {
     const greeting = $('home-greeting');
     if (greeting) {
@@ -85,99 +76,7 @@ function dashboardUpdateGpsStatus() {
     status.innerHTML = `<span class="gps-signal-bars" aria-hidden="true">${bars}</span><span>GPS<span class="gps-status-detail"> · ${labels[quality]}</span></span>`;
 }
 
-function dashboardSetServerStatus(state) {
-    const accountIndicator = $('acc-server-status');
-    if (!accountIndicator) return;
-    const labels = {
-        checking: 'Comprobando PocketBase…',
-        connected: 'PocketBase disponible',
-        offline: 'PocketBase no disponible'
-    };
-    accountIndicator.classList.toggle('connected', state === 'connected');
-    accountIndicator.classList.toggle('offline', state === 'offline');
-    accountIndicator.setAttribute('aria-label', `Estado del servidor: ${labels[state]}`);
-    const text = accountIndicator.querySelector && accountIndicator.querySelector('span');
-    if (text) text.textContent = labels[state];
-}
-
-async function dashboardCheckServerHealth(force = false) {
-    if (!$('acc-server-status')) return false;
-    if (!navigator.onLine) {
-        dashboardServerHealthGeneration++;
-        dashboardServerHealthPromise = null;
-        dashboardServerHealthLastCheckAt = Date.now();
-        dashboardServerHealthLastResult = false;
-        dashboardSetServerStatus('offline');
-        return false;
-    }
-
-    let server = '';
-    try {
-        server = (typeof Cloud !== 'undefined' && Cloud.server)
-            || (typeof DEFAULT_CLOUD_SERVER !== 'undefined' && DEFAULT_CLOUD_SERVER)
-            || '';
-    } catch (error) {
-        server = '';
-    }
-    if (!server) {
-        dashboardServerHealthGeneration++;
-        dashboardServerHealthPromise = null;
-        dashboardServerHealthLastResult = false;
-        dashboardSetServerStatus('offline');
-        return false;
-    }
-
-    if (dashboardServerHealthPromise && dashboardServerHealthPromiseServer === server) {
-        return dashboardServerHealthPromise;
-    }
-    const now = Date.now();
-    if (!force && dashboardServerHealthLastServer === server
-        && now - dashboardServerHealthLastCheckAt < DASHBOARD_SERVER_HEALTH_INTERVAL_MS) {
-        return dashboardServerHealthLastResult;
-    }
-
-    const generation = ++dashboardServerHealthGeneration;
-    dashboardServerHealthLastServer = server;
-    dashboardServerHealthLastCheckAt = now;
-    dashboardSetServerStatus('checking');
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), DASHBOARD_SERVER_HEALTH_TIMEOUT_MS);
-    const request = (async () => {
-        let reachable = false;
-        try {
-            const response = await fetch(`${server}/api/health`, {
-                cache: 'no-store',
-                signal: controller.signal
-            });
-            if (response.ok) {
-                const health = await response.json();
-                reachable = Boolean(health && health.code === 200);
-            }
-        } catch (error) {
-            reachable = false;
-        } finally {
-            clearTimeout(timer);
-        }
-        if (generation === dashboardServerHealthGeneration) {
-            dashboardServerHealthLastResult = reachable;
-            dashboardSetServerStatus(reachable ? 'connected' : 'offline');
-        }
-        return reachable;
-    })();
-    dashboardServerHealthPromise = request;
-    dashboardServerHealthPromiseServer = server;
-    try {
-        return await request;
-    } finally {
-        if (dashboardServerHealthPromise === request) {
-            dashboardServerHealthPromise = null;
-            dashboardServerHealthPromiseServer = '';
-        }
-    }
-}
-
-function dashboardUpdateNetworkStatus(checkServer = false) {
+function dashboardUpdateNetworkStatus() {
     const status = $('dashboard-network-status');
     const online = navigator.onLine;
     if (status) {
@@ -186,7 +85,13 @@ function dashboardUpdateNetworkStatus(checkServer = false) {
         status.setAttribute('aria-label', online ? 'Conexión a internet disponible' : 'Sin conexión a internet');
         status.innerHTML = online ? '<i></i><span>En línea</span>' : '<i></i><span>Sin conexión</span>';
     }
-    dashboardCheckServerHealth(checkServer);
+
+    const accountIndicator = $('acc-server-status');
+    if (accountIndicator) {
+        accountIndicator.classList.toggle('connected', online);
+        accountIndicator.classList.toggle('offline', !online);
+        accountIndicator.setAttribute('aria-label', online ? 'Estado del servidor: conectado' : 'Estado del servidor: sin conexión');
+    }
 }
 
 function dashboardLatestRecordedRoute() {
@@ -527,13 +432,12 @@ document.querySelectorAll('[data-recording]').forEach(button => {
 dashboardInitAvatarViewer();
 dashboardUpdateNav(currentPage);
 dashboardUpdateGreeting();
-dashboardUpdateNetworkStatus(true);
-window.setInterval(() => dashboardCheckServerHealth(true), DASHBOARD_SERVER_HEALTH_INTERVAL_MS);
+dashboardUpdateNetworkStatus();
 window.addEventListener('online', () => {
-    dashboardUpdateNetworkStatus(true);
+    dashboardUpdateNetworkStatus();
     dashboardRenderMapPreview(dashboardLatestRecordedRoute());
 });
 window.addEventListener('offline', () => {
-    dashboardUpdateNetworkStatus(true);
+    dashboardUpdateNetworkStatus();
     dashboardRenderMapPreview(dashboardLatestRecordedRoute());
 });

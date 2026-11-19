@@ -25,7 +25,6 @@ let gpsOneShotPending = false, gpsResumeCheckPending = false;
 let gpsRecenterPending = true;
 let lastGpsSpeedFix = null;
 let lastElevationFix = null;
-let lastVoiceMilestoneKm = 0;
 let pendingGpsVisualState = null, gpsVisualTimer = null, gpsVisualFrame = null;
 let lastGpsVisualUpdateAt = 0;
 let pendingRouteRenderPoints = [];
@@ -79,10 +78,6 @@ function scheduleGpsVisualUpdate(state) {
         if (typeof requestAnimationFrame === 'function') gpsVisualFrame = requestAnimationFrame(render);
         else render();
     }, delay);
-}
-
-function clearPendingGpsVisualUpdate() {
-    pendingGpsVisualState = null;
 }
 
 function renderPendingRoutePoints() {
@@ -142,11 +137,6 @@ function renderGpsVisualUpdate(state) {
     if (isRecording && !isPaused) {
         $('m-dist').textContent = totalDistance.toFixed(2);
         $('m-elevation').textContent = Math.round(elev.gain);
-    }
-    // ── Mini ClimbPro: actualizar progreso de subida activa ───
-    if (typeof renderClimbProgress === 'function' && followedRoute
-        && Number.isFinite(state.followedDistanceM)) {
-        renderClimbProgress(state.followedDistanceM);
     }
 }
 
@@ -337,10 +327,6 @@ function onPos(pos) {
         refreshBatteryStatus();
     }
     const followedMatch = followedRoute ? findFollowedRouteMatch(lat, lon) : null;
-    const followedDistanceM = followedMatch && followedRoute && followedRoute.cumDist
-        && typeof routeDistanceAtMatch === 'function'
-        ? routeDistanceAtMatch(followedMatch, followedRoute.cumDist)
-        : null;
 
     // El GPS nativo puede no incluir rumbo: en ese caso lo calculamos
     // con el desplazamiento entre posiciones fiables mientras avanzamos.
@@ -401,21 +387,12 @@ function onPos(pos) {
         }
     }
 
-    const visualState = { ll, speedKmh: kmh, heading: visualHeading, followedMatch, followedDistanceM };
+    const visualState = { ll, speedKmh: kmh, heading: visualHeading, followedMatch };
     scheduleGpsVisualUpdate(visualState);
-
-    if (followedMatch) {
-        checkOffRoute(lat, lon, followedMatch);
-        if (typeof checkTurnVoicePrompts === 'function' && followedRoute && followedRoute.cumDist) {
-            const routeDistance = Number.isFinite(followedDistanceM)
-                ? followedDistanceM
-                : followedRoute.cumDist[followedMatch.index];
-            checkTurnVoicePrompts(routeDistance, offRouteState, followedRoute);
-        }
-    }
 
     if (!isRecording || isPaused) return;
 
+    if (followedMatch) checkOffRoute(lat, lon, followedMatch);
     if (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > MAX_ACC_M) return; // precisión ausente, inválida o señal pobre: no se graba
     const t = pos.timestamp;
     if (!Number.isFinite(t)) return; // sin tiempo fiable no se puede validar el desplazamiento
@@ -442,18 +419,6 @@ function onPos(pos) {
         : null;
 
     totalDistance += add;
-    if (totalDistance >= 5) {
-        const currentMilestone = Math.floor(totalDistance / 5) * 5;
-        if (currentMilestone > lastVoiceMilestoneKm) {
-            lastVoiceMilestoneKm = currentMilestone;
-            const avgKmh = (typeof movingMs === 'number' && movingMs > 0)
-                ? (totalDistance / (movingMs / 3600000))
-                : kmh;
-            if (typeof announceRouteVoice === 'function') {
-                announceRouteVoice(`${currentMilestone} kilómetros completados. Velocidad media ${avgKmh.toFixed(1).replace('.', ' coma ')} kilómetros por hora.`);
-            }
-        }
-    }
     if (brk) elev.reset();
     elev.add(recordedAltitude);
 

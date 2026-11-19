@@ -76,15 +76,14 @@ function statsRangeRides(period, source = savedRoutes) {
 }
 
 function statsAnalyzeRoute(route) {
-    const cacheKey = `${statsHeartRateMax}|${statsPowerFtp}|${statsWeightKg}`;
+    const cacheKey = `${statsHeartRateMax}|${statsPowerFtp}`;
     const cached = statsAnalysisCache.get(route);
     if (cached && cached.key === cacheKey) return cached.analysis;
     const analysis = MTBStatisticsEngine.analyzeRoute(route, {
         heartRateMax: statsHeartRateMax,
         hrZones: STATS_HR_ZONES,
         ftpWatts: statsPowerFtp,
-        powerZones: STATS_POWER_ZONES,
-        weightKg: statsWeightKg
+        powerZones: STATS_POWER_ZONES
     });
     statsAnalysisCache.set(route, { key: cacheKey, analysis });
     return analysis;
@@ -190,14 +189,8 @@ function statsRenderPerformance(summary, analyses) {
     statsSetText('st-hr-max', Number.isFinite(summary.maxHr) ? `${Math.round(summary.maxHr)} lpm` : 'Sin datos');
     statsSetText('st-cadence-average', Number.isFinite(summary.averageCadence) ? `${Math.round(summary.averageCadence)} rpm` : 'Sin datos');
     statsSetText('st-cadence-max', Number.isFinite(summary.maxCadence) ? `${Math.round(summary.maxCadence)} rpm` : 'Sin datos');
-    const powerLabel = Number.isFinite(summary.averagePower)
-        ? `${Math.round(summary.averagePower)} W${summary.isPowerEstimated ? ' (est.)*' : ''}`
-        : 'Sin datos';
-    statsSetText('st-power-average', powerLabel);
-    const maxPowerLabel = Number.isFinite(summary.maxPower)
-        ? `${Math.round(summary.maxPower)} W${summary.isMaxPowerEstimated ? ' (est.)*' : ''}`
-        : 'Sin datos';
-    statsSetText('st-power-max', maxPowerLabel);
+    statsSetText('st-power-average', Number.isFinite(summary.averagePower) ? `${Math.round(summary.averagePower)} W` : 'Sin datos');
+    statsSetText('st-power-max', Number.isFinite(summary.maxPower) ? `${Math.round(summary.maxPower)} W` : 'Sin datos');
 
     if (statsWeightKg === null) {
         statsSetText('st-calories', 'Configura peso');
