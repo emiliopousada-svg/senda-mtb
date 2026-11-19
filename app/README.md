@@ -34,6 +34,8 @@ The Android activity keeps the display awake while the app is in the foreground.
 
 The web GPS watch uses low-power mode while the app is idle, switches to fresh high-accuracy fixes while recording or following a route, and stops when the app is hidden outside a recording. During native background recording, the background watcher replaces the web watch and uses the same four-metre movement threshold as track sampling. Poor-accuracy fixes and impossible jumps remain excluded from recorded tracks.
 
+When following a route, the app detects significant turns from the route geometry and announces the direction about 50 metres ahead when voice guidance is enabled. Turn guidance works offline and complements the existing off-route and return-to-route announcements.
+
 `scripts/prepare-web.js` copies this directory into the Capacitor web bundle. The service worker precaches these files for PWA startup without a network connection.
 
 ## APK versions and updates

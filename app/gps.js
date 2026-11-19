@@ -327,6 +327,7 @@ function onPos(pos) {
         refreshBatteryStatus();
     }
     const followedMatch = followedRoute ? findFollowedRouteMatch(lat, lon) : null;
+    if (followedMatch) checkUpcomingRouteTurn(followedMatch);
 
     // El GPS nativo puede no incluir rumbo: en ese caso lo calculamos
     // con el desplazamiento entre posiciones fiables mientras avanzamos.

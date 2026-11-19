@@ -12,6 +12,70 @@ function pointSegDistM(p, a, b) { // metros de p al segmento a-b (proyección lo
     return Math.hypot(ax + t * dx, ay + t * dy);
 }
 
+function pointSegFraction(p, a, b) {
+    const k = Math.cos(p[0] * Math.PI / 180);
+    const ax = (a[1] - p[1]) * k * 111320, ay = (a[0] - p[0]) * 110540;
+    const bx = (b[1] - p[1]) * k * 111320, by = (b[0] - p[0]) * 110540;
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    if (!l2) return 0;
+    return Math.max(0, Math.min(1, -(ax * dx + ay * dy) / l2));
+}
+
+function buildRouteCumulativeDistances(points) {
+    const cumulative = [0];
+    for (let i = 1; i < points.length; i++) {
+        cumulative.push(cumulative[i - 1] + dist(points[i - 1], points[i]));
+    }
+    return cumulative;
+}
+
+function routePointAtDistance(points, cumulative, distance) {
+    if (distance <= 0) return points[0];
+    const last = cumulative.length - 1;
+    if (distance >= cumulative[last]) return points[last];
+    let low = 0, high = last;
+    while (low + 1 < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (cumulative[middle] < distance) low = middle;
+        else high = middle;
+    }
+    const segmentLength = cumulative[high] - cumulative[low];
+    const fraction = segmentLength ? (distance - cumulative[low]) / segmentLength : 0;
+    return [
+        points[low][0] + (points[high][0] - points[low][0]) * fraction,
+        points[low][1] + (points[high][1] - points[low][1]) * fraction
+    ];
+}
+
+function buildRouteManeuvers(points, cumulative) {
+    const sampleDistance = 18;
+    const minAngle = 45;
+    const minSeparation = 20;
+    const candidates = [];
+    for (let i = 1; i < points.length - 1; i++) {
+        const distance = cumulative[i];
+        if (distance < sampleDistance || cumulative[cumulative.length - 1] - distance < sampleDistance) continue;
+        const before = routePointAtDistance(points, cumulative, distance - sampleDistance);
+        const after = routePointAtDistance(points, cumulative, distance + sampleDistance);
+        const incoming = bearingBetween(before, points[i]);
+        const outgoing = bearingBetween(points[i], after);
+        const angle = ((outgoing - incoming + 540) % 360) - 180;
+        if (Math.abs(angle) < minAngle || Math.abs(angle) >= 160) continue;
+        const candidate = {
+            distanceMeters: distance,
+            direction: angle > 0 ? 'derecha' : 'izquierda',
+            angle: Math.abs(angle)
+        };
+        const previous = candidates[candidates.length - 1];
+        if (previous && candidate.distanceMeters - previous.distanceMeters < minSeparation) {
+            if (candidate.angle > previous.angle) candidates[candidates.length - 1] = candidate;
+        } else {
+            candidates.push(candidate);
+        }
+    }
+    return candidates;
+}
+
 function unlockOffRouteSound() {
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextCtor) return;
@@ -79,8 +143,33 @@ function findFollowedRouteMatch(lat, lon) {
     let match = scan(Math.max(0, hint - 30), Math.min(lastSegment, hint + 180));
     // Al empezar lejos de la ruta o tras un salto GPS, buscar el trazado completo.
     if (match.distance > 250) match = scan(0, lastSegment);
+    match.fraction = pointSegFraction([lat, lon], pts[match.index], pts[match.index + 1]);
     followedRoute.progressIndex = match.index;
     return match;
+}
+
+function checkUpcomingRouteTurn(match) {
+    if (!followedRoute || !match || match.distance > OFFROUTE_M) return;
+    const cumulative = followedRoute.cumulativeMeters;
+    const segmentLength = cumulative[match.index + 1] - cumulative[match.index];
+    const progress = cumulative[match.index] + segmentLength * match.fraction;
+    const maneuvers = followedRoute.maneuvers;
+    while (followedRoute.nextManeuverIndex < maneuvers.length) {
+        const maneuver = maneuvers[followedRoute.nextManeuverIndex];
+        const remaining = maneuver.distanceMeters - progress;
+        if (remaining < -15) {
+            followedRoute.nextManeuverIndex++;
+            continue;
+        }
+        if (remaining > 50) return;
+        followedRoute.nextManeuverIndex++;
+        const distanceText = remaining <= 15
+            ? 'ahora'
+            : `en ${Math.max(10, Math.round(remaining / 10) * 10)} metros`;
+        announceRouteVoice(`Gira a la ${maneuver.direction} ${distanceText}.`);
+        toast(`Giro a la ${maneuver.direction} ${distanceText}`, 4500);
+        return;
+    }
 }
 
 function checkOffRoute(lat, lon, match) {
@@ -161,11 +250,16 @@ function updateMapRouteProfilePosition(match) {
 function followRoute(r) {
     unlockOffRouteSound();
     clearLastRideMapPreview();
+    const points = r.points.map(p => [p[0], p[1]]);
+    const cumulativeMeters = buildRouteCumulativeDistances(points);
     followedRoute = {
         id: r.id,
         name: r.name,
         kind: r.kind,
-        pts: r.points.map(p => [p[0], p[1]]),
+        pts: points,
+        cumulativeMeters,
+        maneuvers: buildRouteManeuvers(points, cumulativeMeters),
+        nextManeuverIndex: 0,
         pois: Array.isArray(r.pois) ? r.pois : [],
         gainCum: gainCumulative(r.points),
         progressIndex: 0
