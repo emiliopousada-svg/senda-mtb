@@ -1,6 +1,6 @@
 {
   "name": "senda-mtb",
-  "version": "0.2.24",
+  "version": "0.2.25",
   "private": true,
   "description": "senda-mtb: rutas, GPS, mapas offline y comunidad",
   "scripts": {
