@@ -7,10 +7,31 @@ let webHrConnectingGeneration = null, webHrReconnecting = false;
 const hrToggle = $('sensor-hr-enabled');
 
 function onHrChange(e) {
-    const v = e.target.value;
-    const bpm = (v.getUint8(0) & 0x1) ? v.getUint16(1, true) : v.getUint8(1);
+    const bpm = parseHeartRateMeasurement(e.target && e.target.value);
+    if (bpm === null) {
+        currentHr = null;
+        $('m-hr').textContent = '--';
+        setHrConnectionState(true, true, 'Conectado · sin lectura válida, revisa el sensor');
+        return;
+    }
     currentHr = bpm;
     $('m-hr').textContent = bpm;
+    if ($('sensor-hr-status').textContent.includes('sin lectura válida')) {
+        setHrConnectionState(true, true, `Conectado: ${(bleDevice && bleDevice.name) || 'Pulsómetro'}`);
+    }
+}
+
+// En 0x2A37 el bit 0 selecciona uint8/uint16 y los bits 1-2 informan del contacto
+// cuando el sensor lo soporta. Una lectura sin contacto no se muestra ni se graba.
+function parseHeartRateMeasurement(value) {
+    if (!value || value.byteLength < 1) return null;
+    const flags = value.getUint8(0);
+    const is16Bit = (flags & 0x01) !== 0;
+    const valueBytes = is16Bit ? 2 : 1;
+    if (value.byteLength < 1 + valueBytes) return null;
+    if ((flags & 0x04) !== 0 && (flags & 0x02) === 0) return null;
+    const bpm = is16Bit ? value.getUint16(1, true) : value.getUint8(1);
+    return Number.isInteger(bpm) && bpm > 0 ? bpm : null;
 }
 
 async function connectHr(device) {
@@ -157,8 +178,20 @@ function clearSensorReading(type) {
 
 function onSensorValue(type, value) {
     const state = sensorStates[type];
+    if (type === 'hr' && value === null) {
+        currentHr = null;
+        $('m-hr').textContent = '--';
+        setSensorStatus('hr', true, `Conectado: ${state.deviceName || sensorLabel('hr')} · sin lectura válida, revisa el sensor`);
+        return;
+    }
     state.lastReadingAt = Date.now();
-    if (type === 'hr') { currentHr = value; $('m-hr').textContent = value; }
+    if (type === 'hr') {
+        currentHr = value;
+        $('m-hr').textContent = value;
+        if ($('sensor-hr-status').textContent.includes('sin lectura válida')) {
+            setSensorStatus('hr', true, `Conectado: ${state.deviceName || sensorLabel('hr')}`);
+        }
+    }
     else if (type === 'power') updatePower(value);
     else applyCscReading(type, value);
 }

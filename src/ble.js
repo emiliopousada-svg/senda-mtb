@@ -32,8 +32,15 @@ function notifyDisconnected(deviceId, session) {
 
 // Formato estándar "Heart Rate Measurement": el bit 0 de las flags indica si el valor es de 8 o 16 bits
 function parseHr(value) {
+  if (!value || value.byteLength < 1) return null;
   const flags = value.getUint8(0);
-  return (flags & 0x01) ? value.getUint16(1, true) : value.getUint8(1);
+  const is16Bit = (flags & 0x01) !== 0;
+  const valueBytes = is16Bit ? 2 : 1;
+  if (value.byteLength < 1 + valueBytes) return null;
+  // Si el sensor declara que mide el contacto, descarta latidos sin contacto confirmado.
+  if ((flags & 0x04) !== 0 && (flags & 0x02) === 0) return null;
+  const bpm = is16Bit ? value.getUint16(1, true) : value.getUint8(1);
+  return Number.isInteger(bpm) && bpm > 0 ? bpm : null;
 }
 
 function parseCsc(value) {
