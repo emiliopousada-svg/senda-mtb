@@ -16,6 +16,7 @@ let statsVamChart = null;
 let activeStatsSlide = 0;
 let statsWeightKg = null;
 let statsAge = null;
+let statsHeightCm = null;
 let statsHeartRateMax = null;
 let statsPowerFtp = null;
 let statsAnalysisCache = new WeakMap();
@@ -132,6 +133,8 @@ function statsLoadPreferences() {
         if (!Number.isFinite(statsWeightKg) || statsWeightKg < 25 || statsWeightKg > 250) statsWeightKg = null;
         statsAge = Number(localStorage.getItem('mtb_pro_stats_age'));
         if (!Number.isFinite(statsAge) || statsAge < 10 || statsAge > 100) statsAge = null;
+        statsHeightCm = Number(localStorage.getItem('mtb_pro_stats_height_cm'));
+        if (!Number.isInteger(statsHeightCm) || statsHeightCm < 120 || statsHeightCm > 230) statsHeightCm = null;
         statsHeartRateMax = statsAge === null ? Number(localStorage.getItem('mtb_pro_stats_hr_max')) : 220 - statsAge;
         if (!Number.isFinite(statsHeartRateMax) || statsHeartRateMax < 100 || statsHeartRateMax > 240) statsHeartRateMax = null;
         statsPowerFtp = Number(localStorage.getItem('mtb_pro_stats_ftp'));
@@ -139,6 +142,7 @@ function statsLoadPreferences() {
     } catch (error) {
         console.warn('No se pudieron leer las preferencias de estadísticas:', error);
         statsWeightKg = null;
+        statsHeightCm = null;
         statsHeartRateMax = null;
         statsPowerFtp = null;
     }
@@ -171,16 +175,29 @@ function statsSavePreferences(ageChanged = false, syncCloud = true) {
     refreshStats();
 }
 
-function statsApplyAccountProfile(weightKg, age) {
+function statsApplyAccountProfile(weightKg, age, heightCm) {
     const weight = Number(weightKg);
     const years = Number(age);
+    const height = Number(heightCm);
     const validWeight = Number.isFinite(weight) && weight >= 25 && weight <= 250;
     const validAge = Number.isFinite(years) && years >= 10 && years <= 100;
-    if ((!validWeight || statsWeightKg === weight) && (!validAge || statsAge === years)) return;
+    const validHeight = Number.isInteger(height) && height >= 120 && height <= 230;
+    if ((!validWeight || statsWeightKg === weight)
+        && (!validAge || statsAge === years)
+        && (!validHeight || statsHeightCm === height)) return;
     if (validWeight) statsWeightKg = weight;
     if (validAge) statsAge = years;
+    if (validHeight) statsHeightCm = height;
     $('stats-weight').textContent = statsWeightKg === null ? 'Sin configurar' : `${statsWeightKg} kg`;
     $('stats-age').textContent = statsAge === null ? 'Sin configurar' : `${statsAge} años`;
+    try {
+        if (statsWeightKg === null) localStorage.removeItem('mtb_pro_stats_weight');
+        else localStorage.setItem('mtb_pro_stats_weight', String(statsWeightKg));
+        if (statsAge === null) localStorage.removeItem('mtb_pro_stats_age');
+        else localStorage.setItem('mtb_pro_stats_age', String(statsAge));
+        if (statsHeightCm === null) localStorage.removeItem('mtb_pro_stats_height_cm');
+        else localStorage.setItem('mtb_pro_stats_height_cm', String(statsHeightCm));
+    } catch (error) { console.warn('No se pudieron guardar los datos físicos del perfil:', error); }
     statsSavePreferences(validAge, false);
 }
 

@@ -1,7 +1,8 @@
 // Importador de rutas oficiales de Galicia.
-// Lee pb_public/rutas/galicia cada cinco minutos. Los archivos permanecen en
-// su sitio: sourcePath permite actualizar una ruta al modificar el fichero.
+// Comprueba metadatos cada cinco minutos e importa solo archivos nuevos o modificados.
+// Los archivos permanecen en su sitio: sourcePath permite actualizar una ruta al modificar el fichero.
 (function () {
+var importedFileSignatures = Object.create(null);
 function run() {
     function decodeXml(value) {
         return String(value || "").replace(/&(?:amp|lt|gt|quot|apos);/g, function (entity) {
@@ -216,16 +217,17 @@ function run() {
         const ownerNickname = "SENDA-MTB";
         const maxPoints = 100000;
         const sourcePrefix = "galicia/";
-        console.log("[rutas Galicia] iniciando escaneo de " + root);
-        let owner;
-        try { owner = $app.findFirstRecordByData("users", "nickname", ownerNickname); }
-        catch (error) { console.log("[rutas Galicia] no se encuentra la cuenta " + ownerNickname + ": " + error); return; }
-        let filesFound = 0;
-        let routesImported = 0;
+        const files = [];
+        let scanComplete = true;
+        console.log("[rutas Galicia] comprobando cambios en " + root);
         function scan(directory, relativeDirectory) {
             let entries;
             try { entries = $os.readDir(directory); }
-            catch (error) { console.log("[rutas Galicia] no se puede leer " + directory + ": " + error); return; }
+            catch (error) {
+                console.log("[rutas Galicia] no se puede leer " + directory + ": " + error);
+                scanComplete = false;
+                return;
+            }
             for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
                 const entry = entries[entryIndex];
                 const name = entry.name();
@@ -233,13 +235,45 @@ function run() {
                 const fullPath = $filepath.join(directory, name);
                 if (entry.isDir()) { scan(fullPath, relativePath); continue; }
                 if (!/\.(gpx|kml|geojson)$/i.test(name)) continue;
-                filesFound++;
-                try { importFile(owner, relativePath, root, ownerNickname, maxPoints, sourcePrefix); routesImported++; console.log("[rutas Galicia] importada " + relativePath); }
-                catch (error) { console.log("[rutas Galicia] error en " + relativePath + ": " + error); }
+                try {
+                    const info = entry.info();
+                    const signature = String(info.size()) + ":" + String(info.modTime().unixNano());
+                    files.push({ relativePath: relativePath, signature: signature });
+                } catch (error) {
+                    console.log("[rutas Galicia] no se pueden leer los metadatos de " + relativePath + ": " + error);
+                    scanComplete = false;
+                }
             }
         }
         scan(root, "");
-        console.log("[rutas Galicia] escaneo terminado: " + routesImported + "/" + filesFound + " rutas importadas");
+        if (!scanComplete) {
+            console.log("[rutas Galicia] escaneo incompleto; se reintentará en la próxima comprobación");
+            return;
+        }
+        const changedFiles = files.filter(function (file) {
+            return importedFileSignatures[file.relativePath] !== file.signature;
+        });
+        if (!changedFiles.length) {
+            console.log("[rutas Galicia] sin cambios; no hace falta importar rutas");
+            return;
+        }
+        console.log("[rutas Galicia] " + changedFiles.length + " archivo(s) nuevo(s) o modificado(s)");
+        let owner;
+        try { owner = $app.findFirstRecordByData("users", "nickname", ownerNickname); }
+        catch (error) { console.log("[rutas Galicia] no se encuentra la cuenta " + ownerNickname + ": " + error); return; }
+        let routesImported = 0;
+        for (let i = 0; i < changedFiles.length; i++) {
+            const file = changedFiles[i];
+            try {
+                importFile(owner, file.relativePath, root, ownerNickname, maxPoints, sourcePrefix);
+                importedFileSignatures[file.relativePath] = file.signature;
+                routesImported++;
+                console.log("[rutas Galicia] importada " + file.relativePath);
+            } catch (error) {
+                console.log("[rutas Galicia] error en " + file.relativePath + ": " + error);
+            }
+        }
+        console.log("[rutas Galicia] comprobación terminada: " + routesImported + "/" + changedFiles.length + " cambios importados");
     }
     scanAndImport();
 }
