@@ -17,6 +17,7 @@ const METRICS = {
     'map-total-time': { src: 'm-time', label: 'Tiempo total', unit: '' },
     'map-altitude': { src: 'map-panel-altitude', label: 'Altitud', unit: 'm' },
     'map-distance': { src: 'm-dist', label: 'Distancia', unit: 'km' },
+    'map-cadence': { src: 'm-cadence', label: 'Cadencia', unit: 'rpm', color: '#48c7a0' },
     'map-heart-rate': { src: 'm-hr', label: 'Pulso', unit: 'ppm', color: '#ef5350' }
 };
 let expandedMetric = null;
@@ -133,12 +134,20 @@ function expandMetric(key) {
 }
 
 function initMetricPanel() {
-    document.querySelector('.metrics-bar').addEventListener('click', e => {
-        const box = e.target.closest('.m-box');
+    const activateMetric = e => {
+        const box = e.target.closest('.m-box, .map-live-metric[data-metric]');
         if (!box) return;
         const key = box.dataset.metric;
         if (expandedMetric === key) collapseMetric(); // segundo toque: vuelve
         else expandMetric(key);
+    };
+    document.querySelector('.metrics-bar').addEventListener('click', activateMetric);
+    const bannerMetrics = document.querySelector('.map-live-metrics');
+    bannerMetrics.addEventListener('click', activateMetric);
+    bannerMetrics.addEventListener('keydown', e => {
+        if (!e.target.closest('.map-live-metric[data-metric]') || !['Enter', ' '].includes(e.key)) return;
+        e.preventDefault();
+        activateMetric(e);
     });
     $('big-metric').addEventListener('click', collapseMetric);
     $('map-panel-toggle').addEventListener('click', () => {

@@ -60,6 +60,7 @@
                 </div>
                 <div class="map-live-metrics">
                     <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">▲</span><strong><span id="m-elevation">0</span><small> m</small></strong><span>Desnivel +</span></div>
+                    <div class="map-live-metric" data-metric="map-distance" role="button" tabindex="0" aria-label="Distancia recorrida"><span class="map-live-icon" aria-hidden="true">&#8596;</span><strong><span id="m-dist">0.00</span><small> km</small></strong><span>Distancia</span></div>
                     <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">◉</span><strong><span id="m-speed">0.0</span><small> km/h</small></strong><span>Velocidad</span></div>
                     <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">◷</span><strong id="m-moving">00:00</strong><span>En movimiento</span></div>
                 </div>
@@ -120,7 +121,7 @@
                 </button>
             </div>
             <div class="map-legacy-metric-values" aria-hidden="true">
-                <span id="m-avg-speed">0.0</span><span id="m-cadence">--</span><span id="m-power">--</span>
+                <span id="m-avg-speed">0.0</span><span id="m-power">--</span>
             </div>
             <div class="map-bottom-panel" id="map-bottom-panel">
                 <div id="map-route-profile" aria-live="polite">
@@ -149,11 +150,6 @@
                 </div>
                 <div class="map-bottom-panel-content" id="map-bottom-panel-content">
                 <div class="metrics-bar">
-                    <div class="map-live-stat m-box" data-metric="map-distance" role="button">
-                        <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 16.5c2.1-.2 3.6-1 4.7-3l1.5-2.8 2.1 2.2c1.4 1.5 3.5 2.1 6.2 2.4l2 .2c1.3.1 2.5 1 2.5 2.2v1.1H4.2A2.2 2.2 0 0 1 2 16.7z"></path><path d="m8.1 13.5 2.4.3m2 .8 2.3.2"></path></svg></span>
-                        <div class="m-val"><span id="m-dist">0.00</span><small> km</small></div>
-                        <div class="m-lbl">DISTANCIA</div>
-                    </div>
                     <div class="map-live-stat m-box" data-metric="map-total-time" role="button">
                         <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.8 1.8M9 2h6M12 2v3"></path></svg></span>
                         <div class="m-val" id="m-time">00:00</div>
@@ -168,6 +164,11 @@
                         <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2.5 19 7-12 4.1 6.3 2.4-3.8L22 19z"></path><path d="m7.2 19 2.3-3.9 2.5 3.9"></path></svg></span>
                         <div class="m-val"><span id="map-panel-altitude">--</span><small> m</small></div>
                         <div class="m-lbl">ALTITUD</div>
+                    </div>
+                    <div class="map-live-stat m-box" data-metric="map-cadence" role="button">
+                        <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"></circle><path d="M12 9.8 8.5 5.5M12 14.2l4.2 4.2M9.8 12H4"></path><circle cx="7.1" cy="4.2" r="1.5"></circle><circle cx="17.8" cy="19.5" r="1.5"></circle></svg></span>
+                        <div class="m-val"><span id="m-cadence">--</span><small> rpm</small></div>
+                        <div class="m-lbl">CADENCIA</div>
                     </div>
                 </div>
                 <div class="controls-overlay map-recording-actions">
@@ -1083,7 +1084,7 @@
                     <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
                     <section class="card">
                         <h2 id="recording-settings-title">🎛️ Panel de grabación</h2>
-                        <p class="hint">Elige las métricas visibles y su orden en el mapa durante una salida.</p>
+                        <p class="hint">El banner superior muestra desnivel, distancia, velocidad y tiempo en movimiento. Aquí puedes elegir y ordenar las métricas del panel inferior: tiempo total, pulsaciones, altitud y cadencia.</p>
                         <div id="recording-metric-config" class="recording-metric-config" role="group" aria-label="Métricas del panel de grabación"></div>
                     </section>
                 </section>

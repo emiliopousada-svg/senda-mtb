@@ -1272,8 +1272,10 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 #page-map[data-recording-state="paused"] .map-live-indicator,#page-map[data-recording-state="auto-paused"] .map-live-indicator { background:#ffad32; box-shadow:0 0 0 4px rgba(255,173,50,.14); }
 .map-live-gps { display:flex; align-items:center; gap:6px; margin-left:auto; color:#48e276; font-size:.72rem; font-weight:800; }
 .map-live-gps i { width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 9px currentColor; }
-.map-live-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding-top:10px; }
+.map-live-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); padding-top:10px; }
 .map-live-metric { display:flex; min-width:0; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-align:center; }
+.map-live-metric[data-metric] { cursor:pointer; }
+.map-live-metric[data-metric]:focus-visible { outline:2px solid #ff9858; outline-offset:2px; border-radius:8px; }
 .map-live-metric + .map-live-metric { border-left:1px solid rgba(255,255,255,.17); }
 .map-live-icon { height:19px; color:#d0d5dc; font-size:1.05rem; line-height:1; }
 .map-live-metric strong { color:#f7f8fa; font-size:clamp(1.25rem,6vw,1.8rem); font-variant-numeric:tabular-nums; line-height:1.05; white-space:nowrap; }
@@ -1285,6 +1287,7 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 .map-bottom-panel .map-live-stat[hidden] { display:none; }
 .map-live-stat-icon { display:grid; width:23px; height:23px; place-items:center; margin-bottom:1px; color:#dce1e7; }
 .map-live-stat-icon svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.map-live-stat[data-metric="map-cadence"] .map-live-stat-icon { color:#48c7a0; }
 .map-live-stat.m-box { cursor:pointer; }
 .map-bottom-panel .map-live-stat + .map-live-stat { border-left:1px solid rgba(255,255,255,.19); }
 .map-bottom-panel .map-live-stat .m-val { color:#f5f6f8; font-size:clamp(1.2rem,5.2vw,1.75rem); font-variant-numeric:tabular-nums; }

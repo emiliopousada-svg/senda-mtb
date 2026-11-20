@@ -7,13 +7,13 @@ const CLOUD_PREFERENCES_DEBOUNCE_MS = 700;
 const CLOUD_PREFERENCES_RETRY_INITIAL_MS = 5000;
 const CLOUD_PREFERENCES_RETRY_MAX_MS = 60000;
 const CLOUD_PREFERENCE_RECORDING_METRICS = [
-    'map-distance', 'map-total-time', 'map-heart-rate', 'map-altitude'
+    'map-total-time', 'map-heart-rate', 'map-altitude', 'map-cadence'
 ];
 const CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS = [
-    'map-distance', 'map-total-time', 'map-heart-rate', 'map-altitude'
+    'map-total-time', 'map-heart-rate', 'map-altitude', 'map-cadence'
 ];
 const DEFAULT_CLOUD_PREFERENCES = {
-    version: 1,
+    version: 2,
     routeSound: true,
     routeVibration: true,
     routeVoice: true,
@@ -101,14 +101,20 @@ function normalizeCloudPreferences(value) {
     const style = ['ign', 'topographic', 'cyclosm', 'osm', 'satellite'].includes(source.mapStyle)
         ? source.mapStyle
         : DEFAULT_CLOUD_PREFERENCES.mapStyle;
-    const visible = Array.isArray(source.recordingVisibleMetrics)
+    let visible = Array.isArray(source.recordingVisibleMetrics)
         ? source.recordingVisibleMetrics.filter((id, index) =>
             CLOUD_PREFERENCE_RECORDING_METRICS.includes(id)
             && source.recordingVisibleMetrics.indexOf(id) === index)
         : DEFAULT_CLOUD_PREFERENCES.recordingVisibleMetrics.slice();
+    if (!visible.length) visible = CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS.slice();
+    else if (!Number.isFinite(Number(source.version)) || Number(source.version) < 2) {
+        // Version 1 showed distance in the lower panel; migrate that slot to cadence.
+        visible.push('map-cadence');
+        visible = visible.filter((id, index) => visible.indexOf(id) === index);
+    }
 
     return {
-        version: 1,
+        version: 2,
         routeSound: typeof source.routeSound === 'boolean' ? source.routeSound : true,
         routeVibration: typeof source.routeVibration === 'boolean' ? source.routeVibration : true,
         routeVoice: typeof source.routeVoice === 'boolean' ? source.routeVoice : true,
@@ -142,6 +148,7 @@ function readLocalCloudPreferences() {
         if (!visibleMetrics.length) visibleMetrics = CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS;
     }
     return normalizeCloudPreferences({
+        version: localStorage.getItem('mtb_pro_recording_panel_schema') === '2' ? 2 : 1,
         routeSound: localStorage.getItem('mtb_pro_route_sound') !== '0',
         routeVibration: localStorage.getItem('mtb_pro_route_vibration') !== '0',
         routeVoice: localStorage.getItem('mtb_pro_route_voice') !== '0',
@@ -197,7 +204,8 @@ function applyCloudPreferences(value) {
             mtb_pro_wheel_circumference: String(preferences.wheelCircumference),
             mtb_pro_weekly_goal_km: String(preferences.weeklyGoalKm),
             mtb_pro_recording_panel_v1: JSON.stringify(preferences.recordingMetricOrder),
-            mtb_pro_recording_panel_visible_v1: JSON.stringify(preferences.recordingVisibleMetrics)
+            mtb_pro_recording_panel_visible_v1: JSON.stringify(preferences.recordingVisibleMetrics),
+            mtb_pro_recording_panel_schema: '2'
         };
         Object.entries(localValues).forEach(([key, localValue]) => localStorage.setItem(key, localValue));
         if (preferences.maxHeartRate === null) localStorage.removeItem('mtb_pro_stats_hr_max');
@@ -230,8 +238,12 @@ function applyCloudPreferences(value) {
         if (typeof setMapRotationMode === 'function') setMapRotationMode(preferences.mapRotation);
         if (typeof applyMapStyle === 'function') applyMapStyle();
         if (typeof updateQuickMapStyleButton === 'function') updateQuickMapStyleButton();
-        if (typeof applyRecordingPanelPreferences === 'function') applyRecordingPanelPreferences();
-        if (typeof renderRecordingPanelSettings === 'function') renderRecordingPanelSettings();
+        if (typeof applyRecordingPanelCloudPreferences === 'function') {
+            applyRecordingPanelCloudPreferences(preferences.recordingMetricOrder, preferences.recordingVisibleMetrics);
+        } else {
+            if (typeof applyRecordingPanelPreferences === 'function') applyRecordingPanelPreferences();
+            if (typeof renderRecordingPanelSettings === 'function') renderRecordingPanelSettings();
+        }
         if (typeof dashboardApplySavedCardOrder === 'function') dashboardApplySavedCardOrder();
         if (typeof dashboardRefreshOrderControls === 'function') dashboardRefreshOrderControls();
         if (typeof statsLoadPreferences === 'function') statsLoadPreferences();

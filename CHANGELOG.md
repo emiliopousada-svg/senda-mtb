@@ -5,6 +5,14 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.29] - 2026-11-20
+
+### Cambiado
+* **Mapa:** Distancia pasa al banner superior y Cadencia se incorpora al panel inferior.
+* **Centro de control:** el panel de grabación permite ordenar y mostrar u ocultar Cadencia; las preferencias anteriores migran al nuevo conjunto de métricas.
+
+---
+
 ## [0.2.28] - 2026-11-20
 
 ### Añadido

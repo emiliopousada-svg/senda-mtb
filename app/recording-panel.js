@@ -2,11 +2,12 @@
 
 const RECORDING_PANEL_KEY = 'mtb_pro_recording_panel_v1';
 const RECORDING_PANEL_VISIBLE_KEY = 'mtb_pro_recording_panel_visible_v1';
+const RECORDING_PANEL_SCHEMA_KEY = 'mtb_pro_recording_panel_schema';
 const RECORDING_PANEL_METRICS = [
-    { id: 'map-distance', label: 'Distancia' },
     { id: 'map-total-time', label: 'Tiempo total' },
     { id: 'map-heart-rate', label: 'Pulso' },
-    { id: 'map-altitude', label: 'Altitud' }
+    { id: 'map-altitude', label: 'Altitud' },
+    { id: 'map-cadence', label: 'Cadencia' }
 ];
 let recordingPanelPreferences = RECORDING_PANEL_METRICS.map(metric => metric.id);
 
@@ -37,6 +38,17 @@ function applyRecordingPanelPreferences() {
         box.setAttribute('aria-hidden', String(box.hidden));
         box.tabIndex = 0;
     });
+}
+
+function applyRecordingPanelCloudPreferences(order, visible) {
+    recordingPanelPreferences = normalizeRecordingPanelPreferences(order);
+    const visibleIds = new Set(Array.isArray(visible) ? visible : []);
+    document.querySelectorAll('.metrics-bar .m-box[data-metric]').forEach(box => {
+        if (!RECORDING_PANEL_METRICS.some(metric => metric.id === box.dataset.metric)) return;
+        box.dataset.metricVisible = String(visibleIds.has(box.dataset.metric));
+    });
+    applyRecordingPanelPreferences();
+    renderRecordingPanelSettings();
 }
 
 function saveRecordingPanelPreferences() {
@@ -94,7 +106,13 @@ function initRecordingPanelSettings() {
         .filter(box => box.dataset.defaultVisible !== 'false').map(box => box.dataset.metric));
     try {
         const saved = JSON.parse(localStorage.getItem(RECORDING_PANEL_VISIBLE_KEY) || 'null');
-        if (Array.isArray(saved)) visibleMetrics = new Set(saved);
+        if (Array.isArray(saved)) {
+            visibleMetrics = new Set(saved);
+            if (localStorage.getItem(RECORDING_PANEL_SCHEMA_KEY) !== '2') {
+                visibleMetrics.delete('map-distance');
+                visibleMetrics.add('map-cadence');
+            }
+        }
     } catch (error) {}
     if (!RECORDING_PANEL_METRICS.some(metric => visibleMetrics.has(metric.id))) {
         visibleMetrics = new Set([...document.querySelectorAll('.m-box[data-metric]')]
@@ -104,6 +122,12 @@ function initRecordingPanelSettings() {
         if (!RECORDING_PANEL_METRICS.some(metric => metric.id === box.dataset.metric)) return;
         box.dataset.metricVisible = String(visibleMetrics.has(box.dataset.metric));
     });
+    try {
+        localStorage.setItem(RECORDING_PANEL_SCHEMA_KEY, '2');
+        localStorage.setItem(RECORDING_PANEL_KEY, JSON.stringify(recordingPanelPreferences));
+        localStorage.setItem(RECORDING_PANEL_VISIBLE_KEY, JSON.stringify([...document.querySelectorAll('.metrics-bar .m-box[data-metric]')]
+            .filter(box => box.dataset.metricVisible !== 'false').map(box => box.dataset.metric)));
+    } catch (error) {}
     renderRecordingPanelSettings();
     applyRecordingPanelPreferences();
     const container = $('recording-metric-config');
