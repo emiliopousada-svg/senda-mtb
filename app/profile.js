@@ -41,6 +41,13 @@ function profileStoreAccountLocation(uid, location) {
     localStorage.setItem(PROFILE_LOCATION_OWNER_KEY, uid);
 }
 
+function profileSetPendingAccountLocation(uid, location) {
+    const safeUid = String(uid || '');
+    const normalized = profileNormalizeLocation(location);
+    if (!safeUid || !normalized) return;
+    localStorage.setItem(profileLocationPendingKey(safeUid), normalized);
+}
+
 function profileDisplayLocation(location) {
     profileSetText('profile-location', location || 'Añade tu localidad habitual');
     const input = document.getElementById('profile-location-input');

@@ -487,6 +487,9 @@ async function accAuth(register) {
     const weightKg = $('acc-weight').value.trim();
     const heightCm = $('acc-height')?.value.trim() || '';
     const age = $('acc-age').value.trim();
+    const homeLocation = typeof profileNormalizeLocation === 'function'
+        ? profileNormalizeLocation($('acc-home-location')?.value || '')
+        : String($('acc-home-location')?.value || '').trim().slice(0, 80);
     if (weightKg && (!Number.isFinite(Number(weightKg)) || Number(weightKg) < 25 || Number(weightKg) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
     if (heightCm && (!Number.isInteger(Number(heightCm)) || Number(heightCm) < 120 || Number(heightCm) > 230)) { toast('La altura debe estar entre 120 y 230 cm.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
@@ -499,6 +502,7 @@ async function accAuth(register) {
             if (weightKg) profile.weightKg = Number(weightKg);
             if (heightCm) profile.heightCm = Number(heightCm);
             if (age) profile.age = Number(age);
+            if (homeLocation) profile.homeLocation = homeLocation;
             await cloudApi('/api/collections/users/records', 'POST', profile);
             ensureAuthServer(server, authGeneration);
         }
@@ -508,6 +512,9 @@ async function accAuth(register) {
             throw new Error('El servidor no devolvió una sesión válida.');
         }
         Cloud.setSession(auth.record, auth.token);
+        if (!register && homeLocation && typeof profileSetPendingAccountLocation === 'function') {
+            profileSetPendingAccountLocation(auth.record.id, homeLocation);
+        }
         renderAccountProfile(auth.record);
         if ((weightKg || age || heightCm) && typeof statsApplyAccountProfile === 'function') {
             statsApplyAccountProfile(auth.record.weightKg ?? (weightKg ? Number(weightKg) : undefined),
@@ -521,6 +528,7 @@ async function accAuth(register) {
         $('acc-weight').value = '';
         if ($('acc-height')) $('acc-height').value = '';
         $('acc-age').value = '';
+        if ($('acc-home-location')) $('acc-home-location').value = '';
         renderAccount();
         if (!Cloud.nickname && nickname) $('acc-account-nickname').value = nickname;
         await restoreGroup();
