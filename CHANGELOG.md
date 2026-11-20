@@ -19,6 +19,17 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.27] - 2026-11-20
+
+### Añadido
+* **Perfil físico:** campo de altura sincronizado con PocketBase y guardado localmente para futuras estimaciones.
+
+### Cambiado
+* **Inicio:** las estadísticas se refrescan tras cargar las rutas locales y recuperar un borrador de grabación.
+* **Perfil:** la sincronización actualiza los campos sin cambios locales y conserva ediciones y snapshots más recientes pendientes de subida.
+* **Rutas comunitarias:** el importador de Galicia comprueba metadatos cada cinco minutos e importa solo ficheros nuevos o modificados.
+* **Caché sin conexión:** cada versión del service worker usa una caché identificada por el hash del propio worker; el build falla si deja marcadores sin sustituir.
+
 ## [0.2.24] - 2026-11-19
 
 ### Añadido
