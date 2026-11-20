@@ -8,7 +8,7 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 
 | Colección o recurso | Uso |
 | --- | --- |
-| `users` (auth) | Inicio de sesión, apodo, avatar JPEG, peso y edad. La migración de perfil limita listado/lectura/edición al titular y evita que el cliente asigne `groupCode`. |
+| `users` (auth) | Inicio de sesión, apodo, avatar JPEG, peso, altura y edad. La migración de perfil limita listado/lectura/edición al titular y evita que el cliente asigne `groupCode`. |
 | `mtb_user_preferences` | Un registro privado por usuario con sus preferencias de uso, sincronizadas entre dispositivos. Incluye los contactos de emergencia (nombre y teléfono). No almacena credenciales, ubicaciones GPS, identificadores BLE ni teselas offline. |
 | `routes` | Rutas y actividades privadas sincronizadas por propietario. |
 | `map_pois` | Puntos de interés sincronizados por propietario. |
@@ -35,6 +35,8 @@ Los nombres siguientes se deducen de las llamadas API del cliente y los hooks in
 La migración `pb_migrations/1794829123_create_mtb_user_preferences.js` crea `mtb_user_preferences` con reglas que limitan lectura, creación, modificación y borrado al propietario autenticado. Despliega la migración en el directorio de datos de PocketBase y ejecútala con `pocketbase migrate up` (o inicia PocketBase con las migraciones automáticas habilitadas) antes de publicar la versión web que la utiliza.
 
 La migración `pb_migrations/1794830184_add_private_user_profile_fields.js` añade, si faltan, `nickname` (máximo 32 caracteres), `weightKg` (0–250) y `age` (entero, 0–100), además de `avatar` (JPEG, máximo 256 KiB, miniaturas de 96 y 256 px). Cero representa un valor todavía no configurado; la app solo acepta peso de 25–250 kg y edad de 10–100 años. También deja el registro de `users` visible solo para su titular y permite actualizarlo solo al titular sin aceptar cambios de `groupCode`. El archivo de avatar no está protegido y puede descargarse con su URL directa, para que se muestre en grupos. No reemplaza campos ya existentes; comprueba tipos y límites en el panel PocketBase antes de aplicarla.
+
+La migración `pb_migrations/1794836003_add_user_height.js` añade `heightCm` (entero, 0–230) a `users` si falta. La app acepta alturas de 120–230 cm y la conserva en el perfil para futuras estimaciones; las potencias mostradas actualmente siguen requiriendo datos del potenciómetro.
 
 La migración `pb_migrations/1794835000_create_mtb_app_collections.js` crea las colecciones activas de rutas privadas, POIs, ubicaciones en vivo, grupos, clasificaciones, rutas comunitarias, segmentos, valoraciones, favoritos, comentarios y marcas. Añade `groupCode` a `users` si falta y mantiene cerradas las colecciones internas de grupos; las lecturas públicas se limitan a rutas comunitarias publicadas y sus marcas/interacciones. Crea solo colecciones que no existan y conserva las ya existentes sin corregir sus campos o reglas. La migración `pb_migrations/1794835001_add_community_route_poi_fields.js` añade los campos `poisJson` y `poiPhotos` a una colección `community_routes` ya creada si faltan. La migración `pb_migrations/1794835003_secure_live_location_access.js` actualiza las reglas existentes de `live_locations` para exigir pertenencia vigente al grupo. La migración `pb_migrations/1794835004_add_live_location_timestamps.js` añade los campos automáticos `created` y `updated` si faltan, necesarios para ordenar y expirar las ubicaciones. Ambas conservan los registros y campos compatibles. Haz una copia de seguridad antes de aplicar migraciones.
 

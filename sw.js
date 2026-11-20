@@ -1,7 +1,7 @@
 // Service Worker de senda-mtb
 // - Guarda la app y las librerías para que abra sin conexión.
 // - Los mapas offline (teselas del IGN) se guardan en IndexedDB desde la propia aplicación.
-// prepare-web.js sustituye el marcador con la versión de package.json.
+// prepare-web.js sustituye la versión y el hash del service worker en cada build.
 const SHELL = 'mtbpro-shell-v__APP_VERSION__-v16-__SW_HASH__';
 
 const SHELL_URLS = [

@@ -358,8 +358,10 @@ async function accAuth(register) {
     if (register && !nickname) { toast('Escribe un apodo para crear la cuenta.'); $('acc-nickname').focus(); return; }
     if (register && pass.length < 8) { toast('La contraseña debe tener al menos 8 caracteres'); return; }
     const weightKg = $('acc-weight').value.trim();
+    const heightCm = $('acc-height')?.value.trim() || '';
     const age = $('acc-age').value.trim();
     if (weightKg && (!Number.isFinite(Number(weightKg)) || Number(weightKg) < 25 || Number(weightKg) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
+    if (heightCm && (!Number.isInteger(Number(heightCm)) || Number(heightCm) < 120 || Number(heightCm) > 230)) { toast('La altura debe estar entre 120 y 230 cm.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
     localStorage.setItem('mtb_pro_server', server);
     Cloud.clearSession();
@@ -367,21 +369,24 @@ async function accAuth(register) {
         if (register) {
             const profile = { email, password: pass, passwordConfirm: pass, nickname };
             if (weightKg) profile.weightKg = Number(weightKg);
+            if (heightCm) profile.heightCm = Number(heightCm);
             if (age) profile.age = Number(age);
             await cloudApi('/api/collections/users/records', 'POST', profile);
         }
         const r = await cloudApi('/api/collections/users/auth-with-password', 'POST', { identity: email, password: pass });
         Cloud.setSession(r.token, r.record);
         renderAccountProfile(r.record);
-        if ((weightKg || age) && typeof statsApplyAccountProfile === 'function') {
+        if ((weightKg || age || heightCm) && typeof statsApplyAccountProfile === 'function') {
             statsApplyAccountProfile(r.record.weightKg ?? (weightKg ? Number(weightKg) : undefined),
-                r.record.age ?? (age ? Number(age) : undefined));
+                r.record.age ?? (age ? Number(age) : undefined),
+                r.record.heightCm ?? (heightCm ? Number(heightCm) : undefined));
         }
         try { await syncPendingAccountAvatar(r.record); }
         catch (avatarError) { console.warn('No se pudo sincronizar el avatar pendiente:', avatarError); }
         await syncCloudPreferences();
         $('acc-pass').value = '';
         $('acc-weight').value = '';
+        if ($('acc-height')) $('acc-height').value = '';
         $('acc-age').value = '';
         renderAccount();
         if (!Cloud.nickname && nickname) $('acc-account-nickname').value = nickname;
@@ -931,13 +936,19 @@ async function init() {
     }
     renderSavedRoutes();
     dashboardRender();
-    refreshStats();
     initAccount();
     initSettings();
 
     // 1) Arrancar GPS y recuperar borrador de inmediato (offline-first, no depende de la red)
     startGps();
     await maybeRestoreDraft();
+
+    // Render the home statistics after the core modules, local routes and any
+    // recovered recording draft are ready. A later cloud sync refreshes them again.
+    requestAnimationFrame(() => {
+        dashboardRender();
+        refreshStats();
+    });
 
     // 2) Sincronizaciones con la nube en segundo plano (no bloquean el inicio de la app ni el GPS)
     syncRoutes();

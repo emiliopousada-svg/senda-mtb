@@ -118,11 +118,19 @@ for (const asset of localAssets) {
 
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const swHash = crypto.createHash('sha256').update(swSource).digest('hex').slice(0, 12);
-if (!swSource.includes('__APP_VERSION__')) {
-  throw new Error('No se encontró el marcador de versión de caché en sw.js');
+for (const marker of ['__APP_VERSION__', '__SW_HASH__']) {
+  if (!swSource.includes(marker)) {
+    throw new Error(`No se encontró el marcador ${marker} en sw.js`);
+  }
+}
+const builtSw = swSource
+  .replace('__APP_VERSION__', appVersion)
+  .replace('__SW_HASH__', swHash);
+if (builtSw.includes('__APP_VERSION__') || builtSw.includes('__SW_HASH__')) {
+  throw new Error('Quedaron marcadores sin sustituir en el service worker generado');
 }
 fs.writeFileSync(
   path.join(www, 'sw.js'),
-  swSource.replace('__APP_VERSION__', appVersion).replace('__SW_HASH__', swHash)
+  builtSw
 );
 console.log(`www listo (service worker ${appVersion}, entorno ${appEnvironment.name}, servidor ${appEnvironment.cloudServer})`);

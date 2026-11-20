@@ -33,7 +33,7 @@ La publicación y la privacidad de la ruta también dependen de los hooks del re
 
 ## Importación automática de rutas oficiales de Galicia
 
-El hook `community_routes_galicia_import.pb.js` importa al iniciar PocketBase y después cada cinco minutos los archivos GPX, KML y GeoJSON que existan en `pb_public/rutas/galicia` y sus subcarpetas (por ejemplo, `tracks/`). Si el volumen se monta en otra ruta dentro del contenedor, define `COMMUNITY_IMPORT_DIR` con esa ruta interna.
+El hook `community_routes_galicia_import.pb.js` comprueba cada cinco minutos los metadatos de los GPX, KML y GeoJSON que existan en `pb_public/rutas/galicia` y sus subcarpetas (por ejemplo, `tracks/`), e importa solo archivos nuevos o modificados. Si el volumen se monta en otra ruta dentro del contenedor, define `COMMUNITY_IMPORT_DIR` con esa ruta interna. PocketBase JSVM ofrece lectura y consulta de metadatos del sistema de archivos, pero no un watcher de cambios; el sondeo mantiene hasta cinco minutos de demora. Tras reiniciar PocketBase, el primer escaneo vuelve a procesar todos los archivos.
 
 Las rutas se asignan a la cuenta cuyo apodo exacto es `SENDA-MTB`; créala antes de activar el hook. El archivo se conserva para permitir actualizaciones: al modificarlo, se actualiza su publicación gracias al campo interno `sourcePath`. Los fallos se escriben en el log de PocketBase y no impiden importar los demás archivos.
 

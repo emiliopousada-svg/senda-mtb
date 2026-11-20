@@ -91,6 +91,7 @@ async function syncPendingAccountAvatar(record = null) {
         form.append('avatar', blob, 'avatar.jpg');
     }
     if (pending.weightKg !== undefined && pending.weightKg !== '') form.append('weightKg', pending.weightKg);
+    if (pending.heightCm !== undefined && pending.heightCm !== '') form.append('heightCm', pending.heightCm);
     if (pending.age !== undefined && pending.age !== '') form.append('age', pending.age);
     const updated = await cloudApi(`/api/collections/users/records/${encodeURIComponent(uid)}`, 'PATCH', form, { timeoutMs: 60000 });
     localStorage.removeItem(key);
@@ -102,22 +103,28 @@ function renderAccountProfile(record = {}, force = false) {
     const uid = Cloud.uid;
     if (!uid || !record
         || (!Object.prototype.hasOwnProperty.call(record, 'weightKg')
+            && !Object.prototype.hasOwnProperty.call(record, 'heightCm')
             && !Object.prototype.hasOwnProperty.call(record, 'age')
             && !Object.prototype.hasOwnProperty.call(record, 'homeLocation'))) return;
     if (typeof profileApplyAccountLocation === 'function') profileApplyAccountLocation(record);
     if (!Object.prototype.hasOwnProperty.call(record, 'weightKg')
+        && !Object.prototype.hasOwnProperty.call(record, 'heightCm')
         && !Object.prototype.hasOwnProperty.call(record, 'age')) return;
     if (!force && accountProfileLoadedUid === uid) return;
     const weight = $('acc-profile-weight');
+    const height = $('acc-profile-height');
     const age = $('acc-profile-age');
     const weightKg = Number(record.weightKg);
+    const heightCm = Number(record.heightCm);
     const ageYears = Number(record.age);
     const validWeight = record.weightKg !== null && record.weightKg !== undefined && Number.isFinite(weightKg) && weightKg >= 25 && weightKg <= 250;
+    const validHeight = record.heightCm !== null && record.heightCm !== undefined && Number.isInteger(heightCm) && heightCm >= 120 && heightCm <= 230;
     const validAge = record.age !== null && record.age !== undefined && Number.isInteger(ageYears) && ageYears >= 10 && ageYears <= 100;
     if (weight && document.activeElement !== weight) weight.value = validWeight ? String(weightKg) : '';
+    if (height && document.activeElement !== height) height.value = validHeight ? String(heightCm) : '';
     if (age && document.activeElement !== age) age.value = validAge ? String(ageYears) : '';
     if (typeof statsApplyAccountProfile === 'function') {
-        statsApplyAccountProfile(record.weightKg, record.age);
+        statsApplyAccountProfile(record.weightKg, record.age, record.heightCm);
     }
     accountProfileLoadedUid = uid;
 }
@@ -184,10 +191,13 @@ function initAccountAvatar() {
     save.addEventListener('click', async () => {
         const file = input.files && input.files[0];
         const weightInput = $('acc-profile-weight');
+        const heightInput = $('acc-profile-height');
         const ageInput = $('acc-profile-age');
         const weight = weightInput.value.trim();
+        const height = heightInput ? heightInput.value.trim() : '';
         const age = ageInput.value.trim();
         if (weight && (!Number.isFinite(Number(weight)) || Number(weight) < 25 || Number(weight) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
+        if (height && (!Number.isInteger(Number(height)) || Number(height) < 120 || Number(height) > 230)) { toast('La altura debe estar entre 120 y 230 cm.'); return; }
         if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
         save.disabled = true;
         try {
@@ -196,9 +206,9 @@ function initAccountAvatar() {
             if (!uid) throw new Error('Inicia sesión para guardar el avatar.');
             if (dataUrl) localStorage.setItem(accountAvatarKey(uid), dataUrl);
             localStorage.setItem('mtb_pro_avatar_last_uid', uid);
-            localStorage.setItem(accountAvatarPendingKey(uid), JSON.stringify({ avatar: dataUrl, weightKg: weight, age }));
+            localStorage.setItem(accountAvatarPendingKey(uid), JSON.stringify({ avatar: dataUrl, weightKg: weight, heightCm: height, age }));
             if (typeof statsApplyAccountProfile === 'function') {
-                statsApplyAccountProfile(weight, age);
+                statsApplyAccountProfile(weight, age, height);
             }
             renderAccountAvatar();
             input.value = '';
