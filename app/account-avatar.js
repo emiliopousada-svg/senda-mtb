@@ -8,10 +8,21 @@ const ACCOUNT_AVATAR_PENDING_PREFIX = 'mtb_pro_avatar_pending_';
 const ACCOUNT_AVATAR_REMOTE_PREFIX = 'mtb_pro_avatar_remote_';
 let accountAvatarPreviewUrl = '';
 let accountProfileSnapshot = { uid: '', weightKg: undefined, heightCm: undefined, age: undefined };
+let accountAvatarSyncQueue = Promise.resolve();
+const accountAvatarUploadGenerations = new Map();
 
 function accountAvatarKey(uid) { return `${ACCOUNT_AVATAR_CACHE_PREFIX}${uid}`; }
 function accountAvatarPendingKey(uid) { return `${ACCOUNT_AVATAR_PENDING_PREFIX}${uid}`; }
 function resetAccountProfileCache() { accountProfileSnapshot = { uid: '', weightKg: undefined, heightCm: undefined, age: undefined }; }
+
+function hasPendingLocalAccountAvatar(uid) {
+    const pendingValue = localStorage.getItem(accountAvatarPendingKey(uid));
+    if (!pendingValue) return false;
+    try {
+        const pending = JSON.parse(pendingValue);
+        return !!(pending && typeof pending === 'object' && pending.avatar);
+    } catch (_) { return true; }
+}
 
 function getAccountAvatarUrl() {
     // Puede llamarse desde el saludo de inicio antes de que cloud.js defina Cloud.
@@ -73,13 +84,25 @@ function accountAvatarDataUrl(blob) {
     });
 }
 
-async function syncPendingAccountAvatar(record = null) {
+function syncPendingAccountAvatar(record = null) {
     const uid = Cloud.uid;
-    if (!uid || !navigator.onLine) return;
+    const uploadGeneration = uid ? (accountAvatarUploadGenerations.get(uid) || 0) : 0;
+    const sync = accountAvatarSyncQueue.then(() => {
+        if (!uid || Cloud.uid !== uid) return;
+        return syncPendingAccountAvatarNow(record, uid, uploadGeneration);
+    });
+    accountAvatarSyncQueue = sync.catch(() => {});
+    return sync;
+}
+
+async function syncPendingAccountAvatarNow(record = null, uid = Cloud.uid, queuedUploadGeneration = 0) {
+    if (!uid || Cloud.uid !== uid || !navigator.onLine) return;
     const key = accountAvatarPendingKey(uid);
     const pendingValue = localStorage.getItem(key);
     if (!pendingValue) {
-        if (record) await cacheRemoteAccountAvatar(record);
+        if (record && (accountAvatarUploadGenerations.get(uid) || 0) === queuedUploadGeneration) {
+            await cacheRemoteAccountAvatar(record);
+        }
         return;
     }
     let pending;
@@ -90,19 +113,23 @@ async function syncPendingAccountAvatar(record = null) {
         const blob = await (await fetch(pending.avatar)).blob();
         form.append('avatar', blob, 'avatar.jpg');
     }
+    if (Cloud.uid !== uid) return;
     if (pending.weightKg !== undefined && pending.weightKg !== '') form.append('weightKg', pending.weightKg);
     if (pending.heightCm !== undefined && pending.heightCm !== '') form.append('heightCm', pending.heightCm);
     if (pending.age !== undefined && pending.age !== '') form.append('age', pending.age);
+    for (const field of pending.clearedFields || []) form.append(field, '0');
     const updated = await cloudApi(`/api/collections/users/records/${encodeURIComponent(uid)}`, 'PATCH', form, { timeoutMs: 60000 });
     // No consumas ni apliques una respuesta antigua si se guardó otro snapshot
     // mientras la petición estaba en curso; el nuevo queda pendiente para reintento.
+    if (Cloud.uid !== uid) return;
+    accountAvatarUploadGenerations.set(uid, (accountAvatarUploadGenerations.get(uid) || 0) + 1);
     if (localStorage.getItem(key) !== pendingValue) return;
     localStorage.removeItem(key);
     if (updated && updated.avatar) localStorage.setItem(`${ACCOUNT_AVATAR_REMOTE_PREFIX}${uid}`, updated.avatar);
-    if (updated) renderAccountProfile(updated, true);
+    if (updated) renderAccountProfile(updated, true, pending);
 }
 
-function renderAccountProfile(record = {}, force = false) {
+function renderAccountProfile(record = {}, force = false, submittedSnapshot = null) {
     const uid = Cloud.uid;
     if (!uid || !record
         || (!Object.prototype.hasOwnProperty.call(record, 'weightKg')
@@ -116,16 +143,30 @@ function renderAccountProfile(record = {}, force = false) {
     const weight = $('acc-profile-weight');
     const height = $('acc-profile-height');
     const age = $('acc-profile-age');
+    let pendingProfile = null;
+    if (!submittedSnapshot) {
+        try {
+            const pendingValue = localStorage.getItem(accountAvatarPendingKey(uid));
+            const parsedPending = pendingValue ? JSON.parse(pendingValue) : null;
+            if (parsedPending && typeof parsedPending === 'object' && !Array.isArray(parsedPending)) pendingProfile = parsedPending;
+        } catch (_) {}
+    }
+    const profileRecord = { ...record };
+    const pendingClears = new Set(Array.isArray(pendingProfile?.clearedFields) ? pendingProfile.clearedFields : []);
+    ['weightKg', 'heightCm', 'age'].forEach(field => {
+        if (pendingClears.has(field)) profileRecord[field] = 0;
+        else if (pendingProfile && pendingProfile[field] !== undefined && pendingProfile[field] !== '') profileRecord[field] = pendingProfile[field];
+    });
     const sameProfile = accountProfileSnapshot.uid === uid;
     if (!sameProfile) {
         accountProfileSnapshot = { uid, weightKg: undefined, heightCm: undefined, age: undefined };
     }
-    const weightKg = Number(record.weightKg);
-    const heightCm = Number(record.heightCm);
-    const ageYears = Number(record.age);
-    const validWeight = record.weightKg !== null && record.weightKg !== undefined && Number.isFinite(weightKg) && weightKg >= 25 && weightKg <= 250;
-    const validHeight = record.heightCm !== null && record.heightCm !== undefined && Number.isInteger(heightCm) && heightCm >= 120 && heightCm <= 230;
-    const validAge = record.age !== null && record.age !== undefined && Number.isInteger(ageYears) && ageYears >= 10 && ageYears <= 100;
+    const weightKg = Number(profileRecord.weightKg);
+    const heightCm = Number(profileRecord.heightCm);
+    const ageYears = Number(profileRecord.age);
+    const validWeight = profileRecord.weightKg !== null && profileRecord.weightKg !== undefined && Number.isFinite(weightKg) && weightKg >= 25 && weightKg <= 250;
+    const validHeight = profileRecord.heightCm !== null && profileRecord.heightCm !== undefined && Number.isInteger(heightCm) && heightCm >= 120 && heightCm <= 230;
+    const validAge = profileRecord.age !== null && profileRecord.age !== undefined && Number.isInteger(ageYears) && ageYears >= 10 && ageYears <= 100;
     const nextWeight = validWeight ? String(weightKg) : '';
     const nextHeight = validHeight ? String(heightCm) : '';
     const nextAge = validAge ? String(ageYears) : '';
@@ -135,23 +176,26 @@ function renderAccountProfile(record = {}, force = false) {
         || (accountProfileSnapshot.heightCm === undefined && height.value !== ''));
     const ageDirty = sameProfile && age && ((accountProfileSnapshot.age !== undefined && age.value !== accountProfileSnapshot.age)
         || (accountProfileSnapshot.age === undefined && age.value !== ''));
-    if (weight && document.activeElement !== weight && (force || !weightDirty)) {
+    const weightUnchangedSinceSubmit = !submittedSnapshot || weight?.value === String(submittedSnapshot.weightKg ?? '');
+    const heightUnchangedSinceSubmit = !submittedSnapshot || height?.value === String(submittedSnapshot.heightCm ?? '');
+    const ageUnchangedSinceSubmit = !submittedSnapshot || age?.value === String(submittedSnapshot.age ?? '');
+    if (weight && document.activeElement !== weight && (force ? weightUnchangedSinceSubmit : !weightDirty)) {
         weight.value = nextWeight;
         accountProfileSnapshot.weightKg = nextWeight;
     } else if (force) accountProfileSnapshot.weightKg = nextWeight;
-    if (height && document.activeElement !== height && (force || !heightDirty)) {
+    if (height && document.activeElement !== height && (force ? heightUnchangedSinceSubmit : !heightDirty)) {
         height.value = nextHeight;
         accountProfileSnapshot.heightCm = nextHeight;
     } else if (force) accountProfileSnapshot.heightCm = nextHeight;
-    if (age && document.activeElement !== age && (force || !ageDirty)) {
+    if (age && document.activeElement !== age && (force ? ageUnchangedSinceSubmit : !ageDirty)) {
         age.value = nextAge;
         accountProfileSnapshot.age = nextAge;
     } else if (force) accountProfileSnapshot.age = nextAge;
     if (typeof statsApplyAccountProfile === 'function') {
         statsApplyAccountProfile(
-            weightDirty && !force ? undefined : record.weightKg,
-            ageDirty && !force ? undefined : record.age,
-            heightDirty && !force ? undefined : record.heightCm
+            (force ? weightUnchangedSinceSubmit : !weightDirty) ? profileRecord.weightKg : undefined,
+            (force ? ageUnchangedSinceSubmit : !ageDirty) ? profileRecord.age : undefined,
+            (force ? heightUnchangedSinceSubmit : !heightDirty) ? profileRecord.heightCm : undefined
         );
     }
 }
@@ -160,6 +204,11 @@ async function cacheRemoteAccountAvatar(record) {
     const uid = Cloud.uid;
     if (!uid || !record) return;
     localStorage.setItem('mtb_pro_avatar_last_uid', uid);
+    // Conserva la imagen elegida localmente hasta que se confirme su subida.
+    if (hasPendingLocalAccountAvatar(uid)) {
+        renderAccountAvatar();
+        return;
+    }
     const remoteName = String(record.avatar || '');
     const remoteKey = `${ACCOUNT_AVATAR_REMOTE_PREFIX}${uid}`;
     if (!remoteName) {
@@ -189,7 +238,12 @@ async function cacheRemoteAccountAvatar(record) {
         clearTimeout(timer);
     }
     if (!blob.type.startsWith('image/')) throw new Error('El servidor devolvió un archivo de avatar no válido.');
-    localStorage.setItem(accountAvatarKey(uid), await accountAvatarDataUrl(blob));
+    const dataUrl = await accountAvatarDataUrl(blob);
+    if (Cloud.uid !== uid || hasPendingLocalAccountAvatar(uid)) {
+        renderAccountAvatar();
+        return;
+    }
+    localStorage.setItem(accountAvatarKey(uid), dataUrl);
     localStorage.setItem(remoteKey, remoteName);
     renderAccountAvatar();
 }
@@ -233,9 +287,27 @@ function initAccountAvatar() {
             if (!uid) throw new Error('Inicia sesión para guardar el avatar.');
             if (dataUrl) localStorage.setItem(accountAvatarKey(uid), dataUrl);
             localStorage.setItem('mtb_pro_avatar_last_uid', uid);
-            localStorage.setItem(accountAvatarPendingKey(uid), JSON.stringify({ avatar: dataUrl, weightKg: weight, heightCm: height, age }));
+            const pendingKey = accountAvatarPendingKey(uid);
+            let previousPending = {};
+            try { previousPending = JSON.parse(localStorage.getItem(pendingKey) || '{}') || {}; }
+            catch (_) {}
+            const hadValue = value => value !== undefined && value !== null && String(value) !== '';
+            const wasPendingClear = field => Array.isArray(previousPending.clearedFields)
+                && previousPending.clearedFields.includes(field);
+            const previousProfileValue = field => accountProfileSnapshot.uid === uid
+                ? accountProfileSnapshot[field]
+                : undefined;
+            const clearedFields = [];
+            if (weight === '' && (hadValue(previousProfileValue('weightKg')) || hadValue(previousPending.weightKg) || wasPendingClear('weightKg'))) clearedFields.push('weightKg');
+            if (height === '' && (hadValue(previousProfileValue('heightCm')) || hadValue(previousPending.heightCm) || wasPendingClear('heightCm'))) clearedFields.push('heightCm');
+            if (age === '' && (hadValue(previousProfileValue('age')) || hadValue(previousPending.age) || wasPendingClear('age'))) clearedFields.push('age');
+            localStorage.setItem(pendingKey, JSON.stringify({ avatar: dataUrl, weightKg: weight, heightCm: height, age, clearedFields }));
             if (typeof statsApplyAccountProfile === 'function') {
-                statsApplyAccountProfile(weight, age, height);
+                statsApplyAccountProfile(
+                    clearedFields.includes('weightKg') ? 0 : weight,
+                    clearedFields.includes('age') ? 0 : age,
+                    clearedFields.includes('heightCm') ? 0 : height
+                );
             }
             renderAccountAvatar();
             input.value = '';

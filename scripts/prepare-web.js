@@ -117,7 +117,8 @@ for (const asset of localAssets) {
 }
 
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-const swHash = crypto.createHash('sha256').update(swSource).digest('hex').slice(0, 12);
+// Every build gets a distinct shell cache, including same-version app updates.
+const swHash = crypto.randomBytes(8).toString('hex');
 for (const marker of ['__APP_VERSION__', '__SW_HASH__']) {
   if (!swSource.includes(marker)) {
     throw new Error(`No se encontró el marcador ${marker} en sw.js`);

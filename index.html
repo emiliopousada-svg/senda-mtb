@@ -14,11 +14,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <!-- Vista satélite con terreno 3D en la tarjeta de última ruta -->
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.css">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" integrity="sha384-gNYNsUmuZqDYiT3gbirWTV5K7rt71RoveS/yXAaU09d4ZUmeDVTD3XoqB6uJAIFR" crossorigin="anonymous">
     <!-- Chart.js (versión fijada) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 
     <link rel="stylesheet" href="app/styles.css">
     <link rel="stylesheet" href="app/dashboard.css">
@@ -52,31 +52,18 @@
                 <span class="ride-status-item" id="ride-battery">🔋 --</span>
             </div>
 
-            <div id="map-route-profile" aria-live="polite">
-                <div class="route-profile-head">
-                    <strong id="map-route-name"></strong>
-                    <span id="map-route-alt"></span>
+            <section class="map-live-banner" aria-label="Resumen de actividad en directo">
+                <div class="map-live-banner-head">
+                    <span class="map-live-indicator" aria-hidden="true"></span>
+                    <strong id="map-live-title">Lista para grabar</strong>
+                    <span class="map-live-gps"><i aria-hidden="true"></i> GPS</span>
                 </div>
-                <svg id="map-route-svg" viewBox="0 0 320 64" preserveAspectRatio="none" role="img" aria-label="Perfil de altitud y posición actual en la ruta">
-                    <path id="map-route-area"></path>
-                    <path id="map-route-line"></path>
-                    <line id="map-route-cursor-line" x1="0" y1="7" x2="0" y2="60" style="display:none"></line>
-                    <circle id="map-route-cursor" cx="0" cy="0" r="5" style="display:none"></circle>
-                </svg>
-            </div>
-
-            <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
-                <div class="live-profile-head">
-                    <span class="live-profile-label">PERFIL EN DIRECTO</span>
-                    <strong id="recording-live-altitude">--<span class="unit"> m</span></strong>
+                <div class="map-live-metrics">
+                    <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">▲</span><strong><span id="m-elevation">0</span><small> m</small></strong><span>Desnivel +</span></div>
+                    <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">◉</span><strong><span id="m-speed">0.0</span><small> km/h</small></strong><span>Velocidad</span></div>
+                    <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">◷</span><strong id="m-moving">00:00</strong><span>En movimiento</span></div>
                 </div>
-                <svg id="recording-live-svg" viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
-                    <path id="recording-live-area"></path>
-                    <path id="recording-live-line"></path>
-                    <circle id="recording-live-cursor" r="4"></circle>
-                </svg>
-                <div id="recording-live-hint">Esperando lecturas de altitud</div>
-            </div>
+            </section>
 
             <div id="map"></div>
             <input id="route-photo-input" type="file" accept="image/*" capture="environment" hidden>
@@ -93,6 +80,9 @@
                     <span id="map-battery-text">--%</span>
                 </div>
             </div>
+            <button id="map-side-controls-toggle" class="map-side-controls-toggle" type="button" aria-expanded="true" aria-label="Ocultar controles laterales">
+                <span aria-hidden="true">›</span>
+            </button>
 
             <div id="big-metric" role="button" aria-label="Volver a la vista normal">
                 <div id="big-label"></div>
@@ -129,56 +119,70 @@
                     </svg>
                 </button>
             </div>
+            <div class="map-legacy-metric-values" aria-hidden="true">
+                <span id="m-avg-speed">0.0</span><span id="m-cadence">--</span><span id="m-power">--</span>
+            </div>
             <div class="map-bottom-panel" id="map-bottom-panel">
-                <div class="metrics-bar">
-                    <div class="m-box" data-metric="speed" role="button">
-                        <div class="m-val" id="m-speed">0.0</div>
-                        <div class="m-lbl">KM/H</div>
+                <div id="map-route-profile" aria-live="polite">
+                    <div class="route-profile-head">
+                        <strong id="map-route-name"></strong>
+                        <span id="map-route-alt"></span>
                     </div>
-                    <div class="m-box" data-metric="dist" role="button">
-                        <div class="m-val" id="m-dist">0.00</div>
+                    <svg id="map-route-svg" viewBox="0 0 320 64" preserveAspectRatio="none" role="img" aria-label="Perfil de altitud y posición actual en la ruta">
+                        <path id="map-route-area"></path>
+                        <path id="map-route-line"></path>
+                        <line id="map-route-cursor-line" x1="0" y1="7" x2="0" y2="60" style="display:none"></line>
+                        <circle id="map-route-cursor" cx="0" cy="0" r="5" style="display:none"></circle>
+                    </svg>
+                </div>
+                <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
+                    <div class="live-profile-head">
+                        <span class="live-profile-label">PERFIL EN DIRECTO</span>
+                        <strong id="recording-live-altitude">--<span class="unit"> m</span></strong>
+                    </div>
+                    <svg id="recording-live-svg" viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
+                        <path id="recording-live-area"></path>
+                        <path id="recording-live-line"></path>
+                        <circle id="recording-live-cursor" r="4"></circle>
+                    </svg>
+                    <div id="recording-live-hint">Esperando lecturas de altitud</div>
+                </div>
+                <div class="map-bottom-panel-content" id="map-bottom-panel-content">
+                <div class="metrics-bar">
+                    <div class="map-live-stat m-box" data-metric="map-distance" role="button">
+                        <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 16.5c2.1-.2 3.6-1 4.7-3l1.5-2.8 2.1 2.2c1.4 1.5 3.5 2.1 6.2 2.4l2 .2c1.3.1 2.5 1 2.5 2.2v1.1H4.2A2.2 2.2 0 0 1 2 16.7z"></path><path d="m8.1 13.5 2.4.3m2 .8 2.3.2"></path></svg></span>
+                        <div class="m-val"><span id="m-dist">0.00</span><small> km</small></div>
                         <div class="m-lbl">DISTANCIA</div>
                     </div>
-                    <div class="m-box" data-metric="elev" role="button">
-                        <div class="m-val" id="m-elevation">0</div>
-                        <div class="m-lbl">Desnivel</div>
+                    <div class="map-live-stat m-box" data-metric="map-total-time" role="button">
+                        <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.8 1.8M9 2h6M12 2v3"></path></svg></span>
+                        <div class="m-val" id="m-time">00:00</div>
+                        <div class="m-lbl">TIEMPO TOTAL</div>
                     </div>
-                    <div class="m-box" data-metric="hr" role="button">
-                        <div class="m-val" id="m-hr" style="color: #ef5350;">--</div>
-                        <div class="m-lbl">BPM</div>
+                    <div class="map-live-stat m-box" data-metric="map-heart-rate" role="button">
+                        <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.8c0 5-8.8 11-8.8 11s-8.8-6-8.8-11A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z"></path></svg></span>
+                        <div class="m-val" style="color: #ef5350;"><span id="m-hr">--</span><small> ppm</small></div>
+                        <div class="m-lbl">PULSACIONES</div>
                     </div>
-                    <div class="m-box" data-metric="cadence" data-default-visible="false" role="button">
-                        <div class="m-val" id="m-cadence">--</div>
-                        <div class="m-lbl">RPM</div>
-                    </div>
-                    <div class="m-box" data-metric="power" data-default-visible="false" role="button">
-                        <div class="m-val" id="m-power">--</div>
-                        <div class="m-lbl">VATIOS</div>
-                    </div>
-                    <div class="m-box" data-metric="avg-speed" data-default-visible="false" role="button">
-                        <div class="m-val" id="m-avg-speed">0.0</div>
-                        <div class="m-lbl">MEDIA KM/H</div>
-                    </div>
-                    <div class="m-box" data-metric="moving" role="button">
-                        <div class="m-val" id="m-moving">00:00</div>
-                        <div class="m-lbl">T. MOVIM.</div>
+                    <div class="map-live-stat m-box" data-metric="map-altitude" role="button">
+                        <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2.5 19 7-12 4.1 6.3 2.4-3.8L22 19z"></path><path d="m7.2 19 2.3-3.9 2.5 3.9"></path></svg></span>
+                        <div class="m-val"><span id="map-panel-altitude">--</span><small> m</small></div>
+                        <div class="m-lbl">ALTITUD</div>
                     </div>
                 </div>
-                <div class="controls-overlay">
-                    <button class="btn-main-action" id="btn-start">
-                        <span id="ico-start">▶️</span> <span id="lbl-start">COMENZAR RUTA</span>
+                <div class="controls-overlay map-recording-actions">
+                    <button class="btn-main-action" id="btn-start" type="button">
+                        <span id="ico-start" aria-hidden="true">▶</span> <span id="lbl-start">Iniciar actividad</span>
                     </button>
-                    <button class="btn-unfollow-map" id="btn-unfollow" type="button" style="display:none;">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M4 19V5l6-2 4 2 6-2v11M4 5l6 2 4-2 6 2M10 7v11m4-13v8M16 17l5 5m0-5-5 5"></path>
-                        </svg>
-                        <span>Dejar de seguir ruta</span>
+                    <button class="map-follow-route-button" id="btn-follow-route" type="button" aria-label="Seguir una ruta">
+                        <span class="map-route-action-icon" id="btn-follow-route-icon" aria-hidden="true">↗</span>
+                        <span id="btn-follow-route-label">Seguir ruta</span>
                     </button>
-                    <button class="btn-icon-only btn-danger-stop" id="btn-stop" title="Finalizar ruta">⏹️</button>
+                    <button class="btn-icon-only btn-danger-stop" id="btn-stop" type="button" title="Finalizar ruta" aria-label="Finalizar ruta" hidden><span aria-hidden="true">⚑</span><span class="map-stop-label">Finalizar</span></button>
+                </div>
                 </div>
             </div>
-            <!-- El tiempo total ya no se muestra en el mapa; recording.js lo sigue escribiendo aquí para el Cockpit. -->
-            <span id="m-time" hidden>00:00</span>
+            <button id="map-panel-toggle" class="map-panel-toggle" type="button" aria-expanded="true" aria-label="Plegar panel de actividad"><span aria-hidden="true">&#8964;</span></button>
         </div>
 
         <!-- PÁGINA 2: ESTADÍSTICAS -->
@@ -1502,9 +1506,9 @@
     </div>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js"></script>
-    <script src="https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js" integrity="sha384-zQ2gLZyzlwLsRBTdbKJz8LFb7cHALlWKi6ShsPsbldaC8kUTk6ntQhzGq2JWxXhX" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js" integrity="sha384-1qC0PnXk2fgMDybOtZF1ui4LM5Sxm7o0TbEkwfxTTVdlZvuNENNGCKUub7d644HP" crossorigin="anonymous"></script>
     <!-- Ordered classic scripts share app state and keep inline HTML handlers working. -->
     <script src="app/config.js"></script>
     <script src="app/statistics-engine.js"></script>

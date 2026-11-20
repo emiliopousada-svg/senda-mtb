@@ -2,7 +2,6 @@
 // Comprueba metadatos cada cinco minutos e importa solo archivos nuevos o modificados.
 // Los archivos permanecen en su sitio: sourcePath permite actualizar una ruta al modificar el fichero.
 (function () {
-var importedFileSignatures = Object.create(null);
 function run() {
     function decodeXml(value) {
         return String(value || "").replace(/&(?:amp|lt|gt|quot|apos);/g, function (entity) {
@@ -162,7 +161,7 @@ function run() {
         }
         return { lines: lines, json: json };
     }
-    function importFile(owner, relativePath, root, ownerNickname, maxPoints, sourcePrefix) {
+    function importFile(owner, relativePath, root, ownerNickname, maxPoints, sourcePrefix, signature) {
         const lower = relativePath.toLowerCase();
         const text = readUtf8($filepath.join(root, relativePath));
         const fallback = relativePath.split("/").pop().replace(/\.[^.]+$/, "");
@@ -211,6 +210,12 @@ function run() {
         }
         record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: fittedTrack.json, poisJson: "[]", published: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
         $app.save(record);
+        let state;
+        try { state = $app.findFirstRecordByData("community_route_import_state", "sourcePath", sourcePath); }
+        catch (_) { state = new Record($app.findCollectionByNameOrId("community_route_import_state")); }
+        state.set("sourcePath", sourcePath);
+        state.set("signature", signature);
+        $app.save(state);
     }
     function scanAndImport() {
         const root = $os.getenv("COMMUNITY_IMPORT_DIR") || $filepath.join($os.getwd(), "pb_public", "rutas", "galicia");
@@ -236,7 +241,7 @@ function run() {
                 if (entry.isDir()) { scan(fullPath, relativePath); continue; }
                 if (!/\.(gpx|kml|geojson)$/i.test(name)) continue;
                 try {
-                    const info = entry.info();
+                    const info = $os.stat(fullPath);
                     const signature = String(info.size()) + ":" + String(info.modTime().unixNano());
                     files.push({ relativePath: relativePath, signature: signature });
                 } catch (error) {
@@ -246,12 +251,13 @@ function run() {
             }
         }
         scan(root, "");
-        if (!scanComplete) {
-            console.log("[rutas Galicia] escaneo incompleto; se reintentará en la próxima comprobación");
-            return;
-        }
+        if (!scanComplete) console.log("[rutas Galicia] Escaneo incompleto; se procesaran los archivos legibles y se reintentara el resto en la proxima comprobacion.");
         const changedFiles = files.filter(function (file) {
-            return importedFileSignatures[file.relativePath] !== file.signature;
+            const sourcePath = sourcePrefix + file.relativePath;
+            try {
+                const state = $app.findFirstRecordByData("community_route_import_state", "sourcePath", sourcePath);
+                return state.getString("signature") !== file.signature;
+            } catch (_) { return true; }
         });
         if (!changedFiles.length) {
             console.log("[rutas Galicia] sin cambios; no hace falta importar rutas");
@@ -265,8 +271,7 @@ function run() {
         for (let i = 0; i < changedFiles.length; i++) {
             const file = changedFiles[i];
             try {
-                importFile(owner, file.relativePath, root, ownerNickname, maxPoints, sourcePrefix);
-                importedFileSignatures[file.relativePath] = file.signature;
+                importFile(owner, file.relativePath, root, ownerNickname, maxPoints, sourcePrefix, file.signature);
                 routesImported++;
                 console.log("[rutas Galicia] importada " + file.relativePath);
             } catch (error) {

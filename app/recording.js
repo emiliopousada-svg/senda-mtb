@@ -376,11 +376,21 @@ function stopTimers() {
 
 function setBtnState(s) {
     btnStart.classList.toggle('recording', s !== 'idle');
-    lblStart.textContent = { idle: 'COMENZAR RUTA', recording: 'PAUSAR', paused: 'REANUDAR', 'auto-paused': 'PAUSA AUTOMÁTICA' }[s];
-    icoStart.textContent = s === 'recording' ? '⏸️' : '▶️';
-    btnStop.style.display = s === 'idle' ? 'none' : 'flex';
+    lblStart.textContent = { idle: 'Iniciar actividad', recording: 'Pausar actividad', paused: 'Reanudar actividad', 'auto-paused': 'Pausa automática' }[s];
+    icoStart.textContent = s === 'recording' ? 'Ⅱ' : '▶';
+    $('map-live-title').textContent = ({ idle: 'Lista para grabar', recording: 'Grabación en directo', paused: 'Actividad en pausa', 'auto-paused': 'Pausa automática' })[s];
+    $('page-map').dataset.recordingState = s;
+    if (typeof mapPanelSyncActions === 'function') mapPanelSyncActions();
+    if (s === 'idle') {
+        mapPanelSetExpanded(true);
+        if (typeof mapSideControlsSetVisible === 'function') mapSideControlsSetVisible(true);
+    } else if (s === 'recording') {
+        if (typeof mapPanelScheduleAutoCollapse === 'function') mapPanelScheduleAutoCollapse();
+        if (typeof mapSideControlsScheduleAutoCollapse === 'function') mapSideControlsScheduleAutoCollapse();
+    }
     $('btn-route-photo').hidden = s === 'idle';
-    $('recording-live-profile').hidden = s === 'idle';
+    $('recording-live-profile').hidden = s === 'idle' || Boolean(followedRoute);
+    if (typeof mapPanelSyncRouteProfile === 'function') mapPanelSyncRouteProfile();
     if (s !== 'idle') recordingUpdateLiveProfile();
 }
 
@@ -393,6 +403,8 @@ function recordingUpdateLiveProfile() {
     const samples = points.slice(-240).filter(point => Array.isArray(point) && Number.isFinite(point[2]));
     const latest = samples.at(-1);
     $('recording-live-altitude').textContent = latest ? `${Math.round(latest[2])} m` : '-- m';
+    const mapAltitude = $('map-panel-altitude');
+    if (mapAltitude) mapAltitude.textContent = latest ? Math.round(latest[2]).toString() : '--';
     if (samples.length < 2) {
         svgLine.setAttribute('d', '');
         svgArea.setAttribute('d', '');

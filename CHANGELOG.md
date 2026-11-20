@@ -5,6 +5,20 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.28] - 2026-11-20
+
+### Añadido
+* **Mapa:** banner de actividad en directo y panel inferior rediseñado con métricas, perfil de altitud y controles de grabación.
+* **Seguimiento:** las rutas guardadas y comunitarias vuelven al mapa al seleccionarlas; las fotos de POI se cargan en segundo plano.
+* **Rutas comunitarias:** el importador conserva las firmas de los ficheros en PocketBase para detectar cambios entre ejecuciones.
+
+### Cambiado
+* **Mapa:** al grabar sin seguir una ruta, el perfil de altitud aparece dentro del panel inferior y permanece visible al plegarlo. El panel y los controles laterales vuelven a plegarse 20 segundos después de desplegarlos durante una actividad.
+* **Sincronización de cuenta:** las subidas de avatar y las actualizaciones de datos físicos conservan los cambios locales recientes y permiten borrar esos datos del perfil.
+* **Recursos web:** se añaden verificaciones de integridad a dependencias externas y se ajusta la caché del service worker.
+
+---
+
 ## [0.2.24] - 2026-11-19
 
 ### Añadido

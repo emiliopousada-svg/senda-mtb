@@ -3,14 +3,10 @@
 const RECORDING_PANEL_KEY = 'mtb_pro_recording_panel_v1';
 const RECORDING_PANEL_VISIBLE_KEY = 'mtb_pro_recording_panel_visible_v1';
 const RECORDING_PANEL_METRICS = [
-    { id: 'speed', label: 'Velocidad' },
-    { id: 'dist', label: 'Distancia' },
-    { id: 'elev', label: 'Desnivel positivo' },
-    { id: 'hr', label: 'Frecuencia cardíaca' },
-    { id: 'cadence', label: 'Cadencia' },
-    { id: 'power', label: 'Potencia' },
-    { id: 'avg-speed', label: 'Velocidad media' },
-    { id: 'moving', label: 'Tiempo en movimiento' }
+    { id: 'map-distance', label: 'Distancia' },
+    { id: 'map-total-time', label: 'Tiempo total' },
+    { id: 'map-heart-rate', label: 'Pulso' },
+    { id: 'map-altitude', label: 'Altitud' }
 ];
 let recordingPanelPreferences = RECORDING_PANEL_METRICS.map(metric => metric.id);
 

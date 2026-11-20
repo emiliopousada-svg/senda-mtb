@@ -182,12 +182,19 @@ function statsApplyAccountProfile(weightKg, age, heightCm) {
     const validWeight = Number.isFinite(weight) && weight >= 25 && weight <= 250;
     const validAge = Number.isFinite(years) && years >= 10 && years <= 100;
     const validHeight = Number.isInteger(height) && height >= 120 && height <= 230;
-    if ((!validWeight || statsWeightKg === weight)
-        && (!validAge || statsAge === years)
-        && (!validHeight || statsHeightCm === height)) return;
-    if (validWeight) statsWeightKg = weight;
-    if (validAge) statsAge = years;
-    if (validHeight) statsHeightCm = height;
+    const clearWeight = weightKg === 0;
+    const clearAge = age === 0;
+    const clearHeight = heightCm === 0;
+    const applyWeight = validWeight || clearWeight;
+    const applyAge = validAge || clearAge;
+    const applyHeight = validHeight || clearHeight;
+    const ageChanged = applyAge && statsAge !== (clearAge ? null : years);
+    if ((!applyWeight || statsWeightKg === (clearWeight ? null : weight))
+        && (!applyAge || statsAge === (clearAge ? null : years))
+        && (!applyHeight || statsHeightCm === (clearHeight ? null : height))) return;
+    if (applyWeight) statsWeightKg = clearWeight ? null : weight;
+    if (applyAge) statsAge = clearAge ? null : years;
+    if (applyHeight) statsHeightCm = clearHeight ? null : height;
     $('stats-weight').textContent = statsWeightKg === null ? 'Sin configurar' : `${statsWeightKg} kg`;
     $('stats-age').textContent = statsAge === null ? 'Sin configurar' : `${statsAge} años`;
     try {
@@ -198,7 +205,7 @@ function statsApplyAccountProfile(weightKg, age, heightCm) {
         if (statsHeightCm === null) localStorage.removeItem('mtb_pro_stats_height_cm');
         else localStorage.setItem('mtb_pro_stats_height_cm', String(statsHeightCm));
     } catch (error) { console.warn('No se pudieron guardar los datos físicos del perfil:', error); }
-    statsSavePreferences(validAge, false);
+    statsSavePreferences(ageChanged, false);
 }
 
 function statsRenderPerformance(summary, analyses) {

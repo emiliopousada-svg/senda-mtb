@@ -218,6 +218,7 @@ function renderMapRouteProfile(r) {
         $('map-route-cursor-line').style.display = 'none';
         $('map-route-cursor').style.display = 'none';
         panel.classList.add('show');
+        if (typeof mapPanelSyncRouteProfile === 'function') mapPanelSyncRouteProfile();
         return;
     }
 
@@ -235,6 +236,7 @@ function renderMapRouteProfile(r) {
     const gain = Number(r.elevationGain) || 0;
     $('map-route-alt').textContent = `${Math.round(min)}–${Math.round(max)} m · +${Math.round(gain)} m`;
     panel.classList.add('show');
+    if (typeof mapPanelSyncRouteProfile === 'function') mapPanelSyncRouteProfile();
 }
 
 function updateMapRouteProfilePosition(match) {
@@ -261,6 +263,9 @@ function updateMapRouteProfilePosition(match) {
 }
 
 function followRoute(r) {
+    // Volver al mapa antes de preparar capas/perfil: cualquier detalle de la ruta
+    // debe cargarse sin dejar al usuario atrapado en Rutas o Comunidad.
+    goToPage(0);
     unlockOffRouteSound();
     clearLastRideMapPreview();
     const points = r.points.map(p => [p[0], p[1]]);
@@ -278,6 +283,7 @@ function followRoute(r) {
         gainCum: gainCumulative(r.points),
         progressIndex: 0
     };
+    $('recording-live-profile').hidden = !isRecording || Boolean(followedRoute);
     showRoutePoisOnMap([...(isRecording ? recordingPois : []), ...followedRoute.pois]);
     renderMapRouteProfile(r);
     if (lastLat !== null && lastLon !== null) {
@@ -303,10 +309,11 @@ function followRoute(r) {
         following = true;
         updateCenterBtn();
     }
-    $('btn-unfollow').style.display = 'flex';
-    goToPage(0);
+    if (typeof mapPanelSyncActions === 'function') mapPanelSyncActions();
+    if (typeof mapPanelSetExpanded === 'function') mapPanelSetExpanded(true);
+    if (typeof mapSideControlsScheduleAutoCollapse === 'function') mapSideControlsScheduleAutoCollapse();
     refreshGpsMode();
-    toast(`Siguiendo «${r.name}». Te aviso si te desvías.`, 4500);
+    toast(`Ruta preparada: «${r.name}». Inicia la actividad cuando quieras.`, 4500);
 }
 
 function unfollowRoute() {
@@ -318,10 +325,10 @@ function unfollowRoute() {
     offRouteState = false;
     if (savedRouteLayer) savedRouteLayer.setLatLngs([]);
     $('map-route-profile').classList.remove('show');
-    $('btn-unfollow').style.display = 'none';
+    $('recording-live-profile').hidden = !isRecording;
+    if (typeof mapPanelSyncRouteProfile === 'function') mapPanelSyncRouteProfile();
+    if (typeof mapPanelSyncActions === 'function') mapPanelSyncActions();
     if (!isRecording) $('m-elevation').textContent = '0';
     refreshGpsMode();
 }
-$('btn-unfollow').addEventListener('click', () => { unfollowRoute(); toast('Has dejado de seguir la ruta.'); });
-
 // ============================================================

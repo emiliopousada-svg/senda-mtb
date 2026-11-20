@@ -668,9 +668,13 @@ $('saved-routes-list').addEventListener('click', async e => {
     if (btn.dataset.act === 'view') {
         await openSavedRouteDetail(r);
     } else if (btn.dataset.act === 'follow') {
-        try { await DB.loadRoutePhotos(r); }
-        catch (error) { console.warn('No se pudieron cargar las fotos de la ruta:', error); }
         followRoute(r);
+        // Las fotos de los POI son accesorias; no deben retrasar la vuelta al mapa.
+        DB.loadRoutePhotos(r).then(() => {
+            if (!followedRoute || followedRoute.id !== r.id) return;
+            followedRoute.pois = Array.isArray(r.pois) ? r.pois : [];
+            showRoutePoisOnMap([...(isRecording ? recordingPois : []), ...followedRoute.pois]);
+        }).catch(error => console.warn('No se pudieron cargar las fotos de la ruta:', error));
     } else if (btn.dataset.act === 'edit-details') {
         await editRouteDetails(r);
     } else if (btn.dataset.act === 'share') {

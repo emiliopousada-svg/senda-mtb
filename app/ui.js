@@ -13,9 +13,88 @@ const METRICS = {
     cadence: { src: 'm-cadence', label: 'Cadencia', unit: 'rpm', color: '#48c7a0' },
     power: { src: 'm-power', label: 'Potencia', unit: 'W', color: '#e8c34a' },
     'avg-speed': { src: 'm-avg-speed', label: 'Velocidad media', unit: 'km/h', color: '#55baff' },
-    moving: { src: 'm-moving',   label: 'Tiempo en movimiento', unit: '' }
+    moving: { src: 'm-moving',   label: 'Tiempo en movimiento', unit: '' },
+    'map-total-time': { src: 'm-time', label: 'Tiempo total', unit: '' },
+    'map-altitude': { src: 'map-panel-altitude', label: 'Altitud', unit: 'm' },
+    'map-distance': { src: 'm-dist', label: 'Distancia', unit: 'km' },
+    'map-heart-rate': { src: 'm-hr', label: 'Pulso', unit: 'ppm', color: '#ef5350' }
 };
 let expandedMetric = null;
+let mapPanelCollapseTimer = null;
+let mapSideControlsCollapseTimer = null;
+const MAP_ACTIVE_OVERLAY_TIMEOUT = 20_000;
+
+function mapPanelSetExpanded(expanded) {
+    const page = $('page-map');
+    const panel = $('map-bottom-panel');
+    const content = $('map-bottom-panel-content');
+    const toggle = $('map-panel-toggle');
+    if (!page || !panel || !content || !toggle) return;
+    if (mapPanelCollapseTimer) clearTimeout(mapPanelCollapseTimer);
+    mapPanelCollapseTimer = null;
+    page.classList.toggle('panel-collapsed', !expanded);
+    content.inert = !expanded;
+    content.setAttribute('aria-hidden', String(!expanded));
+    mapPanelSyncRouteProfile();
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-label', expanded ? 'Plegar panel de actividad' : 'Desplegar panel de actividad');
+    toggle.innerHTML = `<span aria-hidden="true">${expanded ? '&#8964;' : '&#8963;'}</span>`;
+    if (expanded && (isRecording || followedRoute)) mapPanelScheduleAutoCollapse(MAP_ACTIVE_OVERLAY_TIMEOUT);
+}
+
+function mapPanelSyncRouteProfile() {
+    const page = $('page-map');
+    const profile = $('map-route-profile');
+    const liveProfile = $('recording-live-profile');
+    if (!page || !profile) return;
+    page.classList.toggle('panel-profile-visible', profile.classList.contains('show') || Boolean(liveProfile && !liveProfile.hidden));
+}
+
+function mapPanelScheduleAutoCollapse(delayMs = 1800) {
+    if (mapPanelCollapseTimer) clearTimeout(mapPanelCollapseTimer);
+    mapPanelCollapseTimer = setTimeout(() => mapPanelSetExpanded(false), delayMs);
+}
+
+function mapSideControlsSetVisible(visible) {
+    const page = $('page-map');
+    if (!page) return;
+    const sideControls = page.querySelector('.side-controls');
+    const zoomControls = page.querySelector('.map-zoom-controls');
+    const toggle = $('map-side-controls-toggle');
+    if (!sideControls || !zoomControls || !toggle) return;
+    if (mapSideControlsCollapseTimer) clearTimeout(mapSideControlsCollapseTimer);
+    mapSideControlsCollapseTimer = null;
+    page.classList.toggle('side-controls-collapsed', !visible);
+    [sideControls, zoomControls].forEach(group => {
+        group.inert = !visible;
+        group.setAttribute('aria-hidden', String(!visible));
+    });
+    toggle.setAttribute('aria-expanded', String(visible));
+    toggle.setAttribute('aria-label', visible ? 'Ocultar controles laterales' : 'Mostrar controles laterales');
+    toggle.innerHTML = `<span aria-hidden="true">${visible ? '&rsaquo;' : '&lsaquo;'}</span>`;
+    if (visible && (isRecording || followedRoute)) mapSideControlsScheduleAutoCollapse(MAP_ACTIVE_OVERLAY_TIMEOUT);
+}
+
+function mapSideControlsScheduleAutoCollapse(delayMs = 1800) {
+    if (mapSideControlsCollapseTimer) clearTimeout(mapSideControlsCollapseTimer);
+    mapSideControlsCollapseTimer = setTimeout(() => mapSideControlsSetVisible(false), delayMs);
+}
+
+function mapPanelSyncActions() {
+    const follow = $('btn-follow-route');
+    const stop = $('btn-stop');
+    const actions = document.querySelector('.map-recording-actions');
+    const canceling = Boolean(followedRoute);
+    if (follow) {
+        follow.hidden = false;
+        follow.classList.toggle('is-cancel', canceling);
+        follow.setAttribute('aria-label', canceling ? 'Cancelar seguimiento de ruta' : 'Seguir una ruta');
+        $('btn-follow-route-label').textContent = canceling ? 'Cancelar seguimiento' : 'Seguir ruta';
+        $('btn-follow-route-icon').textContent = canceling ? '×' : '↗';
+    }
+    if (stop) stop.hidden = !isRecording;
+    if (actions) actions.classList.toggle('is-recording', Boolean(isRecording));
+}
 
 function updateGauge(v) {
     const LEN = 282.74;
@@ -62,6 +141,23 @@ function initMetricPanel() {
         else expandMetric(key);
     });
     $('big-metric').addEventListener('click', collapseMetric);
+    $('map-panel-toggle').addEventListener('click', () => {
+        mapPanelSetExpanded($('page-map').classList.contains('panel-collapsed'));
+    });
+    $('map-side-controls-toggle').addEventListener('click', () => {
+        mapSideControlsSetVisible($('page-map').classList.contains('side-controls-collapsed'));
+    });
+    $('btn-follow-route').addEventListener('click', () => {
+        if (followedRoute) {
+            unfollowRoute();
+            toast('Has dejado de seguir la ruta.');
+            return;
+        }
+        goToPage(3);
+        toast('Elige la ruta que quieres seguir.');
+    });
+    mapPanelSyncActions();
+    mapSideControlsSetVisible(true);
 
     // El panel inferior (métricas + botones) cambia de alto según las métricas y los botones visibles:
     // se publica como --map-panel-h para que la atribución del mapa y los controles no queden debajo.
@@ -78,7 +174,7 @@ function initMetricPanel() {
             // Alto de todo lo apilado abajo (panel + perfiles visibles), para colocar la atribución encima.
             const pageBottom = page.getBoundingClientRect().bottom;
             const stackTop = [panel, routeProfile, liveProfile]
-                .filter(el => el && el.offsetParent !== null)
+                .filter(el => el && el.offsetParent !== null && !(el === panel && page.classList.contains('panel-collapsed')))
                 .reduce((top, el) => Math.min(top, el.getBoundingClientRect().top), pageBottom);
             page.style.setProperty('--map-stack-h', `${Math.ceil(pageBottom - stackTop)}px`);
         });

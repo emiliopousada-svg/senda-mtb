@@ -67,12 +67,8 @@ const SHELL_URLS = [
   'lib/leaflet/images/marker-icon-2x.png',
   'lib/leaflet/images/marker-shadow.png',
   'lib/chart.umd.js',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.css',
-  'https://unpkg.com/maplibre-gl@6.19.0/dist/maplibre-gl.js',
-  'https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js'
+  'https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css',
+  'https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js'
 ];
 
 const APP_SCOPE = new URL(self.registration.scope);
@@ -84,16 +80,16 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(SHELL)
       .then(cache => Promise.all(SHELL_URLS.map(async url => {
-        const localAsset = !/^https?:\/\//i.test(url);
         try {
           const response = await fetch(url);
           if (!isCacheableResponse(response)) {
-            if (localAsset) throw new Error(`No se pudo almacenar el recurso esencial ${url}`);
-            return;
+            throw new Error(`No se pudo almacenar el recurso esencial ${url}`);
           }
           await cache.put(url, response);
         } catch (error) {
-          if (localAsset) throw error;
+          // CDN assets are required by the web shell. Keep the previous worker/cache
+          // active if any required dependency cannot be downloaded for this update.
+          throw error;
         }
       })))
       .catch(async error => {
