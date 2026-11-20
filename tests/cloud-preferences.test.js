@@ -69,7 +69,7 @@ test('cloud preferences reject invalid values and fill safe defaults', () => {
     assert.equal(preferences.weeklyGoalKm, 100);
     assert.equal(preferences.maxHeartRate, null);
     assert.equal(preferences.ftpWatts, null);
-    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist', 'elev', 'hr', 'moving']);
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['map-distance', 'map-total-time', 'map-heart-rate', 'map-altitude']);
     assert.equal(Object.hasOwn(preferences, 'dashboardCardOrder'), false);
     assert.equal(Object.hasOwn(preferences, 'adminToken'), false);
 });
@@ -82,8 +82,8 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
         weeklyGoalKm: 50,
         maxHeartRate: 190,
         ftpWatts: 250,
-        recordingMetricOrder: ['power', 'power', 'unknown'],
-        recordingVisibleMetrics: ['power', 'unknown', 'power']
+        recordingMetricOrder: ['map-altitude', 'map-altitude', 'unknown'],
+        recordingVisibleMetrics: ['map-altitude', 'unknown', 'map-altitude']
     });
 
     assert.equal(preferences.routeSound, false);
@@ -92,19 +92,19 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
     assert.equal(preferences.weeklyGoalKm, 50);
     assert.equal(preferences.maxHeartRate, 190);
     assert.equal(preferences.ftpWatts, 250);
-    assert.equal(preferences.recordingMetricOrder[0], 'power');
-    assert.equal(preferences.recordingMetricOrder.length, 8);
-    assert.deepEqual(preferences.recordingVisibleMetrics, ['power']);
+    assert.equal(preferences.recordingMetricOrder[0], 'map-altitude');
+    assert.equal(preferences.recordingMetricOrder.length, 4);
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['map-altitude']);
 });
 
-test('cloud preferences drop the retired total-time map metric', () => {
+test('cloud preferences retain only supported map metrics', () => {
     const preferences = normalizePreferences({
-        recordingMetricOrder: ['time', 'speed', 'dist'],
-        recordingVisibleMetrics: ['speed', 'time', 'dist']
+        recordingMetricOrder: ['map-total-time', 'speed', 'map-distance'],
+        recordingVisibleMetrics: ['map-total-time', 'speed', 'map-distance']
     });
-    assert.equal(preferences.recordingMetricOrder.includes('time'), false);
-    assert.equal(preferences.recordingMetricOrder[0], 'speed');
-    assert.deepEqual(preferences.recordingVisibleMetrics, ['speed', 'dist']);
+    assert.deepEqual(preferences.recordingMetricOrder, ['map-total-time', 'map-distance', 'map-heart-rate', 'map-altitude']);
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['map-total-time', 'map-distance']);
+    assert.equal(preferences.recordingMetricOrder.includes('speed'), false);
 });
 
 test('signed-in sync applies the owner preferences returned by PocketBase', async () => {

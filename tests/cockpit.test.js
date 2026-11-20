@@ -191,15 +191,13 @@ test('cockpit uses compact layout when the phone is in landscape', () => {
     assert.match(css, /\.cockpit-visuals\s*\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
-test('map landscape profiles stay compact and attribution stays above the bottom stack', () => {
+test('map elevation profiles stay inside the bottom panel in landscape', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
     assert.match(css, /@media \(orientation: landscape\) and \(max-width: 1280px\)/);
-    assert.match(css, /#page-map #map-route-profile\s*\{[\s\S]*?width: min\(58vw, 520px\)/);
-    assert.match(css, /#page-map #map-route-profile\s*\{[\s\S]*?max-height: 58px/);
-    assert.match(css, /#page-map #map-route-svg\s*\{[\s\S]*?height: 24px/);
-    assert.match(css, /#page-map #recording-live-profile\s*\{[\s\S]*?top: calc\(env\(safe-area-inset-top, 0px\) \+ 4px\)/);
-    assert.match(css, /#page-map #recording-live-profile\s*\{[\s\S]*?width: auto/);
-    assert.match(css, /#page-map #recording-live-profile svg\s*\{[\s\S]*?height: 14px/);
+    assert.match(css, /#page-map #map-bottom-panel #map-route-profile\s*\{[\s\S]*?position: relative/);
+    assert.match(css, /#page-map #map-bottom-panel #recording-live-profile\s*\{[\s\S]*?position:relative/);
+    assert.match(css, /#page-map #map-bottom-panel #recording-live-profile svg\s*\{[\s\S]*?height:clamp\(28px,8vw,42px\)/);
+    assert.doesNotMatch(css, /#page-map #recording-live-profile\s*\{\s*top:/);
     assert.match(css, /#page-map \.leaflet-bottom\.leaflet-right\s*\{[\s\S]*?left: 50%/);
     assert.match(css, /#page-map \.leaflet-control-attribution\s*\{[\s\S]*?font-size: 8px/);
 });

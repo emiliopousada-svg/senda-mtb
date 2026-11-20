@@ -1159,7 +1159,7 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 }
 .map-bottom-panel .controls-overlay .btn-main-action { flex: 1 1 160px; max-width: none; }
 .map-bottom-panel .controls-overlay .btn-unfollow-map { flex: 1 1 96px; padding: 5px 8px; font-size: .68rem; box-shadow: none; }
-/* En vertical, mientras se sigue una ruta, Pausar y Dejar de seguir se reparten el ancho; el texto basta sin icono. */
+/* En vertical, mientras se sigue una ruta, Pausar y Cancelar seguimiento se reparten el ancho. */
 @media (orientation: portrait) {
     .map-bottom-panel .controls-overlay .btn-main-action { flex-basis: 96px; }
     .map-bottom-panel .btn-unfollow-map svg { display: none; }
@@ -1198,29 +1198,8 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 #page-map #map-bottom-panel #recording-live-profile #recording-live-hint { font-size:.52rem; line-height:1.2; }
 /* La atribución del mapa (licencia) queda siempre visible encima del panel. */
 #page-map .leaflet-bottom { bottom: calc(var(--map-stack-h, 150px) + 4px); }
-/* En vertical, el perfil en directo queda arriba, entre las columnas de controles. */
+/* El perfil en directo se muestra dentro del panel inferior junto al perfil de la ruta. */
 @media (orientation: portrait) {
-    #page-map #recording-live-profile {
-        top: calc(env(safe-area-inset-top, 0px) + 4px);
-        right: calc(env(safe-area-inset-right, 0px) + 66px);
-        bottom: auto;
-        left: calc(env(safe-area-inset-left, 0px) + 66px);
-        width: auto;
-        max-width: none;
-        padding: 3px 8px 2px;
-        border-radius: 8px;
-        transform: none;
-    }
-    #page-map #recording-live-profile > div { font-size: .45rem; line-height: 1; }
-    #page-map #recording-live-altitude { font-size: .58rem; }
-    #page-map #recording-live-profile svg { height: 12px; margin-top: 1px; }
-    #page-map #recording-live-hint {
-        overflow: hidden;
-        font-size: .42rem;
-        line-height: 1;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
     /* La atribución puede subir hasta la columna de iconos derecha: se separa de ella. */
     #page-map .leaflet-bottom.leaflet-right { right: calc(env(safe-area-inset-right, 0px) + 62px); }
     #page-map .leaflet-control-attribution { max-width: calc(100vw - 132px); font-size: 8px; }
@@ -1257,46 +1236,6 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
     .map-bottom-panel .controls-overlay .btn-unfollow-map { flex: 0 1 132px; }
     #page-map #map-route-profile .route-profile-head { font-size: .58rem; }
     #page-map #map-route-svg { height: 24px; }
-    #page-map #recording-live-profile {
-        top: calc(env(safe-area-inset-top, 0px) + 4px);
-        right: calc(env(safe-area-inset-right, 0px) + 72px);
-        bottom: auto;
-        left: calc(env(safe-area-inset-left, 0px) + 72px);
-        width: auto;
-        max-width: none;
-        padding: 3px 8px 2px;
-        border-radius: 8px;
-        transform: none;
-    }
-    #page-map #recording-live-profile > div { font-size: .48rem; line-height: 1; }
-    #page-map #recording-live-profile svg { height: 14px; margin-top: 1px; }
-    #page-map #recording-live-hint {
-        overflow: hidden;
-        font-size: .45rem;
-        line-height: 1.1;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    #page-map #recording-live-profile {
-        top: calc(env(safe-area-inset-top, 0px) + 4px);
-        right: calc(env(safe-area-inset-right, 0px) + 72px);
-        bottom: auto;
-        left: calc(env(safe-area-inset-left, 0px) + 72px);
-        width: auto;
-        max-width: none;
-        padding: 3px 8px 2px;
-        border-radius: 8px;
-        transform: none;
-    }
-    #page-map #recording-live-profile > div { font-size: .48rem; line-height: 1; }
-    #page-map #recording-live-profile svg { height: 14px; margin-top: 1px; }
-    #page-map #recording-live-hint {
-        overflow: hidden;
-        font-size: .45rem;
-        line-height: 1.1;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
     #page-map .leaflet-bottom.leaflet-right {
         left: 50%;
         right: auto;
