@@ -14,6 +14,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ### Cambiado
 * **Mapa:** al grabar sin seguir una ruta, el perfil de altitud aparece dentro del panel inferior y permanece visible al plegarlo. El panel y los controles laterales vuelven a plegarse 20 segundos después de desplegarlos durante una actividad.
+* **Navegación:** las transiciones entre páginas usan un deslizamiento horizontal de 320 ms con desaceleración suave.
 * **Sincronización de cuenta:** las subidas de avatar y las actualizaciones de datos físicos conservan los cambios locales recientes y permiten borrar esos datos del perfil.
 * **Recursos web:** se añaden verificaciones de integridad a dependencias externas y se ajusta la caché del service worker.
 
