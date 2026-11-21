@@ -277,9 +277,10 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
 routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
     const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries } = require(`${__hooks}/groups_utils.js`);
     try {
-        const body = new DynamicModel({ clientId: 0, distanceKm: 0.1, movingTimeSec: 0.1, maxSpeedKmh: 0.1, elevationGain: 0.1 });
+        const body = new DynamicModel({ clientId: 0, groupId: "", distanceKm: 0.1, movingTimeSec: 0.1, maxSpeedKmh: 0.1, elevationGain: 0.1 });
         e.bindBody(body);
         const clientId = Number(body.clientId);
+        const requestedGroupId = requireSafeValue(body.groupId, "groupId");
         const distanceKm = Number(body.distanceKm);
         const movingTimeSec = Number(body.movingTimeSec);
         const maxSpeedKmh = Number(body.maxSpeedKmh);
@@ -300,7 +301,10 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         const user = $app.findRecordById("users", e.auth.id);
         const groupId = user.getString("groupCode");
         if (!groupId) return e.json(404, { message: "No hay un grupo activo." });
-        const safeGroupId = requireSafeValue(groupId, "groupId");
+        if (requestedGroupId !== groupId) {
+            return e.json(403, { message: "El grupo activo cambió; confirma de nuevo antes de compartir." });
+        }
+        const safeGroupId = requireSafeValue(requestedGroupId, "groupId");
         if (!safeMembership(safeGroupId, user.id).length) {
             return e.json(403, { message: "Ya no tienes autorización para compartir marcas en este grupo." });
         }

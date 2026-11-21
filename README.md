@@ -81,7 +81,7 @@ La compilación falla si el entorno no existe, si `staging` no tiene servidor o 
 
 ## Revisión local con CodeRabbit
 
-El hook de pre-commit ejecuta una revisión nueva de CodeRabbit sobre los cambios locales antes de cada commit. Los hallazgos se muestran, pero no bloquean el commit; sí lo bloquea un error al ejecutar o completar la revisión. Requiere CodeRabbit CLI 0.9.5 o posterior, instalada y autenticada. Actívalo una vez en cada clon:
+El hook de pre-commit ejecuta una revisión nueva de CodeRabbit sobre los cambios locales antes de cada commit. Los hallazgos se muestran, pero no bloquean el commit; sí lo bloquea un error de la CLI, una revisión omitida/fallida o incompleta, o la ausencia del evento final de finalización. Requiere CodeRabbit CLI 0.9.5 o posterior, instalada y autenticada, además de Node.js disponible en el `PATH` del entorno que ejecuta Git. Si haces commits desde una interfaz gráfica, comprueba también allí que `node` esté en el `PATH`. Actívalo una vez en cada clon:
 
 ```powershell
 git config core.hooksPath .githooks

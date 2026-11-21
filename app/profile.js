@@ -93,7 +93,9 @@ async function profileSyncPendingLocation(uid) {
         if (profileCurrentUid() !== uid || localStorage.getItem(pendingKey) !== pending) return null;
         profileStoreAccountLocation(uid, location);
         localStorage.removeItem(pendingKey);
-        if (typeof Cloud.setSession === 'function') Cloud.setSession(Cloud.token, updated);
+        if (typeof Cloud.setSession === 'function') {
+            Cloud.setSession({ ...updated, groupCode: Cloud.groupCode });
+        }
         profileDisplayLocation(location);
         profileSetLocationNote('Localidad sincronizada con tu cuenta; no se publica automáticamente.');
         return updated;

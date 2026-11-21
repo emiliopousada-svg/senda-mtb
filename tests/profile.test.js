@@ -47,7 +47,7 @@ function profileLocationContext({ initialStorage = {}, response = null } = {}) {
             uid: 'user-1',
             token: 'token',
             loggedIn() { return true; },
-            setSession(token, record) { this.token = token; this.record = record; }
+            setSession(record) { this.record = record; }
         },
         document: {
             activeElement: null,
@@ -115,6 +115,7 @@ test('profile syncs a queued locality to the signed-in account', async () => {
     const { context, elements, storage, calls } = profileLocationContext({
         initialStorage: { 'mtb_pro_profile_location_pending_user-1': 'Ponte Caldelas, Galicia' }
     });
+    context.Cloud.groupCode = 'current-group';
     await context.profileSyncPendingLocation('user-1');
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, '/api/collections/users/records/user-1');
@@ -123,6 +124,7 @@ test('profile syncs a queued locality to the signed-in account', async () => {
     assert.equal(storage.has('mtb_pro_profile_location_pending_user-1'), false);
     assert.equal(storage.get('mtb_pro_profile_location'), 'Ponte Caldelas, Galicia');
     assert.equal(elements.get('profile-location').textContent, 'Ponte Caldelas, Galicia');
+    assert.equal(context.Cloud.record.groupCode, 'current-group');
 });
 
 test('profile leaves the former account pending value queued after an account switch', async () => {

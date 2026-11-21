@@ -8,6 +8,7 @@ import android.os.Process;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.webkit.CookieManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -28,6 +29,10 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BatteryInfoPlugin.class);
         registerPlugin(ScreenControlPlugin.class);
         super.onCreate(savedInstanceState);
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            // PocketBase is cross-site from the app's https://localhost WebView origin.
+            CookieManager.getInstance().setAcceptThirdPartyCookies(getBridge().getWebView(), true);
+        }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         showFullScreenSplash();
     }

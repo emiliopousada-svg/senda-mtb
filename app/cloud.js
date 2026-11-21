@@ -32,6 +32,11 @@ function scheduleCloudSyncRetry(uid, server, generation) {
 }
 
 const Cloud = {
+    sessionActive: false,
+    authGeneration: 0,
+    profileGeneration: 0,
+    serverSwitchInFlight: false,
+    logoutInProgress: false,
     get server() {
         const stored = localStorage.getItem('mtb_pro_server');
         return normalizeServer(stored || DEFAULT_CLOUD_SERVER);
@@ -39,20 +44,58 @@ const Cloud = {
     setServer(nextServer) {
         const normalized = normalizeServer(nextServer || DEFAULT_CLOUD_SERVER);
         const current = this.server;
-        localStorage.setItem('mtb_pro_server', normalized);
-        if (this.loggedIn() && current && current !== normalized) {
-            this.clearSession();
+        if (current !== normalized && (this.loggedIn() || this.serverSwitchInFlight)) {
+            throw new Error('Cambia el servidor desde sus ajustes para revocar primero la sesión actual.');
         }
+        localStorage.setItem('mtb_pro_server', normalized);
+        if (current && current !== normalized) this.clearSession();
         return normalized;
     },
-    get token()  { return localStorage.getItem('mtb_pro_token') || ''; },
+    async switchServer(nextServer) {
+        const normalized = normalizeServer(nextServer || DEFAULT_CLOUD_SERVER);
+        const current = this.server;
+        if (current === normalized) return normalized;
+        if (this.serverSwitchInFlight
+            || (typeof accAuthInFlight !== 'undefined' && accAuthInFlight)
+            || (typeof logoutInFlight !== 'undefined' && logoutInFlight)) {
+            throw new Error('Espera a que termine la operación de cuenta antes de cambiar de servidor.');
+        }
+
+        const uid = this.uid;
+        const generation = this.authGeneration;
+        this.serverSwitchInFlight = true;
+        try {
+            await cloudApi('/api/mtb/auth/logout', 'POST', {}, { server: current });
+            if (this.server !== current || this.uid !== uid || this.authGeneration !== generation) {
+                throw new Error('La sesión cambió durante el cambio de servidor. Vuelve a intentarlo.');
+            }
+            if (typeof stopGroup === 'function') {
+                try { await stopGroup(); }
+                catch (error) { console.warn('No se pudo detener el grupo al cambiar de servidor:', error); }
+            }
+            if (this.server !== current || this.uid !== uid || this.authGeneration !== generation) {
+                throw new Error('La sesión cambió durante el cambio de servidor. Vuelve a intentarlo.');
+            }
+            localStorage.setItem('mtb_pro_server', normalized);
+            this.clearSession();
+            return normalized;
+        } finally {
+            this.serverSwitchInFlight = false;
+        }
+    },
     get uid()    { return localStorage.getItem('mtb_pro_uid') || ''; },
     get email()  { return localStorage.getItem('mtb_pro_email') || ''; },
     get nickname() { return localStorage.getItem('mtb_pro_nickname') || ''; },
     get groupCode() { return localStorage.getItem('mtb_pro_group_code') || ''; },
-    loggedIn()   { return !!(this.server && this.token && this.uid); },
-    setSession(token, rec) {
-        localStorage.setItem('mtb_pro_token', token);
+    invalidateProfileReads() {
+        this.profileGeneration++;
+    },
+    loggedIn()   { return !!(this.server && this.sessionActive && this.uid); },
+    setSession(rec) {
+        if (!this.sessionActive || this.uid !== rec.id) this.authGeneration++;
+        if (this.groupCode !== (rec.groupCode || '')) this.profileGeneration++;
+        this.sessionActive = true;
+        localStorage.removeItem('mtb_pro_token');
         localStorage.setItem('mtb_pro_uid', rec.id);
         localStorage.setItem('mtb_pro_avatar_last_uid', rec.id);
         localStorage.setItem('mtb_pro_email', rec.email || '');
@@ -62,7 +105,52 @@ const Cloud = {
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
         if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
     },
+    async refreshSession() {
+        const server = this.server;
+        const uid = this.uid;
+        const generation = this.authGeneration;
+        const profileGeneration = this.profileGeneration;
+        if (!this.loggedIn()) return null;
+
+        let result;
+        try {
+            result = await cloudApi('/api/mtb/auth/session');
+        } catch (error) {
+            if (server !== this.server || uid !== this.uid || generation !== this.authGeneration
+                || profileGeneration !== this.profileGeneration || !this.loggedIn()) return null;
+            throw error;
+        }
+        if (!result || !result.record || !result.record.id) {
+            throw new Error('El servidor no devolvió una sesión válida.');
+        }
+        if (server !== this.server || uid !== this.uid || generation !== this.authGeneration
+            || profileGeneration !== this.profileGeneration || !this.loggedIn()) return null;
+        if (result.record.id !== uid) {
+            this.clearSession();
+            return null;
+        }
+        this.setSession(result.record);
+        return result.record;
+    },
+    async restoreSession() {
+        const generation = this.authGeneration;
+        try {
+            const result = await cloudApi('/api/mtb/auth/session');
+            if (!result || !result.record || !result.record.id) {
+                throw new Error('El servidor no devolvió una sesión válida.');
+            }
+            if (generation !== this.authGeneration) return null;
+            this.setSession(result.record);
+            return result.record;
+        } catch (error) {
+            if (generation !== this.authGeneration) return null;
+            if (error.status === 401) this.clearSession();
+            throw error;
+        }
+    },
     clearSession() {
+        this.authGeneration++;
+        this.sessionActive = false;
         cancelCloudSyncRetry();
         if (typeof cancelCloudPreferencesSync === 'function') cancelCloudPreferencesSync();
         ['mtb_pro_token', 'mtb_pro_uid', 'mtb_pro_email', 'mtb_pro_nickname', 'mtb_pro_group_code'].forEach(k => localStorage.removeItem(k));
@@ -71,18 +159,16 @@ const Cloud = {
         if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
     }
 };
+localStorage.removeItem('mtb_pro_token');
 
-// Fija la instancia propia de MTBPro y descarta cualquier sesión anterior al cambiar de servidor.
 let cloudServerWasResetOnLoad = false;
-if (DEFAULT_CLOUD_SERVER) {
-    try {
-        if (Cloud.server !== normalizeServer(DEFAULT_CLOUD_SERVER)) Cloud.setServer(DEFAULT_CLOUD_SERVER);
-    } catch (error) {
-        console.warn('La dirección de servidor guardada no es válida:', error);
-        localStorage.setItem('mtb_pro_server', DEFAULT_CLOUD_SERVER);
-        Cloud.clearSession();
-        cloudServerWasResetOnLoad = true;
-    }
+try {
+    void Cloud.server;
+} catch (error) {
+    console.warn('La dirección de servidor guardada no es válida:', error);
+    localStorage.setItem('mtb_pro_server', DEFAULT_CLOUD_SERVER);
+    Cloud.clearSession();
+    cloudServerWasResetOnLoad = true;
 }
 
 const CLOUD_TIMEOUT_MS = 10000;
@@ -90,23 +176,25 @@ const ROUTE_NICKNAME_LIMIT = 32;
 const ROUTE_FULL_AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ROUTE_SYNC_CURSOR_OVERLAP_MS = 5000;
 
-function cloudSyncStorageKey(name) {
-    return `mtb_pro_${name}_${encodeURIComponent(Cloud.server)}_${Cloud.uid}`;
+function cloudSyncStorageKey(name, server = Cloud.server, uid = Cloud.uid) {
+    return `mtb_pro_${name}_${encodeURIComponent(server)}_${uid}`;
 }
 
-async function fetchRemoteRoutes(fullAudit, cursor) {
-    const unsupportedKey = cloudSyncStorageKey('routes_incremental_unsupported');
+async function fetchRemoteRoutes(fullAudit, cursor, api = cloudApi, isCurrent = () => true, server = Cloud.server, uid = Cloud.uid) {
+    const unsupportedKey = cloudSyncStorageKey('routes_incremental_unsupported', server, uid);
     const fetchPages = async (sort, filter = '') => {
         const remote = [];
         for (let page = 1; ; page++) {
-            const result = await cloudApi(`/api/collections/routes/records?page=${page}&perPage=200&sort=${sort}${filter}`);
+            const result = await api(`/api/collections/routes/records?page=${page}&perPage=200&sort=${sort}${filter}`);
+            if (!isCurrent()) return null;
             remote.push(...result.items);
             if (page >= result.totalPages) break;
         }
         return remote;
     };
     if (fullAudit || localStorage.getItem(unsupportedKey) === '1') {
-        return { records: await fetchPages('clientId'), fullAudit: true };
+        const records = await fetchPages('clientId');
+        return isCurrent() ? { records, fullAudit: true } : null;
     }
     let since = '';
     if (cursor) {
@@ -115,12 +203,15 @@ async function fetchRemoteRoutes(fullAudit, cursor) {
     }
     const filter = since ? `&filter=${encodeURIComponent(`updated >= "${since}"`)}` : '';
     try {
-        return { records: await fetchPages('updated,clientId', filter), fullAudit: false };
+        const records = await fetchPages('updated,clientId', filter);
+        return isCurrent() ? { records, fullAudit: false } : null;
     } catch (error) {
+        if (!isCurrent()) return null;
         if (error.status !== 400) throw error;
         // Algunas instalaciones antiguas no tienen el campo updated en routes.
         // Reconciliar todo mantiene la sincronización funcional sin cambiar el esquema del servidor.
         const remote = await fetchPages('clientId');
+        if (!isCurrent()) return null;
         localStorage.setItem(unsupportedKey, '1');
         console.warn('La colección routes no admite sincronización incremental; se usará reconciliación completa.', error);
         return { records: remote, fullAudit: true };
@@ -219,11 +310,14 @@ function isRetryableCloudStatus(status) {
 async function cloudApi(path, method = 'GET', body = null, options = {}) {
     const timeoutMs = typeof options === 'number' ? options : (options?.timeoutMs || CLOUD_TIMEOUT_MS);
     const headers = {};
-    if (Cloud.token) headers.Authorization = Cloud.token;
+    if (typeof options === 'object' && options?.authorization) {
+        headers.Authorization = options.authorization;
+    }
     let payload;
     if (body instanceof FormData) payload = body;
     else if (body) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
-    const url = new URL(Cloud.server + path);
+    const server = typeof options === 'object' && options?.server ? options.server : Cloud.server;
+    const url = new URL(server + path);
     const isLocalHttp = APP_CONFIG.allowLocalHttpServer
         && url.protocol === 'http:'
         && (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]');
@@ -248,6 +342,7 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
             headers,
             body: payload,
             signal: controller.signal,
+            credentials: 'include',
             cache: 'no-store',
             redirect: 'error'
         });
@@ -335,8 +430,17 @@ function renderAccountServer() {
 
 // Evita peticiones duplicadas si se pulsa varias veces mientras se autentica.
 let accAuthInFlight = false;
+let logoutInFlight = false;
 async function accAuthOnce(register) {
     if (accAuthInFlight) return;
+    if (Cloud.serverSwitchInFlight) {
+        toast('Espera a que termine el cambio de servidor.');
+        return;
+    }
+    if (logoutInFlight) {
+        toast('Espera a que termine el cierre de sesión.');
+        return;
+    }
     accAuthInFlight = true;
     const buttons = [$('acc-login'), $('acc-register')];
     buttons.forEach(button => { if (button) button.disabled = true; });
@@ -347,6 +451,13 @@ async function accAuthOnce(register) {
         accAuthInFlight = false;
         buttons.forEach(button => { if (button) button.disabled = false; });
     }
+}
+
+function ensureAuthServer(server, generation) {
+    if (Cloud.server === server && Cloud.authGeneration === generation) return;
+    const error = new Error('El servidor o la sesión cambió durante el inicio de sesión. Vuelve a intentarlo.');
+    error.code = 'CLOUD_AUTH_CONTEXT_CHANGED';
+    throw error;
 }
 
 async function accAuth(register) {
@@ -365,6 +476,7 @@ async function accAuth(register) {
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
     localStorage.setItem('mtb_pro_server', server);
     Cloud.clearSession();
+    const authGeneration = Cloud.authGeneration;
     try {
         if (register) {
             const profile = { email, password: pass, passwordConfirm: pass, nickname };
@@ -372,16 +484,25 @@ async function accAuth(register) {
             if (heightCm) profile.heightCm = Number(heightCm);
             if (age) profile.age = Number(age);
             await cloudApi('/api/collections/users/records', 'POST', profile);
+            ensureAuthServer(server, authGeneration);
         }
-        const r = await cloudApi('/api/collections/users/auth-with-password', 'POST', { identity: email, password: pass });
-        Cloud.setSession(r.token, r.record);
-        renderAccountProfile(r.record);
+        const auth = await cloudApi('/api/collections/users/auth-with-password', 'POST', { identity: email, password: pass });
+        let session;
+        try {
+            ensureAuthServer(server, authGeneration);
+            session = await cloudApi('/api/mtb/auth/session/exchange', 'POST', {}, { authorization: auth.token });
+            ensureAuthServer(server, authGeneration);
+        } finally {
+            auth.token = '';
+        }
+        Cloud.setSession(session.record);
+        renderAccountProfile(session.record);
         if ((weightKg || age || heightCm) && typeof statsApplyAccountProfile === 'function') {
-            statsApplyAccountProfile(r.record.weightKg ?? (weightKg ? Number(weightKg) : undefined),
-                r.record.age ?? (age ? Number(age) : undefined),
-                r.record.heightCm ?? (heightCm ? Number(heightCm) : undefined));
+            statsApplyAccountProfile(session.record.weightKg ?? (weightKg ? Number(weightKg) : undefined),
+                session.record.age ?? (age ? Number(age) : undefined),
+                session.record.heightCm ?? (heightCm ? Number(heightCm) : undefined));
         }
-        try { await syncPendingAccountAvatar(r.record); }
+        try { await syncPendingAccountAvatar(session.record); }
         catch (avatarError) { console.warn('No se pudo sincronizar el avatar pendiente:', avatarError); }
         await syncCloudPreferences();
         $('acc-pass').value = '';
@@ -399,9 +520,11 @@ async function accAuth(register) {
         }
     } catch (e) {
         console.warn('Auth:', e);
-        toast(e.status === undefined
-            ? 'No se pudo conectar; comprueba tu conexión.'
-            : (register ? 'No se pudo crear la cuenta: ' : 'No se pudo entrar: ') + e.message, 6000);
+        toast(e.code === 'CLOUD_AUTH_CONTEXT_CHANGED'
+            ? e.message
+            : e.status === undefined
+                ? 'No se pudo conectar; comprueba tu conexión.'
+                : (register ? 'No se pudo crear la cuenta: ' : 'No se pudo entrar: ') + e.message, 6000);
     }
 }
 
@@ -410,25 +533,69 @@ async function saveAccountNickname() {
     if (!nickname) { toast('Escribe un apodo para completar tu cuenta.'); $('acc-account-nickname').focus(); return; }
     const button = $('acc-nickname-save');
     button.disabled = true;
+    const server = Cloud.server;
+    const uid = Cloud.uid;
+    const generation = Cloud.authGeneration;
+    const isCurrent = () => Cloud.loggedIn() && Cloud.server === server
+        && Cloud.uid === uid && Cloud.authGeneration === generation;
     try {
-        const updated = await cloudApi(`/api/collections/users/records/${encodeURIComponent(Cloud.uid)}`, 'PATCH', { nickname });
-        Cloud.setSession(Cloud.token, updated);
+        const updated = await cloudApi(`/api/collections/users/records/${encodeURIComponent(uid)}`, 'PATCH', { nickname });
+        if (!isCurrent() || updated.id !== uid) return;
+        localStorage.setItem('mtb_pro_nickname', String(updated.nickname || nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
         renderAccount();
         toast('Apodo guardado en tu cuenta.');
         syncRoutes();
         syncSharedPois();
     } catch (error) {
+        if (error.status === 401 && isCurrent()) {
+            Cloud.clearSession();
+            renderAccount();
+            toast('La sesión ha caducado. Vuelve a entrar.', 5000);
+            return;
+        }
         console.warn('No se pudo guardar el apodo de la cuenta:', error);
         toast('No se pudo guardar el apodo: ' + error.message, 6000);
     } finally { button.disabled = false; }
 }
 
 async function logoutCloudAccount() {
-    await stopGroup();
-    Cloud.clearSession();
-    renderFriends();
-    renderAccount();
-    toast('Sesión cerrada. Tus rutas siguen en este móvil.');
+    if (logoutInFlight || Cloud.serverSwitchInFlight) return;
+    logoutInFlight = true;
+    Cloud.logoutInProgress = true;
+    const server = Cloud.server;
+    const uid = Cloud.uid;
+    const generation = Cloud.authGeneration;
+    const activeGroupId = localStorage.getItem('mtb_pro_group_joined') || '';
+    const sameAuthContext = () => Cloud.server === server && Cloud.uid === uid
+        && Cloud.authGeneration === generation;
+    try {
+        await stopGroup();
+        if (!sameAuthContext()) return;
+        try {
+            await cloudApi('/api/mtb/auth/logout', 'POST', {});
+        } catch (error) {
+            if (!sameAuthContext()) return;
+            if (error.status !== 401) {
+                console.warn('No se pudo revocar la sesión en el servidor:', error);
+                if (activeGroupId && Cloud.groupCode === activeGroupId) {
+                    localStorage.setItem('mtb_pro_group_joined', activeGroupId);
+                    Cloud.logoutInProgress = false;
+                    await restoreGroup();
+                    if (!sameAuthContext()) return;
+                }
+                toast('No se pudo cerrar la sesión en el servidor. Comprueba la conexión e inténtalo de nuevo.', 6000);
+                return;
+            }
+        }
+        if (!sameAuthContext()) return;
+        Cloud.clearSession();
+        renderFriends();
+        renderAccount();
+        toast('Sesión cerrada. Tus rutas siguen en este móvil.');
+    } finally {
+        logoutInFlight = false;
+        Cloud.logoutInProgress = false;
+    }
 }
 
 async function putLocal(r) { await DB.put(r); }
@@ -458,9 +625,22 @@ function routeForm(r) {
     return fd;
 }
 
-let syncing = false, syncRetryQueued = false;
+let syncing = false, syncQueued = false, syncQueuedManual = false;
+let syncQueuedUid = '', syncQueuedServer = '', syncQueuedAuthGeneration = -1;
 async function syncRoutes(manual = false) {
-    if (!Cloud.loggedIn() || syncing) return;
+    if (!Cloud.loggedIn()) return;
+    if (syncing) {
+        const sameQueuedContext = syncQueued && syncQueuedUid === Cloud.uid
+            && syncQueuedServer === Cloud.server
+            && syncQueuedAuthGeneration === Cloud.authGeneration;
+        if (!sameQueuedContext) syncQueuedManual = Boolean(manual);
+        else syncQueuedManual = syncQueuedManual || manual;
+        syncQueued = true;
+        syncQueuedUid = Cloud.uid;
+        syncQueuedServer = Cloud.server;
+        syncQueuedAuthGeneration = Cloud.authGeneration;
+        return;
+    }
     if (!Cloud.nickname) {
         if (manual) toast('Completa el apodo de tu cuenta antes de sincronizar rutas.');
         return;
@@ -471,6 +651,14 @@ async function syncRoutes(manual = false) {
     const retryUid = Cloud.uid;
     const retryServer = Cloud.server;
     const retryGeneration = cloudSyncRetryGeneration;
+    const retryAuthGeneration = Cloud.authGeneration;
+    const isCurrentSync = () => Cloud.loggedIn() && Cloud.uid === retryUid
+        && Cloud.server === retryServer && Cloud.authGeneration === retryAuthGeneration;
+    const syncCloudApi = (path, method, body, options) => {
+        if (!isCurrentSync()) return Promise.resolve(null);
+        const apiOptions = options && typeof options === 'object' ? options : {};
+        return cloudApi(path, method, body, { ...apiOptions, server: retryServer });
+    };
     syncing = true;
     $('acc-status').textContent = 'Sincronizando…';
     let pushed = 0, pulled = 0, syncFailures = 0, garageUsageChanged = false;
@@ -488,9 +676,17 @@ async function syncRoutes(manual = false) {
     };
     let groupRankingFailureNotified = false;
     const syncRouteRanking = async route => {
+        if (!isCurrentSync()) return;
         try {
-            await shareRouteToGroupRanking(route, null, { automatic: true });
+            await shareRouteToGroupRanking(route, null, {
+                automatic: true,
+                server: retryServer,
+                uid: retryUid,
+                api: syncCloudApi,
+                isCurrent: isCurrentSync
+            });
         } catch (error) {
+            if (!isCurrentSync()) return;
             const message = `La ruta «${route.name || 'sin nombre'}» se subió, pero no se pudo añadir al ranking: ${error.message || 'error del servidor'}`;
             noteSyncFailure(message, error);
             console.warn(message, error);
@@ -502,12 +698,12 @@ async function syncRoutes(manual = false) {
     };
     const hasPendingGroupRanking = route => route.kind === 'recorded' && (
         route.groupRankingPending
-        || (route.groupRankingOwnerId === Cloud.uid
-            && route.groupRankingServer === Cloud.server
+        || (route.groupRankingOwnerId === retryUid
+            && route.groupRankingServer === retryServer
             && !route.groupRankingGroupId)
     );
-    const cursorKey = cloudSyncStorageKey('routes_sync_cursor');
-    const auditKey = cloudSyncStorageKey('routes_full_audit_at');
+    const cursorKey = cloudSyncStorageKey('routes_sync_cursor', retryServer, retryUid);
+    const auditKey = cloudSyncStorageKey('routes_full_audit_at', retryServer, retryUid);
     let cursor = '', lastFullAudit = 0;
     try {
         cursor = localStorage.getItem(cursorKey) || '';
@@ -518,14 +714,17 @@ async function syncRoutes(manual = false) {
     try {
         // 0) renovar la sesión (si ha caducado, se cierra)
         try {
-            const ar = await cloudApi('/api/collections/users/auth-refresh', 'POST');
-            Cloud.setSession(ar.token, ar.record);
-            renderAccountProfile(ar.record);
-            try { await syncPendingAccountAvatar(ar.record); }
+            const record = await Cloud.refreshSession();
+            if (!record) return;
+            renderAccountProfile(record);
+            if (!isCurrentSync()) return;
+            try { await syncPendingAccountAvatar(record); }
             catch (avatarError) {
+                if (!isCurrentSync()) return;
                 markSyncError(avatarError);
                 console.warn('No se pudo sincronizar el avatar pendiente:', avatarError);
             }
+            if (!isCurrentSync()) return;
         } catch (e) {
             if (e.status === 401) {
                 Cloud.clearSession();
@@ -536,7 +735,8 @@ async function syncRoutes(manual = false) {
         }
 
         // 1) rutas que ya hay en el servidor
-        const routeInventory = await fetchRemoteRoutes(fullAudit, cursor);
+        const routeInventory = await fetchRemoteRoutes(fullAudit, cursor, syncCloudApi, isCurrentSync, retryServer, retryUid);
+        if (!isCurrentSync() || !routeInventory) return;
         const remote = routeInventory.records;
         fullAudit = routeInventory.fullAudit;
         const pendingRemoteByClient = new Map();
@@ -547,9 +747,11 @@ async function syncRoutes(manual = false) {
                 const ids = pendingClientIds.slice(offset, offset + 50);
                 const filter = encodeURIComponent(`(${ids.map(id => `clientId = ${id}`).join(' || ')})`);
                 try {
-                    const result = await cloudApi(`/api/collections/routes/records?filter=${filter}&perPage=200`);
+                    const result = await syncCloudApi(`/api/collections/routes/records?filter=${filter}&perPage=200`);
+                    if (!isCurrentSync()) return;
                     (result.items || []).forEach(record => pendingRemoteByClient.set(Number(record.clientId), record));
                 } catch (error) {
+                    if (!isCurrentSync()) return;
                     // No impide subir rutas nuevas; el índice único owner/clientId protege frente a duplicados.
                     markSyncError(error);
                     console.warn('No se pudieron buscar rutas locales pendientes por clientId:', error);
@@ -562,22 +764,39 @@ async function syncRoutes(manual = false) {
         // 2) borrados pendientes
         let pend = [];
         let pendingDeletesAvailable = true;
-        try { pend = (await DB.kvGet('pendingDeletes')) || []; }
-        catch (e) { pendingDeletesAvailable = false; noteSyncFailure(`No se pudo leer la cola de borrados: ${e.message}`); console.warn('No se pudo leer la cola de borrados:', e); }
+        try {
+            pend = (await DB.kvGet('pendingDeletes')) || [];
+            if (!isCurrentSync()) return;
+        } catch (e) {
+            if (!isCurrentSync()) return;
+            pendingDeletesAvailable = false;
+            noteSyncFailure(`No se pudo leer la cola de borrados: ${e.message}`);
+            console.warn('No se pudo leer la cola de borrados:', e);
+        }
         const rest = [];
         for (const rid of pend) {
-            try { await cloudApi(`/api/collections/routes/records/${rid}`, 'DELETE'); }
+            if (!isCurrentSync()) return;
+            try { await syncCloudApi(`/api/collections/routes/records/${rid}`, 'DELETE'); }
             catch (e) {
+                if (!isCurrentSync()) return;
                 if (e.status !== 404) {
                     rest.push(rid);
                     noteSyncFailure(`No se pudo borrar una ruta del servidor: ${e.message}`, e);
                     console.warn(`No se pudo borrar la ruta remota ${rid}:`, e);
                 }
             }
+            if (!isCurrentSync()) return;
         }
         if (pendingDeletesAvailable) {
-            try { await DB.kvSet('pendingDeletes', rest); }
-            catch (e) { noteSyncFailure(`No se pudo guardar la cola de borrados: ${e.message}`); console.warn('No se pudo guardar la cola de borrados:', e); }
+            if (!isCurrentSync()) return;
+            try {
+                await DB.kvSet('pendingDeletes', rest);
+                if (!isCurrentSync()) return;
+            } catch (e) {
+                if (!isCurrentSync()) return;
+                noteSyncFailure(`No se pudo guardar la cola de borrados: ${e.message}`);
+                console.warn('No se pudo guardar la cola de borrados:', e);
+            }
         }
         const skip = new Set(pend);
 
@@ -586,6 +805,7 @@ async function syncRoutes(manual = false) {
         const byRemoteId = new Map(remote.map(x => [x.id, x]));
         const blockedIds = new Set();
         for (const r of [...savedRoutes]) {
+            if (!isCurrentSync()) return;
             const previousCreator = r.createdBy || '';
             r.createdBy = nickname;
             const found = byClient.get(r.id);
@@ -597,16 +817,32 @@ async function syncRoutes(manual = false) {
             if (r.remoteId && (skip.has(r.remoteId) || (fullAudit && !matched))) {
                 try {
                     const ownerId = r.kind === 'recorded' ? (r.groupRankingOwnerId || Cloud.uid) : '';
-                    const rankingServer = r.groupRankingServer || Cloud.server;
+                    const rankingServer = r.groupRankingServer || retryServer;
                     const clientId = Number(r.id);
                     const rankingDelete = ownerId && rankingServer && Number.isSafeInteger(clientId) && clientId > 0
                         ? { ownerId, server: rankingServer, clientId }
                         : null;
+                    if (!isCurrentSync()) return;
                     await DB.deleteRoute(r.id, null, rankingDelete);
                     savedRoutes = savedRoutes.filter(x => x.id !== r.id);
                     garageUsageChanged = true;
-                    if (rankingDelete) await syncPendingGroupRankingDeletes();
+                    if (!isCurrentSync()) {
+                        renderSavedRoutes();
+                        refreshStats();
+                        return;
+                    }
+                    if (rankingDelete) {
+                        if (!isCurrentSync()) return;
+                        await syncPendingGroupRankingDeletes({
+                            server: retryServer,
+                            uid: retryUid,
+                            api: syncCloudApi,
+                            isCurrent: isCurrentSync
+                        });
+                        if (!isCurrentSync()) return;
+                    }
                 } catch (e) {
+                    if (!isCurrentSync()) return;
                     blockedIds.add(r.id);
                     noteSyncFailure(`No se pudo aplicar el cambio remoto a «${r.name || 'ruta'}»: ${e.message}`);
                     console.warn(`No se pudo aplicar el borrado remoto de la ruta ${r.id}:`, e);
@@ -622,9 +858,11 @@ async function syncRoutes(manual = false) {
                 const remoteCreator = nickname;
                 if (remoteCreator && matched.createdBy !== remoteCreator) {
                     try {
-                        await cloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', { createdBy: remoteCreator });
+                        await syncCloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', { createdBy: remoteCreator });
+                        if (!isCurrentSync()) return;
                         matched.createdBy = remoteCreator;
                     } catch (e) {
+                        if (!isCurrentSync()) return;
                         noteSyncFailure(`No se pudo actualizar el apodo de «${r.name || 'ruta'}»: ${e.message}`, e);
                         console.warn(`No se pudo actualizar el apodo de la ruta ${r.id}:`, e);
                     }
@@ -635,39 +873,63 @@ async function syncRoutes(manual = false) {
                 if (remoteCreator) r.createdBy = remoteCreator;
                 r.dirty = false;
                 if (changed) {
+                    if (!isCurrentSync()) return;
                     try { await putLocal(r); }
-                    catch (e) { blockedIds.add(r.id); noteSyncFailure(`No se pudo guardar «${r.name || 'ruta'}» en este teléfono: ${e.message}`); console.warn(`No se pudo actualizar localmente la ruta ${r.id}:`, e); }
+                    catch (e) {
+                        if (!isCurrentSync()) return;
+                        blockedIds.add(r.id);
+                        noteSyncFailure(`No se pudo guardar «${r.name || 'ruta'}» en este teléfono: ${e.message}`);
+                        console.warn(`No se pudo actualizar localmente la ruta ${r.id}:`, e);
+                    }
+                    if (!isCurrentSync()) return;
                 }
                 if (!blockedIds.has(r.id) && Cloud.groupCode && hasPendingGroupRanking(r)) {
                     await syncRouteRanking(r);
+                    if (!isCurrentSync()) return;
                 }
                 continue;
             }
             if (blockedIds.has(r.id)) continue;
             if (matched) r.remoteId = matched.id;
             if (r.remoteId && !r.dirty) {
-                if (Cloud.groupCode && hasPendingGroupRanking(r)) await syncRouteRanking(r);
+                if (Cloud.groupCode && hasPendingGroupRanking(r)) {
+                    await syncRouteRanking(r);
+                    if (!isCurrentSync()) return;
+                }
                 continue;
             }
             try {
                 let rec;
-                if (r.remoteId) rec = await cloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', {
+                if (r.remoteId) rec = await syncCloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', {
                     name: r.name,
                     ...(r.createdBy ? { createdBy: String(r.createdBy).slice(0, ROUTE_NICKNAME_LIMIT) } : {})
                 });
-                else rec = await cloudApi('/api/collections/routes/records', 'POST', routeForm(r), { timeoutMs: 60000 });
+                else rec = await syncCloudApi('/api/collections/routes/records', 'POST', routeForm(r), { timeoutMs: 60000 });
+                if (!isCurrentSync()) return;
                 r.remoteId = rec.id;
                 r.dirty = false;
-                if (r.kind === 'recorded' && Cloud.groupCode) await syncRouteRanking(r);
+                if (r.kind === 'recorded' && Cloud.groupCode) {
+                    await syncRouteRanking(r);
+                    if (!isCurrentSync()) return;
+                }
+                if (!isCurrentSync()) return;
                 await putLocal(r);
+                if (!isCurrentSync()) return;
                 pushed++;
             } catch (e) {
+                if (!isCurrentSync()) return;
                 noteSyncFailure(`No se pudo sincronizar «${r.name || 'ruta'}»: ${e.message}`, e);
                 console.warn(`No se pudo sincronizar la ruta ${r.id}:`, e);
                 if (e.status === 404 && r.remoteId) {
                     r.remoteId = null;
-                    try { await putLocal(r); }
-                    catch (localError) { console.warn(`No se pudo actualizar la ruta local ${r.id}:`, localError); }
+                    try {
+                        if (!isCurrentSync()) return;
+                        await putLocal(r);
+                        if (!isCurrentSync()) return;
+                    } catch (localError) {
+                        if (!isCurrentSync()) return;
+                        console.warn(`No se pudo actualizar la ruta local ${r.id}:`, localError);
+                    }
                 }
             }
         }
@@ -680,7 +942,8 @@ async function syncRoutes(manual = false) {
             let fileToken = '';
             let fileTokenIssuedAt = 0;
             const refreshFileToken = async () => {
-                const result = await cloudApi('/api/files/token', 'POST');
+                const result = await syncCloudApi('/api/files/token', 'POST');
+                if (!isCurrentSync()) return null;
                 if (!result || !result.token) throw new Error('El servidor no devolvió un token de descarga.');
                 fileToken = result.token;
                 fileTokenIssuedAt = Date.now();
@@ -689,24 +952,26 @@ async function syncRoutes(manual = false) {
             const downloadTrack = async rec => {
                 let retriedWithFreshToken = false;
                 while (true) {
+                    if (!isCurrentSync()) return null;
                     if (!fileToken || Date.now() - fileTokenIssuedAt >= FILE_TOKEN_REFRESH_INTERVAL_MS) {
-                        await refreshFileToken();
+                        if (!await refreshFileToken()) return null;
                     }
                     const dlController = new AbortController();
                     const dlTimer = setTimeout(() => dlController.abort(), 15000);
                     let res;
                     try {
-                        res = await fetch(`${Cloud.server}/api/files/routes/${rec.id}/${encodeURIComponent(rec.track)}?token=${encodeURIComponent(fileToken)}`, { signal: dlController.signal });
+                        res = await fetch(`${retryServer}/api/files/routes/${rec.id}/${encodeURIComponent(rec.track)}?token=${encodeURIComponent(fileToken)}`, { signal: dlController.signal });
                     } catch (error) {
                         if (error && (error.status === undefined || error.name === 'AbortError')) error.retryable = true;
                         throw error;
                     } finally {
                         clearTimeout(dlTimer);
                     }
+                    if (!isCurrentSync()) return null;
                     if (res.ok) return res;
                     if (!retriedWithFreshToken && [401, 403, 404].includes(res.status)) {
                         retriedWithFreshToken = true;
-                        await refreshFileToken();
+                        if (!await refreshFileToken()) return null;
                         continue;
                     }
                     const error = new Error(`El servidor respondió ${res.status}`);
@@ -716,11 +981,14 @@ async function syncRoutes(manual = false) {
                 }
             };
             for (const rec of missing) {
+                if (!isCurrentSync()) return;
                 try {
                     const res = await downloadTrack(rec);
+                    if (!isCurrentSync()) return;
                     let trackData;
                     try { trackData = JSON.parse(await res.text()); }
                     catch (_) { throw new Error('El archivo del track no contiene JSON válido'); }
+                    if (!isCurrentSync()) return;
                     const points = normalizeRemoteTrack(trackData);
                     if (!points) {
                         const shape = Array.isArray(trackData) ? `array (${trackData.length} elementos)`
@@ -741,11 +1009,18 @@ async function syncRoutes(manual = false) {
                         movingTimeSec: rec.movingTimeSec || 0, distanceKm: rec.distanceKm || 0,
                         elevationGain: rec.elevationGain || 0, hrAvg: rec.hrAvg || null, points
                     };
+                    if (!isCurrentSync()) return;
                     await putLocal(r);
                     savedRoutes.push(r);
                     pulled++;
                     garageUsageChanged = true;
+                    if (!isCurrentSync()) {
+                        renderSavedRoutes();
+                        refreshStats();
+                        return;
+                    }
                 } catch (e) {
+                    if (!isCurrentSync()) return;
                     noteSyncFailure(`No se pudo descargar «${rec.name || 'una ruta'}»: ${e.message}`, e);
                     console.warn(`No se pudo descargar la ruta remota ${rec.id}:`, e);
                 }
@@ -753,6 +1028,7 @@ async function syncRoutes(manual = false) {
             savedRoutes.sort((a, b) => b.id - a.id);
         }
 
+        if (!isCurrentSync()) return;
         try {
             localStorage.setItem('mtb_pro_lastsync', String(Date.now()));
             localStorage.setItem('mtb_pro_sync_failures', String(syncFailures));
@@ -773,6 +1049,7 @@ async function syncRoutes(manual = false) {
             ? `⚠️ Sincronización parcial: ${pushed} subidas, ${pulled} descargadas y ${syncFailures} pendiente(s). ${syncFailureDetails.join(' · ')}`
             : `✅ Sincronizado: ${pushed} subidas, ${pulled} descargadas`, syncFailures ? 10000 : 3500);
     } catch (e) {
+        if (!isCurrentSync()) return;
         markSyncError(e);
         console.warn('Sync:', e);
         if (manual || e.status !== undefined) {
@@ -789,20 +1066,35 @@ async function syncRoutes(manual = false) {
                 toast('Rutas sincronizadas, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
             }
         }
-        const retryQueued = syncRetryQueued;
-        syncRetryQueued = false;
+        const queued = syncQueued;
+        const queuedManual = syncQueuedManual;
+        const queuedUid = syncQueuedUid;
+        const queuedServer = syncQueuedServer;
+        const queuedAuthGeneration = syncQueuedAuthGeneration;
+        syncQueued = false;
+        syncQueuedManual = false;
+        syncQueuedUid = '';
+        syncQueuedServer = '';
+        syncQueuedAuthGeneration = -1;
         syncing = false;
         renderAccount();
         const sameSession = retryGeneration === cloudSyncRetryGeneration
-            && Cloud.loggedIn() && Cloud.uid === retryUid && Cloud.server === retryServer;
+            && isCurrentSync();
         if (retryableSyncFailure && sameSession && navigator.onLine) {
             scheduleCloudSyncRetry(retryUid, retryServer, retryGeneration);
         } else if (!retryableSyncFailure) {
             cloudSyncRetryDelayMs = CLOUD_SYNC_RETRY_INITIAL_MS;
         }
-        if (!retryableSyncFailure && !permanentSyncFailure && syncFailures === 0
-            && retryQueued && sameSession && navigator.onLine) {
-            setTimeout(() => syncRoutes(), 250);
+        const queuedForDifferentSession = queuedUid !== retryUid || queuedServer !== retryServer
+            || queuedAuthGeneration !== retryAuthGeneration;
+        if (queued && Cloud.loggedIn() && navigator.onLine
+            && (queuedManual || queuedForDifferentSession
+                || (!retryableSyncFailure && !permanentSyncFailure && syncFailures === 0))) {
+            setTimeout(() => {
+                if (!Cloud.loggedIn() || Cloud.uid !== queuedUid || Cloud.server !== queuedServer
+                    || Cloud.authGeneration !== queuedAuthGeneration) return;
+                syncRoutes(queuedManual);
+            }, 250);
         }
     }
 }
@@ -849,9 +1141,25 @@ function initSettings() {
 }
 
 async function syncWhenOnline() {
-    syncCloudPreferences();
-    if (syncing) syncRetryQueued = true;
-    else await syncRoutes();
+    let restoredSession = null;
+    if (!Cloud.loggedIn() && !accAuthInFlight) {
+        try {
+            restoredSession = await Cloud.restoreSession();
+            if (restoredSession) {
+                renderAccountProfile(restoredSession);
+                renderAccount();
+            }
+        }
+        catch (error) {
+            if (error.status !== 401) console.warn('No se pudo restaurar la sesión al recuperar conexión:', error);
+        }
+    }
+    if (Cloud.loggedIn()) {
+        if (restoredSession) restoreGroup();
+        syncCloudPreferences();
+        if (syncing) syncRoutes();
+        else await syncRoutes();
+    }
     syncSharedPois();
 }
 
@@ -874,9 +1182,10 @@ function initAccount() {
     const serverInput = $('acc-server');
     if (serverInput) {
         serverInput.value = Cloud.server;
-        serverInput.addEventListener('change', () => {
+        serverInput.addEventListener('change', async () => {
+            const hadSession = Cloud.loggedIn();
             let nextServer;
-            try { nextServer = Cloud.setServer(serverInput.value); }
+            try { nextServer = await Cloud.switchServer(serverInput.value); }
             catch (error) {
                 console.warn('Dirección de servidor no válida:', error);
                 toast(error.message, 6000);
@@ -884,8 +1193,7 @@ function initAccount() {
                 return;
             }
             serverInput.value = nextServer;
-            if (Cloud.loggedIn()) {
-                Cloud.clearSession();
+            if (hadSession) {
                 toast('Servidor cambiado: vuelve a iniciar sesión.', 4000);
             }
             renderAccount();
@@ -915,7 +1223,17 @@ function initAccount() {
         if (document.visibilityState === 'visible' && navigator.onLine) syncWhenOnline();
     });
     renderAccount();
-    if (Cloud.loggedIn()) syncCloudPreferences();
+    Cloud.restoreSession().then(record => {
+        if (!record) return;
+        renderAccountProfile(record);
+        renderAccount();
+        syncCloudPreferences();
+        syncRoutes();
+        restoreGroup();
+    }).catch(error => {
+        if (error.status !== 401) console.warn('No se pudo restaurar la sesión de PocketBase:', error);
+        renderAccount();
+    });
 }
 
 async function init() {

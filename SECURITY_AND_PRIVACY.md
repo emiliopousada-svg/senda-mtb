@@ -68,3 +68,10 @@ El modo de seguridad Guardian Mode introduce capacidades críticas de salvaguard
 * Todas las conexiones hacia el backend de PocketBase se realizan obligatoriamente bajo **HTTPS / TLS 1.3**.
 * La función cliente `cloudApi()` implementa validación estricta de dominios, control de cabeceras, rechazo de redirecciones inesperadas y `cache: 'no-store'` para evitar que respuestas con datos privados queden registradas en cachés compartidas del navegador.
 
+## 6. Autenticación y Sesiones
+
+* El cliente no conserva JWT de PocketBase en `localStorage`. El login nativo de PocketBase entrega un JWT solo en memoria para intercambiarlo por la cookie `__Host-mtb_session`, que es `HttpOnly`, `Secure` y `SameSite=None`.
+* El servidor guarda solo el hash SHA-256 del secreto de sesión, aplica una expiración de 30 días y revoca la sesión al cerrar sesión. La migración rota las claves de token antiguas y limita a 120 segundos los JWT usados para el intercambio.
+* Las mutaciones con cookie requieren el origen exacto `https://localhost`; el límite de intentos de contraseña es 10 por cuenta e IP en 15 minutos. El WebView Android acepta cookies de terceros únicamente para que la cookie segura alcance el servidor PocketBase cross-site.
+* La recuperación depende del envío de correo configurado en la instancia PocketBase; el repositorio no incluye una pantalla de recuperación. Configura y verifica la entrega de mensajes en el servidor antes de ofrecer ese flujo.
+
