@@ -82,6 +82,7 @@ function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fet
         localStorage: { getItem() { return null; }, setItem() {} },
         navigator: { onLine: true },
         normalizeRemoteTrack: () => [[0, 0], [1, 1]],
+        routeForm: route => route,
         renderAccount() {},
         renderAccountProfile() {},
         renderSavedRoutes() {},

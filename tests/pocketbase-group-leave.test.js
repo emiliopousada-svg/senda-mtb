@@ -31,6 +31,7 @@ function groupHandlers() {
         },
         findRecordsByFilter(collection, _filter, _sort, limit, offset, params) {
             const values = records[collection].filter(record => {
+                if (collection === 'mtb_groups') return record.id === params.id;
                 if (collection === 'mtb_group_members') {
                     return record.fields.group === params.group && record.fields.user === params.user;
                 }
@@ -121,5 +122,17 @@ test('a pending leave removes only its target membership and preserves the newly
     assert.equal(pendingLeave.status, 200);
     assert.equal(records.users[0].fields.groupCode, 'group-2');
     assert.deepEqual(records.mtb_group_members.map(record => record.fields.group), ['group-2']);
+    assert.equal(records.live_locations.length, 0);
+});
+
+test('a pending leave completes after its group has already been deleted', () => {
+    const { handlers, records } = groupHandlers();
+    records.mtb_groups.length = 0;
+
+    const pendingLeave = handlers.get('POST /api/mtb/groups/leave')(event());
+
+    assert.equal(pendingLeave.status, 200);
+    assert.equal(records.users[0].fields.groupCode, '');
+    assert.equal(records.mtb_group_members.length, 0);
     assert.equal(records.live_locations.length, 0);
 });

@@ -459,8 +459,15 @@ routerAdd("POST", "/api/mtb/groups/leave", (e) => {
         const safeUserId = requireSafeValue(user.id, "userId");
         $app.runInTransaction((txApp) => {
             const currentUser = txApp.findRecordById("users", safeUserId);
-            const group = txApp.findRecordById("mtb_groups", requestedGroupId);
-            if (group.getString("owner") === safeUserId) {
+            const groups = txApp.findRecordsByFilter(
+                "mtb_groups",
+                "id = {:id}",
+                "",
+                1,
+                0,
+                { id: requestedGroupId }
+            );
+            if (groups.length && groups[0].getString("owner") === safeUserId) {
                 throw new Error("Transfiere la administración o elimina el grupo antes de salir.");
             }
 
