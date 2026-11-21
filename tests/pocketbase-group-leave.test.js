@@ -110,15 +110,16 @@ test('leaving a group revokes membership and prevents reactivation without a new
     assert.equal(reselected.status, 403);
 });
 
-test('leaving a stale group does not remove a different active membership', () => {
+test('a pending leave removes only its target membership and preserves the newly active group', () => {
     const { handlers, records } = groupHandlers();
     records.users[0].fields.groupCode = 'group-2';
     records.mtb_groups.push(new FakeRecord('group-2', { owner: 'admin-2' }));
     records.mtb_group_members.push(new FakeRecord('member-2', { group: 'group-2', user: 'user-1' }));
 
-    const staleLeave = handlers.get('POST /api/mtb/groups/leave')(event({ groupId: 'group-1' }));
+    const pendingLeave = handlers.get('POST /api/mtb/groups/leave')(event({ groupId: 'group-1' }));
 
-    assert.equal(staleLeave.status, 409);
+    assert.equal(pendingLeave.status, 200);
     assert.equal(records.users[0].fields.groupCode, 'group-2');
-    assert.equal(records.mtb_group_members.length, 2);
+    assert.deepEqual(records.mtb_group_members.map(record => record.fields.group), ['group-2']);
+    assert.equal(records.live_locations.length, 0);
 });

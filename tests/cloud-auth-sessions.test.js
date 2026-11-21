@@ -400,6 +400,59 @@ test('a full audit on another server does not delete a locally saved remote rout
     assert.ok(route);
 });
 
+test('switching back to a server searches for its existing route before creating one', async () => {
+    let createCount = 0;
+    const { context } = routeSyncContext({
+        routes: [{
+            id: 5,
+            remoteId: 'remote-b',
+            remoteServer: 'https://other.example',
+            kind: 'local',
+            name: 'Existing route',
+            activityType: 'mtb',
+            createdBy: 'Rider',
+            dirty: false
+        }],
+        fetchRemoteRoutes: async () => ({ records: [], fullAudit: false }),
+        cloudApi: async path => {
+            if (path.includes('filter=')) {
+                return { items: [{ id: 'remote-a', clientId: 5, name: 'Existing route', createdBy: 'Rider' }] };
+            }
+            if (path === '/api/collections/routes/records') createCount++;
+            return { token: 'file-token', id: 'remote-new' };
+        }
+    });
+
+    await context.syncRoutes();
+
+    const [route] = context.getSavedRoutes();
+    assert.equal(createCount, 0);
+    assert.equal(route.remoteId, 'remote-a');
+    assert.equal(route.remoteServer, 'https://server.example');
+});
+
+test('legacy routes with unknown remote server are not re-created without a match', async () => {
+    let createCount = 0;
+    const { context } = routeSyncContext({
+        routes: [{
+            id: 6,
+            remoteId: 'unknown-remote',
+            kind: 'local',
+            name: 'Legacy route',
+            dirty: true
+        }],
+        cloudApi: async path => {
+            if (path === '/api/collections/routes/records') createCount++;
+            return { token: 'file-token', id: 'remote-new' };
+        }
+    });
+
+    await context.syncRoutes();
+
+    assert.equal(createCount, 0);
+    assert.equal(context.getSavedRoutes().length, 1);
+});
+
 test('completed route download updates memory before stopping a stale sync', async () => {
     const { context, cloud } = routeSyncContext({
         remote: [{

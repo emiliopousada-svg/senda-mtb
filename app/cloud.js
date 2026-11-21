@@ -758,7 +758,8 @@ async function syncRoutes(manual = false) {
         fullAudit = routeInventory.fullAudit;
         const pendingRemoteByClient = new Map();
         if (!fullAudit) {
-            const pendingClientIds = savedRoutes.filter(route => !route.remoteId)
+            const pendingClientIds = savedRoutes.filter(route => !route.remoteId
+                || !route.remoteServer || route.remoteServer !== retryServer)
                 .map(route => Number(route.id)).filter(Number.isSafeInteger);
             for (let offset = 0; offset < pendingClientIds.length; offset += 50) {
                 const ids = pendingClientIds.slice(offset, offset + 50);
@@ -827,14 +828,21 @@ async function syncRoutes(manual = false) {
             const previousRemoteServer = r.remoteServer || '';
             r.createdBy = nickname;
             const found = byClient.get(r.id);
-            const remoteRecord = r.remoteId && r.remoteServer === retryServer && !skip.has(r.remoteId)
+            const remoteRecord = r.remoteId && (!r.remoteServer || r.remoteServer === retryServer)
+                && !skip.has(r.remoteId)
                 ? byRemoteId.get(r.remoteId)
                 : null;
             const matched = remoteRecord || (found && !skip.has(found.id) ? found : null)
                 || (!fullAudit ? pendingRemoteByClient.get(Number(r.id)) : null);
 
             // Una ruta borrada desde otro dispositivo ya no existe en el inventario remoto.
-            let remoteIdOnCurrentServer = Boolean(r.remoteId && r.remoteServer === retryServer);
+            let remoteIdOnCurrentServer = Boolean(r.remoteId
+                && (r.remoteServer === retryServer || (!r.remoteServer && remoteRecord)));
+            if (r.remoteId && !r.remoteServer && !matched) {
+                noteSyncFailure(`No se puede reconciliar «${r.name || 'ruta'}»: no se conoce el servidor de origen de su identificador remoto.`);
+                blockedIds.add(r.id);
+                continue;
+            }
             if (remoteIdOnCurrentServer
                 && (skip.has(r.remoteId) || (fullAudit && !matched))) {
                 try {

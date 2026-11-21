@@ -456,19 +456,10 @@ routerAdd("POST", "/api/mtb/groups/leave", (e) => {
         e.bindBody(body);
         const requestedGroupId = requireSafeValue(body.groupId, "groupId");
         const user = $app.findRecordById("users", e.auth.id);
-        const groupId = user.getString("groupCode");
-        if (!groupId) return e.json(200, { ok: true });
-        const safeGroupId = requireSafeValue(groupId, "groupId");
-        if (requestedGroupId !== safeGroupId) {
-            return e.json(409, { message: "El grupo activo cambió. Actualiza la página e inténtalo de nuevo." });
-        }
         const safeUserId = requireSafeValue(user.id, "userId");
         $app.runInTransaction((txApp) => {
             const currentUser = txApp.findRecordById("users", safeUserId);
-            if (currentUser.getString("groupCode") !== safeGroupId) {
-                throw new Error("El grupo activo cambió. Actualiza la página e inténtalo de nuevo.");
-            }
-            const group = txApp.findRecordById("mtb_groups", safeGroupId);
+            const group = txApp.findRecordById("mtb_groups", requestedGroupId);
             if (group.getString("owner") === safeUserId) {
                 throw new Error("Transfiere la administración o elimina el grupo antes de salir.");
             }
@@ -479,7 +470,7 @@ routerAdd("POST", "/api/mtb/groups/leave", (e) => {
                 "",
                 200,
                 0,
-                { group: safeGroupId, user: safeUserId }
+                { group: requestedGroupId, user: safeUserId }
             );
             for (const membership of memberships) txApp.delete(membership);
 
@@ -490,16 +481,18 @@ routerAdd("POST", "/api/mtb/groups/leave", (e) => {
                     "",
                     200,
                     0,
-                    { owner: safeUserId, group: safeGroupId }
+                    { owner: safeUserId, group: requestedGroupId }
                 );
                 if (!locations.length) break;
                 for (const location of locations) txApp.delete(location);
             }
 
-            currentUser.set("groupCode", "");
-            txApp.save(currentUser);
+            if (currentUser.getString("groupCode") === requestedGroupId) {
+                currentUser.set("groupCode", "");
+                txApp.save(currentUser);
+            }
         });
-        return e.json(200, { ok: true, retained: false });
+        return e.json(200, { ok: true, groupId: requestedGroupId });
     } catch (err) {
         return e.json(400, { message: err.message || "No se pudo salir del grupo." });
     }

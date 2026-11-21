@@ -166,12 +166,10 @@ async function syncPendingGroupLeave() {
 
     const auth = await Cloud.refreshSession();
     if (!auth || !isCurrent()) return false;
-    if (auth.groupCode === pending.groupId) {
-        Cloud.invalidateProfileReads();
-        await cloudApi('/api/mtb/groups/leave', 'POST', { groupId: pending.groupId }, { server });
-        if (!isCurrent()) return false;
-        Cloud.invalidateProfileReads();
-    }
+    Cloud.invalidateProfileReads();
+    await cloudApi('/api/mtb/groups/leave', 'POST', { groupId: pending.groupId }, { server });
+    if (!isCurrent()) return false;
+    Cloud.invalidateProfileReads();
     const fresh = await Cloud.refreshSession();
     if (!fresh || !isCurrent()) return false;
     localStorage.removeItem(key);
