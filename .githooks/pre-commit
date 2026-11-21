@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+cd "$repository_root"
+
+coderabbit_path=$(git config --path --get senda.coderabbitPath || true)
+if [ -z "$coderabbit_path" ] || [ ! -x "$coderabbit_path" ]; then
+    printf '%s\n' "CodeRabbit CLI is not configured. Set senda.coderabbitPath to its trusted absolute path." >&2
+    exit 1
+fi
+
+exec "$coderabbit_path" review --agent --fresh --uncommitted
