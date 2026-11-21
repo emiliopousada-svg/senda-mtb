@@ -168,7 +168,7 @@ async function syncPendingGroupLeave() {
     if (!auth || !isCurrent()) return false;
     if (auth.groupCode === pending.groupId) {
         Cloud.invalidateProfileReads();
-        await cloudApi('/api/mtb/groups/leave', 'POST', null, { server });
+        await cloudApi('/api/mtb/groups/leave', 'POST', { groupId: pending.groupId }, { server });
         if (!isCurrent()) return false;
         Cloud.invalidateProfileReads();
     }
@@ -1033,7 +1033,7 @@ async function leaveGroupLocally() {
         const leaveCompleted = await syncPendingGroupLeave();
         if (!isCurrent()) return;
         if (leaveCompleted) {
-            toast('Has salido del grupo. Conservas el acceso para volver a entrar.');
+            toast('Has salido del grupo. Necesitarás una nueva invitación para volver a entrar.');
         } else {
             $('group-status').textContent = 'Has salido en este dispositivo; se completará la salida del servidor al recuperar conexión.';
             toast('Has salido en este dispositivo; la salida del servidor queda pendiente de conexión.', 6000);

@@ -135,8 +135,10 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         if (!automatic) toast('Inicia sesión y selecciona un grupo para compartir marcas.');
         return false;
     }
-    if (automatic && route && route.groupRankingPending && route.groupRankingGroupId
-        && route.groupRankingGroupId !== activeGroupId) return false;
+    if (automatic && route && route.groupRankingPending
+        && (route.groupRankingGroupId !== activeGroupId
+            || route.groupRankingOwnerId !== uid
+            || route.groupRankingServer !== server)) return false;
     if (!navigator.onLine) {
         if (!automatic) toast('Necesitas conexión para compartir una marca con el grupo.');
         return false;
@@ -251,8 +253,12 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
 async function syncPendingGroupRankingDeletes(options = {}) {
     const server = options.server || Cloud.server;
     const uid = options.uid || Cloud.uid;
+    const authGeneration = options.authGeneration === undefined
+        ? Cloud.authGeneration
+        : options.authGeneration;
     const isCurrent = options.isCurrent || (() => Cloud.loggedIn()
-        && Cloud.uid === uid && Cloud.server === server);
+        && Cloud.uid === uid && Cloud.server === server
+        && Cloud.authGeneration === authGeneration);
     const api = options.api || ((path, method, body, apiOptions) => {
         if (!isCurrent()) return Promise.resolve(null);
         const requestOptions = apiOptions && typeof apiOptions === 'object' ? apiOptions : {};

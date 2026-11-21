@@ -66,12 +66,16 @@ function profileOpenEditorOnFirstVisit() {
 
 async function profileSyncPendingLocation(uid) {
     if (!uid || !navigator.onLine || profileCurrentUid() !== uid) return null;
+    const server = Cloud.server;
+    const authGeneration = Cloud.authGeneration;
+    const isCurrent = () => profileCurrentUid() === uid
+        && Cloud.server === server && Cloud.authGeneration === authGeneration;
     const pendingKey = profileLocationPendingKey(uid);
     while (true) {
-        if (profileCurrentUid() !== uid) return null;
+        if (!isCurrent()) return null;
         if (profileLocationSyncPromise && profileLocationSyncUid === uid) {
             await profileLocationSyncPromise;
-            if (profileCurrentUid() !== uid) return null;
+            if (!isCurrent()) return null;
             continue;
         }
         const pending = localStorage.getItem(pendingKey);
@@ -83,14 +87,16 @@ async function profileSyncPendingLocation(uid) {
         const updated = await cloudApi(
             `/api/collections/users/records/${encodeURIComponent(uid)}`,
             'PATCH',
-            { homeLocation: location }
+            { homeLocation: location },
+            { server }
         );
+        if (!isCurrent() || localStorage.getItem(pendingKey) !== pending) return null;
         if (!updated || typeof updated !== 'object'
             || !Object.prototype.hasOwnProperty.call(updated, 'homeLocation')
             || profileNormalizeLocation(updated.homeLocation) !== location) {
             throw new Error('El servidor no confirmó la localidad del perfil.');
         }
-        if (profileCurrentUid() !== uid || localStorage.getItem(pendingKey) !== pending) return null;
+        if (!isCurrent() || localStorage.getItem(pendingKey) !== pending) return null;
         profileStoreAccountLocation(uid, location);
         localStorage.removeItem(pendingKey);
         if (typeof Cloud.setSession === 'function') {

@@ -43,7 +43,7 @@ function cloudContext(cloudApi = async () => ({ record: { id: 'user-1' } })) {
     return { context, values };
 }
 
-function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fetchRemoteRoutes } = {}) {
+function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fetchRemoteRoutes, cloudApi } = {}) {
     const cloud = {
         active: true,
         uid: 'user-a',
@@ -66,11 +66,12 @@ function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fet
                 if (deleteRoute) return deleteRoute(...args);
             }
         },
+        FormData,
         ROUTE_FULL_AUDIT_INTERVAL_MS: 24 * 60 * 60 * 1000,
         ROUTE_NICKNAME_LIMIT: 32,
         clearCloudSyncRetryTimer() {},
         cloudSyncStorageKey() { return 'sync-state'; },
-        cloudApi: async () => ({ token: 'file-token' }),
+        cloudApi: cloudApi || (async () => ({ token: 'file-token' })),
         fetch: async () => ({
             ok: true,
             async text() { return JSON.stringify([[0, 0], [1, 1]]); }
@@ -148,11 +149,14 @@ test('switching servers revokes the old cookie session before changing the origi
     });
     context.Cloud.setServer('https://same.example:9443');
     context.Cloud.setSession({ id: 'user-a' });
+    context.stopGroup = async () => { calls.push({ requestPath: 'stopGroup' }); };
 
     const nextServer = await context.Cloud.switchServer('https://same.example:9444');
 
     assert.equal(nextServer, 'https://same.example:9444');
     assert.deepEqual(calls, [{
+        requestPath: 'stopGroup'
+    }, {
         requestPath: '/api/mtb/auth/logout',
         method: 'POST',
         server: 'https://same.example:9443'
@@ -172,6 +176,21 @@ test('a failed old-server logout prevents switching to a same-host port', async 
 
     assert.equal(context.Cloud.server, 'https://same.example:9443');
     assert.equal(context.Cloud.loggedIn(), true);
+});
+
+test('switching servers does not contact an unavailable server after session absence is confirmed', async () => {
+    let requestCount = 0;
+    const { context } = cloudContext(async () => {
+        requestCount++;
+        throw new Error('The previous server is unavailable.');
+    });
+    context.Cloud.clearSession();
+
+    const server = await context.Cloud.switchServer('https://new.example');
+
+    assert.equal(server, 'https://new.example');
+    assert.equal(context.Cloud.server, 'https://new.example');
+    assert.equal(requestCount, 0);
 });
 
 test('refreshing a session cannot apply a response from a changed server', async () => {
@@ -252,6 +271,38 @@ test('a late nickname 401 cannot clear a newer session', async () => {
     assert.equal(context.Cloud.uid, 'user-b');
 });
 
+test('a stale profile refresh cannot overwrite a saved nickname', async () => {
+    let resolveSession;
+    const { context } = cloudContext(requestPath => {
+        if (requestPath === '/api/mtb/auth/session') {
+            return new Promise(resolve => { resolveSession = resolve; });
+        }
+        return Promise.resolve({ id: 'user-a', nickname: 'New name' });
+    });
+    context.Cloud.setSession({ id: 'user-a', nickname: 'Old name' });
+    context.$ = id => new Map([
+        ['acc-account-nickname', { value: 'New name' }],
+        ['acc-nickname-save', { disabled: false }]
+    ]).get(id);
+    context.renderAccount = () => {};
+    context.toast = () => {};
+    context.syncRoutes = () => {};
+    context.syncSharedPois = () => {};
+    context.console = { warn() {} };
+    vm.runInContext(
+        sourceBetween('async function saveAccountNickname()', '\nasync function logoutCloudAccount()'),
+        context
+    );
+
+    const refreshing = context.Cloud.refreshSession();
+    const saving = context.saveAccountNickname();
+    await saving;
+    resolveSession({ record: { id: 'user-a', nickname: 'Old name' } });
+
+    assert.equal(await refreshing, null);
+    assert.equal(context.Cloud.nickname, 'New name');
+});
+
 test('cloud API requests can stay pinned to the server captured by a sync', async () => {
     const requests = [];
     const context = vm.createContext({
@@ -313,13 +364,40 @@ test('remote route pagination stops when the captured sync context changes', asy
 
 test('completed local route deletion updates memory before stopping a stale sync', async () => {
     const { context, cloud } = routeSyncContext({
-        routes: [{ id: 1, remoteId: 'remote-1', kind: 'local', name: 'Local route' }],
+        routes: [{
+            id: 1,
+            remoteId: 'remote-1',
+            remoteServer: 'https://server.example',
+            kind: 'local',
+            name: 'Local route'
+        }],
         deleteRoute: async () => { cloud.active = false; }
     });
 
     await context.syncRoutes();
 
     assert.deepEqual(Array.from(context.getSavedRoutes()), []);
+});
+
+test('a full audit on another server does not delete a locally saved remote route', async () => {
+    let deleteCount = 0;
+    const { context } = routeSyncContext({
+        routes: [{
+            id: 4,
+            remoteId: 'old-remote',
+            remoteServer: 'https://old.example',
+            kind: 'local',
+            name: 'Local route',
+            dirty: true
+        }],
+        deleteRoute: async () => { deleteCount++; }
+    });
+
+    await context.syncRoutes();
+
+    const [route] = context.getSavedRoutes();
+    assert.equal(deleteCount, 0);
+    assert.ok(route);
 });
 
 test('completed route download updates memory before stopping a stale sync', async () => {

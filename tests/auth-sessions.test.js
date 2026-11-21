@@ -466,7 +466,29 @@ test('auth middleware accepts a valid cookie but rejects CSRF and bearer-only re
     assert.equal(exchangeEvent.nextCalled, true);
 });
 
-test('logout does not clear a cookie when its session is already invalid', () => {
+test('logout does not clear a revoked session cookie', () => {
+    const utils = authUtils();
+    const app = new FakeApp();
+    const security = fakeSecurity();
+    const created = utils.createSession(app, security, { id: 'user-1' }, 'jwt-1');
+    utils.markSessionRevoked(app, created.session.id);
+    const { middlewares, routes } = authHook(utils, app, security);
+    const sessionMiddleware = middlewares.find(item => item.priority === -1021).handler;
+    const event = requestEvent({
+        cookie: `${utils.SESSION_COOKIE_NAME}=${created.token}`,
+        origin: utils.APP_ORIGIN,
+        method: 'POST'
+    });
+    const logout = routes.find(route => route.route === '/api/mtb/auth/logout').handler;
+
+    sessionMiddleware(event);
+    const result = logout(event);
+
+    assert.equal(result.status, 204);
+    assert.equal(event.headers['Set-Cookie'], undefined);
+});
+
+test('logout without a cookie does not emit a cookie header', () => {
     const utils = authUtils();
     const app = new FakeApp();
     const { routes } = authHook(utils, app, fakeSecurity());

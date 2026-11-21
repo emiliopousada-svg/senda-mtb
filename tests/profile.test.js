@@ -46,6 +46,9 @@ function profileLocationContext({ initialStorage = {}, response = null } = {}) {
         Cloud: {
             uid: 'user-1',
             token: 'token',
+            server: 'https://old.example',
+            authGeneration: 1,
+            groupCode: 'group-current',
             loggedIn() { return true; },
             setSession(record) { this.record = record; }
         },
@@ -143,6 +146,27 @@ test('profile leaves the former account pending value queued after an account sw
     finishRequest({ homeLocation: 'Girona', id: 'user-1' });
     assert.equal(await sync, null);
     assert.equal(calls.length, 1);
+    assert.equal(storage.get(pendingKey), 'Girona');
+});
+
+test('profile keeps the pending locality when its server changes during the PATCH', async () => {
+    const pendingKey = 'mtb_pro_profile_location_pending_user-1';
+    const { context, storage, calls } = profileLocationContext({
+        initialStorage: { [pendingKey]: 'Girona' }
+    });
+    let finishRequest;
+    context.cloudApi = (url, method, body, options) => {
+        calls.push({ url, method, body, options });
+        return new Promise(resolve => { finishRequest = resolve; });
+    };
+
+    const sync = context.profileSyncPendingLocation('user-1');
+    context.Cloud.server = 'https://new.example';
+    context.Cloud.authGeneration++;
+    finishRequest({ homeLocation: 'Girona', id: 'user-1' });
+
+    assert.equal(await sync, null);
+    assert.equal(calls[0].options.server, 'https://old.example');
     assert.equal(storage.get(pendingKey), 'Girona');
 });
 
