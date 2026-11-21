@@ -187,7 +187,6 @@ routerAdd("POST", "/api/mtb/groups/transfer", (e) => {
 
 routerAdd("GET", "/api/mtb/groups/live", (e) => {
     const { SAFE_INVITE_RE, requireSafeValue, requireNickname, safeMembership, findAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
-    e.response.header().set("Cache-Control", "no-store");
     try {
         const user = $app.findRecordById("users", e.auth.id);
         const groupId = user.getString("groupCode");
@@ -278,10 +277,9 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
 routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
     const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries } = require(`${__hooks}/groups_utils.js`);
     try {
-        const body = new DynamicModel({ clientId: 0, groupId: "", distanceKm: 0.1, movingTimeSec: 0.1, maxSpeedKmh: 0.1, elevationGain: 0.1 });
+        const body = new DynamicModel({ clientId: 0, distanceKm: 0.1, movingTimeSec: 0.1, maxSpeedKmh: 0.1, elevationGain: 0.1 });
         e.bindBody(body);
         const clientId = Number(body.clientId);
-        const requestedGroupId = requireSafeValue(body.groupId, "groupId");
         const distanceKm = Number(body.distanceKm);
         const movingTimeSec = Number(body.movingTimeSec);
         const maxSpeedKmh = Number(body.maxSpeedKmh);
@@ -302,10 +300,7 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         const user = $app.findRecordById("users", e.auth.id);
         const groupId = user.getString("groupCode");
         if (!groupId) return e.json(404, { message: "No hay un grupo activo." });
-        if (requestedGroupId !== groupId) {
-            return e.json(403, { message: "El grupo activo cambió; confirma de nuevo antes de compartir." });
-        }
-        const safeGroupId = requireSafeValue(requestedGroupId, "groupId");
+        const safeGroupId = requireSafeValue(groupId, "groupId");
         if (!safeMembership(safeGroupId, user.id).length) {
             return e.json(403, { message: "Ya no tienes autorización para compartir marcas en este grupo." });
         }
@@ -449,57 +444,20 @@ routerAdd("POST", "/api/mtb/groups/revoke", (e) => {
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/leave", (e) => {
-    const { requireSafeValue } = require(`${__hooks}/groups_utils.js`);
-    e.response.header().set("Cache-Control", "no-store");
+    const { SAFE_INVITE_RE, requireSafeValue, requireNickname, safeMembership, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
     try {
-        const body = new DynamicModel({ groupId: "" });
-        e.bindBody(body);
-        const requestedGroupId = requireSafeValue(body.groupId, "groupId");
         const user = $app.findRecordById("users", e.auth.id);
-        const safeUserId = requireSafeValue(user.id, "userId");
-        $app.runInTransaction((txApp) => {
-            const currentUser = txApp.findRecordById("users", safeUserId);
-            const groups = txApp.findRecordsByFilter(
-                "mtb_groups",
-                "id = {:id}",
-                "",
-                1,
-                0,
-                { id: requestedGroupId }
-            );
-            if (groups.length && groups[0].getString("owner") === safeUserId) {
-                throw new Error("Transfiere la administración o elimina el grupo antes de salir.");
-            }
-
-            const memberships = txApp.findRecordsByFilter(
-                "mtb_group_members",
-                "group = {:group} && user = {:user}",
-                "",
-                200,
-                0,
-                { group: requestedGroupId, user: safeUserId }
-            );
-            for (const membership of memberships) txApp.delete(membership);
-
-            while (true) {
-                const locations = txApp.findRecordsByFilter(
-                    "live_locations",
-                    "owner = {:owner} && groupCode = {:group}",
-                    "",
-                    200,
-                    0,
-                    { owner: safeUserId, group: requestedGroupId }
-                );
-                if (!locations.length) break;
-                for (const location of locations) txApp.delete(location);
-            }
-
-            if (currentUser.getString("groupCode") === requestedGroupId) {
-                currentUser.set("groupCode", "");
-                txApp.save(currentUser);
-            }
-        });
-        return e.json(200, { ok: true, groupId: requestedGroupId });
+        const groupId = user.getString("groupCode");
+        if (!groupId) return e.json(200, { ok: true });
+        const safeGroupId = requireSafeValue(groupId, "groupId");
+        const group = $app.findRecordById("mtb_groups", safeGroupId);
+        if (group.getString("owner") === user.id) {
+            return e.json(400, { message: "Transfiere la administración o elimina el grupo antes de salir." });
+        }
+        deleteAllRecordsByFilter("live_locations", 'owner = "' + user.id + '" && groupCode = "' + safeGroupId + '"');
+        user.set("groupCode", "");
+        $app.save(user);
+        return e.json(200, { ok: true, retained: true });
     } catch (err) {
         return e.json(400, { message: err.message || "No se pudo salir del grupo." });
     }
