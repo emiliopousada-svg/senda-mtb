@@ -67,7 +67,7 @@ const Cloud = {
         }
         const uid = this.uid;
         const generation = this.authGeneration;
-        const shouldRevokeSession = this.sessionState !== 'none';
+        const shouldRevokeSession = this.sessionState === 'active';
         this.serverSwitchInFlight = true;
         try {
             if (this.loggedIn() && typeof stopGroup === 'function') {
@@ -146,6 +146,7 @@ const Cloud = {
         return result.record;
     },
     async restoreSession() {
+        if (this.serverSwitchInFlight) return null;
         const generation = this.authGeneration;
         this.sessionState = 'pending';
         try {
@@ -1181,7 +1182,7 @@ function initSettings() {
 
 async function syncWhenOnline() {
     let restoredSession = null;
-    if (!Cloud.loggedIn() && !accAuthInFlight) {
+    if (!Cloud.loggedIn() && !accAuthInFlight && !Cloud.serverSwitchInFlight) {
         try {
             restoredSession = await Cloud.restoreSession();
             if (restoredSession) {

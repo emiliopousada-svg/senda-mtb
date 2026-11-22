@@ -485,12 +485,21 @@ routerAdd("POST", "/api/mtb/groups/revoke", (e) => {
 routerAdd("POST", "/api/mtb/groups/leave", (e) => {
     const { requireSafeValue, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
     try {
+        const body = new DynamicModel({ groupId: "" });
+        e.bindBody(body);
         let result;
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
             const groupId = user.getString("groupCode");
             if (!groupId) {
                 result = { status: 200, body: { ok: true } };
+                return;
+            }
+            const requestedGroupId = body.groupId
+                ? requireSafeValue(body.groupId, "groupId")
+                : groupId;
+            if (requestedGroupId !== groupId) {
+                result = { status: 200, body: { ok: true, retained: true } };
                 return;
             }
             const safeGroupId = requireSafeValue(groupId, "groupId");

@@ -135,10 +135,17 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         if (!automatic) toast('Inicia sesión y selecciona un grupo para compartir marcas.');
         return false;
     }
-    if (automatic && route && route.groupRankingPending
-        && (route.groupRankingGroupId !== activeGroupId
-            || route.groupRankingOwnerId !== uid
-            || route.groupRankingServer !== server)) return false;
+    if (automatic && route && route.groupRankingPending) {
+        if (route.groupRankingOwnerId !== uid || route.groupRankingServer !== server) return false;
+        if (route.groupRankingGroupId && route.groupRankingGroupId !== activeGroupId) return false;
+        if (!route.groupRankingGroupId) {
+            const confirmed = await modal({
+                message: `Esta actividad quedó pendiente de una versión anterior y no se guardó el grupo de destino. ¿Confirmas compartir sus marcas con «${groupInfo && groupInfo.name ? groupInfo.name : 'tu grupo actual'}»?`,
+                ok: 'Confirmar grupo'
+            });
+            if (!confirmed || !isCurrent()) return false;
+        }
+    }
     if (!navigator.onLine) {
         if (!automatic) toast('Necesitas conexión para compartir una marca con el grupo.');
         return false;
