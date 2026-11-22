@@ -23,5 +23,5 @@ migrate((app) => {
         indexes: ["CREATE UNIQUE INDEX idx_strava_connections_owner ON strava_connections (owner)"],
     }))
 }, (app) => {
-    try { app.delete(app.findCollectionByNameOrId("strava_connections")) } catch (_) {}
+    // The collection may have existed before this migration; preserve it and its data on rollback.
 })

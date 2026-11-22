@@ -45,9 +45,11 @@ La migración `pb_migrations/1794835000_create_mtb_app_collections.js` crea las 
 
 La migración `pb_migrations/1794835005_add_author_nicknames.js` añade campos de apodo a rutas, POIs, ubicaciones en vivo, contenido comunitario y membresías de grupo, y actualiza la autoría de los registros existentes usando el apodo actual de su propietario. Despliega también los hooks de `pb_hooks/` para que PocketBase imponga el apodo del usuario autenticado en las nuevas escrituras. El campo `owner` o equivalente sigue siendo el vínculo técnico de permisos y no se sustituye por el apodo. Haz una copia de seguridad y aplica la migración en el servidor antes de desplegar esta versión de la app.
 
+Las migraciones `pb_migrations/1794835006_add_community_route_source_path.js` y `pb_migrations/1794835007_repair_community_route_source_path_index.js` mantienen `sourcePath` único solo cuando no está vacío, permitiendo que las rutas comunitarias creadas manualmente no tengan una ruta de origen.
+
 La app solicita la comunidad autónoma al publicar; conserva el nombre histórico del campo `province` en PocketBase para no romper rutas y clientes existentes. Consulta [CONFIGURAR-RUTAS-COMUNIDAD.md](./CONFIGURAR-RUTAS-COMUNIDAD.md) para desplegar y verificar los campos y hooks.
 
-La migración `pb_migrations/1794836000_create_group_challenges.js` añade los campos automáticos `created` y `updated` a `mtb_group_ranking_entries` (las marcas antiguas usan como fecha el `clientId` de la salida) y crea `mtb_group_challenges`. El hook `pb_hooks/group_league.pb.js` publica, para el grupo del usuario autenticado:
+La migración `pb_migrations/1794836000_create_group_challenges.js` añade los campos automáticos `created` y `updated` a `mtb_group_ranking_entries` (las marcas antiguas usan como fecha el `clientId` de la salida) y crea `mtb_group_challenges`. Los `down` de esta migración y `1794836001_create_strava_connections.js` conservan intencionadamente las colecciones y los datos al hacer rollback, porque no pueden distinguir una colección preexistente de otra creada por la migración. El rollback también conserva los campos de fecha añadidos al ranking. El hook `pb_hooks/group_league.pb.js` publica, para el grupo del usuario autenticado:
 
 | Ruta | Uso |
 | --- | --- |
