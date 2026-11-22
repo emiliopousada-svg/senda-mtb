@@ -79,17 +79,6 @@ $env:MTB_APP_ENV = 'staging'; $env:MTB_CLOUD_SERVER = 'https://pruebas.example.c
 
 La compilación falla si el entorno no existe, si `staging` no tiene servidor o si la URL no es válida. Las etiquetas `vX.Y.Z` solo se compilan en producción y sin `MTB_CLOUD_SERVER`. Fuera de producción, Ajustes muestra el entorno junto a la versión (por ejemplo, `v0.2.29 (build local) · Pruebas`). Android bloquea el tráfico `http://`, así que en el móvil usa `staging` con un servidor HTTPS; `development` es para el navegador. Si sirves `index.html` sin compilar, la app usa producción.
 
-## Revisión local con CodeRabbit
-
-El hook de pre-commit ejecuta una revisión nueva de CodeRabbit sobre los cambios locales antes de cada commit. Los hallazgos se muestran, pero no bloquean el commit; sí lo bloquea un error de la CLI, una revisión omitida/fallida o incompleta, o la ausencia del evento final de finalización. Requiere CodeRabbit CLI 0.9.5 o posterior, instalada y autenticada, además de Node.js disponible en el `PATH` del entorno que ejecuta Git. Si haces commits desde una interfaz gráfica, comprueba también allí que `node` esté en el `PATH`. Actívalo una vez en cada clon:
-
-```powershell
-git config core.hooksPath .githooks
-git config --local senda.coderabbitPath 'C:/ruta/absoluta/a/coderabbit.exe'
-```
-
-Configura `senda.coderabbitPath` con la ruta absoluta de la CLI oficial instalada en tu equipo. El hook usa el ámbito `--uncommitted`, por lo que revisa los cambios preparados y los cambios rastreados aún no preparados; no incluye archivos sin seguimiento.
-
 ## iOS
 
 El proyecto iOS está generado para `com.emiliopousada.sendamtb`, nombre `senda-mtb` y despliegue mínimo iOS 15. El acceso a ubicación en uso y en segundo plano y Bluetooth declara sus textos de permiso en `ios/App/App/Info.plist`. Revisa los mensajes y valida el comportamiento en un dispositivo antes de publicar.
