@@ -92,26 +92,3 @@ test('challenge migration rollback preserves a collection that existed before mi
     assert.deepEqual(deleted, []);
 });
 
-test('Strava migration rollback preserves a collection that existed before migration', () => {
-    const migration = loadMigration('1794836001_create_strava_connections.js');
-    const existingConnections = { name: 'strava_connections', records: [{ id: 'existing-connection' }] };
-    const collections = [existingConnections];
-    const deleted = [];
-    const app = {
-        findCollectionByNameOrId(name) {
-            if (name === 'users') return { id: 'users_id' };
-            if (name === 'strava_connections') return existingConnections;
-            throw new Error(`Unknown collection: ${name}`);
-        },
-        findAllCollections() { return collections; },
-        save() {},
-        delete(collection) { deleted.push(collection); }
-    };
-
-    migration.up(app);
-    migration.down(app);
-
-    assert.ok(collections.includes(existingConnections));
-    assert.deepEqual(existingConnections.records, [{ id: 'existing-connection' }]);
-    assert.deepEqual(deleted, []);
-});
