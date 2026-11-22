@@ -34,16 +34,16 @@ function groupHookEnvironment({ failUserSave = false } = {}) {
         ]));
     }
 
-    function createApp() {
+    function createApp(getState = () => state) {
         return {
             findCollectionByNameOrId(name) { return { name }; },
             findRecordById(collection, id) {
-                const record = state.get(collection)?.get(id);
+                const record = getState().get(collection)?.get(id);
                 if (!record) throw new Error(`Missing ${collection} record ${id}`);
                 return record;
             },
             findRecordsByFilter(collection, _filter, _sort, limit, offset, params = {}) {
-                let records = Array.from(state.get(collection)?.values() || []);
+                let records = Array.from(getState().get(collection)?.values() || []);
                 if (params.group) records = records.filter(record => record.getString('group') === params.group);
                 if (params.user) records = records.filter(record => record.getString('user') === params.user);
                 return records.slice(offset, offset + limit);
@@ -51,18 +51,21 @@ function groupHookEnvironment({ failUserSave = false } = {}) {
             save(record) {
                 if (failUserSave && record.collection.name === 'users') throw new Error('injected save failure');
                 if (!record.id) record.id = `record-${nextId++}`;
-                state.get(record.collection.name).set(record.id, record);
+                getState().get(record.collection.name).set(record.id, record);
             },
-            delete(record) { state.get(record.collection.name).delete(record.id); }
+            delete(record) { getState().get(record.collection.name).delete(record.id); }
         };
     }
 
     const app = createApp();
     app.runInTransaction = callback => {
         const before = snapshot();
+        const transactionState = snapshot();
         const previousNextId = nextId;
         try {
-            return callback(createApp());
+            const result = callback(createApp(() => transactionState));
+            state = transactionState;
+            return result;
         } catch (error) {
             state = before;
             nextId = previousNextId;
