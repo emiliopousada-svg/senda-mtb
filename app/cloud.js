@@ -67,17 +67,10 @@ const Cloud = {
         }
         const uid = this.uid;
         const generation = this.authGeneration;
-        const shouldRevokeSession = this.sessionState === 'active';
         this.serverSwitchInFlight = true;
         try {
             if (this.loggedIn() && typeof stopGroup === 'function') {
                 await stopGroup();
-            }
-            if (this.server !== current || this.uid !== uid || this.authGeneration !== generation) {
-                throw new Error('La sesión cambió durante el cambio de servidor. Vuelve a intentarlo.');
-            }
-            if (shouldRevokeSession) {
-                await cloudApi('/api/mtb/auth/logout', 'POST', {}, { server: current });
             }
             if (this.server !== current || this.uid !== uid || this.authGeneration !== generation) {
                 throw new Error('La sesión cambió durante el cambio de servidor. Vuelve a intentarlo.');
@@ -103,12 +96,12 @@ const Cloud = {
         this.profileGeneration++;
     },
     loggedIn()   { return !!(this.server && this.sessionActive && this.uid); },
-    setSession(rec) {
+    setSession(rec, token) {
         if (!this.sessionActive || this.uid !== rec.id) this.authGeneration++;
         if (this.groupCode !== (rec.groupCode || '')) this.profileGeneration++;
         this.sessionActive = true;
         this.sessionState = 'active';
-        localStorage.removeItem('mtb_pro_token');
+        if (typeof token === 'string' && token) localStorage.setItem('mtb_pro_token', token);
         localStorage.setItem('mtb_pro_uid', rec.id);
         localStorage.setItem('mtb_pro_avatar_last_uid', rec.id);
         localStorage.setItem('mtb_pro_email', rec.email || '');
@@ -127,7 +120,7 @@ const Cloud = {
 
         let result;
         try {
-            result = await cloudApi('/api/mtb/auth/session');
+            result = await cloudApi('/api/collections/users/auth-refresh', 'POST');
         } catch (error) {
             if (server !== this.server || uid !== this.uid || generation !== this.authGeneration
                 || profileGeneration !== this.profileGeneration || !this.loggedIn()) return null;
@@ -142,20 +135,24 @@ const Cloud = {
             this.clearSession();
             return null;
         }
-        this.setSession(result.record);
+        this.setSession(result.record, result.token);
         return result.record;
     },
     async restoreSession() {
         if (this.serverSwitchInFlight) return null;
+        if (!localStorage.getItem('mtb_pro_token')) {
+            this.clearSession();
+            return null;
+        }
         const generation = this.authGeneration;
         this.sessionState = 'pending';
         try {
-            const result = await cloudApi('/api/mtb/auth/session');
+            const result = await cloudApi('/api/collections/users/auth-refresh', 'POST');
             if (!result || !result.record || !result.record.id) {
                 throw new Error('El servidor no devolvió una sesión válida.');
             }
             if (generation !== this.authGeneration) return null;
-            this.setSession(result.record);
+            this.setSession(result.record, result.token);
             return result.record;
         } catch (error) {
             if (generation !== this.authGeneration) return null;
@@ -176,7 +173,6 @@ const Cloud = {
         if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
     }
 };
-localStorage.removeItem('mtb_pro_token');
 
 let cloudServerWasResetOnLoad = false;
 try {
@@ -329,6 +325,9 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
     const headers = {};
     if (typeof options === 'object' && options?.authorization) {
         headers.Authorization = options.authorization;
+    } else {
+        const token = localStorage.getItem('mtb_pro_token');
+        if (token) headers.Authorization = token;
     }
     let payload;
     if (body instanceof FormData) payload = body;
@@ -504,22 +503,18 @@ async function accAuth(register) {
             ensureAuthServer(server, authGeneration);
         }
         const auth = await cloudApi('/api/collections/users/auth-with-password', 'POST', { identity: email, password: pass });
-        let session;
-        try {
-            ensureAuthServer(server, authGeneration);
-            session = await cloudApi('/api/mtb/auth/session/exchange', 'POST', {}, { authorization: auth.token });
-            ensureAuthServer(server, authGeneration);
-        } finally {
-            auth.token = '';
+        ensureAuthServer(server, authGeneration);
+        if (!auth.token || !auth.record || !auth.record.id) {
+            throw new Error('El servidor no devolvió una sesión válida.');
         }
-        Cloud.setSession(session.record);
-        renderAccountProfile(session.record);
+        Cloud.setSession(auth.record, auth.token);
+        renderAccountProfile(auth.record);
         if ((weightKg || age || heightCm) && typeof statsApplyAccountProfile === 'function') {
-            statsApplyAccountProfile(session.record.weightKg ?? (weightKg ? Number(weightKg) : undefined),
-                session.record.age ?? (age ? Number(age) : undefined),
-                session.record.heightCm ?? (heightCm ? Number(heightCm) : undefined));
+            statsApplyAccountProfile(auth.record.weightKg ?? (weightKg ? Number(weightKg) : undefined),
+                auth.record.age ?? (age ? Number(age) : undefined),
+                auth.record.heightCm ?? (heightCm ? Number(heightCm) : undefined));
         }
-        try { await syncPendingAccountAvatar(session.record); }
+        try { await syncPendingAccountAvatar(auth.record); }
         catch (avatarError) { console.warn('No se pudo sincronizar el avatar pendiente:', avatarError); }
         await syncCloudPreferences();
         $('acc-pass').value = '';
@@ -583,28 +578,10 @@ async function logoutCloudAccount() {
     const server = Cloud.server;
     const uid = Cloud.uid;
     const generation = Cloud.authGeneration;
-    const activeGroupId = localStorage.getItem('mtb_pro_group_joined') || '';
     const sameAuthContext = () => Cloud.server === server && Cloud.uid === uid
         && Cloud.authGeneration === generation;
     try {
         await stopGroup();
-        if (!sameAuthContext()) return;
-        try {
-            await cloudApi('/api/mtb/auth/logout', 'POST', {});
-        } catch (error) {
-            if (!sameAuthContext()) return;
-            if (error.status !== 401) {
-                console.warn('No se pudo revocar la sesión en el servidor:', error);
-                if (activeGroupId && Cloud.groupCode === activeGroupId) {
-                    localStorage.setItem('mtb_pro_group_joined', activeGroupId);
-                    Cloud.logoutInProgress = false;
-                    await restoreGroup();
-                    if (!sameAuthContext()) return;
-                }
-                toast('No se pudo cerrar la sesión en el servidor. Comprueba la conexión e inténtalo de nuevo.', 6000);
-                return;
-            }
-        }
         if (!sameAuthContext()) return;
         Cloud.clearSession();
         renderFriends();

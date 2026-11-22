@@ -117,6 +117,7 @@ test('stale session restoration cannot replace a newer login', async () => {
     const { context } = cloudContext(() => new Promise((_resolve, reject) => {
         rejectRequest = reject;
     }));
+    context.localStorage.setItem('mtb_pro_token', 'old-token');
     const restoring = context.Cloud.restoreSession();
 
     context.Cloud.setSession({ id: 'new-user' });
@@ -132,6 +133,7 @@ test('changing servers invalidates an in-flight session restoration', async () =
     const { context } = cloudContext(() => new Promise(resolve => {
         resolveRequest = resolve;
     }));
+    context.localStorage.setItem('mtb_pro_token', 'old-token');
     const restoring = context.Cloud.restoreSession();
 
     context.Cloud.setServer('https://other.example');
@@ -142,7 +144,7 @@ test('changing servers invalidates an in-flight session restoration', async () =
     assert.equal(context.Cloud.uid, '');
 });
 
-test('switching servers revokes the old cookie session before changing the origin', async () => {
+test('switching servers stops the active group before clearing local credentials', async () => {
     const calls = [];
     const { context } = cloudContext(async (requestPath, method, body, options) => {
         calls.push({ requestPath, method, server: options.server });
@@ -155,28 +157,23 @@ test('switching servers revokes the old cookie session before changing the origi
     const nextServer = await context.Cloud.switchServer('https://same.example:9444');
 
     assert.equal(nextServer, 'https://same.example:9444');
-    assert.deepEqual(calls, [{
-        requestPath: 'stopGroup'
-    }, {
-        requestPath: '/api/mtb/auth/logout',
-        method: 'POST',
-        server: 'https://same.example:9443'
-    }]);
+    assert.deepEqual(calls, [{ requestPath: 'stopGroup' }]);
     assert.equal(context.Cloud.server, 'https://same.example:9444');
     assert.equal(context.Cloud.loggedIn(), false);
 });
 
-test('a failed old-server logout prevents switching to a same-host port', async () => {
+test('switching servers does not depend on the old server being reachable', async () => {
     const { context } = cloudContext(async () => {
         throw Object.assign(new Error('old server unavailable'), { status: 503 });
     });
     context.Cloud.setServer('https://same.example:9443');
     context.Cloud.setSession({ id: 'user-a' });
 
-    await assert.rejects(context.Cloud.switchServer('https://same.example:9444'), /old server unavailable/);
+    const server = await context.Cloud.switchServer('https://same.example:9444');
 
-    assert.equal(context.Cloud.server, 'https://same.example:9443');
-    assert.equal(context.Cloud.loggedIn(), true);
+    assert.equal(server, 'https://same.example:9444');
+    assert.equal(context.Cloud.server, 'https://same.example:9444');
+    assert.equal(context.Cloud.loggedIn(), false);
 });
 
 test('switching servers does not contact an unavailable server after session absence is confirmed', async () => {
@@ -275,7 +272,7 @@ test('a late nickname 401 cannot clear a newer session', async () => {
 test('a stale profile refresh cannot overwrite a saved nickname', async () => {
     let resolveSession;
     const { context } = cloudContext(requestPath => {
-        if (requestPath === '/api/mtb/auth/session') {
+        if (requestPath === '/api/collections/users/auth-refresh') {
             return new Promise(resolve => { resolveSession = resolve; });
         }
         return Promise.resolve({ id: 'user-a', nickname: 'New name' });
@@ -314,6 +311,7 @@ test('cloud API requests can stay pinned to the server captured by a sync', asyn
         FormData,
         URL,
         clearTimeout,
+        localStorage: { getItem() { return null; } },
         setTimeout,
         isRetryableCloudStatus: () => false,
         fetch: async url => {
@@ -507,7 +505,7 @@ test('a queued sync does not run for a different account after its delay', async
     assert.equal(inventoryCalls, 1);
 });
 
-test('login does not forward a JWT after the configured server changes', async () => {
+test('login discards a bearer token after the configured server changes', async () => {
     let resolvePassword;
     const calls = [];
     const { context } = cloudContext((requestPath) => {
@@ -535,24 +533,18 @@ test('login does not forward a JWT after the configured server changes', async (
 
     const login = vm.runInContext('accAuth(false)', context);
     context.Cloud.setServer('https://other.example');
-    const auth = { token: 'short-lived-jwt' };
+    const auth = { token: 'bearer-token', record: { id: 'user-a' } };
     resolvePassword(auth);
     await login;
 
-    assert.equal(auth.token, '');
+    assert.equal(context.localStorage.getItem('mtb_pro_token'), null);
     assert.deepEqual(calls, ['/api/collections/users/auth-with-password']);
 });
 
-test('login discards an exchange response after the configured server changes', async () => {
-    let resolveExchange;
-    let signalExchangeStarted;
-    const exchangeStarted = new Promise(resolve => { signalExchangeStarted = resolve; });
+test('login discards an authentication response after the configured server changes', async () => {
+    let resolvePassword;
     const { context } = cloudContext(requestPath => {
-        if (requestPath.includes('auth-with-password')) return Promise.resolve({ token: 'short-lived-jwt' });
-        if (requestPath.includes('/exchange')) {
-            signalExchangeStarted();
-            return new Promise(resolve => { resolveExchange = resolve; });
-        }
+        if (requestPath.includes('auth-with-password')) return new Promise(resolve => { resolvePassword = resolve; });
         throw new Error('Unexpected request');
     });
     const fields = new Map([
@@ -572,13 +564,13 @@ test('login discards an exchange response after the configured server changes', 
     );
 
     const login = vm.runInContext('accAuth(false)', context);
-    await exchangeStarted;
     context.Cloud.setServer('https://other.example');
-    resolveExchange({ record: { id: 'user-a' } });
+    resolvePassword({ token: 'bearer-token', record: { id: 'user-a' } });
     await login;
 
     assert.equal(context.Cloud.loggedIn(), false);
     assert.equal(context.Cloud.uid, '');
+    assert.equal(context.localStorage.getItem('mtb_pro_token'), null);
 });
 
 test('restoring a session on reconnect precedes authenticated syncs', async () => {
@@ -640,16 +632,12 @@ test('logout clears local session state when the server already returned 401', a
     assert.equal(context.Cloud.uid, '');
 });
 
-test('a late logout response does not clear a session created on another server', async () => {
-    let resolveLogout;
-    let signalLogoutStarted;
-    const logoutStarted = new Promise(resolve => { signalLogoutStarted = resolve; });
-    const { context } = cloudContext(() => {
-        signalLogoutStarted();
-        return new Promise(resolve => { resolveLogout = resolve; });
-    });
+test('a late group stop does not clear a session created on another server', async () => {
+    let resolveStop;
+    const groupStopStarted = new Promise(resolve => { resolveStop = resolve; });
+    const { context } = cloudContext();
     context.Cloud.setSession({ id: 'user-a' });
-    context.stopGroup = async () => {};
+    context.stopGroup = () => groupStopStarted;
     context.renderFriends = () => {};
     context.renderAccount = () => {};
     context.toast = () => {};
@@ -659,29 +647,27 @@ test('a late logout response does not clear a session created on another server'
     );
 
     const logout = context.logoutCloudAccount();
-    await logoutStarted;
+    await new Promise(resolve => setImmediate(resolve));
     context.Cloud.clearSession();
     context.Cloud.setServer('https://other.example');
     context.Cloud.setSession({ id: 'user-b' });
-    resolveLogout({});
+    resolveStop();
     await logout;
 
     assert.equal(context.Cloud.loggedIn(), true);
     assert.equal(context.Cloud.uid, 'user-b');
 });
 
-test('only one remote logout request runs at a time', async () => {
-    let resolveLogout;
-    let signalLogoutStarted;
-    let requestCount = 0;
-    const logoutStarted = new Promise(resolve => { signalLogoutStarted = resolve; });
-    const { context } = cloudContext(() => {
-        requestCount++;
-        signalLogoutStarted();
-        return new Promise(resolve => { resolveLogout = resolve; });
-    });
+test('only one logout can wait for group shutdown at a time', async () => {
+    let resolveStop;
+    let stopCount = 0;
+    const groupStopStarted = new Promise(resolve => { resolveStop = resolve; });
+    const { context } = cloudContext();
     context.Cloud.setSession({ id: 'user-a' });
-    context.stopGroup = async () => {};
+    context.stopGroup = () => {
+        stopCount++;
+        return groupStopStarted;
+    };
     context.renderFriends = () => {};
     context.renderAccount = () => {};
     context.toast = () => {};
@@ -691,25 +677,18 @@ test('only one remote logout request runs at a time', async () => {
     );
 
     const firstLogout = context.logoutCloudAccount();
-    await logoutStarted;
+    await new Promise(resolve => setImmediate(resolve));
     await context.logoutCloudAccount();
-    assert.equal(requestCount, 1);
-    resolveLogout({});
+    assert.equal(stopCount, 1);
+    resolveStop();
     await firstLogout;
 });
 
-test('a failed logout restores the active group while the session remains valid', async () => {
-    const { context } = cloudContext(async () => {
-        throw Object.assign(new Error('server unavailable'), { status: 503 });
-    });
+test('a failed group shutdown leaves the local session intact', async () => {
+    const { context } = cloudContext();
     context.Cloud.setSession({ id: 'user-a', groupCode: 'group-a' });
     context.localStorage.setItem('mtb_pro_group_joined', 'group-a');
-    context.stopGroup = async () => context.localStorage.removeItem('mtb_pro_group_joined');
-    let restoreCount = 0;
-    context.restoreGroup = async () => {
-        restoreCount++;
-        context.localStorage.setItem('mtb_pro_group_joined', 'group-a');
-    };
+    context.stopGroup = async () => { throw new Error('group unavailable'); };
     context.renderFriends = () => {};
     context.renderAccount = () => {};
     context.toast = () => {};
@@ -719,9 +698,8 @@ test('a failed logout restores the active group while the session remains valid'
         context
     );
 
-    await context.logoutCloudAccount();
+    await assert.rejects(context.logoutCloudAccount(), /group unavailable/);
 
     assert.equal(context.Cloud.loggedIn(), true);
     assert.equal(context.localStorage.getItem('mtb_pro_group_joined'), 'group-a');
-    assert.equal(restoreCount, 1);
 });
