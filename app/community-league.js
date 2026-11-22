@@ -169,7 +169,7 @@ function renderLeagueChallenges(result) {
     if (!list) return;
     const challenges = Array.isArray(result && result.challenges) ? result.challenges : [];
     if (!challenges.length) {
-        leagueEmpty(list, 'El grupo no tiene desafíos. Crea el primero: cualquier miembro puede proponer uno.');
+        leagueEmpty(list, 'El grupo no tiene desafíos vigentes. Crea uno: cualquier miembro puede proponerlo.');
         return;
     }
     list.replaceChildren(...challenges.map(renderLeagueChallenge));
@@ -226,7 +226,11 @@ async function submitLeagueChallenge(event) {
     const target = Number(String($('league-challenge-target').value).replace(',', '.'));
     const endsAt = $('league-challenge-end').value;
     if (name.length < 3) { toast('Ponle al desafío un nombre de al menos 3 caracteres.'); $('league-challenge-name').focus(); return; }
-    if (!Number.isFinite(target) || target <= 0) { toast('Indica una meta mayor que cero.'); $('league-challenge-target').focus(); return; }
+    if (!Number.isFinite(target) || target < 10 || target > 20000) {
+        toast('La meta debe estar entre 10 y 20.000.');
+        $('league-challenge-target').focus();
+        return;
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(endsAt)) { toast('Elige la fecha de fin del desafío.'); $('league-challenge-end').focus(); return; }
     const submit = $('league-challenge-submit');
     submit.disabled = true;
@@ -285,6 +289,7 @@ function renderLeagueAwards(result) {
     }
     const medalTable = $('league-medal-table');
     const history = $('league-awards-history');
+    const challengeMedals = $('league-challenge-medals');
     const medals = Array.isArray(result.medalTable) ? result.medalTable : [];
     if (medalTable) {
         medalTable.replaceChildren();
@@ -306,18 +311,44 @@ function renderLeagueAwards(result) {
         const seasons = Array.isArray(result.history) ? result.history : [];
         if (!seasons.length) {
             leagueEmpty(history, 'El palmarés se llenará al cerrar la primera temporada con salidas compartidas.');
-            return;
+        } else {
+            history.replaceChildren(...seasons.map(item => {
+                const block = leagueEl('details', 'league-history-season');
+                const summary = leagueEl('summary', '', `Temporada ${item.season.seasonNumber} · ${leagueFormatDay(item.season.startDate)} – ${leagueFormatDay(item.season.endDate)}`);
+                const champion = item.titles.find(title => title.key === 'champion');
+                if (champion && champion.winner) summary.appendChild(leagueEl('span', 'league-history-champion', ` 🏆 ${champion.winner.nickname}`));
+                const grid = leagueEl('div', 'league-titles');
+                renderLeagueTitles(grid, item.titles, true);
+                block.append(summary, grid);
+                return block;
+            }));
         }
-        history.replaceChildren(...seasons.map(item => {
-            const block = leagueEl('details', 'league-history-season');
-            const summary = leagueEl('summary', '', `Temporada ${item.season.seasonNumber} · ${leagueFormatDay(item.season.startDate)} – ${leagueFormatDay(item.season.endDate)}`);
-            const champion = item.titles.find(title => title.key === 'champion');
-            if (champion && champion.winner) summary.appendChild(leagueEl('span', 'league-history-champion', ` 🏆 ${champion.winner.nickname}`));
-            const grid = leagueEl('div', 'league-titles');
-            renderLeagueTitles(grid, item.titles, true);
-            block.append(summary, grid);
-            return block;
-        }));
+    }
+    if (challengeMedals) {
+        const awards = Array.isArray(result.challengeMedals) ? result.challengeMedals : [];
+        if (!awards.length) {
+            leagueEmpty(challengeMedals, 'Cuando termine un desafío, quienes hayan alcanzado su meta recibirán aquí una medalla.');
+        } else {
+            challengeMedals.replaceChildren(...awards.map(award => {
+                const card = leagueEl('article', 'league-challenge-medal');
+                const head = leagueEl('div', 'league-challenge-medal-head');
+                const title = leagueEl('div', 'league-challenge-medal-title');
+                title.append(
+                    leagueEl('strong', '', award.name),
+                    leagueEl('small', '', `Meta ${leagueFormatValue(award.metric, award.target)} · terminó el ${leagueFormatDay(new Date(award.endsAtMs).toISOString())}`)
+                );
+                head.append(
+                    leagueEl('span', 'league-challenge-medal-icon', '🏅'),
+                    title
+                );
+                const recipients = leagueEl('ul', 'league-challenge-medal-recipients');
+                (award.recipients || []).forEach(recipient => {
+                    recipients.appendChild(leagueEl('li', '', `${recipient.nickname} · meta alcanzada el ${leagueFormatDay(new Date(recipient.completedAtMs).toISOString())}`));
+                });
+                card.append(head, recipients);
+                return card;
+            }));
+        }
     }
 }
 
@@ -327,6 +358,7 @@ async function loadLeagueAwards(force = false) {
         $('league-current-titles')?.replaceChildren();
         $('league-medal-table')?.replaceChildren();
         $('league-awards-history')?.replaceChildren();
+        $('league-challenge-medals')?.replaceChildren();
         leagueSetStatus('league-awards-status', 'Inicia sesión y únete a un grupo para consultar los títulos.');
         return;
     }

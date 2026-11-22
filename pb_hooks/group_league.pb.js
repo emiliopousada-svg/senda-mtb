@@ -8,25 +8,26 @@ routerAdd("GET", "/api/mtb/groups/challenges", (e) => {
         const now = Date.now();
         const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + ctx.groupId + '"', "");
         const records = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "-endsAt");
-        const challenges = records.map((record) => {
-            const challenge = utils.challengeFromRecord(record);
-            const progress = utils.challengeProgress(challenge, entries, ctx.members);
-            const mine = progress.find(item => item.userId === ctx.user.id) || null;
-            return {
-                id: challenge.id,
-                name: challenge.name,
-                metric: challenge.metric,
-                target: challenge.target,
-                startsAt: new Date(challenge.startsAtMs).toISOString(),
-                endsAt: new Date(challenge.endsAtMs).toISOString(),
-                status: utils.challengeStatus(challenge, now),
-                createdBy: ctx.nicknames[challenge.createdBy] || "Ciclista",
-                canDelete: ctx.isAdmin || challenge.createdBy === ctx.user.id,
-                completedCount: progress.filter(item => item.completed).length,
-                mine,
-                progress
-            };
-        });
+        const challenges = records.map((record) => utils.challengeFromRecord(record))
+            .filter(challenge => utils.challengeStatus(challenge, now) !== "finished")
+            .map((challenge) => {
+                const progress = utils.challengeProgress(challenge, entries, ctx.members);
+                const mine = progress.find(item => item.userId === ctx.user.id) || null;
+                return {
+                    id: challenge.id,
+                    name: challenge.name,
+                    metric: challenge.metric,
+                    target: challenge.target,
+                    startsAt: new Date(challenge.startsAtMs).toISOString(),
+                    endsAt: new Date(challenge.endsAtMs).toISOString(),
+                    status: utils.challengeStatus(challenge, now),
+                    createdBy: ctx.nicknames[challenge.createdBy] || "Ciclista",
+                    canDelete: ctx.isAdmin || challenge.createdBy === ctx.user.id,
+                    completedCount: progress.filter(item => item.completed).length,
+                    mine,
+                    progress
+                };
+            });
         const order = { active: 0, upcoming: 1, finished: 2 };
         challenges.sort((a, b) => (order[a.status] - order[b.status]) || (Date.parse(a.endsAt) - Date.parse(b.endsAt)));
         const season = utils.getSeasonInfo(now);
@@ -110,6 +111,21 @@ routerAdd("GET", "/api/mtb/groups/awards", (e) => {
         const now = Date.now();
         const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + ctx.groupId + '"', "");
         const current = utils.getSeasonInfo(now);
+        const challengeRecords = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "", $app);
+        const historicalMembers = new Map(ctx.members.map(member => [member.userId, member]));
+        const historicalProfiles = utils.findRecordsByIds($app, "users", entries.map(entry => entry.getString("owner")).filter(Boolean));
+        historicalProfiles.forEach(profile => {
+            const nickname = profile.getString("nickname").trim()
+                || (historicalMembers.get(profile.id) || {}).nickname
+                || "Ciclista";
+            historicalMembers.set(profile.id, { userId: profile.id, nickname });
+        });
+        const challengeMedals = utils.challengeMedals(
+            challengeRecords.map(utils.challengeFromRecord),
+            entries,
+            Array.from(historicalMembers.values()),
+            now
+        );
         const history = [];
         for (let number = current.seasonNumber - 1; number >= 1 && history.length < 12; number--) {
             const season = utils.getSeasonInfoByNumber(number, now);
@@ -127,7 +143,8 @@ routerAdd("GET", "/api/mtb/groups/awards", (e) => {
             group: { id: ctx.groupId, name: ctx.group.getString("name") },
             current: { season: current, titles: utils.seasonTitles(entries, current, ctx.nicknames) },
             history,
-            medalTable: Object.values(medals).sort((a, b) => b.count - a.count || a.nickname.localeCompare(b.nickname))
+            medalTable: Object.values(medals).sort((a, b) => b.count - a.count || a.nickname.localeCompare(b.nickname)),
+            challengeMedals
         });
     } catch (err) {
         return e.json(err.status || 400, { message: err.message || "No se pudieron cargar los títulos." });

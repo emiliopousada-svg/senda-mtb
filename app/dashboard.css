@@ -1096,6 +1096,14 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 .league-history-season[open] summary { margin-bottom:10px; }
 .league-history-champion { color:#ffb07a; }
 .league-medal-table:empty { display:none; }
+.league-challenge-medals { display:grid; gap:8px; }
+.league-challenge-medal { display:grid; gap:8px; padding:10px 12px; border:1px solid rgba(255,255,255,.08); border-radius:11px; background:rgba(255,255,255,.02); }
+.league-challenge-medal-head { display:flex; align-items:center; gap:10px; }
+.league-challenge-medal-icon { font-size:1.35rem; }
+.league-challenge-medal-title { display:grid; gap:3px; min-width:0; }
+.league-challenge-medal-title strong { color:#f4f6f9; font-size:.82rem; overflow-wrap:anywhere; }
+.league-challenge-medal-title small,.league-challenge-medal-recipients { color:#98a4b3; font-size:.72rem; }
+.league-challenge-medal-recipients { display:grid; gap:4px; margin:0; padding-left:2.5rem; }
 .league-feed { min-height:0; padding:0; border:0; background:none; }
 .league-feed:empty { display:none; }
 .league-feed-item { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:start; gap:10px; padding:10px 11px; border:1px solid rgba(255,255,255,.07); border-radius:11px; background:#1b222b; }
@@ -1344,12 +1352,88 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
     #page-map .side-controls,#page-map .map-zoom-controls { top:calc(env(safe-area-inset-top,0px) + 112px); }
 }
 
+@media (orientation:landscape) and (max-width:1280px) and (max-height:560px) {
+    #page-map .side-controls,
+    #page-map .map-zoom-controls {
+        top:calc(env(safe-area-inset-top,0px) + 44px);
+        gap:clamp(2px,1dvh,4px);
+    }
+    #page-map .side-controls .btn-icon-only,
+    #page-map .map-zoom-btn {
+        width:clamp(36px,10dvh,40px);
+        height:clamp(36px,10dvh,40px);
+        border-radius:10px;
+    }
+    #page-map .side-controls #btn-center { margin-top:0; }
+    #page-map .btn-logo { width:24px; }
+    #page-map #btn-center svg { width:21px; height:21px; }
+    #page-map .map-zoom-btn { font-size:1.15rem; }
+    #page-map .map-zoom-btn.orient { font-size:.9rem; }
+    #page-map .map-zoom-btn.route-photo-button { font-size:1rem; }
+    #page-map #map-battery { width:34px; padding:3px 0; gap:2px; font-size:.62rem; }
+    #page-map #map-battery-icon { width:21px; height:12px; }
+}
+
 @media (max-width:719px) {
     #page-map { --map-nav-offset:0px; }
     #page-map .map-bottom-panel { bottom:0; }
     #page-map.panel-collapsed:not(.panel-profile-visible) .map-panel-toggle { bottom:0; }
     #page-map .map-bottom-panel { border-radius:16px 16px 25px 25px; }
     #page-map.panel-collapsed.panel-profile-visible .map-bottom-panel { border-radius:16px; }
+}
+
+@media (orientation:landscape) and (max-width:1280px) {
+    #page-map .map-live-banner {
+        top:calc(env(safe-area-inset-top,0px) + 4px);
+        padding:3px 8px 4px;
+        border-radius:16px;
+    }
+    #page-map .map-live-banner-head { min-height:18px; padding:0 2px 3px; gap:6px; }
+    #page-map .map-live-banner-head strong { font-size:.72rem; }
+    #page-map .map-live-indicator { width:8px; height:8px; flex-basis:8px; }
+    #page-map .map-live-gps { font-size:.62rem; }
+    #page-map .map-live-metrics { padding-top:3px; }
+    #page-map .map-live-metric strong { font-size:clamp(1.05rem,5dvh,1.4rem); }
+    #page-map .map-live-metric > span:last-child { font-size:.56rem; }
+    #page-map .map-bottom-panel {
+        bottom:0;
+        padding:4px 6px;
+        gap:4px;
+        border-radius:14px 14px 0 0;
+    }
+    #page-map .map-bottom-panel-content {
+        display:grid;
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(176px,auto) minmax(0,1fr) minmax(0,1fr);
+        align-items:center;
+        gap:3px;
+    }
+    #page-map .map-bottom-panel .metrics-bar { display:contents; }
+    #page-map .map-bottom-panel .map-live-stat { min-height:42px; gap:1px; }
+    #page-map .map-bottom-panel .map-live-stat-icon { display:none; }
+    #page-map .map-bottom-panel .map-live-stat .m-val { font-size:clamp(.85rem,3.8dvh,1.1rem); }
+    #page-map .map-bottom-panel .map-live-stat .m-lbl { font-size:.46rem; }
+    #page-map .map-bottom-panel .metrics-bar .map-live-stat:nth-child(1) { grid-column:1; grid-row:1; }
+    #page-map .map-bottom-panel .metrics-bar .map-live-stat:nth-child(2) { grid-column:2; grid-row:1; }
+    #page-map .map-bottom-panel .controls-overlay.map-recording-actions {
+        grid-column:3;
+        grid-row:1;
+        width:100%;
+        min-width:0;
+        padding:0;
+        border:0;
+        gap:4px;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    #page-map .map-bottom-panel .metrics-bar .map-live-stat:nth-child(3) { grid-column:4; grid-row:1; }
+    #page-map .map-bottom-panel .metrics-bar .map-live-stat:nth-child(4) { grid-column:5; grid-row:1; }
+    #page-map .map-recording-actions #btn-start,
+    #page-map .map-recording-actions #btn-follow-route,
+    #page-map .map-recording-actions #btn-stop {
+        min-height:42px;
+        padding:3px 6px;
+        gap:4px;
+        font-size:.68rem;
+    }
 }
 
 /* Sensores Bluetooth registrados (se reconectan solos) */

@@ -14,6 +14,7 @@ const {
     validateChallengeInput,
     challengeProgress,
     challengeStatus,
+    challengeMedals,
     seasonTitles,
     groupActivityFeed,
     segmentLeadsByUser
@@ -57,17 +58,28 @@ test('getSeasonInfoByNumber devuelve temporadas pasadas cerradas', () => {
     assert.equal(getSeasonInfoByNumber(current.seasonNumber, NOW).finished, false);
 });
 
+test('el formulario de desafíos limita la meta entre 10 y 20000', () => {
+    const root = path.join(__dirname, '..');
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const source = fs.readFileSync(path.join(root, 'app', 'community-league.js'), 'utf8');
+    assert.match(html, /id="league-challenge-target" min="10" max="20000"/);
+    assert.match(source, /target < 10 \|\| target > 20000/);
+});
+
 test('validateChallengeInput normaliza y rechaza desafíos inválidos', () => {
     const ok = validateChallengeInput({ name: '  100   km ', metric: 'distance', target: 100.04, endsAt: '2026-11-30' }, NOW);
     assert.equal(ok.name, '100 km');
     assert.equal(ok.target, 100);
     assert.equal(ok.startsAtMs, NOW);
     assert.equal(ok.endsAtMs, Date.UTC(2026, 10, 30) + DAY - 1, 'la fecha de fin es inclusiva');
-    assert.equal(validateChallengeInput({ name: 'Salidas', metric: 'activities', target: 2.2, endsAt: '2026-11-30' }, NOW).target, 3);
+    assert.equal(validateChallengeInput({ name: 'Mínimo', metric: 'distance', target: 10, endsAt: '2026-11-30' }, NOW).target, 10);
+    assert.equal(validateChallengeInput({ name: 'Máximo', metric: 'distance', target: 20000, endsAt: '2026-11-30' }, NOW).target, 20000);
+    assert.equal(validateChallengeInput({ name: 'Salidas', metric: 'activities', target: 10.2, endsAt: '2026-11-30' }, NOW).target, 11);
 
     assert.throws(() => validateChallengeInput({ name: 'ab', metric: 'distance', target: 10, endsAt: '2026-11-30' }, NOW), /nombre/);
     assert.throws(() => validateChallengeInput({ name: 'Reto', metric: 'saltos', target: 10, endsAt: '2026-11-30' }, NOW), /tipo/);
-    assert.throws(() => validateChallengeInput({ name: 'Reto', metric: 'distance', target: 0, endsAt: '2026-11-30' }, NOW), /objetivo/);
+    assert.throws(() => validateChallengeInput({ name: 'Reto', metric: 'distance', target: 9.9, endsAt: '2026-11-30' }, NOW), /meta/);
+    assert.throws(() => validateChallengeInput({ name: 'Reto', metric: 'distance', target: 20000.1, endsAt: '2026-11-30' }, NOW), /meta/);
     assert.throws(() => validateChallengeInput({ name: 'Reto', metric: 'distance', target: 10, endsAt: '2026-11-01' }, NOW), /fin/);
     assert.throws(() => validateChallengeInput({ name: 'Reto', metric: 'distance', target: 10, endsAt: '2027-06-01' }, NOW), /máximo/);
 });
@@ -93,6 +105,27 @@ test('challengeProgress suma solo las salidas del grupo dentro de las fechas', (
     assert.equal(challengeStatus(challenge, NOW), 'active');
     assert.equal(challengeStatus(challenge, NOW - 20 * DAY), 'upcoming');
     assert.equal(challengeStatus(challenge, NOW + 20 * DAY), 'finished');
+});
+
+test('challengeMedals archiva desafíos vencidos y premia solo a quienes alcanzaron la meta', () => {
+    const finished = {
+        id: 'challenge-1', name: '100 km', metric: 'distance', target: 50,
+        startsAtMs: NOW - 10 * DAY, endsAtMs: NOW - DAY
+    };
+    const active = { ...finished, id: 'challenge-2', name: 'Reto activo', endsAtMs: NOW + DAY };
+    const medals = challengeMedals([finished, active], [
+        entry('ana', 5, { distanceKm: 30 }),
+        entry('ana', 2, { distanceKm: 25 }),
+        entry('brais', 1, { distanceKm: 10 })
+    ], [
+        { userId: 'ana', nickname: 'Ana' },
+        { userId: 'brais', nickname: 'Brais' }
+    ], NOW);
+
+    assert.equal(medals.length, 1);
+    assert.equal(medals[0].id, 'challenge-1');
+    assert.deepEqual(medals[0].recipients.map(item => item.userId), ['ana']);
+    assert.equal(medals[0].recipients[0].completedAtMs, NOW - 2 * DAY);
 });
 
 test('seasonTitles reparte los cinco títulos de la temporada', () => {

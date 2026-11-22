@@ -188,11 +188,12 @@ function groupRankingSummaryFromEntries(entries, options = {}) {
 //  Liga de grupo: temporadas, desafíos, títulos y actividad
 // ------------------------------------------------------------
 const CHALLENGE_METRICS = {
-    distance: { label: "km", maxTarget: 100000 },
-    elevation: { label: "m de desnivel", maxTarget: 1000000 },
-    activities: { label: "salidas", maxTarget: 1000 },
-    time: { label: "horas en movimiento", maxTarget: 10000 }
+    distance: { label: "km", maxTarget: 20000 },
+    elevation: { label: "m de desnivel", maxTarget: 20000 },
+    activities: { label: "salidas", maxTarget: 20000 },
+    time: { label: "horas en movimiento", maxTarget: 20000 }
 };
+const CHALLENGE_MIN_TARGET = 10;
 const CHALLENGE_MAX_DAYS = 120;
 const CHALLENGE_MAX_ACTIVE = 20;
 
@@ -226,8 +227,8 @@ function validateChallengeInput(input, nowMs = Date.now()) {
     const definition = CHALLENGE_METRICS[metric];
     if (!definition) throw new Error("Elige un tipo de desafío válido.");
     const target = Number(input && input.target);
-    if (!Number.isFinite(target) || target <= 0 || target > definition.maxTarget) {
-        throw new Error("El objetivo del desafío no es válido.");
+    if (!Number.isFinite(target) || target < CHALLENGE_MIN_TARGET || target > definition.maxTarget) {
+        throw new Error("La meta del desafío debe estar entre 10 y 20000.");
     }
     const dayMs = 24 * 60 * 60 * 1000;
     const startsAtMs = input && input.startsAt ? Date.parse(String(input.startsAt)) : nowMs;
@@ -272,6 +273,28 @@ function challengeStatus(challenge, nowMs = Date.now()) {
     if (nowMs < challenge.startsAtMs) return "upcoming";
     if (nowMs > challenge.endsAtMs) return "finished";
     return "active";
+}
+
+function challengeMedals(challenges, entries, members, nowMs = Date.now()) {
+    return (Array.isArray(challenges) ? challenges : [])
+        .filter(challenge => challengeStatus(challenge, nowMs) === "finished")
+        .map(challenge => ({
+            id: challenge.id,
+            name: challenge.name,
+            metric: challenge.metric,
+            target: challenge.target,
+            endsAtMs: challenge.endsAtMs,
+            recipients: challengeProgress(challenge, entries, members)
+                .filter(item => item.completed)
+                .map(item => ({
+                    userId: item.userId,
+                    nickname: item.nickname,
+                    completedAtMs: item.completedAtMs
+                }))
+                .sort((a, b) => (a.completedAtMs - b.completedAtMs) || a.nickname.localeCompare(b.nickname))
+        }))
+        .filter(challenge => challenge.recipients.length > 0)
+        .sort((a, b) => b.endsAtMs - a.endsAtMs);
 }
 
 // Títulos de temporada calculados a partir de las marcas compartidas.
@@ -431,6 +454,7 @@ module.exports = {
     validateChallengeInput,
     challengeProgress,
     challengeStatus,
+    challengeMedals,
     SEASON_TITLES,
     seasonTitles,
     groupActivityFeed,

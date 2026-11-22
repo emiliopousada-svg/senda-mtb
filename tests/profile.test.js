@@ -37,6 +37,7 @@ function profileLocationContext({ initialStorage = {}, response = null } = {}) {
     const elements = new Map([
         ['profile-edit-button', editButton],
         ['profile-editor', editor],
+        ['profile-account-details', { open: false }],
         ['profile-location', { textContent: '' }],
         ['profile-location-input', { value: '' }],
         ['profile-editor-note', { textContent: '' }]
@@ -83,6 +84,7 @@ test('profile editor opens on the first visit when no locality has been saved', 
     const { context, elements, storage } = profileLocationContext();
     assert.equal(context.profileOpenEditorOnFirstVisit(), true);
     assert.equal(elements.get('profile-editor').hidden, false);
+    assert.equal(elements.get('profile-account-details').open, true);
     assert.equal(elements.get('profile-edit-button').attributes['aria-expanded'], 'true');
     assert.equal(storage.has('mtb_pro_profile_setup_complete'), false);
 });
@@ -276,6 +278,9 @@ test('profile renders account identity and social icons without placeholder inte
     const pageStart = html.indexOf('<div class="page content-panel" id="page-settings">');
     const pageEnd = html.indexOf('<!-- INICIO / DASHBOARD senda-mtb -->', pageStart);
     const profilePage = html.slice(pageStart, pageEnd);
+    const accountStart = profilePage.indexOf('<details class="profile-account-details"');
+    const accountEnd = profilePage.indexOf('</details>', accountStart);
+    const profileEditor = profilePage.indexOf('<form class="profile-editor"');
 
     for (const id of [
         'profile-avatar-image', 'profile-name', 'profile-location', 'profile-total-distance',
@@ -293,7 +298,7 @@ test('profile renders account identity and social icons without placeholder inte
     assert.match(source, /profileUpdateAccountStatus/);
     assert.doesNotMatch(source, /profileRefreshSharedRoutes/);
     assert.match(navigation, /profileRender\(\)/);
-    assert.ok(profilePage.indexOf('profile-account-details') < profilePage.indexOf('<form class="profile-editor"'));
+    assert.ok(profileEditor > accountStart && profileEditor < accountEnd);
     assert.match(profilePage, /profile-account-details[\s\S]*Cuenta y sincronización[\s\S]*acc-form[\s\S]*acc-profile-editor/);
     assert.match(profilePage, /id="profile-account-details" open/);
     assert.doesNotMatch(profilePage, /<details class="account-options"/);

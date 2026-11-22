@@ -64,6 +64,8 @@ function profileOpenEditorOnFirstVisit() {
         || profileNormalizeLocation(localStorage.getItem(PROFILE_LOCATION_KEY))) return false;
 
     editor.hidden = false;
+    const accountDetails = document.getElementById('profile-account-details');
+    if (accountDetails) accountDetails.open = true;
     const editButton = document.getElementById('profile-edit-button');
     if (editButton) editButton.setAttribute('aria-expanded', 'true');
     return true;
@@ -327,9 +329,11 @@ function profileBindUI() {
     const editButton = document.getElementById('profile-edit-button');
     const editor = document.getElementById('profile-editor');
     const locationInput = document.getElementById('profile-location-input');
+    const accountDetails = document.getElementById('profile-account-details');
     if (editButton && editor) {
         editButton.addEventListener('click', () => {
             const open = editor.hidden;
+            if (open && accountDetails) accountDetails.open = true;
             editor.hidden = !open;
             editButton.setAttribute('aria-expanded', String(open));
             if (!open) localStorage.setItem(PROFILE_SETUP_COMPLETE_KEY, 'true');

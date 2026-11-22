@@ -461,7 +461,7 @@
                                     <option value="time">Horas en movimiento</option>
                                 </select></div>
                                 <div><label for="league-challenge-target">Meta</label>
-                                <input type="number" id="league-challenge-target" min="1" step="any" inputmode="decimal" placeholder="200" required></div>
+                                <input type="number" id="league-challenge-target" min="10" max="20000" step="any" inputmode="decimal" placeholder="200" required></div>
                             </div>
                             <label for="league-challenge-end">Termina el</label>
                             <input type="date" id="league-challenge-end" required>
@@ -530,6 +530,9 @@
                     <h2>🏅 Palmarés del grupo</h2>
                     <div id="league-medal-table" class="league-medal-table"></div>
                     <div id="league-awards-history" class="league-history"></div>
+                    <h3>Medallas de desafíos</h3>
+                    <p class="hint">Se conceden al alcanzar la meta y aparecen aquí cuando termina el desafío.</p>
+                    <div id="league-challenge-medals" class="league-challenge-medals"></div>
                 </div>
             </section>
 
@@ -751,19 +754,18 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            <form class="profile-editor" id="profile-editor" hidden>
+                                                <label for="profile-location-input">Localidad habitual</label>
+                                                <input type="text" id="profile-location-input" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">
+                                                <p class="profile-editor-note" id="profile-editor-note">Se guarda en tu cuenta si has iniciado sesión; no se publica automáticamente.</p>
+                                                <div class="profile-editor-actions">
+                                                    <button class="btn" type="submit">Guardar localidad</button>
+                                                    <button class="btn secondary" id="profile-account-edit" type="button">Editar foto y datos físicos</button>
+                                                </div>
+                                            </form>
                                         </section>
                                     </details>
                 </section>
-
-                <form class="profile-editor" id="profile-editor" hidden>
-                                    <label for="profile-location-input">Localidad habitual</label>
-                                    <input type="text" id="profile-location-input" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">
-                                    <p class="profile-editor-note" id="profile-editor-note">Se guarda en tu cuenta si has iniciado sesión; no se publica automáticamente.</p>
-                                    <div class="profile-editor-actions">
-                                        <button class="btn" type="submit">Guardar localidad</button>
-                                        <button class="btn secondary" id="profile-account-edit" type="button">Editar foto y datos físicos</button>
-                                    </div>
-                </form>
 
                 <section class="profile-stat-grid" aria-label="Totales históricos">
                                     <button class="profile-stat-card profile-stat-distance" type="button" data-page="1">
