@@ -5,6 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.30] - 2026-11-22
+
+### Cambiado
+* **Perfil:** Cuenta y sincronización agrupa los datos de sesión y perfil; el indicador del servidor queda junto al avatar y la sección Social muestra iconos de muestra.
+* **Mapa:** los controles laterales reaparecen al tocar el mapa después de ocultarse, sin un botón lateral.
+* **Entrenamiento:** se elimina el acceso «Configurar en Stats» de la tarjeta de perfil.
+
 ## [0.2.29] - 2026-11-20
 
 ### Cambiado
