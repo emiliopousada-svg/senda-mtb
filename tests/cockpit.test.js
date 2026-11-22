@@ -194,6 +194,11 @@ test('cockpit uses compact layout when the phone is in landscape', () => {
 test('map elevation profiles stay inside the bottom panel in landscape', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
     assert.match(css, /@media \(orientation: landscape\) and \(max-width: 1280px\)/);
+    assert.match(css, /@media \(orientation:landscape\) and \(max-width:1280px\)[\s\S]*?#page-map #recording-live-profile \{ display:none !important; \}/);
+    assert.match(css, /#page-map \.map-bottom-panel \.controls-overlay\.map-recording-actions\.is-recording\s*\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+    assert.match(css, /#page-map \.map-bottom-panel-content\s*\{[\s\S]*?minmax\(220px,33vw\)/);
+    assert.match(css, /#page-map \.map-live-banner\s*\{[\s\S]*?left:calc\(env\(safe-area-inset-left,0px\) \+ 90px\)/);
+    assert.match(css, /#page-map \.side-controls \.btn-icon-only,\s*#page-map \.map-zoom-btn\s*\{[\s\S]*?clamp\(40px,11dvh,44px\)/);
     assert.match(css, /#page-map #map-bottom-panel #map-route-profile\s*\{[\s\S]*?position: relative/);
     assert.match(css, /#page-map #map-bottom-panel #recording-live-profile\s*\{[\s\S]*?position:relative/);
     assert.match(css, /#page-map #map-bottom-panel #recording-live-profile svg\s*\{[\s\S]*?height:clamp\(28px,8vw,42px\)/);
