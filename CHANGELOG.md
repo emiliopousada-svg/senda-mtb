@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.32] - 2026-11-22
+
+### Cambiado
+* **Mapa horizontal:** se oculta el perfil en directo, se alinean los tres botones al grabar y se ajustan el banner superior y los controles laterales.
+
 ## [0.2.31] - 2026-11-22
 
 ### Añadido
