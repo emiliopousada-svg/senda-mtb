@@ -2,7 +2,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { groupRankingSummaryFromEntries } = require('../pb_hooks/groups_utils.js');
+const {
+    groupRankingSummaryFromEntries,
+    findRecordsByIds,
+    loadActiveGroupContext
+} = require('../pb_hooks/groups_utils.js');
 
 function rankingEntry(owner, created, values) {
     const record = { owner, created, ...values };
@@ -49,4 +53,75 @@ test('group ranking summary includes only entries within the active season', () 
         totalElevationM: 300,
         leaguePoints: 45
     });
+});
+
+test('findRecordsByIds deduplicates ids and splits lookups into bounded batches', () => {
+    const records = Array.from({ length: 205 }, (_, index) => ({ id: `user-${index}` }));
+    const calls = [];
+    const app = {
+        findRecordsByFilter(collection, filter, sort, limit, offset, params) {
+            calls.push({ collection, filter, sort, limit, offset, params });
+            const ids = Object.values(params);
+            return records.filter(record => ids.includes(record.id));
+        }
+    };
+
+    const found = findRecordsByIds(app, 'users', [...records.map(record => record.id), 'user-0']);
+
+    assert.equal(found.length, 205);
+    assert.equal(calls.length, 3);
+    assert.deepEqual(calls.map(call => call.limit), [100, 100, 5]);
+    assert.ok(calls.every(call => call.collection === 'users' && call.offset === 0));
+    assert.ok(calls.every(call => call.filter.includes('id = {:id0}')));
+});
+
+test('findRecordsByIds rejects unsafe ids before querying', () => {
+    let queries = 0;
+    const app = { findRecordsByFilter() { queries++; return []; } };
+
+    assert.throws(() => findRecordsByIds(app, 'users', ['valid-id', 'bad" || id != ""']), /id inválido/);
+    assert.equal(queries, 0);
+});
+
+test('loadActiveGroupContext batches member profiles into one query', () => {
+    const record = (id, values) => ({
+        id,
+        getString(field) { return String(values[field] ?? ''); }
+    });
+    const user = record('user-1', { groupCode: 'group-1' });
+    const group = record('group-1', { owner: 'user-1' });
+    const memberships = [
+        record('membership-1', { user: 'user-1', nickname: 'Old Rider' }),
+        record('membership-2', { user: 'user-2', nickname: 'Second Rider' })
+    ];
+    const profiles = [
+        record('user-1', { nickname: 'Rider' }),
+        record('user-2', { nickname: 'Second' })
+    ];
+    let profileQueries = 0;
+    const app = {
+        findRecordById(collection, id) {
+            if (collection === 'users' && id === user.id) return user;
+            if (collection === 'mtb_groups' && id === group.id) return group;
+            throw new Error(`Unexpected record lookup: ${collection}/${id}`);
+        },
+        findRecordsByFilter(collection, _filter, _sort, _limit, _offset, params = {}) {
+            if (collection === 'mtb_group_members' && params.group && params.user) return [memberships[0]];
+            if (collection === 'mtb_group_members') return memberships;
+            if (collection === 'users') {
+                profileQueries++;
+                const ids = Object.values(params);
+                return profiles.filter(profile => ids.includes(profile.id));
+            }
+            throw new Error(`Unexpected collection query: ${collection}`);
+        }
+    };
+
+    const context = loadActiveGroupContext('user-1', app);
+
+    assert.equal(profileQueries, 1);
+    assert.deepEqual(context.members, [
+        { userId: 'user-1', nickname: 'Rider' },
+        { userId: 'user-2', nickname: 'Second' }
+    ]);
 });
