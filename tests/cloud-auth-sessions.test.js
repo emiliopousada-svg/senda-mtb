@@ -303,6 +303,7 @@ test('a stale profile refresh cannot overwrite a saved nickname', async () => {
 
 test('cloud API requests can stay pinned to the server captured by a sync', async () => {
     const requests = [];
+    let requestOptions;
     const context = vm.createContext({
         APP_CONFIG: {},
         CLOUD_TIMEOUT_MS: 1000,
@@ -314,8 +315,9 @@ test('cloud API requests can stay pinned to the server captured by a sync', asyn
         localStorage: { getItem() { return null; } },
         setTimeout,
         isRetryableCloudStatus: () => false,
-        fetch: async url => {
+        fetch: async (url, options) => {
             requests.push(String(url));
+            requestOptions = options;
             return { ok: true, status: 200, json: async () => ({}) };
         }
     });
@@ -326,6 +328,7 @@ test('cloud API requests can stay pinned to the server captured by a sync', asyn
 
     await context.cloudApi('/api/collections/routes/records', 'GET', null, { server: 'https://old.example' });
     assert.deepEqual(requests, ['https://old.example/api/collections/routes/records']);
+    assert.equal(requestOptions.credentials, 'omit');
 });
 
 test('remote route pagination stops when the captured sync context changes', async () => {

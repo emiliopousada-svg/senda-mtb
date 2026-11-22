@@ -358,7 +358,7 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
             headers,
             body: payload,
             signal: controller.signal,
-            credentials: 'include',
+            credentials: 'omit',
             cache: 'no-store',
             redirect: 'error'
         });
