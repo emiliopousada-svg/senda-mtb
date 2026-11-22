@@ -212,7 +212,7 @@ test('home network status glows online and switches to offline state', () => {
 test('profile hides the synchronization server URL and shows the illuminated server status', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     assert.doesNotMatch(html, /id="acc-server"|Servidor de sincronización:/);
-    assert.match(html, /id="acc-server-status" class="account-server-status"[^>]*role="status"[^>]*aria-label="Estado del servidor"[\s\S]*<span>Estado del servidor<\/span>/);
+    assert.match(html, /id="acc-server-status" class="account-server-status profile-server-status"[^>]*role="status"[^>]*aria-label="Estado del servidor"[\s\S]*<span>Servidor<\/span>/);
 });
 
 test('dashboard loads before cloud.js without errors and keeps network listeners', () => {

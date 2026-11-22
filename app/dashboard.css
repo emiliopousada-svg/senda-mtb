@@ -1313,8 +1313,6 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 #page-map .side-controls,#page-map .map-zoom-controls { transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease; }
 #page-map.side-controls-collapsed .side-controls { opacity:0; transform:translateX(calc(-100% - 20px)); pointer-events:none; }
 #page-map.side-controls-collapsed .map-zoom-controls { opacity:0; transform:translateX(calc(100% + 20px)); pointer-events:none; }
-.map-side-controls-toggle { position:absolute; z-index:1005; top:50%; right:0; display:grid; width:27px; height:68px; place-items:center; transform:translateY(-50%); border:1px solid rgba(255,255,255,.2); border-right:0; border-radius:12px 0 0 12px; color:#f5f7fa; background:rgba(7,9,10,.82); box-shadow:0 4px 16px rgba(0,0,0,.28); backdrop-filter:blur(12px); font-size:1.2rem; font-weight:800; cursor:pointer; }
-.map-side-controls-toggle:focus-visible { outline:2px solid #ff9858; outline-offset:2px; }
 #page-map .side-controls,#page-map .map-zoom-controls { top:calc(env(safe-area-inset-top,0px) + 158px); }
 @media (max-width:420px) {
     .map-live-banner { padding:8px 10px 10px; border-radius:19px; }

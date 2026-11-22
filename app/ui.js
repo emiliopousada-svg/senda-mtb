@@ -61,8 +61,7 @@ function mapSideControlsSetVisible(visible) {
     if (!page) return;
     const sideControls = page.querySelector('.side-controls');
     const zoomControls = page.querySelector('.map-zoom-controls');
-    const toggle = $('map-side-controls-toggle');
-    if (!sideControls || !zoomControls || !toggle) return;
+    if (!sideControls || !zoomControls) return;
     if (mapSideControlsCollapseTimer) clearTimeout(mapSideControlsCollapseTimer);
     mapSideControlsCollapseTimer = null;
     page.classList.toggle('side-controls-collapsed', !visible);
@@ -70,9 +69,6 @@ function mapSideControlsSetVisible(visible) {
         group.inert = !visible;
         group.setAttribute('aria-hidden', String(!visible));
     });
-    toggle.setAttribute('aria-expanded', String(visible));
-    toggle.setAttribute('aria-label', visible ? 'Ocultar controles laterales' : 'Mostrar controles laterales');
-    toggle.innerHTML = `<span aria-hidden="true">${visible ? '&rsaquo;' : '&lsaquo;'}</span>`;
     if (visible && (isRecording || followedRoute)) mapSideControlsScheduleAutoCollapse(MAP_ACTIVE_OVERLAY_TIMEOUT);
 }
 
@@ -153,8 +149,9 @@ function initMetricPanel() {
     $('map-panel-toggle').addEventListener('click', () => {
         mapPanelSetExpanded($('page-map').classList.contains('panel-collapsed'));
     });
-    $('map-side-controls-toggle').addEventListener('click', () => {
-        mapSideControlsSetVisible($('page-map').classList.contains('side-controls-collapsed'));
+    const mapPage = $('page-map');
+    mapPage.addEventListener('click', () => {
+        if (mapPage.classList.contains('side-controls-collapsed')) mapSideControlsSetVisible(true);
     });
     $('btn-follow-route').addEventListener('click', () => {
         if (followedRoute) {
