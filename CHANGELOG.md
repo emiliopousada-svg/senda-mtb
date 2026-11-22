@@ -5,6 +5,16 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.31] - 2026-11-22
+
+### Añadido
+* **Desafíos del grupo:** al finalizar, los miembros que alcanzaron la meta reciben una medalla en el palmarés; el desafío queda archivado.
+
+### Cambiado
+* **Perfil:** la localidad se integra en «Cuenta y sincronización» y el editor abre esa sección cuando hace falta.
+* **Desafíos del grupo:** las metas ahora van de 10 a 20.000.
+* **Mapa:** los controles laterales y el panel inferior se compactan en horizontal; los indicadores se distribuyen a ambos lados de los botones centrados.
+
 ## [0.2.30] - 2026-11-22
 
 ### Cambiado
