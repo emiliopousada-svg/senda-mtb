@@ -16,32 +16,49 @@ function requireNickname(value) {
     return nickname;
 }
 
-function safeMembership(groupId, userId) {
+function safeMembership(groupId, userId, app = $app) {
     const safeGroupId = requireSafeValue(groupId, "groupId");
     const safeUserId = requireSafeValue(userId, "userId");
-    return $app.findRecordsByFilter("mtb_group_members", "group = {:group} && user = {:user}", "", 1, 0, { group: safeGroupId, user: safeUserId });
+    return app.findRecordsByFilter("mtb_group_members", "group = {:group} && user = {:user}", "", 1, 0, { group: safeGroupId, user: safeUserId });
 }
 
-function findAllRecordsByFilter(collection, filter, sort) {
+function findRecordsByIds(app, collection, ids) {
+    const uniqueIds = Array.from(new Set(ids.map(id => requireSafeValue(id, "id"))));
+    const records = [];
+    const batchSize = 100;
+    for (let offset = 0; offset < uniqueIds.length; offset += batchSize) {
+        const batch = uniqueIds.slice(offset, offset + batchSize);
+        const params = {};
+        const clauses = batch.map((id, index) => {
+            const key = `id${index}`;
+            params[key] = id;
+            return `id = {:${key}}`;
+        });
+        records.push(...app.findRecordsByFilter(collection, clauses.join(" || "), "", batch.length, 0, params));
+    }
+    return records;
+}
+
+function findAllRecordsByFilter(collection, filter, sort, app = $app) {
     const records = [];
     const pageSize = 200;
     let offset = 0;
     while (true) {
-        const page = $app.findRecordsByFilter(collection, filter, sort, pageSize, offset);
+        const page = app.findRecordsByFilter(collection, filter, sort, pageSize, offset);
         records.push(...page);
         if (page.length < pageSize) return records;
         offset += page.length;
     }
 }
 
-function deleteAllRecordsByFilter(collection, filter) {
+function deleteAllRecordsByFilter(collection, filter, app = $app) {
     const batchSize = 200;
     let deleted = 0;
     while (true) {
-        const batch = $app.findRecordsByFilter(collection, filter, "", batchSize, 0);
+        const batch = app.findRecordsByFilter(collection, filter, "", batchSize, 0);
         if (!batch.length) return deleted;
         for (const record of batch) {
-            $app.delete(record);
+            app.delete(record);
             deleted++;
         }
     }
@@ -340,20 +357,23 @@ function recordTimeMs(record, field) {
 }
 
 // Contexto del grupo activo del usuario autenticado. Lanza un error con .status si no es válido.
-function loadActiveGroupContext(authId) {
+function loadActiveGroupContext(authId, app = $app) {
     const fail = (status, message) => { const error = new Error(message); error.status = status; throw error; };
-    const user = $app.findRecordById("users", authId);
+    const user = app.findRecordById("users", authId);
     const groupId = user.getString("groupCode");
     if (!groupId) fail(404, "No hay un grupo activo.");
     const safeGroupId = requireSafeValue(groupId, "groupId");
-    if (!safeMembership(safeGroupId, user.id).length) fail(403, "Ya no tienes autorización para consultar este grupo.");
-    const group = $app.findRecordById("mtb_groups", safeGroupId);
-    const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "");
+    if (!safeMembership(safeGroupId, user.id, app).length) fail(403, "Ya no tienes autorización para consultar este grupo.");
+    const group = app.findRecordById("mtb_groups", safeGroupId);
+    const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "", app);
+    const profiles = new Map(findRecordsByIds(app, "users", memberships.map(membership => membership.getString("user")))
+        .map(profile => [profile.id, profile]));
     const nicknames = {};
     const members = memberships.map((membership) => {
         const userId = membership.getString("user");
         let nickname = membership.getString("nickname") || "";
-        try { nickname = $app.findRecordById("users", userId).getString("nickname").trim() || nickname; } catch (_) {}
+        const profile = profiles.get(userId);
+        if (profile) nickname = profile.getString("nickname").trim() || nickname;
         nicknames[userId] = nickname || "Apodo pendiente";
         return { userId, nickname: nicknames[userId] };
     });
@@ -398,6 +418,7 @@ module.exports = {
     requireSafeValue,
     requireNickname,
     safeMembership,
+    findRecordsByIds,
     findAllRecordsByFilter,
     deleteAllRecordsByFilter,
     getSeasonInfo,

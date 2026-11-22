@@ -68,3 +68,10 @@ El modo de seguridad Guardian Mode introduce capacidades críticas de salvaguard
 * Todas las conexiones hacia el backend de PocketBase se realizan obligatoriamente bajo **HTTPS / TLS 1.3**.
 * La función cliente `cloudApi()` implementa validación estricta de dominios, control de cabeceras, rechazo de redirecciones inesperadas y `cache: 'no-store'` para evitar que respuestas con datos privados queden registradas en cachés compartidas del navegador.
 
+## 6. Autenticación y Sesiones
+
+* El cliente conserva el token bearer de PocketBase en `localStorage` para mantener la sesión y lo envía en la cabecera `Authorization`. El JavaScript que se ejecute en el origen de la aplicación podría acceder a ese token.
+* Al cerrar sesión, `logoutCloudAccount()` detiene la actividad del grupo y elimina las credenciales locales. No envía una solicitud de revocación de sesión a PocketBase; borrar el token del dispositivo no equivale a revocarlo en el servidor.
+* El repositorio no distribuye hooks, migraciones ni configuración que acrediten políticas propias de expiración o rotación de tokens, validación de origen o límites de intentos de contraseña. Esas propiedades dependen de la configuración de PocketBase desplegada y no se afirman aquí.
+* La recuperación depende del envío de correo configurado en la instancia PocketBase; el repositorio no incluye una pantalla de recuperación. Configura y verifica la entrega de mensajes en el servidor antes de ofrecer ese flujo.
+

@@ -124,10 +124,27 @@ async function loadGroupRankings() {
 
 async function shareRouteToGroupRanking(route, button, options = {}) {
     const automatic = options.automatic === true;
+    const server = options.server || Cloud.server;
+    const uid = options.uid || Cloud.uid;
+    const authGeneration = Cloud.authGeneration;
+    const api = options.api || cloudApi;
+    const isCurrent = options.isCurrent || (() => Cloud.loggedIn()
+        && Cloud.uid === uid && Cloud.server === server && Cloud.authGeneration === authGeneration);
     const activeGroupId = Cloud.groupCode;
     if (!Cloud.loggedIn() || !activeGroupId || (!automatic && !groupJoined)) {
         if (!automatic) toast('Inicia sesión y selecciona un grupo para compartir marcas.');
         return false;
+    }
+    if (automatic && route && route.groupRankingPending) {
+        if (route.groupRankingOwnerId !== uid || route.groupRankingServer !== server) return false;
+        if (route.groupRankingGroupId && route.groupRankingGroupId !== activeGroupId) return false;
+        if (!route.groupRankingGroupId) {
+            const confirmed = await modal({
+                message: `Esta actividad quedó pendiente de una versión anterior y no se guardó el grupo de destino. ¿Confirmas compartir sus marcas con «${groupInfo && groupInfo.name ? groupInfo.name : 'tu grupo actual'}»?`,
+                ok: 'Confirmar grupo'
+            });
+            if (!confirmed || !isCurrent()) return false;
+        }
     }
     if (!navigator.onLine) {
         if (!automatic) toast('Necesitas conexión para compartir una marca con el grupo.');
@@ -138,7 +155,7 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         return false;
     }
     if (automatic && route.groupRankingGroupId === activeGroupId
-        && route.groupRankingServer === Cloud.server && !route.groupRankingPending) {
+        && route.groupRankingServer === server && !route.groupRankingPending) {
         return true;
     }
     const analysis = typeof statsAnalyzeRoute === 'function' ? statsAnalyzeRoute(route) : null;
@@ -172,15 +189,18 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
             });
             if (!confirmed) return false;
         }
+        if (!isCurrent()) return false;
         const clientId = Number(route.id);
         if (!Number.isSafeInteger(clientId) || clientId <= 0) {
             throw new Error('No se pudo identificar esta actividad para el ranking.');
         }
         const previousRankingOwnerId = route.groupRankingOwnerId;
         const previousRankingServer = route.groupRankingServer;
+        const previousRankingGroupId = route.groupRankingGroupId;
         const previousRankingPending = route.groupRankingPending;
-        route.groupRankingOwnerId = Cloud.uid;
-        route.groupRankingServer = Cloud.server;
+        route.groupRankingOwnerId = uid;
+        route.groupRankingServer = server;
+        route.groupRankingGroupId = activeGroupId;
         route.groupRankingPending = true;
         try {
             await DB.put(route);
@@ -189,28 +209,32 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
             else route.groupRankingOwnerId = previousRankingOwnerId;
             if (previousRankingServer === undefined) delete route.groupRankingServer;
             else route.groupRankingServer = previousRankingServer;
+            if (previousRankingGroupId === undefined) delete route.groupRankingGroupId;
+            else route.groupRankingGroupId = previousRankingGroupId;
             if (previousRankingPending === undefined) delete route.groupRankingPending;
             else route.groupRankingPending = previousRankingPending;
             throw error;
         }
-        const result = await cloudApi('/api/mtb/groups/rankings/share', 'POST', {
+        if (!isCurrent()) return false;
+        const result = await api('/api/mtb/groups/rankings/share', 'POST', {
             clientId,
+            groupId: activeGroupId,
             distanceKm,
             movingTimeSec,
             maxSpeedKmh,
             elevationGain
         });
-        const previousRankingGroupId = route.groupRankingGroupId;
+        if (!isCurrent()) return false;
         route.groupRankingGroupId = activeGroupId;
         route.groupRankingPending = false;
         try {
             await DB.put(route);
         } catch (error) {
-            if (previousRankingGroupId === undefined) delete route.groupRankingGroupId;
-            else route.groupRankingGroupId = previousRankingGroupId;
+            route.groupRankingGroupId = activeGroupId;
             route.groupRankingPending = true;
             throw error;
         }
+        if (!isCurrent()) return false;
         const records = [];
         if (result.newDistanceRecord) records.push('nueva actividad más larga');
         if (result.newAscentRecord) records.push('mayor desnivel');
@@ -219,7 +243,7 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         toast(automatic
             ? `Marcas añadidas automáticamente al ranking de ${groupInfo?.name || 'tu grupo'}.`
             : records.length ? `Marca compartida: ${records.join(' y ')}.` : 'Marcas compartidas; ya conservabas un mejor récord.');
-        if (currentPage === 2) await loadGroupRankings();
+        if (currentPage === 2 && isCurrent()) await loadGroupRankings();
         return true;
     } catch (error) {
         console.warn('No se pudieron compartir las marcas con el grupo:', error);
@@ -233,7 +257,20 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
     }
 }
 
-async function syncPendingGroupRankingDeletes() {
+async function syncPendingGroupRankingDeletes(options = {}) {
+    const server = options.server || Cloud.server;
+    const uid = options.uid || Cloud.uid;
+    const authGeneration = options.authGeneration === undefined
+        ? Cloud.authGeneration
+        : options.authGeneration;
+    const isCurrent = options.isCurrent || (() => Cloud.loggedIn()
+        && Cloud.uid === uid && Cloud.server === server
+        && Cloud.authGeneration === authGeneration);
+    const api = options.api || ((path, method, body, apiOptions) => {
+        if (!isCurrent()) return Promise.resolve(null);
+        const requestOptions = apiOptions && typeof apiOptions === 'object' ? apiOptions : {};
+        return cloudApi(path, method, body, { ...requestOptions, server });
+    });
     if (!Cloud.loggedIn() || !navigator.onLine || groupRankingDeletesSyncing) return false;
     groupRankingDeletesSyncing = true;
     let pending;
@@ -253,20 +290,37 @@ async function syncPendingGroupRankingDeletes() {
     const remaining = [];
     let failed = false;
     for (const item of pending) {
-        if (!item || item.ownerId !== Cloud.uid || item.server !== Cloud.server) {
+        if (!isCurrent()) {
+            groupRankingDeletesSyncing = false;
+            return false;
+        }
+        if (!item || item.ownerId !== uid || item.server !== server) {
             remaining.push(item);
             continue;
         }
         try {
-            await cloudApi('/api/mtb/groups/rankings/delete', 'POST', { clientId: item.clientId });
+            await api('/api/mtb/groups/rankings/delete', 'POST', { clientId: item.clientId });
+            if (!isCurrent()) {
+                groupRankingDeletesSyncing = false;
+                return false;
+            }
         } catch (error) {
+            if (!isCurrent()) {
+                groupRankingDeletesSyncing = false;
+                return false;
+            }
             failed = true;
             remaining.push(item);
             console.warn(`No se pudo retirar del ranking la actividad ${item.clientId}:`, error);
         }
     }
+    if (!isCurrent()) {
+        groupRankingDeletesSyncing = false;
+        return false;
+    }
     try {
         await DB.kvSet('pendingGroupRankingDeletes', remaining);
+        if (!isCurrent()) return false;
     } catch (error) {
         failed = true;
         console.warn('No se pudo guardar la cola de borrados del ranking:', error);

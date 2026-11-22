@@ -49,6 +49,5 @@ migrate((app) => {
     })
     app.save(challenges)
 }, (app) => {
-    const existing = app.findAllCollections().find(collection => collection.name === "mtb_group_challenges")
-    if (existing) app.delete(existing)
+    // The collection may have existed before this migration; preserve it and its data on rollback.
 })

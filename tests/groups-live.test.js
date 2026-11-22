@@ -29,15 +29,24 @@ function element() {
 
 function groupsContext() {
     const elements = new Map();
-    const context = vm.createContext({
-        Cloud: {
-            uid: 'current-user',
-            server: 'https://example.test',
-            groupCode: 'group-1',
-            nickname: 'Rider',
-            loggedIn() { return true; },
-            setSession() {}
-        },
+    const storage = new Map();
+    let context;
+    const cloud = {
+        uid: 'current-user',
+        server: 'https://example.test',
+        groupCode: 'group-1',
+        nickname: 'Rider',
+        authGeneration: 1,
+        loggedIn() { return true; },
+        invalidateProfileReads() {},
+        setSession() {},
+        async refreshSession() {
+            const result = await context.cloudApi('/api/mtb/auth/session');
+            return result ? result.record : null;
+        }
+    };
+    context = vm.createContext({
+        Cloud: cloud,
         navigator: { onLine: true },
         document: {
             visibilityState: 'visible',
@@ -56,14 +65,18 @@ function groupsContext() {
         clearTimeout() {},
         setInterval() { return 1; },
         clearInterval() {},
-        localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} }
+        localStorage: {
+            getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+            setItem(key, value) { storage.set(key, String(value)); },
+            removeItem(key) { storage.delete(key); }
+        }
     });
     vm.runInContext(
         fs.readFileSync(path.join(__dirname, '..', 'app', 'groups.js'), 'utf8'),
         context
     );
     vm.runInContext('groupJoined = true; groupSyncAvailable = true;', context);
-    return { context, elements };
+    return { context, elements, cloud, storage };
 }
 
 test('a failed live-location refresh removes stale friends from the avatar roster', async () => {
@@ -79,8 +92,8 @@ test('a failed live-location refresh removes stale friends from the avatar roste
     assert.equal(elements.get('friends-group-status').children.length, 1);
 
     context.cloudApi = async url => {
-        if (url.includes('auth-refresh')) {
-            return { token: 'token', record: { groupCode: 'group-1' } };
+        if (url.includes('/api/mtb/auth/session')) {
+            return { record: { groupCode: 'group-1' } };
         }
         throw Object.assign(new Error('server unavailable'), { status: 500 });
     };
@@ -140,4 +153,82 @@ test('disabling safety group tracking prevents live-location publishing and retr
     await context.retryPendingLiveLocation();
 
     assert.equal(apiCalls, 0);
+});
+
+test('selecting a group stops before changing pending state when the account changes', async () => {
+    const { context, cloud, storage } = groupsContext();
+    context.removeMyLiveLocation = async () => {};
+    const pendingKey = `mtb_pro_pending_group_leave_${encodeURIComponent(cloud.server)}_user-b`;
+    storage.set(pendingKey, JSON.stringify({ groupId: 'group-2' }));
+    context.cloudApi = async path => {
+        if (path === '/api/mtb/groups/select') {
+            cloud.uid = 'user-b';
+            cloud.authGeneration++;
+            return {};
+        }
+        throw new Error(`Unexpected request: ${path}`);
+    };
+
+    await context.selectGroup('group-2');
+
+    assert.equal(storage.get(pendingKey), JSON.stringify({ groupId: 'group-2' }));
+});
+
+test('a session change queues a fresh group restoration after an older one finishes', async () => {
+    const { context, cloud } = groupsContext();
+    vm.runInContext('groupJoined = false;', context);
+    let resolveOldSession;
+    let signalOldSessionStarted;
+    let refreshCount = 0;
+    let groupLoadCount = 0;
+    const oldSessionStarted = new Promise(resolve => { signalOldSessionStarted = resolve; });
+    context.cloudApi = async path => {
+        if (path === '/api/mtb/auth/session') {
+            refreshCount++;
+            if (refreshCount === 1) {
+                signalOldSessionStarted();
+                return new Promise(resolve => { resolveOldSession = resolve; });
+            }
+            return { record: { id: 'user-b', groupCode: '' } };
+        }
+        throw new Error(`Unexpected request: ${path}`);
+    };
+    context.syncPendingGroupRankingDeletes = async () => true;
+    context.loadMyGroup = async () => { groupLoadCount++; };
+
+    const oldRestore = context.restoreGroup();
+    await oldSessionStarted;
+    cloud.uid = 'user-b';
+    cloud.authGeneration++;
+    await context.restoreGroup();
+    resolveOldSession({ record: { id: 'user-a', groupCode: '' } });
+    await oldRestore;
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(refreshCount, 2);
+    assert.equal(groupLoadCount, 1);
+});
+
+test('a concurrent profile refresh reconciles a newly selected group', async () => {
+    const { context, cloud } = groupsContext();
+    let refreshCount = 0;
+    let groupLoadCount = 0;
+    context.removeMyLiveLocation = async () => {};
+    context.cloudApi = async path => {
+        if (path === '/api/mtb/groups/select') return {};
+        throw new Error(`Unexpected request: ${path}`);
+    };
+    cloud.refreshSession = async () => {
+        refreshCount++;
+        return refreshCount === 1 ? null : { id: cloud.uid, groupCode: 'group-2' };
+    };
+    context.syncPendingGroupRankingDeletes = async () => true;
+    context.loadMyGroup = async () => { groupLoadCount++; };
+    context.refreshFriends = async () => {};
+    context.startFriendsTimer = () => {};
+
+    await context.selectGroup('group-2');
+
+    assert.equal(refreshCount, 2);
+    assert.equal(groupLoadCount, 1);
 });

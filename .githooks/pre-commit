@@ -1,0 +1,35 @@
+#!/bin/sh
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+cd "$repository_root"
+
+coderabbit_path=$(git config --path --get senda.coderabbitPath || true)
+if [ -z "$coderabbit_path" ] || [ ! -x "$coderabbit_path" ]; then
+    printf '%s\n' "CodeRabbit CLI is not configured. Set senda.coderabbitPath to its trusted absolute path." >&2
+    exit 1
+fi
+
+review_output=$(mktemp) || {
+    printf '%s\n' "Could not create a temporary file for the CodeRabbit review." >&2
+    exit 1
+}
+trap 'rm -f "$review_output"' 0
+trap 'exit 1' HUP INT TERM
+
+if "$coderabbit_path" review --agent --fresh --uncommitted >"$review_output"; then
+    review_status=0
+else
+    review_status=$?
+fi
+
+cat "$review_output"
+if [ "$review_status" -ne 0 ]; then
+    printf '%s\n' "CodeRabbit review command failed; commit blocked." >&2
+    exit "$review_status"
+fi
+
+if ! node "$repository_root/scripts/validate-coderabbit-review.js" <"$review_output"; then
+    printf '%s\n' "CodeRabbit review did not complete successfully; commit blocked." >&2
+    exit 1
+fi

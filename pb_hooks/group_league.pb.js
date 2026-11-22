@@ -50,27 +50,35 @@ routerAdd("GET", "/api/mtb/groups/challenges", (e) => {
 routerAdd("POST", "/api/mtb/groups/challenges", (e) => {
     const utils = require(`${__hooks}/groups_utils.js`);
     try {
-        const ctx = utils.loadActiveGroupContext(e.auth.id);
         const body = new DynamicModel({ name: "", metric: "", target: 0.1, startsAt: "", endsAt: "" });
         e.bindBody(body);
         const input = utils.validateChallengeInput({ name: body.name, metric: body.metric, target: body.target, startsAt: body.startsAt, endsAt: body.endsAt });
-        const now = Date.now();
-        const open = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "")
-            .map(utils.challengeFromRecord)
-            .filter(challenge => utils.challengeStatus(challenge, now) !== "finished");
-        if (open.length >= utils.CHALLENGE_MAX_ACTIVE) {
-            return e.json(400, { message: `El grupo ya tiene ${utils.CHALLENGE_MAX_ACTIVE} desafíos abiertos. Elimina alguno antes de crear otro.` });
-        }
-        const record = new Record($app.findCollectionByNameOrId("mtb_group_challenges"));
-        record.set("group", ctx.groupId);
-        record.set("createdBy", ctx.user.id);
-        record.set("name", input.name);
-        record.set("metric", input.metric);
-        record.set("target", input.target);
-        record.set("startsAt", new Date(input.startsAtMs).toISOString());
-        record.set("endsAt", new Date(input.endsAtMs).toISOString());
-        $app.save(record);
-        return e.json(200, { ok: true, id: record.id });
+        let result;
+        $app.runInTransaction((txApp) => {
+            const ctx = utils.loadActiveGroupContext(e.auth.id, txApp);
+            const now = Date.now();
+            const open = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "", txApp)
+                .map(utils.challengeFromRecord)
+                .filter(challenge => utils.challengeStatus(challenge, now) !== "finished");
+            if (open.length >= utils.CHALLENGE_MAX_ACTIVE) {
+                result = {
+                    status: 400,
+                    body: { message: `El grupo ya tiene ${utils.CHALLENGE_MAX_ACTIVE} desafíos abiertos. Elimina alguno antes de crear otro.` }
+                };
+                return;
+            }
+            const record = new Record(txApp.findCollectionByNameOrId("mtb_group_challenges"));
+            record.set("group", ctx.groupId);
+            record.set("createdBy", ctx.user.id);
+            record.set("name", input.name);
+            record.set("metric", input.metric);
+            record.set("target", input.target);
+            record.set("startsAt", new Date(input.startsAtMs).toISOString());
+            record.set("endsAt", new Date(input.endsAtMs).toISOString());
+            txApp.save(record);
+            result = { status: 200, body: { ok: true, id: record.id } };
+        });
+        return e.json(result.status, result.body);
     } catch (err) {
         return e.json(err.status || 400, { message: err.message || "No se pudo crear el desafío." });
     }

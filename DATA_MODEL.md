@@ -185,9 +185,9 @@ Las colecciones de PocketBase gestionan usuarios, sincronización y vida social 
 ## 4. Políticas de Retención y Privacidad
 
 1. **Ubicaciones en Directo (`live_locations`):**
-   * Tienen un tiempo de vida (TTL) máximo de 12 horas.
+   * Se eliminan tras más de 5 minutos sin actualizarse; el cron comprueba las posiciones cada minuto.
    * La finalización de la actividad o salida del grupo emite un `DELETE` inmediato.
-   * El cron del hook `live_cleanup.pb.js` borra registros sin actualizar en más de 30 minutos.
+   * El cron del hook `live_cleanup.pb.js` borra registros sin actualizar en más de 5 minutos.
 2. **Protección de Domicilio:**
    * Al publicar una ruta comunitaria, el hook de PocketBase recorta automáticamente **150 metros** del inicio y del final del track para evitar revelar la dirección residencial del ciclista.
    * Se rechazan POIs situados a menos de 150 metros de los extremos.
