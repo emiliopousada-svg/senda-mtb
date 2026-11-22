@@ -61,7 +61,6 @@ function renderPage(index) {
         if (typeof renderAccount === 'function') renderAccount();
         if (typeof profileRender === 'function') profileRender();
         if (typeof profileOpenEditorOnFirstVisit === 'function') profileOpenEditorOnFirstVisit();
-        if (typeof profileRefreshSharedRoutes === 'function') profileRefreshSharedRoutes();
     }
 }
 

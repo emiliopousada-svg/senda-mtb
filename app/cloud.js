@@ -419,6 +419,11 @@ function normalizeServer(v) {
 function renderAccount() {
     renderAccountServer();
     const on = Cloud.loggedIn();
+    const profileAccountDetails = document.getElementById('profile-account-details');
+    if (profileAccountDetails && profileAccountDetailsSessionState !== on) {
+        profileAccountDetails.open = !on;
+        profileAccountDetailsSessionState = on;
+    }
     $('acc-form').style.display = on ? 'none' : 'block';
     $('acc-logged').style.display = on ? 'block' : 'none';
     const hasNickname = Boolean(Cloud.nickname);
@@ -433,8 +438,11 @@ function renderAccount() {
     $('acc-status').textContent = on
         ? `Conectado como ${Cloud.email}` + (Cloud.groupCode ? ' · grupo asignado' : ' · sin grupo asignado') + (last ? ` · última sincronización: ${new Date(Number(last)).toLocaleString('es-ES')}` : '') + (syncFailures ? ` · sincronización parcial: ${syncFailures} elemento(s) pendiente(s)` : '')
         : 'Sin sesión: tus rutas se guardan solo en este móvil.';
+    if (typeof profileUpdateAccountStatus === 'function') profileUpdateAccountStatus();
     if (typeof renderCloudPreferencesStatus === 'function') renderCloudPreferencesStatus();
 }
+
+let profileAccountDetailsSessionState = null;
 
 function renderAccountServer() {
     const serverInput = $('acc-server');

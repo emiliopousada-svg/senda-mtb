@@ -267,10 +267,11 @@ test('profile duration uses moving time as whole hours and minutes', () => {
     assert.equal(profileFormatDuration(3660), '1 h 1 min');
 });
 
-test('profile renders account-backed identity and keeps unavailable social services explicit', () => {
+test('profile renders account identity and social icons without placeholder integrations', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const source = fs.readFileSync(path.join(root, 'app', 'profile.js'), 'utf8');
     const navigation = fs.readFileSync(path.join(root, 'app', 'navigation.js'), 'utf8');
+    const cloud = fs.readFileSync(path.join(root, 'app', 'cloud.js'), 'utf8');
     const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
     const pageStart = html.indexOf('<div class="page content-panel" id="page-settings">');
     const pageEnd = html.indexOf('<!-- INICIO / DASHBOARD senda-mtb -->', pageStart);
@@ -279,17 +280,28 @@ test('profile renders account-backed identity and keeps unavailable social servi
     for (const id of [
         'profile-avatar-image', 'profile-name', 'profile-location', 'profile-total-distance',
         'profile-total-ascent', 'profile-total-time', 'profile-bike-image', 'profile-achievements',
-        'profile-hr-max', 'profile-ftp', 'profile-followers-count', 'profile-following-count',
-        'profile-shared-routes-count'
+        'profile-hr-max', 'profile-ftp', 'profile-account-details', 'profile-account-status'
     ]) assert.ok(profilePage.includes(`id="${id}"`), `${id} must be present in Profile`);
-    for (const provider of ['Garmin Connect', 'Komoot', 'Apple Salud']) {
-        assert.match(profilePage, new RegExp(`${provider}[\\s\\S]*Próximamente`));
+    for (const network of ['Facebook', 'Instagram', 'TikTok']) {
+        assert.match(profilePage, new RegExp(`aria-label="${network}"`));
     }
     assert.doesNotMatch(profilePage, /Strava|Herramientas → Social/);
-    assert.equal((profilePage.match(/class="profile-service-toggle" type="checkbox" disabled/g) || []).length, 3);
+    assert.match(profilePage, /id="profile-social-title">Social/);
+    assert.doesNotMatch(profilePage, /SERVICIOS EXTERNOS|Garmin Connect|Komoot|Apple Salud|Próximamente/);
     assert.match(profilePage, /Se guarda en tu cuenta si has iniciado sesión/);
-    assert.match(source, /published = true/);
-    assert.match(navigation, /profileRender\(\)[\s\S]*profileRefreshSharedRoutes\(\)/);
+    assert.doesNotMatch(profilePage, /Seguidores|Seguidos|Rutas compartidas/);
+    assert.match(source, /profileUpdateAccountStatus/);
+    assert.doesNotMatch(source, /profileRefreshSharedRoutes/);
+    assert.match(navigation, /profileRender\(\)/);
+    assert.ok(profilePage.indexOf('profile-account-details') < profilePage.indexOf('<form class="profile-editor"'));
+    assert.match(profilePage, /profile-account-details[\s\S]*Cuenta y sincronización[\s\S]*acc-form[\s\S]*acc-profile-editor/);
+    assert.match(profilePage, /id="profile-account-details" open/);
+    assert.doesNotMatch(profilePage, /<details class="account-options"/);
+    assert.match(cloud, /profileAccountDetails\.open = !on/);
+    assert.match(cloud, /profileAccountDetailsSessionState !== on/);
+    const identity = profilePage.slice(profilePage.indexOf('class="profile-identity"'), profilePage.indexOf('class="profile-account-details"'));
+    assert.match(identity, /id="acc-server-status"/);
+    assert.doesNotMatch(profilePage.slice(profilePage.indexOf('class="profile-account-details"'), profilePage.indexOf('<form class="profile-editor"')), /acc-server-status/);
     assert.match(navigation, /profileOpenEditorOnFirstVisit\(\)/);
     assert.ok(html.indexOf('app/cloud.js') < html.indexOf('app/profile.js'));
     assert.match(worker, /'app\/profile\.js'/);

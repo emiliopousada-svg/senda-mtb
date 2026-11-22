@@ -5,8 +5,6 @@ const PROFILE_LOCATION_OWNER_KEY = 'mtb_pro_profile_location_owner';
 const PROFILE_LOCATION_USER_PREFIX = 'mtb_pro_profile_location_user_';
 const PROFILE_LOCATION_PENDING_PREFIX = 'mtb_pro_profile_location_pending_';
 const PROFILE_SETUP_COMPLETE_KEY = 'mtb_pro_profile_setup_complete';
-let profileSharedRoutesPromise = null;
-let profileSharedRoutesUid = '';
 let profileLocationSyncPromise = null;
 let profileLocationSyncUid = '';
 
@@ -241,6 +239,7 @@ function profileRender() {
         ? Cloud.nickname
         : localStorage.getItem('mtb_pro_nickname');
     profileSetText('profile-name', String(nickname || '').trim() || 'Biker');
+    profileUpdateAccountStatus();
 
     const avatar = profileSafeImageSource(typeof getAccountAvatarUrl === 'function' ? getAccountAvatarUrl() : '');
     const avatarImage = document.getElementById('profile-avatar-image');
@@ -313,51 +312,15 @@ function profileRender() {
     return summary;
 }
 
-async function profileRefreshSharedRoutes() {
-    const count = document.getElementById('profile-shared-routes-count');
-    const note = document.getElementById('profile-shared-routes-note');
-    if (!count) return;
-
-    if (typeof Cloud === 'undefined' || !Cloud.loggedIn() || !navigator.onLine) {
-        count.textContent = '—';
-        count.setAttribute('aria-label', 'Rutas compartidas no disponibles');
-        if (note) note.textContent = typeof Cloud !== 'undefined' && Cloud.loggedIn()
-            ? 'Conéctate para consultar tus rutas publicadas.'
-            : 'Inicia sesión para consultar tus rutas publicadas.';
-        return;
+function profileUpdateAccountStatus() {
+    const status = document.getElementById('profile-account-status');
+    if (!status) return;
+    if (typeof Cloud !== 'undefined' && typeof Cloud.loggedIn === 'function' && Cloud.loggedIn()) {
+        const failures = Number(localStorage.getItem('mtb_pro_sync_failures') || 0);
+        status.textContent = failures ? 'Conectada · sincronización pendiente' : 'Conectada · datos sincronizables';
+    } else {
+        status.textContent = 'Sin sesión';
     }
-
-    const uid = String(Cloud.uid || '');
-    if (profileSharedRoutesPromise && profileSharedRoutesUid === uid) return profileSharedRoutesPromise;
-
-    profileSharedRoutesUid = uid;
-    count.textContent = '…';
-    count.setAttribute('aria-label', 'Cargando rutas compartidas');
-    if (note) note.textContent = 'Consultando las rutas publicadas en la comunidad…';
-    profileSharedRoutesPromise = (async () => {
-        try {
-            const safeUid = uid.replace(/["\\]/g, '');
-            const filter = `owner = "${safeUid}" && published = true`;
-            const result = await cloudApi('/api/collections/community_routes/records?page=1&perPage=1&fields=id&filter='
-                + encodeURIComponent(filter));
-            const total = Number(result && result.totalItems);
-            if (Cloud.uid !== uid) return;
-            if (!Number.isSafeInteger(total) || total < 0) throw new Error('El servidor no devolvió un total válido de rutas publicadas.');
-            count.textContent = String(total);
-            count.setAttribute('aria-label', `${total} ${total === 1 ? 'ruta compartida' : 'rutas compartidas'}`);
-            if (note) note.textContent = 'Rutas publicadas por tu cuenta en la comunidad.';
-        } catch (error) {
-            console.warn('No se pudo consultar el total de rutas compartidas:', error);
-            if (Cloud.uid === uid) {
-                count.textContent = '—';
-                count.setAttribute('aria-label', 'Rutas compartidas no disponibles');
-                if (note) note.textContent = 'No se pudo consultar el total de rutas publicadas.';
-            }
-        } finally {
-            if (profileSharedRoutesUid === uid) profileSharedRoutesPromise = null;
-        }
-    })();
-    return profileSharedRoutesPromise;
 }
 
 function profileBindUI() {
@@ -423,8 +386,6 @@ function profileBindUI() {
     document.getElementById('profile-account-edit')?.addEventListener('click', () => {
         const accountDetails = document.getElementById('profile-account-details');
         if (accountDetails) accountDetails.open = true;
-        const accountOptions = document.querySelector('#acc-ready details.account-options');
-        if (accountOptions) accountOptions.open = true;
         document.getElementById('acc-profile-editor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 

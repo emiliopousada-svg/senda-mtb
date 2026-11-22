@@ -34,6 +34,7 @@
 }
 .profile-hero { padding:16px; background:radial-gradient(ellipse at 92% 4%,rgba(22,140,255,.17),transparent 42%),linear-gradient(145deg,#171e28,#12171f); }
 .profile-identity { display:flex; min-width:0; align-items:center; gap:13px; }
+.profile-server-status { flex:0 0 auto; gap:7px; margin:0 0 0 auto; padding:6px 8px; font-size:.62rem; }
 .profile-avatar {
     display:grid; width:72px; height:72px; flex:0 0 72px; place-items:center; overflow:hidden;
     border:2px solid rgba(22,140,255,.48); border-radius:50%;
@@ -46,13 +47,7 @@
 .profile-kicker { display:block; color:#8494a9; font-size:.58rem; font-weight:800; letter-spacing:.13em; }
 .profile-identity-copy h2 { overflow:hidden; margin:4px 0 3px; color:#f4f7fb; font-size:1.25rem; font-weight:780; letter-spacing:-.04em; text-overflow:ellipsis; }
 .profile-identity-copy p { overflow:hidden; margin:0; color:#aab6c5; font-size:.75rem; text-overflow:ellipsis; white-space:nowrap; }
-.profile-social-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:17px; padding-top:13px; border-top:1px solid rgba(255,255,255,.075); }
-.profile-social-stat { display:grid; justify-items:center; gap:3px; min-width:0; padding:2px 4px; text-align:center; }
-.profile-social-stat + .profile-social-stat { border-left:1px solid rgba(255,255,255,.075); }
-.profile-social-stat strong { color:#f2f5f9; font-size:1rem; font-variant-numeric:tabular-nums; font-weight:780; }
-.profile-social-stat span { overflow:hidden; color:#96a3b4; font-size:.6rem; text-overflow:ellipsis; white-space:nowrap; }
-.profile-social-note,.profile-editor-note,.profile-panel-note { margin:9px 0 0; color:#8693a4; font-size:.66rem; line-height:1.45; }
-.profile-social-note + .profile-social-note { margin-top:3px; }
+.profile-editor-note,.profile-panel-note { margin:9px 0 0; color:#8693a4; font-size:.66rem; line-height:1.45; }
 .profile-editor { display:grid; gap:8px; padding:14px; }
 .profile-editor[hidden] { display:none !important; }
 .profile-editor label { color:#d3dce7; font-size:.75rem; font-weight:700; }
@@ -95,25 +90,26 @@
 .profile-performance-grid > div { display:grid; gap:4px; padding:10px; border:1px solid rgba(255,255,255,.065); border-radius:11px; background:rgba(9,13,19,.35); }
 .profile-performance-grid span { color:#909eaf; font-size:.65rem; }
 .profile-performance-grid strong { color:#edf2f7; font-size:.82rem; font-variant-numeric:tabular-nums; }
-.profile-services { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin:12px 0 0; padding:0; list-style:none; }
-.profile-services li { display:flex; min-width:0; align-items:center; justify-content:space-between; gap:5px; padding:9px; border:1px solid rgba(255,255,255,.065); border-radius:11px; background:rgba(9,13,19,.35); color:#dce4ed; font-size:.68rem; }
-.profile-service-status { display:inline-flex; flex:0 0 auto; align-items:center; gap:5px; color:#8290a1; font-size:.55rem; white-space:nowrap; }
-.profile-service-toggle { position:relative; width:30px; height:17px; margin:0; appearance:none; border:1px solid #566273; border-radius:999px; background:#242c37; opacity:.72; }
-.profile-service-toggle::before { position:absolute; top:2px; left:2px; width:11px; height:11px; border-radius:50%; background:#9aa7b8; content:''; }
-.profile-account-details { overflow:hidden; padding:0 14px; }
-.profile-account-details > summary { display:flex; min-height:54px; align-items:center; justify-content:space-between; gap:8px; color:#e3eaf2; font-size:.78rem; font-weight:750; cursor:pointer; list-style:none; }
+.profile-social-icons { display:flex; align-items:center; gap:8px; margin:12px 0 0; padding:0; list-style:none; }
+.profile-social-icons li { display:grid; width:32px; height:32px; place-items:center; border:1px solid rgba(255,255,255,.06); border-radius:9px; background:rgba(9,13,19,.24); opacity:.72; }
+.profile-social-icon { width:18px; height:18px; fill:currentColor; }
+.profile-social-icon.facebook { color:#1877f2; }
+.profile-social-icon.instagram { fill:none; color:#e4405f; stroke:currentColor; stroke-width:2; }
+.profile-social-icon.instagram .profile-social-icon-dot { fill:currentColor; stroke:none; }
+.profile-social-icon.tiktok { color:#25f4ee; }
+.profile-account-details { overflow:hidden; margin-top:12px; border:0; border-top:1px solid rgba(255,255,255,.075); border-radius:0; background:transparent; box-shadow:none; }
+.profile-account-details > summary { display:flex; min-height:52px; align-items:center; gap:9px; color:#e8f2fb; cursor:pointer; list-style:none; }
 .profile-account-details > summary::-webkit-details-marker { display:none; }
-.profile-account-details > summary::after { content:'＋'; color:#8fa3b8; font-size:1rem; }
-.profile-account-details[open] > summary::after { content:'−'; }
-.profile-account-details > summary span { margin-left:auto; color:#8794a5; font-size:.6rem; font-weight:500; text-align:right; }
-.profile-account-details > .card { width:100%; margin:0 0 14px; padding:13px; border:1px solid rgba(255,255,255,.07); border-radius:13px; background:rgba(9,13,19,.38); box-shadow:none; }
+.profile-account-summary-copy { display:grid; min-width:0; flex:1; gap:2px; }
+.profile-account-summary-copy strong { font-size:.72rem; font-weight:760; }
+.profile-account-summary-copy small { overflow:hidden; color:#91a2b5; font-size:.58rem; text-overflow:ellipsis; white-space:nowrap; }
+.profile-account-button-chevron { color:#83a5c2; font-size:1rem; transition:transform .18s ease; }
+.profile-account-details[open] .profile-account-button-chevron { transform:rotate(90deg); }
+.profile-account-details > summary:focus-visible { outline:2px solid #42aaff; outline-offset:2px; }
+.profile-account-details > .card { width:100%; margin:0 0 4px; padding:13px; border:1px solid rgba(255,255,255,.07); border-radius:13px; background:rgba(9,13,19,.38); box-shadow:none; }
 .profile-account-details > .card h2 { display:none; }
-.profile-account-details:focus-within > summary { color:#f5f7fa; }
 @media (min-width:720px) {
     .profile-hero,.profile-bike-card,.profile-panel { padding:18px; }
-    .profile-hero { display:grid; grid-template-columns:minmax(0,1fr) minmax(270px,.72fr); align-items:center; column-gap:22px; }
-    .profile-social-grid { margin-top:0; padding-top:0; border-top:0; }
-    .profile-social-note { grid-column:1/-1; }
     .profile-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .profile-performance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
@@ -121,7 +117,6 @@
     .profile-stat-grid { gap:5px; }
     .profile-stat-card { min-height:108px; padding:9px 7px; }
     .profile-stat-label { font-size:.48rem; }
-    .profile-services { grid-template-columns:1fr; }
 }
 /* Altura real de la barra de estado / notch del teléfono.
    - iOS y Android con WebView 140+: env(safe-area-inset-top) (index.html usa viewport-fit=cover).
@@ -672,7 +667,6 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .setting-toggle strong { color:#e8edf4; }
 .setting-toggle input { accent-color:var(--mtb-blue); }
 .account-avatar { border-color:rgba(22,140,255,.6); background:#17202b; }
-.account-options > summary { color:#c4d0de; }
 .pill-selector,.stats-evolution-controls select { border-color:rgba(255,255,255,.1); background:#0e131a; }
 .pill-btn.active { background:rgba(22,140,255,.2); color:#59baff; }
 .community-panel {
