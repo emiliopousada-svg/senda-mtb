@@ -44,12 +44,7 @@ function communityRenderRanking(records, container, totalItems = records.length)
 }
 
 async function communityLoadRanking(record, collection, relationField, container) {
-    const isCurrentTarget = () => {
-        if (container === $('community-route-leaderboard')) {
-            return communityDetailRecord && communityDetailRecord.id === record.id;
-        }
-        return container.isConnected;
-    };
+    const isCurrentTarget = () => container.isConnected;
     if (!isCurrentTarget()) return;
     container.replaceChildren();
     if (!record || !record.id) return;
@@ -65,7 +60,7 @@ async function communityLoadRanking(record, collection, relationField, container
             Number(result.totalItems) || 0);
     } catch (error) {
         if (!isCurrentTarget()) return;
-        console.warn(`No se pudo cargar la clasificación de ${record.title || 'la ruta'}:`, error);
+        console.warn(`No se pudo cargar la clasificación de ${record.name || 'el segmento'}:`, error);
         loading.textContent = error.status === 404
             ? 'Faltan las colecciones community_performance.json en PocketBase.'
             : `No se pudo cargar la clasificación: ${error.message || 'error de conexión'}`;
@@ -130,8 +125,6 @@ async function communityPublishEffort(record, relationField, collection, match, 
         }
         status.textContent = 'Mejor tiempo publicado en la comunidad.';
         toast('Tiempo publicado en la clasificación.');
-        const container = relationField === 'route' ? $('community-route-leaderboard') : null;
-        if (container) communityLoadRanking(record, collection, relationField, container);
         if (relationField === 'segment' && communityDetailRecord) {
             communityLoadSegments(communityDetailRecord);
         }

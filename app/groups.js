@@ -188,7 +188,7 @@ function friendAvatarUrl(record) {
     const avatarName = String(record.avatar || '').trim();
     return avatarName && record.owner
         ? `${Cloud.server}/api/files/users/${encodeURIComponent(record.owner)}/${encodeURIComponent(avatarName)}?thumb=96x96`
-        : '';
+        : (typeof accountAvatarDefaultUrl === 'function' ? accountAvatarDefaultUrl() : 'icon-512.png');
 }
 
 function showFriendOnMap(friend) {

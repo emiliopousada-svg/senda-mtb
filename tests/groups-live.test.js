@@ -79,6 +79,16 @@ function groupsContext() {
     return { context, elements, cloud, storage };
 }
 
+test('friends without an uploaded avatar use the app icon', () => {
+    const { context } = groupsContext();
+
+    assert.equal(context.friendAvatarUrl({ owner: 'friend-1', avatar: '' }), 'icon-512.png');
+    assert.equal(
+        context.friendAvatarUrl({ owner: 'friend-1', avatar: 'avatar.jpg' }),
+        'https://example.test/api/files/users/friend-1/avatar.jpg?thumb=96x96'
+    );
+});
+
 test('a failed live-location refresh removes stale friends from the avatar roster', async () => {
     const { context, elements } = groupsContext();
     context.renderFriends([{

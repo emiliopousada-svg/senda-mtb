@@ -416,6 +416,58 @@ function normalizeServer(v) {
     return `${url.origin}${url.pathname}`.replace(/\/+$/, '');
 }
 
+let manualAccountSyncInFlight = false;
+
+function renderProfileManualSyncButton() {
+    const button = $('profile-manual-sync');
+    if (!button) return;
+    const syncingNow = manualAccountSyncInFlight;
+    const loggedIn = Cloud.loggedIn();
+    const hasNickname = Boolean(Cloud.nickname);
+    const online = navigator.onLine;
+    const canSync = loggedIn && hasNickname && online;
+    button.disabled = syncingNow || !canSync;
+    const accountSyncButton = $('acc-sync');
+    if (accountSyncButton) accountSyncButton.disabled = syncingNow || !canSync;
+    button.classList.toggle('is-syncing', syncingNow);
+    button.setAttribute('aria-busy', syncingNow ? 'true' : 'false');
+    button.setAttribute('aria-label', syncingNow ? 'Sincronizando' : 'Sincronizar ahora');
+    button.title = syncingNow ? 'Sincronizando…'
+        : !loggedIn ? 'Inicia sesión para sincronizar'
+            : !hasNickname ? 'Completa tu apodo para sincronizar'
+                : !online ? 'Sin conexión a internet'
+                    : 'Sincronizar ahora';
+    const label = button.querySelector('.profile-manual-sync-label');
+    if (label) label.textContent = syncingNow ? 'Sincronizando…' : 'Sincronizar';
+}
+
+async function syncAccountManually() {
+    if (manualAccountSyncInFlight) return;
+    if (!Cloud.loggedIn()) { toast('Inicia sesión para sincronizar.'); return; }
+    if (!Cloud.nickname) { toast('Completa el apodo de tu cuenta antes de sincronizar.'); return; }
+    if (!navigator.onLine) { toast('Sin conexión: se sincronizará cuando vuelva internet.'); return; }
+
+    manualAccountSyncInFlight = true;
+    renderProfileManualSyncButton();
+    try {
+        await syncCloudPreferences();
+        await syncRoutes(true);
+        await restoreGroup();
+        const poisSynced = await syncSharedPois(true);
+        if (!poisSynced && pendingSharedPoiCount()) {
+            toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
+        }
+    } catch (error) {
+        console.warn('No se pudo completar la sincronización manual:', error);
+        toast(error.message
+            ? `No se pudo completar la sincronización: ${error.message}`
+            : 'No se pudo completar la sincronización.', 6000);
+    } finally {
+        manualAccountSyncInFlight = false;
+        renderProfileManualSyncButton();
+    }
+}
+
 function renderAccount() {
     renderAccountServer();
     const on = Cloud.loggedIn();
@@ -435,9 +487,12 @@ function renderAccount() {
     }
     const last = localStorage.getItem('mtb_pro_lastsync');
     const syncFailures = Number(localStorage.getItem('mtb_pro_sync_failures') || 0);
-    $('acc-status').textContent = on
+    const accountStatus = $('acc-status');
+    accountStatus.hidden = !on;
+    accountStatus.textContent = on
         ? `Conectado como ${Cloud.email}` + (Cloud.groupCode ? ' · grupo asignado' : ' · sin grupo asignado') + (last ? ` · última sincronización: ${new Date(Number(last)).toLocaleString('es-ES')}` : '') + (syncFailures ? ` · sincronización parcial: ${syncFailures} elemento(s) pendiente(s)` : '')
-        : 'Sin sesión: tus rutas se guardan solo en este móvil.';
+        : '';
+    renderProfileManualSyncButton();
     if (typeof profileUpdateAccountStatus === 'function') profileUpdateAccountStatus();
     if (typeof renderCloudPreferencesStatus === 'function') renderCloudPreferencesStatus();
 }
@@ -498,6 +553,7 @@ async function accAuth(register) {
     const homeLocation = typeof profileNormalizeLocation === 'function'
         ? profileNormalizeLocation($('acc-home-location')?.value || '')
         : String($('acc-home-location')?.value || '').trim().slice(0, 80);
+    const registrationAvatarFile = register ? $('acc-register-avatar-file')?.files?.[0] : null;
     if (weightKg && (!Number.isFinite(Number(weightKg)) || Number(weightKg) < 25 || Number(weightKg) > 250)) { toast('El peso debe estar entre 25 y 250 kg.'); return; }
     if (heightCm && (!Number.isInteger(Number(heightCm)) || Number(heightCm) < 120 || Number(heightCm) > 230)) { toast('La altura debe estar entre 120 y 230 cm.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
@@ -511,7 +567,16 @@ async function accAuth(register) {
             if (heightCm) profile.heightCm = Number(heightCm);
             if (age) profile.age = Number(age);
             if (homeLocation) profile.homeLocation = homeLocation;
-            await cloudApi('/api/collections/users/records', 'POST', profile);
+            if (registrationAvatarFile) {
+                if (typeof accountAvatarToJpeg !== 'function') throw new Error('No se pudo preparar el avatar.');
+                const avatar = await accountAvatarToJpeg(registrationAvatarFile);
+                const form = new FormData();
+                Object.entries(profile).forEach(([key, value]) => form.append(key, String(value)));
+                form.append('avatar', avatar, 'avatar.jpg');
+                await cloudApi('/api/collections/users/records', 'POST', form);
+            } else {
+                await cloudApi('/api/collections/users/records', 'POST', profile);
+            }
             ensureAuthServer(server, authGeneration);
         }
         const auth = await cloudApi('/api/collections/users/auth-with-password', 'POST', { identity: email, password: pass });
@@ -537,6 +602,7 @@ async function accAuth(register) {
         if ($('acc-height')) $('acc-height').value = '';
         $('acc-age').value = '';
         if ($('acc-home-location')) $('acc-home-location').value = '';
+        if ($('acc-register-avatar-file')) $('acc-register-avatar-file').value = '';
         renderAccount();
         if (!Cloud.nickname && nickname) $('acc-account-nickname').value = nickname;
         await restoreGroup();
@@ -671,7 +737,9 @@ async function syncRoutes(manual = false) {
         return cloudApi(path, method, body, { ...apiOptions, server: retryServer });
     };
     syncing = true;
-    $('acc-status').textContent = 'Sincronizando…';
+    const accountStatus = $('acc-status');
+    accountStatus.hidden = false;
+    accountStatus.textContent = 'Sincronizando…';
     let pushed = 0, pulled = 0, syncFailures = 0, garageUsageChanged = false;
     let retryableSyncFailure = false;
     let permanentSyncFailure = false;
@@ -1240,15 +1308,8 @@ function initAccount() {
     });
     $('acc-register').addEventListener('click', () => accAuthOnce(true));
     $('acc-nickname-save').addEventListener('click', saveAccountNickname);
-    $('acc-sync').addEventListener('click', async () => {
-        await syncCloudPreferences();
-        await syncRoutes(true);
-        await restoreGroup();
-        const poisSynced = await syncSharedPois(true);
-        if (!poisSynced && pendingSharedPoiCount()) {
-            toast(`${pendingSharedPoiCount()} punto(s) del mapa siguen pendientes: ${poiSyncPendingMessage()}`, 8000);
-        }
-    });
+    $('acc-sync').addEventListener('click', syncAccountManually);
+    $('profile-manual-sync').addEventListener('click', syncAccountManually);
     $('acc-logout').addEventListener('click', logoutCloudAccount);
     $('acc-logout-incomplete').addEventListener('click', logoutCloudAccount);
     window.addEventListener('online', syncWhenOnline);

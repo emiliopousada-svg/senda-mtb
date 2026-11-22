@@ -3,6 +3,7 @@
 const ACCOUNT_AVATAR_MAX_BYTES = 256 * 1024;
 const ACCOUNT_AVATAR_MAX_INPUT_BYTES = 20 * 1024 * 1024;
 const ACCOUNT_AVATAR_FETCH_TIMEOUT_MS = 10000;
+const ACCOUNT_AVATAR_DEFAULT_URL = 'icon-512.png';
 const ACCOUNT_AVATAR_CACHE_PREFIX = 'mtb_pro_avatar_';
 const ACCOUNT_AVATAR_PENDING_PREFIX = 'mtb_pro_avatar_pending_';
 const ACCOUNT_AVATAR_REMOTE_PREFIX = 'mtb_pro_avatar_remote_';
@@ -13,6 +14,7 @@ const accountAvatarUploadGenerations = new Map();
 
 function accountAvatarKey(uid) { return `${ACCOUNT_AVATAR_CACHE_PREFIX}${uid}`; }
 function accountAvatarPendingKey(uid) { return `${ACCOUNT_AVATAR_PENDING_PREFIX}${uid}`; }
+function accountAvatarDefaultUrl() { return ACCOUNT_AVATAR_DEFAULT_URL; }
 function resetAccountProfileCache() { accountProfileSnapshot = { uid: '', weightKg: undefined, heightCm: undefined, age: undefined }; }
 
 function hasPendingLocalAccountAvatar(uid) {
@@ -28,9 +30,9 @@ function getAccountAvatarUrl() {
     // Puede llamarse desde el saludo de inicio antes de que cloud.js defina Cloud.
     const sessionUid = typeof Cloud !== 'undefined' ? Cloud.uid : localStorage.getItem('mtb_pro_uid');
     const uid = sessionUid || localStorage.getItem('mtb_pro_avatar_last_uid') || '';
-    if (!uid) return '';
-    try { return localStorage.getItem(accountAvatarKey(uid)) || ''; }
-    catch (error) { return ''; }
+    if (!uid) return accountAvatarDefaultUrl();
+    try { return localStorage.getItem(accountAvatarKey(uid)) || accountAvatarDefaultUrl(); }
+    catch (error) { return accountAvatarDefaultUrl(); }
 }
 
 function renderAccountAvatar() {
@@ -252,9 +254,9 @@ function initAccountAvatar() {
     const input = $('acc-avatar-file');
     const save = $('acc-profile-save');
     const cancel = $('acc-profile-cancel');
-    if (!input || !save) return;
+    if (!save) return;
     renderAccountAvatar();
-    input.addEventListener('change', () => {
+    if (input) input.addEventListener('change', () => {
         if (accountAvatarPreviewUrl) URL.revokeObjectURL(accountAvatarPreviewUrl);
         accountAvatarPreviewUrl = input.files && input.files[0] ? URL.createObjectURL(input.files[0]) : '';
         if (accountAvatarPreviewUrl) {
@@ -263,14 +265,14 @@ function initAccountAvatar() {
             $('acc-avatar-placeholder').hidden = true;
         } else renderAccountAvatar();
     });
-    if (cancel) cancel.addEventListener('click', () => {
+    if (input && cancel) cancel.addEventListener('click', () => {
         input.value = '';
         if (accountAvatarPreviewUrl) URL.revokeObjectURL(accountAvatarPreviewUrl);
         accountAvatarPreviewUrl = '';
         renderAccountAvatar();
     });
     save.addEventListener('click', async () => {
-        const file = input.files && input.files[0];
+        const file = input && input.files && input.files[0];
         const weightInput = $('acc-profile-weight');
         const heightInput = $('acc-profile-height');
         const ageInput = $('acc-profile-age');
@@ -310,7 +312,7 @@ function initAccountAvatar() {
                 );
             }
             renderAccountAvatar();
-            input.value = '';
+            if (input) input.value = '';
             if (accountAvatarPreviewUrl) URL.revokeObjectURL(accountAvatarPreviewUrl);
             accountAvatarPreviewUrl = '';
             if (navigator.onLine) {

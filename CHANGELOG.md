@@ -5,6 +5,16 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.33] - 2026-11-22
+
+### Añadido
+* **Perfil:** avatar opcional durante el registro; si no se sube una foto, se usa el icono de senda-mtb.
+* **Sincronización:** acceso manual desde el encabezado del perfil, con estado azul en reposo y naranja durante la sincronización.
+
+### Cambiado
+* **Perfil:** el editor de datos físicos deja de incluir la carga del avatar y se elimina el aviso de rutas locales sin sesión.
+* **Rutas comunitarias:** se retiran la clasificación y la publicación de marcas en las fichas de rutas; las funciones de segmentos se conservan.
+
 ## [0.2.32] - 2026-11-22
 
 ### Cambiado

@@ -20,6 +20,14 @@ test('profile location is trimmed and limited to 80 characters', () => {
     assert.equal(profileNormalizeLocation(null), '');
 });
 
+test('profile accepts the app icon as a safe default avatar', () => {
+    const context = vm.createContext({});
+    vm.runInContext(fs.readFileSync(path.join(root, 'app', 'profile.js'), 'utf8'), context);
+
+    assert.equal(context.profileSafeImageSource('icon-512.png'), 'icon-512.png');
+    assert.equal(context.profileSafeImageSource('javascript:alert(1)'), '');
+});
+
 function profileLocationContext({ initialStorage = {}, response = null } = {}) {
     const storage = new Map(Object.entries(initialStorage));
     const listeners = new Map();
@@ -274,6 +282,7 @@ test('profile renders account identity and social icons without placeholder inte
     const source = fs.readFileSync(path.join(root, 'app', 'profile.js'), 'utf8');
     const navigation = fs.readFileSync(path.join(root, 'app', 'navigation.js'), 'utf8');
     const cloud = fs.readFileSync(path.join(root, 'app', 'cloud.js'), 'utf8');
+    const dashboardStyles = fs.readFileSync(path.join(root, 'app', 'dashboard.css'), 'utf8');
     const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
     const pageStart = html.indexOf('<div class="page content-panel" id="page-settings">');
     const pageEnd = html.indexOf('<!-- INICIO / DASHBOARD senda-mtb -->', pageStart);
@@ -281,6 +290,7 @@ test('profile renders account identity and social icons without placeholder inte
     const accountStart = profilePage.indexOf('<details class="profile-account-details"');
     const accountEnd = profilePage.indexOf('</details>', accountStart);
     const profileEditor = profilePage.indexOf('<form class="profile-editor"');
+    const localityEditor = profilePage.slice(profileEditor);
 
     for (const id of [
         'profile-avatar-image', 'profile-name', 'profile-location', 'profile-total-distance',
@@ -294,6 +304,19 @@ test('profile renders account identity and social icons without placeholder inte
     assert.match(profilePage, /id="profile-social-title">Social/);
     assert.doesNotMatch(profilePage, /SERVICIOS EXTERNOS|Garmin Connect|Komoot|Apple Salud|Próximamente/);
     assert.match(profilePage, /Se guarda en tu cuenta si has iniciado sesión/);
+    assert.match(profilePage, /<label for="acc-home-location">Localidad habitual<\/label>/);
+    assert.match(profilePage, /<div class="profile-server-controls">[\s\S]*id="acc-server-status"[\s\S]*id="profile-manual-sync"[\s\S]*<\/div>/);
+    assert.match(dashboardStyles, /\.profile-server-controls \{[^}]*justify-content:flex-end;[^}]*margin-left:auto;/);
+    assert.match(dashboardStyles, /\.profile-server-controls \.profile-server-status \{ margin:0; \}/);
+    assert.match(dashboardStyles, /\.account-server-status\.profile-manual-sync\.is-syncing/);
+    const registrationLocation = profilePage.indexOf('id="acc-home-location"');
+    const registrationAvatar = profilePage.indexOf('<label for="acc-register-avatar-file">Foto de perfil (opcional)</label>');
+    assert.ok(registrationAvatar > registrationLocation && registrationAvatar < profilePage.indexOf('</form>', registrationLocation));
+    assert.match(profilePage, /id="acc-register-avatar-file" accept="image\/jpeg,image\/png,image\/webp"/);
+    assert.doesNotMatch(profilePage, /id="acc-avatar-file"/);
+    assert.match(profilePage, /id="profile-account-edit" type="button">Editar datos físicos<\/button>/);
+    assert.doesNotMatch(localityEditor, /<label for="profile-location-input">Localidad habitual<\/label>/);
+    assert.match(localityEditor, /id="profile-location-input" aria-label="Localidad habitual"/);
     assert.doesNotMatch(profilePage, /Seguidores|Seguidos|Rutas compartidas/);
     assert.match(source, /profileUpdateAccountStatus/);
     assert.doesNotMatch(source, /profileRefreshSharedRoutes/);
@@ -304,6 +327,9 @@ test('profile renders account identity and social icons without placeholder inte
     assert.doesNotMatch(profilePage, /<details class="account-options"/);
     assert.match(cloud, /profileAccountDetails\.open = !on/);
     assert.match(cloud, /profileAccountDetailsSessionState !== on/);
+    assert.match(profilePage, /id="acc-status"[^>]*role="status" hidden><\/p>/);
+    assert.match(cloud, /accountStatus\.hidden = !on/);
+    assert.doesNotMatch(cloud, /Sin sesión: tus rutas se guardan solo en este móvil/);
     const identity = profilePage.slice(profilePage.indexOf('class="profile-identity"'), profilePage.indexOf('class="profile-account-details"'));
     assert.match(identity, /id="acc-server-status"/);
     assert.doesNotMatch(profilePage.slice(profilePage.indexOf('class="profile-account-details"'), profilePage.indexOf('<form class="profile-editor"')), /acc-server-status/);

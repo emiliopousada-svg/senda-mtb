@@ -678,9 +678,16 @@
                                             <h2 id="profile-name">Biker</h2>
                                             <p><span aria-hidden="true">📍</span> <span id="profile-location">Añade tu localidad habitual</span></p>
                                         </div>
-                                        <div id="acc-server-status" class="account-server-status profile-server-status" role="status" aria-live="polite" aria-label="Estado del servidor">
-                                            <span>Servidor</span>
-                                            <i aria-hidden="true"></i>
+                                        <div class="profile-server-controls">
+                                            <div id="acc-server-status" class="account-server-status profile-server-status" role="status" aria-live="polite" aria-label="Estado del servidor">
+                                                <span>Servidor</span>
+                                                <i aria-hidden="true"></i>
+                                            </div>
+                                            <button id="profile-manual-sync" class="account-server-status profile-server-status profile-manual-sync" type="button" aria-label="Sincronizar ahora" aria-busy="false" title="Inicia sesión para sincronizar" disabled>
+                                                <span class="profile-manual-sync-icon" aria-hidden="true">↻</span>
+                                                <span class="profile-manual-sync-label" aria-live="polite">Sincronizar</span>
+                                                <i aria-hidden="true"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <details class="profile-account-details" id="profile-account-details" open>
@@ -693,7 +700,7 @@
                                             <span class="profile-account-button-chevron" aria-hidden="true">›</span>
                                         </summary>
                                         <section class="card">
-                                            <p class="hint" id="acc-status">Sin sesión: tus rutas se guardan solo en este móvil.</p>
+                                            <p class="hint" id="acc-status" role="status" hidden></p>
                                             <p class="hint" id="acc-preferences-status" role="status" aria-live="polite">Inicia sesión para sincronizar tus ajustes entre dispositivos.</p>
                                             <p class="hint">Se sincronizan tus preferencias de uso. La ubicación GPS reciente, los dispositivos Bluetooth y los mapas descargados permanecen solo en este dispositivo.</p>
                                             <form id="acc-form" novalidate>
@@ -711,6 +718,9 @@
                                                 <input type="number" id="acc-age" name="age" min="10" max="100" step="1" inputmode="numeric" placeholder="Para estimar la FC máxima">
                                                 <label for="acc-home-location">Localidad habitual</label>
                                                 <input type="text" id="acc-home-location" name="homeLocation" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">
+                                                <label for="acc-register-avatar-file">Foto de perfil (opcional)</label>
+                                                <input type="file" id="acc-register-avatar-file" accept="image/jpeg,image/png,image/webp">
+                                                <p class="hint">Se ajusta a 512 × 512 y se comprime a un máximo de 256 KB.</p>
                                                 <p class="hint">Se guardan en tu cuenta. Si ya completaste tu perfil, no hace falta volver a introducirlos.</p>
                                                 <button class="btn" id="acc-login" type="submit">Entrar</button>
                                                 <button class="btn secondary" id="acc-register" type="button">Crear cuenta</button>
@@ -741,11 +751,7 @@
                                                                     <input type="number" id="acc-profile-height" min="120" max="230" step="1" inputmode="numeric">
                                                                     <label for="acc-profile-age">Edad (años)</label>
                                                                     <input type="number" id="acc-profile-age" min="10" max="100" step="1" inputmode="numeric">
-                                                                    <label for="acc-avatar-file">Foto de perfil (opcional)</label>
-                                                                    <input type="file" id="acc-avatar-file" accept="image/jpeg,image/png,image/webp">
-                                                                    <p class="hint">Se ajusta a 512 × 512 y se comprime a un máximo de 256 KB.</p>
                                                                     <button class="btn secondary" id="acc-profile-save" type="button">Guardar perfil</button>
-                                                                    <button class="btn secondary" id="acc-profile-cancel" type="button" hidden>Cancelar</button>
                                                                 </div>
                                                                 <button class="btn secondary" id="acc-profile-edit" type="button" hidden>Modificar perfil</button>
                                                             </div>
@@ -755,12 +761,11 @@
                                                 </div>
                                             </div>
                                             <form class="profile-editor" id="profile-editor" hidden>
-                                                <label for="profile-location-input">Localidad habitual</label>
-                                                <input type="text" id="profile-location-input" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">
+                                                <input type="text" id="profile-location-input" aria-label="Localidad habitual" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">
                                                 <p class="profile-editor-note" id="profile-editor-note">Se guarda en tu cuenta si has iniciado sesión; no se publica automáticamente.</p>
                                                 <div class="profile-editor-actions">
                                                     <button class="btn" type="submit">Guardar localidad</button>
-                                                    <button class="btn secondary" id="profile-account-edit" type="button">Editar foto y datos físicos</button>
+                                                    <button class="btn secondary" id="profile-account-edit" type="button">Editar datos físicos</button>
                                                 </div>
                                             </form>
                                         </section>
@@ -1460,12 +1465,6 @@
                     <div id="community-favorite-control"></div>
                     <div id="community-comments" class="community-comments" aria-live="polite"></div>
                     <div id="community-comment-form"></div>
-                </section>
-                <section id="community-route-ranking-section" class="community-detail-section" aria-labelledby="community-route-ranking-title">
-                    <h3 id="community-route-ranking-title">Clasificación de la ruta</h3>
-                    <p class="community-privacy">Se muestra un alias asignado a la cuenta y el mejor tiempo. La marca no se verifica de forma independiente. No se publica el track de la actividad, el correo ni los datos de sensores.</p>
-                    <div id="community-route-leaderboard" class="community-ranking-list" aria-live="polite"></div>
-                    <div id="community-route-attempt"></div>
                 </section>
                 <section id="community-segments-section" class="community-detail-section" aria-labelledby="community-segments-title">
                     <div class="community-segments-heading">

@@ -2,6 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { matchActivity } = require('../app/community-performance.js');
 
 const route = [
@@ -81,4 +83,18 @@ test('does not match across a recorded GPS segment break', () => {
     const activity = activityFor(route);
     activity.points[20][5] = 1;
     assert.equal(matchActivity(activity, [route]), null);
+});
+
+test('route detail omits route rankings and saved activity publication while segment rankings remain', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const routes = fs.readFileSync(path.join(__dirname, '..', 'app', 'community-routes.js'), 'utf8');
+    const performanceUi = fs.readFileSync(path.join(__dirname, '..', 'app', 'community-performance-ui.js'), 'utf8');
+    const segments = fs.readFileSync(path.join(__dirname, '..', 'app', 'community-segments.js'), 'utf8');
+    assert.doesNotMatch(html, /id="community-route-attempt"/);
+    assert.doesNotMatch(html, /id="community-route-ranking-section"/);
+    assert.doesNotMatch(routes, /communityRenderEffortWidget/);
+    assert.doesNotMatch(routes, /communityLoadRanking/);
+    assert.doesNotMatch(performanceUi, /community-route-leaderboard/);
+    assert.match(segments, /communityRenderEffortWidget/);
+    assert.match(segments, /communityLoadRanking/);
 });

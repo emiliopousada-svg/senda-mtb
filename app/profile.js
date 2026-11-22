@@ -231,7 +231,8 @@ function profileSetText(id, value) {
 
 function profileSafeImageSource(value) {
     const source = String(value || '');
-    return /^data:image\/(?:jpeg|png|webp);base64,/i.test(source) ? source : '';
+    const defaultAvatar = typeof accountAvatarDefaultUrl === 'function' ? accountAvatarDefaultUrl() : 'icon-512.png';
+    return source === defaultAvatar || /^data:image\/(?:jpeg|png|webp);base64,/i.test(source) ? source : '';
 }
 
 function profileRender() {

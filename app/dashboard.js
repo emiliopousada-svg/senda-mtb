@@ -92,6 +92,7 @@ function dashboardUpdateNetworkStatus() {
         accountIndicator.classList.toggle('offline', !online);
         accountIndicator.setAttribute('aria-label', online ? 'Estado del servidor: conectado' : 'Estado del servidor: sin conexión');
     }
+    if (typeof renderProfileManualSyncButton === 'function') renderProfileManualSyncButton();
 }
 
 function dashboardLatestRecordedRoute() {

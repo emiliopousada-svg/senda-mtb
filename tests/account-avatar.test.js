@@ -62,3 +62,63 @@ test('account avatar URL works before cloud.js defines Cloud', () => {
     );
     assert.equal(context.getAccountAvatarUrl(), 'data:image/jpeg;base64,avatar');
 });
+
+test('account avatar uses the app icon when no uploaded avatar exists', () => {
+    const context = vm.createContext({
+        Cloud: { uid: 'user-1' },
+        localStorage: { getItem: () => null }
+    });
+    vm.runInContext(
+        fs.readFileSync(path.join(__dirname, '..', 'app', 'account-avatar.js'), 'utf8'),
+        context
+    );
+
+    assert.equal(context.getAccountAvatarUrl(), 'icon-512.png');
+    context.Cloud.uid = '';
+    assert.equal(context.getAccountAvatarUrl(), 'icon-512.png');
+});
+
+test('physical profile can still be saved when the avatar editor is absent', async () => {
+    const storage = new Map();
+    const save = {
+        disabled: false,
+        addEventListener(type, listener) {
+            if (type === 'click') this.onClick = listener;
+        }
+    };
+    const inputs = {
+        'acc-profile-save': save,
+        'acc-profile-weight': { value: '72' },
+        'acc-profile-height': { value: '178' },
+        'acc-profile-age': { value: '34' }
+    };
+    const context = vm.createContext({
+        Cloud: { uid: 'user-1' },
+        $: id => inputs[id] || null,
+        document: { activeElement: null },
+        localStorage: {
+            getItem(key) { return storage.get(key) || null; },
+            setItem(key, value) { storage.set(key, String(value)); },
+            removeItem(key) { storage.delete(key); }
+        },
+        navigator: { onLine: false },
+        renderAccountAvatar() {},
+        statsApplyAccountProfile() {},
+        toast() {},
+        console: { warn() {} }
+    });
+    vm.runInContext(
+        fs.readFileSync(path.join(__dirname, '..', 'app', 'account-avatar.js'), 'utf8'),
+        context
+    );
+    context.initAccountAvatar();
+
+    await save.onClick();
+
+    const pending = JSON.parse(storage.get('mtb_pro_avatar_pending_user-1'));
+    assert.equal(pending.avatar, '');
+    assert.equal(pending.weightKg, '72');
+    assert.equal(pending.heightCm, '178');
+    assert.equal(pending.age, '34');
+    assert.equal(save.disabled, false);
+});

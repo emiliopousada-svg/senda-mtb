@@ -263,18 +263,11 @@ function openCommunityDetail(record, lines, options = {}) {
     });
     const showCommunityTools = Boolean(communityDetailRecord);
     $('community-social').hidden = !showCommunityTools;
-    $('community-route-ranking-section').hidden = !showCommunityTools;
     $('community-segments-section').hidden = !showCommunityTools;
     $('community-create-segment').hidden = !showCommunityTools || !Cloud.loggedIn() || !navigator.onLine;
-    $('community-route-leaderboard').replaceChildren();
-    $('community-route-attempt').replaceChildren();
     $('community-segment-list').replaceChildren();
     if (showCommunityTools) {
         communityLoadSocial(communityDetailRecord);
-        communityLoadRanking(communityDetailRecord, 'community_route_efforts', 'route',
-            $('community-route-leaderboard'));
-        communityRenderEffortWidget($('community-route-attempt'), communityDetailRecord,
-            lines, 'community_route_efforts', 'route', 'la ruta');
         communityLoadSegments(communityDetailRecord);
     }
 

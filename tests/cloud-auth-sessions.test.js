@@ -508,6 +508,144 @@ test('a queued sync does not run for a different account after its delay', async
     assert.equal(inventoryCalls, 1);
 });
 
+test('registration uploads an optional compressed avatar with the account record', async () => {
+    const calls = [];
+    const sourceFile = { type: 'image/png', size: 1024 };
+    const jpeg = new Blob(['compressed avatar'], { type: 'image/jpeg' });
+    const { context } = cloudContext(async (requestPath, method, body) => {
+        calls.push({ requestPath, method, body });
+        if (requestPath === '/api/collections/users/records') return { id: 'user-1' };
+        if (requestPath === '/api/collections/users/auth-with-password') {
+            return { token: 'bearer-token', record: { id: 'user-1', email: 'rider@example.com', nickname: 'Rider' } };
+        }
+        throw new Error(`Unexpected request: ${requestPath}`);
+    });
+    const avatarInput = { files: [sourceFile], value: 'avatar.png' };
+    const fields = new Map([
+        ['acc-nickname', { value: 'Rider' }],
+        ['acc-email', { value: 'rider@example.com' }],
+        ['acc-pass', { value: 'secure-password' }],
+        ['acc-weight', { value: '' }],
+        ['acc-height', { value: '' }],
+        ['acc-age', { value: '' }],
+        ['acc-home-location', { value: 'Ribeira' }],
+        ['acc-register-avatar-file', avatarInput],
+        ['acc-account-nickname', { value: '' }]
+    ]);
+    context.$ = id => fields.get(id) || null;
+    context.FormData = FormData;
+    context.accountAvatarToJpeg = async file => {
+        assert.equal(file, sourceFile);
+        return jpeg;
+    };
+    context.Cloud.clearSession = function () {
+        this.sessionActive = false;
+        this.authGeneration++;
+    };
+    context.renderAccountProfile = () => {};
+    context.syncPendingAccountAvatar = async () => {};
+    context.syncCloudPreferences = async () => {};
+    context.renderAccount = () => {};
+    context.restoreGroup = async () => {};
+    context.syncRoutes = () => {};
+    context.syncSharedPois = async () => true;
+    context.pendingSharedPoiCount = () => 0;
+    context.poiSyncPendingMessage = () => '';
+    context.toast = () => {};
+    context.console = { warn() {} };
+    vm.runInContext(
+        sourceBetween('function ensureAuthServer(server, generation)', '\nasync function saveAccountNickname()'),
+        context
+    );
+
+    await context.accAuth(true);
+
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].method, 'POST');
+    assert.ok(calls[0].body instanceof FormData);
+    assert.equal(calls[0].body.get('nickname'), 'Rider');
+    assert.equal(calls[0].body.get('homeLocation'), 'Ribeira');
+    assert.equal(calls[0].body.get('avatar').name, 'avatar.jpg');
+    assert.equal(await calls[0].body.get('avatar').text(), 'compressed avatar');
+    assert.equal(avatarInput.value, '');
+});
+
+test('manual account sync shows progress and returns to the ready state when complete', async () => {
+    const { context } = cloudContext();
+    const classes = new Set();
+    const label = { textContent: 'Sincronizar' };
+    const attributes = {};
+    const accountSyncButton = { disabled: false };
+    const button = {
+        disabled: true,
+        title: '',
+        classList: {
+            toggle(name, enabled) {
+                if (enabled) classes.add(name);
+                else classes.delete(name);
+            },
+            contains(name) { return classes.has(name); }
+        },
+        querySelector(selector) {
+            return selector === '.profile-manual-sync-label' ? label : null;
+        },
+        setAttribute(name, value) { attributes[name] = value; }
+    };
+    context.$ = id => id === 'profile-manual-sync' ? button
+        : id === 'acc-sync' ? accountSyncButton
+            : null;
+    context.navigator = { onLine: true };
+    context.toast = () => {};
+    context.pendingSharedPoiCount = () => 0;
+    context.poiSyncPendingMessage = () => '';
+    vm.runInContext(
+        sourceBetween('let manualAccountSyncInFlight = false;', '\nfunction renderAccount()'),
+        context
+    );
+
+    context.renderProfileManualSyncButton();
+    assert.equal(button.disabled, true);
+    assert.equal(accountSyncButton.disabled, true);
+    assert.equal(button.title, 'Inicia sesión para sincronizar');
+    context.Cloud.setSession({ id: 'user-1', nickname: 'Rider' }, 'token');
+    context.renderProfileManualSyncButton();
+    assert.equal(button.disabled, false);
+    assert.equal(accountSyncButton.disabled, false);
+
+    let finishPreferences;
+    let signalStarted;
+    const started = new Promise(resolve => { signalStarted = resolve; });
+    const calls = [];
+    context.syncCloudPreferences = () => {
+        calls.push('preferences');
+        signalStarted();
+        return new Promise(resolve => { finishPreferences = resolve; });
+    };
+    context.syncRoutes = async manual => { calls.push(manual ? 'routes-manual' : 'routes'); };
+    context.restoreGroup = async () => { calls.push('group'); };
+    context.syncSharedPois = async () => { calls.push('pois'); return true; };
+
+    const sync = context.syncAccountManually();
+    await started;
+    assert.equal(button.disabled, true);
+    assert.equal(accountSyncButton.disabled, true);
+    assert.equal(button.title, 'Sincronizando…');
+    assert.equal(label.textContent, 'Sincronizando…');
+    assert.equal(attributes['aria-busy'], 'true');
+    assert.equal(classes.has('is-syncing'), true);
+
+    finishPreferences(true);
+    await sync;
+
+    assert.deepEqual(calls, ['preferences', 'routes-manual', 'group', 'pois']);
+    assert.equal(button.disabled, false);
+    assert.equal(accountSyncButton.disabled, false);
+    assert.equal(button.title, 'Sincronizar ahora');
+    assert.equal(label.textContent, 'Sincronizar');
+    assert.equal(attributes['aria-busy'], 'false');
+    assert.equal(classes.has('is-syncing'), false);
+});
+
 test('login discards a bearer token after the configured server changes', async () => {
     let resolvePassword;
     const calls = [];
@@ -524,9 +662,11 @@ test('login discards a bearer token after the configured server changes', async 
         ['acc-pass', { value: 'password' }],
         ['acc-weight', { value: '' }],
         ['acc-height', { value: '' }],
-        ['acc-age', { value: '' }]
+        ['acc-age', { value: '' }],
+        ['acc-register-avatar-file', { files: [{ type: 'image/png', size: 10 }], value: 'avatar.png' }]
     ]);
     context.$ = id => fields.get(id);
+    context.accountAvatarToJpeg = () => { throw new Error('Login must not process the registration avatar'); };
     context.toast = () => {};
     context.console = { warn() {} };
     vm.runInContext(
