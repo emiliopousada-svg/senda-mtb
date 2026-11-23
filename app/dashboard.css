@@ -35,7 +35,8 @@
 .profile-hero { padding:16px; background:radial-gradient(ellipse at 92% 4%,rgba(22,140,255,.17),transparent 42%),linear-gradient(145deg,#171e28,#12171f); }
 .profile-identity { display:flex; min-width:0; align-items:center; gap:13px; }
 .profile-server-status { flex:0 0 auto; gap:7px; margin:0 0 0 auto; padding:6px 8px; font-size:.62rem; }
-.profile-server-controls { display:flex; flex:0 0 auto; align-items:center; justify-content:flex-end; gap:7px; margin-left:auto; }
+.profile-server-controls { display:flex; flex:0 0 auto; flex-direction:column; align-items:flex-end; justify-content:center; gap:6px; margin-left:auto; }
+.profile-server-controls > * { min-width:104px; justify-content:center; }
 .profile-server-controls .profile-server-status { margin:0; }
 .account-server-status.profile-manual-sync {
     margin:0;

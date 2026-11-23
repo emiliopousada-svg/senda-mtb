@@ -306,7 +306,8 @@ test('profile renders account identity and social icons without placeholder inte
     assert.match(profilePage, /Se guarda en tu cuenta si has iniciado sesión/);
     assert.match(profilePage, /<label for="acc-home-location">Localidad habitual<\/label>/);
     assert.match(profilePage, /<div class="profile-server-controls">[\s\S]*id="acc-server-status"[\s\S]*id="profile-manual-sync"[\s\S]*<\/div>/);
-    assert.match(dashboardStyles, /\.profile-server-controls \{[^}]*justify-content:flex-end;[^}]*margin-left:auto;/);
+    assert.match(dashboardStyles, /\.profile-server-controls \{[^}]*flex-direction:column;[^}]*align-items:flex-end;[^}]*margin-left:auto;/);
+    assert.match(dashboardStyles, /\.profile-server-controls > \* \{ min-width:104px; justify-content:center; \}/);
     assert.match(dashboardStyles, /\.profile-server-controls \.profile-server-status \{ margin:0; \}/);
     assert.match(dashboardStyles, /\.account-server-status\.profile-manual-sync\.is-syncing/);
     const registrationLocation = profilePage.indexOf('id="acc-home-location"');
