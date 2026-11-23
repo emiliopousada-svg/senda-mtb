@@ -20,11 +20,12 @@ independent PocketBase instance before enabling sync. The expected collection
 set and access boundaries are documented in [POCKETBASE.md](POCKETBASE.md).
 
 If community routes are enabled, their tracks are public data. The included
-route hook trims 150 m from both ends before storing a track and rejects POIs
-within 150 m of the submitted endpoints. This reduces location exposure but
-does not guarantee anonymity. The client also resizes and re-encodes photos;
-the hook does not strip image metadata, so the server must validate or remove
-EXIF data if that is required.
+route hook trims 150 m from both ends before storing a track and validates new
+POIs against the protected endpoints, including POI-only updates. This reduces
+location exposure but does not guarantee anonymity. The client resizes and
+re-encodes photos, and the hook rejects uploaded JPEGs with EXIF/XMP, IPTC, or
+comment metadata. Photos uploaded before this validation was deployed are not
+cleaned automatically and may need a separate review.
 
 The API bearer token supports persistent sign-in and is stored in browser
 `localStorage`. JavaScript running in the app origin can access it, so script

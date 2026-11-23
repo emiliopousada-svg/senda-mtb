@@ -11,7 +11,10 @@ function indexCommunityRouteBounds(e) {
     if (!nickname) throw new BadRequestError("Configura un apodo antes de publicar rutas.");
     if (!internalWrite) e.record.set("createdBy", nickname);
 
+    const shouldTrimTrack = e.record.isNew()
+        || e.record.getString("trackJson") !== e.record.original().getString("trackJson");
     const communityRouteTrimMeters = 150;
+    const communityRouteMaxPhotoBytes = 614400;
 
     function communityRouteDistance(a, b) {
         const rad = Math.PI / 180;
@@ -62,6 +65,67 @@ function indexCommunityRouteBounds(e) {
         return result;
     }
 
+    function communityRoutePhotoBytes(file) {
+        const size = Number(file.size);
+        if (!Number.isSafeInteger(size) || size < 4 || size > communityRouteMaxPhotoBytes) {
+            throw new BadRequestError("La foto debe ser un JPEG válido de hasta 600 KB.");
+        }
+
+        const reader = file.reader.open();
+        const bytes = [];
+        try {
+            while (bytes.length < size) {
+                const chunk = new Array(Math.min(8192, size - bytes.length)).fill(0);
+                const count = reader.read(chunk);
+                if (!Number.isInteger(count) || count <= 0 || count > chunk.length) {
+                    throw new BadRequestError("No se pudo verificar la foto.");
+                }
+                for (let i = 0; i < count; i++) bytes.push(Number(chunk[i]) & 255);
+            }
+        } finally {
+            reader.close();
+        }
+        return bytes;
+    }
+
+    function communityRouteValidatePhotoMetadata(file) {
+        const bytes = communityRoutePhotoBytes(file);
+        if (bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+            throw new BadRequestError("La foto debe ser un JPEG válido.");
+        }
+
+        let offset = 2;
+        while (offset < bytes.length) {
+            if (bytes[offset] !== 0xff) throw new BadRequestError("La foto debe ser un JPEG válido.");
+            while (offset < bytes.length && bytes[offset] === 0xff) offset++;
+            if (offset >= bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
+
+            const marker = bytes[offset++];
+            if (marker === 0xd9) return;
+            if (marker === 0xda) {
+                if (offset + 2 > bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
+                const scanLength = bytes[offset] * 256 + bytes[offset + 1];
+                if (scanLength < 2 || offset + scanLength > bytes.length) {
+                    throw new BadRequestError("La foto debe ser un JPEG válido.");
+                }
+                return;
+            }
+            if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+            if (offset + 2 > bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
+
+            const segmentLength = bytes[offset] * 256 + bytes[offset + 1];
+            if (segmentLength < 2 || offset + segmentLength > bytes.length) {
+                throw new BadRequestError("La foto debe ser un JPEG válido.");
+            }
+            if (marker === 0xe1 || marker === 0xed || marker === 0xfe) {
+                throw new BadRequestError("La foto contiene metadatos; vuelve a exportarla sin EXIF.");
+            }
+            offset += segmentLength;
+        }
+
+        throw new BadRequestError("La foto debe ser un JPEG válido.");
+    }
+
     let lines;
     try { lines = JSON.parse(e.record.getString("trackJson")); }
     catch (error) { throw new BadRequestError("El trazado de la ruta no es JSON válido."); }
@@ -92,23 +156,39 @@ function indexCommunityRouteBounds(e) {
     try { pois = JSON.parse(e.record.getString("poisJson") || "[]"); }
     catch (error) { throw new BadRequestError("Los puntos de interés no son JSON válido."); }
     if (!Array.isArray(pois)) throw new BadRequestError("Los puntos de interés no son válidos.");
+    let originalPois = [];
+    if (!shouldTrimTrack) {
+        try { originalPois = JSON.parse(e.record.original().getString("poisJson") || "[]"); }
+        catch (error) { throw new BadRequestError("Los puntos de interés originales no son JSON válido."); }
+        if (!Array.isArray(originalPois)) throw new BadRequestError("Los puntos de interés originales no son válidos.");
+    }
     for (const poi of pois) {
         const lat = Number(poi && poi.lat);
         const lng = Number(poi && poi.lng);
         if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
             throw new BadRequestError("Los puntos de interés contienen coordenadas no válidas.");
         }
-        if (communityRouteDistance([lat, lng], firstPoint) <= communityRouteTrimMeters
-            || communityRouteDistance([lat, lng], lastPoint) <= communityRouteTrimMeters) {
-            throw new BadRequestError("Los puntos de interés deben quedar a más de 150 metros de los extremos originales.");
+        const existedBefore = originalPois.some(originalPoi =>
+            Number(originalPoi && originalPoi.lat) === lat && Number(originalPoi && originalPoi.lng) === lng
+        );
+        if ((shouldTrimTrack || !existedBefore)
+            && (communityRouteDistance([lat, lng], firstPoint) <= communityRouteTrimMeters
+                || communityRouteDistance([lat, lng], lastPoint) <= communityRouteTrimMeters)) {
+            throw new BadRequestError("Los puntos de interés nuevos deben quedar a más de 150 metros de los extremos protegidos.");
         }
     }
 
-    lines = communityRouteTrimEnds(lines);
-    if (!lines.length || lines.reduce((total, line) => total + line.length, 0) < 2) {
-        throw new BadRequestError("La ruta es demasiado corta para publicarse después de ocultar sus extremos.");
+    for (const photo of e.record.getUnsavedFiles("poiPhotos")) {
+        communityRouteValidatePhotoMetadata(photo);
     }
-    e.record.set("trackJson", JSON.stringify(lines));
+
+    if (shouldTrimTrack) {
+        lines = communityRouteTrimEnds(lines);
+        if (!lines.length || lines.reduce((total, line) => total + line.length, 0) < 2) {
+            throw new BadRequestError("La ruta es demasiado corta para publicarse después de ocultar sus extremos.");
+        }
+        e.record.set("trackJson", JSON.stringify(lines));
+    }
 
     let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
     let count = 0;

@@ -10,6 +10,9 @@ const validateUserNickname = (e) => {
         throw new BadRequestError("El apodo no se puede cambiar una vez elegido.");
     }
     if (nickname.length > 32) throw new BadRequestError("El apodo no puede superar los 32 caracteres.");
+    if (nickname.toLowerCase() === "senda-mtb" && originalNickname.toLowerCase() !== "senda-mtb") {
+        throw new BadRequestError("Ese apodo está reservado.");
+    }
 
     // Existing or legacy accounts without a nickname remain valid; unrelated profile updates
     // do not query or rewrite the nickname.

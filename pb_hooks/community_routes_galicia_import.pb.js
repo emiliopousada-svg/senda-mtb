@@ -264,9 +264,18 @@ function run() {
             return;
         }
         console.log("[rutas Galicia] " + changedFiles.length + " archivo(s) nuevo(s) o modificado(s)");
+        const ownerId = String($os.getenv("COMMUNITY_IMPORT_OWNER_ID") || "").trim();
+        if (!ownerId) {
+            console.log("[rutas Galicia] falta COMMUNITY_IMPORT_OWNER_ID; no se importarán rutas");
+            return;
+        }
         let owner;
-        try { owner = $app.findFirstRecordByData("users", "nickname", ownerNickname); }
-        catch (error) { console.log("[rutas Galicia] no se encuentra la cuenta " + ownerNickname + ": " + error); return; }
+        try { owner = $app.findRecordById("users", ownerId); }
+        catch (error) { console.log("[rutas Galicia] no se encuentra el propietario configurado: " + error); return; }
+        if (owner.getString("nickname").trim().toLowerCase() !== ownerNickname.toLowerCase()) {
+            console.log("[rutas Galicia] COMMUNITY_IMPORT_OWNER_ID no corresponde a la cuenta " + ownerNickname);
+            return;
+        }
         let routesImported = 0;
         for (let i = 0; i < changedFiles.length; i++) {
             const file = changedFiles[i];
