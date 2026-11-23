@@ -12,6 +12,7 @@ function communitySetSection(key, moveFocus = false) {
         const panel = $(item.getAttribute('aria-controls'));
         if (panel) panel.hidden = !selected;
     });
+    if (key === 'segments') communityLoadHubSegments();
     if (moveFocus) tab.focus();
 }
 
@@ -38,11 +39,6 @@ document.querySelectorAll('[data-community-section]').forEach((tab, index) => {
     tab.tabIndex = index === 0 ? 0 : -1;
     const panel = $(tab.getAttribute('aria-controls'));
     if (panel) panel.hidden = index !== 0;
-});
-
-$('community-open-segments')?.addEventListener('click', () => {
-    goToPage(3);
-    setRoutesTab('community');
 });
 
 $('community-open-season')?.addEventListener('click', () => {

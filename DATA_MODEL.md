@@ -178,7 +178,7 @@ Las colecciones de PocketBase gestionan usuarios, sincronización y vida social 
 | `community_routes` | Base | Lectura pública; escritura autenticada | Rutas comunitarias con comunidad autónoma, POIs y fotos (con recorte de 150 m en extremos para privacidad). El campo remoto `province` se conserva por compatibilidad. |
 | `community_route_favorites`, `community_route_ratings`, `community_route_comments` | Base | Lectura pública limitada a rutas publicadas; escritura autenticada propia | Favoritos, valoraciones y comentarios. |
 | `community_segments` | Base | Lectura pública; escritura autenticada | Trazados de segmentos competitivos. |
-| `community_route_efforts`, `community_segment_efforts` | Base | Lectura pública limitada a trazados publicados; escritura autenticada propia | Marcas de tiempo de rutas y segmentos. |
+| `community_route_efforts`, `community_segment_efforts` | Base | Lectura pública limitada a trazados publicados; escritura autenticada propia | Récord histórico por persona y segmento, sin pertenencia a grupo. El cliente compara salidas locales no importadas y solo publica apodo y tiempo; la base de datos impide empeorar un récord existente. |
 
 ---
 

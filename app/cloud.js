@@ -110,6 +110,9 @@ const Cloud = {
         localStorage.setItem('mtb_pro_group_code', rec.groupCode || '');
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
         if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
+        if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
+            communityScheduleAutomaticSegmentEffortScan();
+        }
     },
     async refreshSession() {
         const server = this.server;
@@ -641,6 +644,9 @@ async function saveAccountNickname() {
         toast('Apodo guardado en tu cuenta.');
         syncRoutes();
         syncSharedPois();
+        if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
+            communityScheduleAutomaticSegmentEffortScan();
+        }
     } catch (error) {
         if (error.status === 401 && isCurrent()) {
             Cloud.clearSession();
@@ -1129,6 +1135,9 @@ async function syncRoutes(manual = false) {
             savedRoutes.sort((a, b) => b.id - a.id);
         }
 
+        if (pulled > 0 && typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
+            communityScheduleAutomaticSegmentEffortScan();
+        }
         if (!isCurrentSync()) return;
         try {
             localStorage.setItem('mtb_pro_lastsync', String(Date.now()));
@@ -1342,6 +1351,9 @@ async function init() {
     try {
         await DB.open();
         savedRoutes = (await DB.all()).sort((a, b) => b.id - a.id);
+        if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
+            communityScheduleAutomaticSegmentEffortScan();
+        }
     } catch (e) {
         console.warn('Sin IndexedDB:', e);
         toast('⚠️ Sin almacenamiento persistente: las rutas se perderán al cerrar la app.', 6000);

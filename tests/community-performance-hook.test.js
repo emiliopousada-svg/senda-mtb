@@ -55,12 +55,12 @@ function loadHandlers() {
     ]));
 }
 
-function createEvent(collection) {
+function createEvent(collection, { elapsedSeconds = 60, originalElapsedSeconds = null } = {}) {
     const values = {
         owner: 'user123',
         route: 'route123',
         segment: 'segment123',
-        elapsedSeconds: 60
+        elapsedSeconds
     };
     return {
         collection: { name: collection },
@@ -69,7 +69,11 @@ function createEvent(collection) {
         record: {
             getString: name => values[name] || '',
             get: name => values[name],
-            set(name, value) { values[name] = value; }
+            set(name, value) { values[name] = value; },
+            isNew: () => originalElapsedSeconds === null,
+            original: () => ({
+                get: name => name === 'elapsedSeconds' ? originalElapsedSeconds : values[name]
+            })
         },
         values,
         nextCalled: false,
@@ -86,4 +90,41 @@ test('community effort hooks calculate route and segment distances in isolated h
         assert.equal(event.values.alias, 'Rider');
         assert.equal(event.nextCalled, true);
     }
+});
+
+test('segment effort updates cannot worsen the saved personal best', () => {
+    const handler = loadHandlers()['update:community_segment_efforts'];
+    const slower = createEvent('community_segment_efforts', {
+        elapsedSeconds: 80,
+        originalElapsedSeconds: 60
+    });
+    assert.throws(() => handler(slower), /no se puede empeorar/);
+
+    const faster = createEvent('community_segment_efforts', {
+        elapsedSeconds: 50,
+        originalElapsedSeconds: 60
+    });
+    handler(faster);
+    assert.equal(faster.values.elapsedSeconds, 50);
+    assert.equal(faster.nextCalled, true);
+});
+
+test('segment effort migration installs a database guard against concurrent regressions', () => {
+    const migrationPath = path.join(__dirname, '..', 'pb_migrations', '1794836006_prevent_segment_effort_regression.js');
+    let up;
+    vm.runInContext(fs.readFileSync(migrationPath, 'utf8'), vm.createContext({
+        migrate(callback) { up = callback; }
+    }));
+    let sql = '';
+    up({
+        db: () => ({
+            newQuery(query) {
+                sql = query;
+                return { execute() {} };
+            }
+        })
+    });
+    assert.match(sql, /BEFORE UPDATE OF elapsedSeconds ON community_segment_efforts/);
+    assert.match(sql, /WHEN NEW\.elapsedSeconds > OLD\.elapsedSeconds/);
+    assert.match(sql, /RAISE\(ABORT/);
 });

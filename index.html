@@ -429,7 +429,21 @@
             </section>
 
             <section class="community-section" id="community-section-segments" role="tabpanel" aria-label="Segmentos MTB" hidden>
-                <div class="card community-empty-card"><span class="community-feature-icon">▲</span><h2>Segmentos MTB</h2><p>Los segmentos públicos se crean sobre rutas de la comunidad. Cada uno conserva su perfil, distancia y clasificación de intentos.</p><button class="btn" id="community-open-segments" type="button">Explorar rutas y segmentos</button><p class="hint">Abre una ruta para consultar sus segmentos y tiempos publicados.</p></div>
+                <div class="card community-segments-hub-card">
+                    <div class="community-segments-hub-heading">
+                        <div class="community-segments-hub-intro">
+                            <span class="community-segments-hub-icon" aria-hidden="true">⌖</span>
+                            <div>
+                                <span class="community-segments-hub-kicker">COMUNIDAD · CERCA DE TI</span>
+                                <h2>Segmentos MTB</h2>
+                                <p class="hint">Descubre retos cercanos y la ruta donde empieza cada uno.</p>
+                            </div>
+                        </div>
+                        <button class="btn-small secondary community-segments-refresh" id="community-hub-segments-refresh" type="button"><span aria-hidden="true">↻</span> Actualizar</button>
+                    </div>
+                    <p id="community-hub-segments-status" class="hint community-segments-hub-status" role="status" aria-live="polite">Abre esta sección para cargar los segmentos cercanos.</p>
+                    <div id="community-hub-segment-list" class="community-hub-segment-list"></div>
+                </div>
             </section>
 
             <section class="community-section" id="community-section-challenges" role="tabpanel" aria-label="Temporada y desafíos del grupo" hidden>

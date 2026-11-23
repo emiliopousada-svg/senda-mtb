@@ -5,6 +5,16 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.34] - 2026-03-26
+
+### Añadido
+* **Comunidad · Segmentos MTB:** catálogo cercano con la ruta asociada, podio de tres tiempos y mejor marca personal.
+* **Récords de segmentos:** detección automática en las salidas guardadas no importadas; solo se publica el apodo y el tiempo, y el récord histórico no puede empeorar.
+
+### Cambiado
+* **Mapa:** el indicador GPS distingue estados de señal y los indicadores de métricas amplían su visualización al pulsarlos.
+* **Perfil:** los controles de servidor y sincronización se apilan para no tapar el apodo.
+
 ## [0.2.33] - 2026-11-22
 
 ### Añadido

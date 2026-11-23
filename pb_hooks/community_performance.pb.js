@@ -14,6 +14,13 @@ function validateCommunityEffort(e) {
         throw new BadRequestError("El tiempo debe estar entre 1 segundo y 24 horas.");
     }
 
+    if (e.collection.name === "community_segment_efforts" && !e.record.isNew()) {
+        const previousSeconds = Number(e.record.original().get("elapsedSeconds"));
+        if (Number.isFinite(previousSeconds) && elapsedSeconds > previousSeconds) {
+            throw new BadRequestError("El mejor tiempo de un segmento no se puede empeorar.");
+        }
+    }
+
     let trackJson = "";
     if (e.collection.name === "community_route_efforts") {
         const route = $app.findRecordById("community_routes", e.record.getString("route"));

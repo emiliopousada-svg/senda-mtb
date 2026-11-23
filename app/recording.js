@@ -794,6 +794,9 @@ async function saveRoute(r) {
         return false;
     }
     savedRoutes.unshift(r);
+    if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
+        communityScheduleAutomaticSegmentEffortScan();
+    }
     if (typeof garageRouteSaved === 'function' && !garageRouteSaved(r)) {
         toast('La ruta se guardó, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
     }

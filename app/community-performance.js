@@ -37,6 +37,11 @@
                 || !Number.isFinite(timeMs) || timeMs <= 0) return null;
             return { coord: [lat, lon], timeMs, index, startsSegment: point[5] === 1 };
         }).filter(Boolean);
+        let segmentId = 0;
+        points.forEach((point, index) => {
+            if (index > 0 && point.startsSegment) segmentId++;
+            point.segmentId = segmentId;
+        });
         for (let i = 1; i < points.length; i++) {
             const previous = points[i - 1], current = points[i];
             const elapsedSeconds = (current.timeMs - previous.timeMs) / 1000;
@@ -110,10 +115,31 @@
         return { cells, latitudeStep, longitudeStep, key };
     }
 
-    function matchDirection(points, samples, maxDistanceM, index) {
-        let previousIndex = -1;
-        let first = null, last = null;
-        for (const sample of samples) {
+    function pointIndexesNearSample(points, sample, maxDistanceM, index) {
+        const latCell = Math.floor(sample[0] / index.latitudeStep);
+        const lonCell = Math.floor(sample[1] / index.longitudeStep);
+        const nearby = [];
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const candidates = index.cells.get(index.key(latCell + dy, lonCell + dx)) || [];
+                for (const candidateIndex of candidates) {
+                    if (distanceMeters(points[candidateIndex].coord, sample) <= maxDistanceM) {
+                        nearby.push(candidateIndex);
+                    }
+                }
+            }
+        }
+        return nearby.sort((a, b) => a - b);
+    }
+
+    function matchDirectionFromStart(points, samples, maxDistanceM, index, startIndex) {
+        const first = points[startIndex];
+        const segmentId = first.segmentId;
+        if (distanceMeters(first.coord, samples[0]) > maxDistanceM) return null;
+        let last = first;
+        let previousIndex = startIndex;
+        for (let sampleIndex = 1; sampleIndex < samples.length; sampleIndex++) {
+            const sample = samples[sampleIndex];
             const latCell = Math.floor(sample[0] / index.latitudeStep);
             const lonCell = Math.floor(sample[1] / index.longitudeStep);
             let nearestIndex = -1, nearestDistance = Infinity;
@@ -121,7 +147,7 @@
                 for (let dx = -1; dx <= 1; dx++) {
                     const candidates = index.cells.get(index.key(latCell + dy, lonCell + dx)) || [];
                     for (const candidateIndex of candidates) {
-                        if (candidateIndex <= previousIndex) continue;
+                        if (candidateIndex <= previousIndex || points[candidateIndex].segmentId !== segmentId) continue;
                         const distance = distanceMeters(points[candidateIndex].coord, sample);
                         if (distance <= maxDistanceM && distance < nearestDistance) {
                             nearestDistance = distance;
@@ -131,15 +157,32 @@
                 }
             }
             if (nearestIndex < 0) return null;
-            if (previousIndex >= 0 && points[nearestIndex].startsSegment) return null;
-            if (!first) first = points[nearestIndex];
             last = points[nearestIndex];
             previousIndex = nearestIndex;
         }
-        if (!first || !last || last.timeMs <= first.timeMs) return null;
+        if (last.timeMs <= first.timeMs) return null;
         const elapsedSeconds = Math.round((last.timeMs - first.timeMs) / 1000);
         if (elapsedSeconds < 1 || elapsedSeconds > MAX_EFFORT_SECONDS) return null;
         return { elapsedSeconds, startPointIndex: first.index, endPointIndex: last.index };
+    }
+
+    function matchDirection(points, samples, maxDistanceM, index) {
+        const starts = pointIndexesNearSample(points, samples[0], maxDistanceM, index).filter(startIndex => {
+            const point = points[startIndex];
+            const distance = distanceMeters(point.coord, samples[0]);
+            const previous = points[startIndex - 1];
+            const next = points[startIndex + 1];
+            return (!previous || point.startsSegment
+                    || distance <= distanceMeters(previous.coord, samples[0]))
+                && (!next || next.startsSegment
+                    || distance <= distanceMeters(next.coord, samples[0]));
+        });
+        let best = null;
+        for (const startIndex of starts) {
+            const match = matchDirectionFromStart(points, samples, maxDistanceM, index, startIndex);
+            if (match && (!best || match.elapsedSeconds < best.elapsedSeconds)) best = match;
+        }
+        return best;
     }
 
     function matchActivity(activity, lines, options = {}) {
