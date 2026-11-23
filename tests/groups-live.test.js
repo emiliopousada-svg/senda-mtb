@@ -140,6 +140,25 @@ test('a session refresh that clears the group revokes access in the same live re
     assert.match(notified, /revocado tu acceso/);
 });
 
+test('a revoked group stays disconnected when reloading the group fails', async () => {
+    const { context, elements, cloud } = groupsContext();
+    context.removeMyLiveLocation = async () => {};
+    context.loadMyGroup = async () => { throw new Error('server unavailable'); };
+    context.renderFriends = () => {};
+    context.toast = () => {};
+    cloud.refreshSession = async () => {
+        cloud.groupCode = '';
+        return { id: cloud.uid, groupCode: '' };
+    };
+    vm.runInContext('lastGroupAuthRefreshAt = 0;', context);
+
+    await context.refreshFriends();
+
+    assert.equal(elements.get('group-setup').style.display, 'block');
+    assert.equal(elements.get('group-connected').style.display, 'none');
+    assert.equal(vm.runInContext('groupJoined', context), false);
+});
+
 for (const [changedIdentity, changeIdentity] of [
     ['server', (cloud) => { cloud.server = 'https://other.example'; }],
     ['user', (cloud) => { cloud.uid = 'other-user'; }],

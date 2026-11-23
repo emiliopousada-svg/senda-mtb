@@ -672,11 +672,23 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
             if (!auth) return;
             const revokedFromCurrentGroup = auth.groupCode === ''
                 && (!groupName() || groupName() === expectedGroup);
-            if (!isAuthCurrent() || (!revokedFromCurrentGroup && !isCurrent())) return;
+            if (!isAuthCurrent()) return;
+            if (revokedFromCurrentGroup) {
+                groupJoined = false;
+                localStorage.removeItem('mtb_pro_group_joined');
+                renderGroupState(false);
+                await removeMyLiveLocation();
+                await loadMyGroup();
+                renderFriends();
+                toast('El administrador ha revocado tu acceso a este grupo.');
+                return;
+            }
+            if (!isCurrent()) return;
             lastGroupAuthRefreshAt = now;
             if (auth.groupCode !== expectedGroup || !expectedGroup) {
                 groupJoined = false;
                 localStorage.removeItem('mtb_pro_group_joined');
+                renderGroupState(false);
                 await removeMyLiveLocation();
                 await loadMyGroup();
                 renderFriends();
@@ -691,6 +703,7 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
             if (membership.activeGroupId !== expectedGroup || !expectedGroup) {
                 groupJoined = false;
                 localStorage.removeItem('mtb_pro_group_joined');
+                renderGroupState(false);
                 await removeMyLiveLocation();
                 await loadMyGroup();
                 renderFriends();

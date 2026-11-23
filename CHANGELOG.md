@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.36] - 2026-11-23
+
+### Cambiado
+* **Grupos:** al revocar el acceso desde la sesión o detectar el cambio de membresía, la interfaz desconecta inmediatamente el estado del grupo y muestra el flujo para volver a unirse.
+* **Grupos:** la desconexión se conserva aunque falle la recarga posterior del grupo.
+
 ## [0.2.34] - 2026-03-26
 
 ### Añadido
