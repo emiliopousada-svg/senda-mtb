@@ -142,6 +142,10 @@ test('home omits the recording CTA and adventure tagline but keeps its shortcuts
     assert.doesNotMatch(actions[1], /hero-connectivity-status/);
     assert.match(html, /class="hero-topline"[\s\S]*class="eyebrow"[\s\S]*class="hero-connectivity-status"[\s\S]*id="dashboard-network-status"[\s\S]*id="dashboard-gps-status"[\s\S]*class="dashboard-greeting"/);
     assert.match(html, /id="home-greeting"[\s\S]*id="home-last-ride"/);
+    const latestRidePanel = html.match(/<article class="dashboard-panel latest-ride-panel"[\s\S]*?<\/article>/);
+    assert.ok(latestRidePanel);
+    assert.match(latestRidePanel[0], /id="home-last-route-path"/);
+    assert.doesNotMatch(latestRidePanel[0], /panel-symbol orange-symbol|<span>MTB<\/span>/);
     assert.match(html, /id="home-avatar" class="dashboard-avatar" type="button"[^>]*aria-haspopup="dialog"/);
     assert.match(html, /<dialog id="home-avatar-dialog"[\s\S]*id="home-avatar-dialog-image"/);
     assert.doesNotMatch(html, /class="hero-status"/);
@@ -308,4 +312,19 @@ test('home hero summarizes how long ago the latest ride was', () => {
     assert.equal(context.dashboardLastRideAgo(daysAgo(3)), 'Última salida hace 3 días');
     assert.match(context.dashboardLastRideAgo(daysAgo(45)), /^Última salida el /);
     assert.equal(context.dashboardLastRideAgo(null), 'Última salida');
+});
+
+test('latest ride thumbnail sketches route segments without connecting broken tracks', () => {
+    const { context } = dashboardContext('TrailRider');
+    const path = context.dashboardLastRidePreviewPath({
+        points: [
+            [40, -3],
+            [40.001, -3.001],
+            [40.002, -3.002, null, null, null, 1],
+            [40.003, -3.003]
+        ]
+    });
+    assert.equal((path.match(/M/g) || []).length, 2);
+    assert.equal((path.match(/L/g) || []).length, 2);
+    assert.equal(context.dashboardLastRidePreviewPath({ points: [] }), '');
 });

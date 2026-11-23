@@ -49,54 +49,6 @@ function cockpitInitOledSaver() {
     cockpitUpdateOledSaver();
 }
 
-function cockpitRenderRoute() {
-    const line = $('cockpit-route-line');
-    const start = $('cockpit-route-start');
-    const end = $('cockpit-route-end');
-    const empty = $('cockpit-route-empty');
-    const title = $('cockpit-route-title');
-    if (!line || !start || !end || !empty || !title) return;
-
-    const routePoints = Array.isArray(points)
-        ? points.filter(point => Array.isArray(point)
-            && Number.isFinite(point[0]) && Number.isFinite(point[1]))
-        : [];
-    title.textContent = isRecording ? 'Trazado en directo' : routePoints.length ? 'Último trazado' : 'Tu recorrido';
-    if (!routePoints.length) {
-        line.setAttribute('d', '');
-        start.hidden = true;
-        end.hidden = true;
-        empty.hidden = false;
-        return;
-    }
-
-    const step = Math.max(1, Math.ceil(routePoints.length / 300));
-    const samples = routePoints.filter((_, index) => index % step === 0);
-    if (samples[samples.length - 1] !== routePoints[routePoints.length - 1]) {
-        samples.push(routePoints[routePoints.length - 1]);
-    }
-    const latitudes = samples.map(point => point[0]);
-    const longitudes = samples.map(point => point[1]);
-    const minLat = Math.min(...latitudes), maxLat = Math.max(...latitudes);
-    const minLon = Math.min(...longitudes), maxLon = Math.max(...longitudes);
-    const latRange = Math.max(maxLat - minLat, 0.00001);
-    const lonRange = Math.max(maxLon - minLon, 0.00001);
-    const coordinates = samples.map(point => ({
-        x: 8 + (point[1] - minLon) / lonRange * 84,
-        y: 56 - (point[0] - minLat) / latRange * 48
-    }));
-    line.setAttribute('d', coordinates.map((point, index) =>
-        `${index ? 'L' : 'M'}${point.x.toFixed(2)},${point.y.toFixed(2)}`
-    ).join(' '));
-    start.setAttribute('cx', coordinates[0].x.toFixed(2));
-    start.setAttribute('cy', coordinates[0].y.toFixed(2));
-    end.setAttribute('cx', coordinates[coordinates.length - 1].x.toFixed(2));
-    end.setAttribute('cy', coordinates[coordinates.length - 1].y.toFixed(2));
-    start.hidden = false;
-    end.hidden = false;
-    empty.hidden = true;
-}
-
 function cockpitRender() {
     cockpitMetricBindings.forEach(([sourceId, targetId]) => {
         const source = $(sourceId);
@@ -141,9 +93,14 @@ function cockpitRender() {
     }
     const gpsSource = $('dashboard-gps-status');
     const gpsTarget = $('cockpit-gps-status');
-    if (gpsSource && gpsTarget) {
-        gpsTarget.textContent = gpsSource.textContent.replace(/\s+/g, ' ').trim();
-        gpsTarget.classList.toggle('ready', gpsSource.classList.contains('ready'));
+    const gpsLabel = $('cockpit-gps-label');
+    if (gpsSource && gpsTarget && gpsLabel) {
+        const quality = Number(gpsSource.getAttribute('data-gps-quality'));
+        const normalizedQuality = Number.isInteger(quality) ? Math.min(Math.max(quality, 0), 4) : 0;
+        gpsLabel.textContent = gpsSource.textContent.replace(/\s+/g, ' ').trim();
+        gpsTarget.dataset.gpsQuality = String(normalizedQuality);
+        gpsTarget.classList.toggle('ready', normalizedQuality > 0);
+        gpsTarget.setAttribute('aria-label', gpsSource.getAttribute('aria-label') || gpsLabel.textContent);
     }
     const networkSource = $('dashboard-network-status');
     const networkTarget = $('cockpit-network-status');
@@ -155,23 +112,6 @@ function cockpitRender() {
         networkTarget.setAttribute('aria-label', networkSource.getAttribute('aria-label') || networkLabel.textContent);
     }
 
-    const altitude = $('recording-live-altitude');
-    const altitudeTarget = $('cockpit-profile-altitude');
-    if (altitude && altitudeTarget) altitudeTarget.textContent = active ? altitude.textContent : '-- m';
-    const elevationHint = $('recording-live-hint');
-    const elevationRange = $('cockpit-elevation-range');
-    if (elevationHint && elevationRange) elevationRange.textContent = active ? elevationHint.textContent : '-- m';
-    const sourceLine = $('recording-live-line');
-    const sourceArea = $('recording-live-area');
-    const profileLine = $('cockpit-profile-line');
-    const profileArea = $('cockpit-profile-area');
-    const profileEmpty = $('cockpit-profile-empty');
-    const profilePath = sourceLine ? sourceLine.getAttribute('d') || '' : '';
-    if (profileLine) profileLine.setAttribute('d', profilePath);
-    if (profileArea) profileArea.setAttribute('d', sourceArea ? sourceArea.getAttribute('d') || '' : '');
-    if (profileEmpty) profileEmpty.hidden = Boolean(active && profilePath);
-
-    cockpitRenderRoute();
 }
 
 cockpitInitOledSaver();
@@ -184,11 +124,6 @@ if (typeof MutationObserver !== 'undefined') {
         $('m-speed'),
         $('dashboard-gps-status'),
         $('dashboard-network-status'),
-        $('recording-live-profile'),
-        $('recording-live-altitude'),
-        $('recording-live-hint'),
-        $('recording-live-line'),
-        $('recording-live-area'),
         $('lbl-start'),
         $('btn-stop')
     ].filter(Boolean).forEach(element => cockpitObserver.observe(element, {

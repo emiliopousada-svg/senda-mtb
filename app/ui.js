@@ -28,14 +28,11 @@ const MAP_ACTIVE_OVERLAY_TIMEOUT = 20_000;
 function mapPanelSetExpanded(expanded) {
     const page = $('page-map');
     const panel = $('map-bottom-panel');
-    const content = $('map-bottom-panel-content');
     const toggle = $('map-panel-toggle');
-    if (!page || !panel || !content || !toggle) return;
+    if (!page || !panel || !toggle) return;
     if (mapPanelCollapseTimer) clearTimeout(mapPanelCollapseTimer);
     mapPanelCollapseTimer = null;
     page.classList.toggle('panel-collapsed', !expanded);
-    content.inert = !expanded;
-    content.setAttribute('aria-hidden', String(!expanded));
     mapPanelSyncRouteProfile();
     toggle.setAttribute('aria-expanded', String(expanded));
     toggle.setAttribute('aria-label', expanded ? 'Plegar panel de actividad' : 'Desplegar panel de actividad');
@@ -46,9 +43,8 @@ function mapPanelSetExpanded(expanded) {
 function mapPanelSyncRouteProfile() {
     const page = $('page-map');
     const profile = $('map-route-profile');
-    const liveProfile = $('recording-live-profile');
     if (!page || !profile) return;
-    page.classList.toggle('panel-profile-visible', profile.classList.contains('show') || Boolean(liveProfile && !liveProfile.hidden));
+    page.classList.toggle('panel-profile-visible', profile.classList.contains('show'));
 }
 
 function mapPanelScheduleAutoCollapse(delayMs = 1800) {
@@ -171,20 +167,19 @@ function initMetricPanel() {
     if (panel && typeof ResizeObserver === 'function') {
         const page = $('page-map');
         const routeProfile = $('map-route-profile');
-        const liveProfile = $('recording-live-profile');
         const observer = new ResizeObserver(() => {
             page.style.setProperty('--map-panel-h', `${Math.ceil(panel.getBoundingClientRect().height)}px`);
-            // Alto real del perfil de la ruta seguida, para apilar encima el perfil en directo.
+            // Alto real del perfil de la ruta seguida, para mantener la atribucion despejada.
             const profileH = routeProfile ? Math.ceil(routeProfile.getBoundingClientRect().height) : 0;
             if (profileH > 0) page.style.setProperty('--map-route-profile-h', `${profileH}px`);
-            // Alto de todo lo apilado abajo (panel + perfiles visibles), para colocar la atribución encima.
+            // Alto de lo apilado abajo (panel y perfil de ruta), para colocar la atribucion encima.
             const pageBottom = page.getBoundingClientRect().bottom;
-            const stackTop = [panel, routeProfile, liveProfile]
-                .filter(el => el && el.offsetParent !== null && !(el === panel && page.classList.contains('panel-collapsed')))
+            const stackTop = [panel, routeProfile]
+                .filter(el => el && el.offsetParent !== null)
                 .reduce((top, el) => Math.min(top, el.getBoundingClientRect().top), pageBottom);
             page.style.setProperty('--map-stack-h', `${Math.ceil(pageBottom - stackTop)}px`);
         });
-        [panel, routeProfile, liveProfile].forEach(el => el && observer.observe(el));
+        [panel, routeProfile].forEach(el => el && observer.observe(el));
     }
 
     // La vista grande copia en vivo el valor de la métrica original

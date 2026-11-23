@@ -283,7 +283,6 @@ function followRoute(r) {
         gainCum: gainCumulative(r.points),
         progressIndex: 0
     };
-    $('recording-live-profile').hidden = !isRecording || Boolean(followedRoute);
     showRoutePoisOnMap([...(isRecording ? recordingPois : []), ...followedRoute.pois]);
     renderMapRouteProfile(r);
     if (lastLat !== null && lastLon !== null) {
@@ -325,8 +324,6 @@ function unfollowRoute() {
     offRouteState = false;
     if (savedRouteLayer) savedRouteLayer.setLatLngs([]);
     $('map-route-profile').classList.remove('show');
-    $('recording-live-profile').hidden = !isRecording;
-    if (typeof mapPanelSyncRouteProfile === 'function') mapPanelSyncRouteProfile();
     if (typeof mapPanelSyncActions === 'function') mapPanelSyncActions();
     if (!isRecording) $('m-elevation').textContent = '0';
     refreshGpsMode();

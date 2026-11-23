@@ -7,6 +7,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const cockpitSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'cockpit.js'), 'utf8');
+const uiSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'ui.js'), 'utf8');
 
 function cockpitContext() {
     const elements = new Map();
@@ -37,23 +38,18 @@ function cockpitContext() {
         ['m-avg-speed', '13.2'], ['m-moving', '09:04'], ['m-hr', '152'],
         ['m-cadence', '82'], ['m-power', '210'], ['m-speed', '21.4'],
         ['dashboard-gps-status', 'GPS · Buena'], ['dashboard-network-status', 'En línea'],
-        ['recording-live-altitude', '620 m'], ['recording-live-hint', '600–640 m · últimas lecturas'],
-        ['recording-live-line', ''], ['recording-live-area', ''],
         ['cockpit-time'], ['cockpit-distance'], ['cockpit-elevation'], ['cockpit-avg-speed'], ['cockpit-moving'],
         ['cockpit-heart-rate'], ['cockpit-cadence'], ['cockpit-power'], ['cockpit-speed'],
         ['page-cockpit'], ['cockpit-oled-toggle'], ['cockpit-oled-status'],
         ['cockpit-sensor-hr'], ['cockpit-sensor-cadence'], ['cockpit-sensor-power'],
         ['sensor-hr-status'], ['sensor-cadence-status'], ['sensor-power-status'],
         ['cockpit-speed-panel'], ['cockpit-speed-gauge'], ['cockpit-recording-state'],
-        ['cockpit-gps-status'], ['cockpit-network-status'], ['cockpit-network-label'],
-        ['cockpit-profile-altitude'], ['cockpit-elevation-range'], ['cockpit-profile-line'],
-        ['cockpit-profile-area'], ['cockpit-profile-empty'], ['cockpit-route-line'], ['cockpit-route-start'],
-        ['cockpit-route-end'], ['cockpit-route-empty'], ['cockpit-route-title']
+        ['cockpit-gps-status'], ['cockpit-gps-label'], ['cockpit-network-status'], ['cockpit-network-label'],
     ].forEach(([id, text]) => elements.set(id, makeElement(text)));
     elements.get('dashboard-gps-status').classList.toggle('ready', true);
+    elements.get('dashboard-gps-status').setAttribute('data-gps-quality', '3');
+    elements.get('dashboard-gps-status').setAttribute('aria-label', 'Calidad GPS: Buena, 3 de 4 barras');
     elements.get('dashboard-network-status').classList.toggle('connected', true);
-    elements.get('recording-live-line').setAttribute('d', 'M0,40 L320,10');
-    elements.get('recording-live-area').setAttribute('d', 'M0,40 L320,10 L320,48 L0,48 Z');
     const body = makeElement();
     const savedPreferences = new Map();
     const context = vm.createContext({
@@ -66,7 +62,6 @@ function cockpitContext() {
         },
         toast() {},
         screenScheduleDim() {},
-        points: [[12.1, 104.1], [12.2, 104.3]],
         isRecording: true,
         isPaused: false,
         sensorStates: {
@@ -97,18 +92,29 @@ test('cockpit mirrors ride metrics, live status and route into its own view', ()
     observers[0].callback();
     assert.equal(elements.get('cockpit-sensor-cadence').classList.contains('connected'), true);
     assert.equal(elements.get('cockpit-recording-state').textContent, 'Grabando ruta');
-    assert.equal(elements.get('cockpit-gps-status').textContent, 'GPS · Buena');
+    assert.equal(elements.get('cockpit-gps-label').textContent, 'GPS · Buena');
+    assert.equal(elements.get('cockpit-gps-status').dataset.gpsQuality, '3');
+    assert.equal(elements.get('cockpit-gps-status').classList.contains('ready'), true);
     assert.equal(elements.get('cockpit-network-label').textContent, 'En línea');
     assert.equal(elements.get('cockpit-network-status').classList.contains('connected'), true);
-    assert.equal(elements.get('cockpit-profile-line').getAttribute('d'), 'M0,40 L320,10');
-    assert.match(elements.get('cockpit-route-line').getAttribute('d'), /^M/);
-    assert.equal(elements.get('cockpit-route-empty').hidden, true);
-
+    elements.get('dashboard-gps-status').textContent = 'GPS · Débil';
+    elements.get('dashboard-gps-status').setAttribute('data-gps-quality', '1');
+    elements.get('dashboard-gps-status').setAttribute('aria-label', 'Calidad GPS: Débil, 1 de 4 barras');
+    observers[0].callback();
+    assert.equal(elements.get('cockpit-gps-label').textContent, 'GPS · Débil');
+    assert.equal(elements.get('cockpit-gps-status').dataset.gpsQuality, '1');
     context.isRecording = false;
     context.sensorStates.hr.connected = false;
     context.cockpitRender();
     assert.equal(elements.get('cockpit-recording-state').textContent, 'Sin grabar');
     assert.equal(elements.get('cockpit-sensor-hr').classList.contains('connected'), false);
+});
+
+test('cockpit omits the elevation and route preview block entirely', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    assert.doesNotMatch(html, /<span>ALTIMETRÍA<\/span>/);
+    assert.doesNotMatch(html, /<span>TRAZADO<\/span>/);
+    assert.doesNotMatch(html, /cockpit-(?:visuals|chart-wrap|route-preview|profile-line|route-line|map-link)/);
 });
 
 test('cockpit speedometer changes color band at each speed threshold', () => {
@@ -165,7 +171,7 @@ test('cockpit switches the connection indicator to offline styling when disconne
     assert.equal(elements.get('cockpit-network-status').classList.contains('offline'), true);
 });
 
-test('cockpit sits between home and tools and maps back to the existing map navigation', () => {
+test('cockpit sits between home and tools and uses app navigation without a home button', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     const home = html.indexOf('id="page-home"');
     const cockpit = html.indexOf('id="page-cockpit"');
@@ -174,10 +180,13 @@ test('cockpit sits between home and tools and maps back to the existing map navi
     assert.ok(home < cockpit && cockpit < tools);
     assert.match(html, /<h1 class="cockpit-title">[\s\S]*class="cockpit-title-brand">SENDA-MTB<\/span>[\s\S]*class="cockpit-title-caption">COCKPIT<\/span>/);
     assert.doesNotMatch(html, /Tu salida, de un vistazo|CONTROLES DE SALIDA/);
-    assert.match(html, /<div class="cockpit-status-row"[^>]*>\s*<button class="cockpit-back"[^>]*data-page="5">← Inicio<\/button>/);
+    assert.match(html, /<div class="cockpit-status-row"[^>]*>\s*<span id="cockpit-recording-state"/);
+    assert.match(html, /<div class="cockpit-status-row"[\s\S]*<button class="cockpit-oled-toggle"[\s\S]*id="cockpit-oled-status"[\s\S]*<\/button>\s*<\/div>/);
+    assert.doesNotMatch(html, /class="cockpit-back"|← Inicio/);
     assert.match(html, /data-page="6"[^>]*>Cockpit<\/button>/);
-    assert.match(html, /id="page-cockpit"[\s\S]*data-page="0">Abrir mapa/);
+    assert.doesNotMatch(html, /id="page-cockpit"[\s\S]*Abrir mapa/);
     assert.doesNotMatch(html, /class="cockpit-controls"|id="cockpit-toggle"|id="cockpit-finish"|Iniciar salida|Finalizar y guardar/);
+    assert.doesNotMatch(html, /cockpit-gps-signal-bars/);
     assert.ok(mapControls);
     assert.match(mapControls[1], /id="btn-map-cockpit"[^>]*data-page="6"[^>]*aria-label="Volver al Cockpit"/);
 });
@@ -188,21 +197,74 @@ test('cockpit uses compact layout when the phone is in landscape', () => {
     assert.match(css, /@media \(orientation: landscape\) and \(max-width:1280px\) and \(max-height:600px\)/);
     assert.match(css, /\.cockpit-speed-gauge\s*\{[\s\S]*?width:min\(21dvh,150px\)/);
     assert.match(css, /\.cockpit-performance\s*\{[\s\S]*?grid-template-columns:minmax\(210px,\.72fr\)/);
-    assert.match(css, /\.cockpit-visuals\s*\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+    assert.doesNotMatch(css, /cockpit-visuals|cockpit-chart-wrap|cockpit-route-preview/);
+    assert.match(css, /#cockpit-gps-status\[data-gps-quality="1"\]\s*\{[^}]*color:#ff8585/);
+    assert.match(css, /#cockpit-gps-status\[data-gps-quality="4"\]\s*\{[^}]*color:#83e3ab/);
+    assert.match(css, /#cockpit-gps-status\[data-gps-quality="1"\]::before\s*\{[^}]*background:#ff6565/);
+    assert.match(css, /#cockpit-gps-status\[data-gps-quality="4"\]::before\s*\{[^}]*background:#35d17a/);
+    assert.match(css, /\.cockpit-status-row\s*\{[^}]*justify-content:center/);
 });
 
-test('map elevation profiles stay inside the bottom panel in landscape', () => {
+test('live elevation profile is removed from the map while route profile remains styled', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
-    assert.match(css, /@media \(orientation: landscape\) and \(max-width: 1280px\)/);
-    assert.match(css, /@media \(orientation:landscape\) and \(max-width:1280px\)[\s\S]*?#page-map #recording-live-profile \{ display:none !important; \}/);
-    assert.match(css, /#page-map \.map-bottom-panel \.controls-overlay\.map-recording-actions\.is-recording\s*\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-    assert.match(css, /#page-map \.map-bottom-panel-content\s*\{[\s\S]*?minmax\(220px,33vw\)/);
-    assert.match(css, /#page-map \.map-live-banner\s*\{[\s\S]*?left:calc\(env\(safe-area-inset-left,0px\) \+ 90px\)/);
-    assert.match(css, /#page-map \.side-controls \.btn-icon-only,\s*#page-map \.map-zoom-btn\s*\{[\s\S]*?clamp\(40px,11dvh,44px\)/);
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    assert.doesNotMatch(html, /recording-live-profile|recording-live-(?:altitude|hint|line|area)/);
+    assert.doesNotMatch(css, /#page-map[^}]*#recording-live-profile/);
     assert.match(css, /#page-map #map-bottom-panel #map-route-profile\s*\{[\s\S]*?position: relative/);
-    assert.match(css, /#page-map #map-bottom-panel #recording-live-profile\s*\{[\s\S]*?position:relative/);
-    assert.match(css, /#page-map #map-bottom-panel #recording-live-profile svg\s*\{[\s\S]*?height:clamp\(28px,8vw,42px\)/);
-    assert.doesNotMatch(css, /#page-map #recording-live-profile\s*\{\s*top:/);
-    assert.match(css, /#page-map \.leaflet-bottom\.leaflet-right\s*\{[\s\S]*?left: 50%/);
-    assert.match(css, /#page-map \.leaflet-control-attribution\s*\{[\s\S]*?font-size: 8px/);
+});
+
+test('collapsing the map panel keeps ride metrics visible and hides its actions', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
+    assert.match(css, /#page-map\.panel-collapsed \.map-bottom-panel-content\s*\{[^}]*display:flex/);
+    assert.match(css, /#page-map\.panel-collapsed \.map-bottom-panel \.controls-overlay\s*\{[^}]*display:none/);
+    assert.match(css, /#page-map\.panel-collapsed \.map-bottom-panel \.map-live-stat\s*\{[^}]*min-height:46px/);
+    assert.doesNotMatch(css, /#page-map\.panel-collapsed[^}]*\.map-bottom-panel\s*\{[^}]*opacity:0/);
+});
+
+test('collapsed map panel contributes to the map stack height', () => {
+    const styles = new Map();
+    const observers = [];
+    const makeElement = ({ top = 0, height = 0, offsetParent = {} } = {}) => ({
+        textContent: '',
+        hidden: false,
+        style: { setProperty(name, value) { styles.set(name, value); } },
+        classList: {
+            contains(name) { return name === 'panel-collapsed'; },
+            toggle() {}
+        },
+        addEventListener() {},
+        setAttribute() {},
+        getBoundingClientRect() { return { top, bottom: top + height, height }; },
+        querySelector(selector) { return selector === '.side-controls' || selector === '.map-zoom-controls' ? makeElement() : null; }
+    });
+    const elements = new Map([
+        ['page-map', makeElement({ height: 500 })],
+        ['map-bottom-panel', makeElement({ top: 460, height: 40 })],
+        ['map-route-profile', makeElement({ top: 500, offsetParent: null })]
+    ]);
+    const document = {
+        querySelector(selector) {
+            return selector === '.map-recording-actions' ? makeElement() : makeElement();
+        },
+        querySelectorAll() { return []; }
+    };
+    const context = vm.createContext({
+        $: id => elements.get(id) || makeElement(),
+        document,
+        isRecording: false,
+        followedRoute: null,
+        ResizeObserver: class {
+            constructor(callback) { observers.push(callback); }
+            observe() {}
+        },
+        MutationObserver: class {
+            observe() {}
+        }
+    });
+    vm.runInContext(uiSource, context);
+
+    context.initMetricPanel();
+    observers[0]();
+
+    assert.equal(styles.get('--map-stack-h'), '40px');
 });

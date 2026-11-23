@@ -132,18 +132,6 @@
                         <circle id="map-route-cursor" cx="0" cy="0" r="5" style="display:none"></circle>
                     </svg>
                 </div>
-                <div id="recording-live-profile" aria-label="Perfil de elevación de la grabación en curso" hidden>
-                    <div class="live-profile-head">
-                        <span class="live-profile-label">PERFIL EN DIRECTO</span>
-                        <strong id="recording-live-altitude">--<span class="unit"> m</span></strong>
-                    </div>
-                    <svg id="recording-live-svg" viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
-                        <path id="recording-live-area"></path>
-                        <path id="recording-live-line"></path>
-                        <circle id="recording-live-cursor" r="4"></circle>
-                    </svg>
-                    <div id="recording-live-hint">Esperando lecturas de altitud</div>
-                </div>
                 <div class="map-bottom-panel-content" id="map-bottom-panel-content">
                 <div class="metrics-bar">
                     <div class="map-live-stat m-box" data-metric="map-total-time" role="button">
@@ -962,9 +950,13 @@
 
                 <section class="dashboard-lower-grid" aria-label="Actividad y rutas">
                     <article class="dashboard-panel latest-ride-panel" id="dashboard-latest-panel">
-                        <div class="panel-heading"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Última salida</h2></div><span class="panel-symbol orange-symbol">↗</span></div>
+                        <div class="panel-heading"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Última salida</h2></div></div>
                         <div class="latest-ride-content">
-                            <div class="ride-thumb" aria-hidden="true"><span>MTB</span></div>
+                            <div class="ride-thumb" aria-hidden="true">
+                                <svg viewBox="0 0 76 72" preserveAspectRatio="none">
+                                    <path id="home-last-route-path"></path>
+                                </svg>
+                            </div>
                             <div class="ride-copy"><strong id="home-last-route-name">Aún no hay salidas</strong><span id="home-last-route-date">Tu primera ruta te espera</span><div><span id="home-last-route-distance">— km</span><span id="home-last-route-ascent">— m+</span></div></div>
                             <button class="round-arrow" type="button" data-page="3" aria-label="Ver rutas">›</button>
                         </div>
@@ -991,21 +983,22 @@
                         <span class="cockpit-title-brand">SENDA-MTB</span>
                         <span class="cockpit-title-caption">COCKPIT</span>
                     </h1>
-                    <button class="cockpit-oled-toggle" id="cockpit-oled-toggle" type="button" aria-pressed="false">
-                        <span aria-hidden="true">⚡</span>
-                        <span>Ahorro OLED</span>
-                        <strong id="cockpit-oled-status">OFF</strong>
-                    </button>
                 </header>
 
                 <div class="cockpit-status-row" aria-label="Estado de la actividad">
-                    <button class="cockpit-back" type="button" data-page="5">← Inicio</button>
                     <span id="cockpit-recording-state" class="cockpit-state" data-state="idle">Lista para salir</span>
-                    <span id="cockpit-gps-status" class="cockpit-status-chip">GPS · Buscando</span>
+                    <span id="cockpit-gps-status" class="cockpit-status-chip" data-gps-quality="0" aria-label="Calidad GPS: Buscando">
+                        <span id="cockpit-gps-label">GPS · Buscando</span>
+                    </span>
                     <span id="cockpit-network-status" class="cockpit-status-chip" aria-live="polite">
                         <i class="cockpit-connectivity-icon" aria-hidden="true"></i>
                         <span id="cockpit-network-label">En línea</span>
                     </span>
+                    <button class="cockpit-oled-toggle" id="cockpit-oled-toggle" type="button" aria-pressed="false" title="Modo ahorro OLED">
+                        <span aria-hidden="true">⚡</span>
+                        <span>OLED</span>
+                        <strong id="cockpit-oled-status">OFF</strong>
+                    </button>
                 </div>
 
                 <section class="cockpit-trip-summary" aria-label="Resumen de la salida">
@@ -1056,35 +1049,6 @@
                         </div>
                     </article>
 
-                    <section class="cockpit-visuals" aria-label="Perfil y trazado">
-                        <article class="cockpit-panel">
-                            <div class="cockpit-section-heading">
-                                <div><span>ALTIMETRÍA</span><strong id="cockpit-profile-altitude">Perfil en directo</strong></div>
-                                <span id="cockpit-elevation-range">-- m</span>
-                            </div>
-                            <div class="cockpit-chart-wrap">
-                                <svg viewBox="0 0 320 48" preserveAspectRatio="none" aria-hidden="true">
-                                    <path id="cockpit-profile-area"></path>
-                                    <path id="cockpit-profile-line"></path>
-                                </svg>
-                                <p id="cockpit-profile-empty">El perfil aparecerá cuando comience la salida.</p>
-                            </div>
-                        </article>
-                        <article class="cockpit-panel">
-                            <div class="cockpit-section-heading">
-                                <div><span>TRAZADO</span><strong id="cockpit-route-title">Tu recorrido</strong></div>
-                                <button class="cockpit-map-link" type="button" data-page="0">Abrir mapa ↗</button>
-                            </div>
-                            <div class="cockpit-route-preview">
-                                <svg id="cockpit-route-svg" viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true">
-                                    <path id="cockpit-route-line"></path>
-                                    <circle id="cockpit-route-start" r="2.5"></circle>
-                                    <circle id="cockpit-route-end" r="2.5"></circle>
-                                </svg>
-                                <p id="cockpit-route-empty">El trazado de tu salida aparecerá aquí.</p>
-                            </div>
-                        </article>
-                    </section>
                 </section>
 
             </main>

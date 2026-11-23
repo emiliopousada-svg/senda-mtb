@@ -139,6 +139,32 @@ function dashboardTerrainRouteSegments(route) {
     return segments;
 }
 
+function dashboardLastRidePreviewPath(route) {
+    const segments = dashboardTerrainRouteSegments(route);
+    const coordinates = segments.flat();
+    if (coordinates.length < 2) return '';
+
+    const centerLatitude = coordinates.reduce((sum, point) => sum + point[1], 0) / coordinates.length;
+    const longitudeScale = Math.max(0.01, Math.cos(centerLatitude * Math.PI / 180));
+    const projected = segments.map(segment =>
+        segment.map(([longitude, latitude]) => [longitude * longitudeScale, latitude])
+    );
+    const allPoints = projected.flat();
+    const minX = Math.min(...allPoints.map(point => point[0]));
+    const maxX = Math.max(...allPoints.map(point => point[0]));
+    const minY = Math.min(...allPoints.map(point => point[1]));
+    const maxY = Math.max(...allPoints.map(point => point[1]));
+    const rangeX = maxX - minX;
+    const rangeY = maxY - minY;
+    const scale = Math.min(60 / Math.max(rangeX, 0.000001), 56 / Math.max(rangeY, 0.000001));
+    const offsetX = (76 - rangeX * scale) / 2;
+    const offsetY = (72 - rangeY * scale) / 2;
+
+    return projected.map(segment => segment.map(([x, y], index) =>
+        `${index ? 'L' : 'M'}${(offsetX + (x - minX) * scale).toFixed(1)},${(72 - offsetY - (y - minY) * scale).toFixed(1)}`
+    ).join(' ')).join(' ');
+}
+
 function dashboardCreateTerrainMap(route, container, routeKey) {
     if (!window.maplibregl || !navigator.onLine) return false;
     const segments = dashboardTerrainRouteSegments(route);
@@ -338,6 +364,8 @@ function dashboardRender() {
     dashboardUpdateGreeting();
     const latest = dashboardLatestRecordedRoute();
     dashboardUpdateLastRide(latest);
+    const lastRoutePath = $('home-last-route-path');
+    if (lastRoutePath) lastRoutePath.setAttribute('d', dashboardLastRidePreviewPath(latest));
     const routeCount = Array.isArray(savedRoutes) ? savedRoutes.length : 0;
     const count = $('home-routes-count');
     if (count) count.textContent = `${routeCount} ${routeCount === 1 ? 'ruta guardada' : 'rutas guardadas'}`;

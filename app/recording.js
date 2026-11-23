@@ -389,46 +389,14 @@ function setBtnState(s) {
         if (typeof mapSideControlsScheduleAutoCollapse === 'function') mapSideControlsScheduleAutoCollapse();
     }
     $('btn-route-photo').hidden = s === 'idle';
-    $('recording-live-profile').hidden = s === 'idle' || Boolean(followedRoute);
-    if (typeof mapPanelSyncRouteProfile === 'function') mapPanelSyncRouteProfile();
-    if (s !== 'idle') recordingUpdateLiveProfile();
+    if (s !== 'idle') recordingUpdateMapAltitude();
 }
 
-function recordingUpdateLiveProfile() {
-    const svgLine = $('recording-live-line');
-    const svgArea = $('recording-live-area');
-    const svgCursor = $('recording-live-cursor');
-    const hint = $('recording-live-hint');
-    if (!svgLine || !svgArea || !hint) return;
+function recordingUpdateMapAltitude() {
     const samples = points.slice(-240).filter(point => Array.isArray(point) && Number.isFinite(point[2]));
     const latest = samples.at(-1);
-    $('recording-live-altitude').textContent = latest ? `${Math.round(latest[2])} m` : '-- m';
     const mapAltitude = $('map-panel-altitude');
     if (mapAltitude) mapAltitude.textContent = latest ? Math.round(latest[2]).toString() : '--';
-    if (samples.length < 2) {
-        svgLine.setAttribute('d', '');
-        svgArea.setAttribute('d', '');
-        if (svgCursor) svgCursor.setAttribute('display', 'none');
-        hint.textContent = 'Esperando lecturas de altitud';
-        return;
-    }
-    const values = samples.map(point => point[2]);
-    const min = Math.min(...values), max = Math.max(...values);
-    const range = Math.max(1, max - min);
-    const coordinates = values.map((value, index) => ({
-        x: (index / (values.length - 1) * 320).toFixed(1),
-        y: (43 - (value - min) / range * 36).toFixed(1)
-    }));
-    const path = coordinates.map((point, index) => `${index ? 'L' : 'M'}${point.x},${point.y}`).join(' ');
-    svgLine.setAttribute('d', path);
-    svgArea.setAttribute('d', `${path} L320,48 L0,48 Z`);
-    if (svgCursor) {
-        const latestPoint = coordinates[coordinates.length - 1];
-        svgCursor.setAttribute('cx', latestPoint.x);
-        svgCursor.setAttribute('cy', latestPoint.y);
-        svgCursor.setAttribute('display', 'inline');
-    }
-    hint.textContent = `${Math.round(min)}–${Math.round(max)} m · últimas lecturas`;
 }
 
 function autoPauseMovementThreshold(accuracy) {
@@ -917,7 +885,7 @@ function restoreDraft(d) {
         if (index > 0 && p[5] === 1) elev.reset();
         elev.add(p[2]);
     });
-    recordingUpdateLiveProfile();
+    recordingUpdateMapAltitude();
     segments = buildSegments(points);
     isRecording = true;
     isPaused = true;

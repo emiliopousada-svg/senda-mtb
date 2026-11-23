@@ -5,6 +5,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.37] - 2026-11-23
+
+### Añadido
+* **Inicio:** la tarjeta «Última salida» dibuja una miniatura del trazado real de la ruta.
+
+### Cambiado
+* **Mapa:** al plegar el panel inferior, las métricas de la salida permanecen visibles; se elimina el perfil de elevación en directo.
+* **Cockpit:** se simplifica la pantalla, se integra el modo OLED en la fila de estado y el indicador GPS refleja la calidad de señal por color.
+
 ## [0.2.36] - 2026-11-23
 
 ### Cambiado

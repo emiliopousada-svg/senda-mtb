@@ -155,15 +155,6 @@ html, body {
     pointer-events: none;
 }
 #map-route-profile.show { display: block; }
-#recording-live-profile { position:absolute; top:calc(env(safe-area-inset-top, 0px) + 124px); right:9px; z-index:999; width:min(44vw,220px); padding:6px 8px 5px; border:1px solid rgba(255,255,255,.13); border-radius:12px; background:rgba(11,16,22,.9); box-shadow:0 5px 18px rgba(0,0,0,.3); pointer-events:none; backdrop-filter:blur(10px); }
-#recording-live-profile[hidden] { display:none; }
-#recording-live-profile > div { display:flex; justify-content:space-between; gap:8px; color:#9faec0; font-size:.53rem; font-weight:800; letter-spacing:.09em; }
-#recording-live-altitude { color:#f5f7fa; font-size:.66rem; letter-spacing:0; }
-#recording-live-profile svg { width:100%; height:23px; margin-top:3px; }
-#recording-live-area { fill:rgba(255,118,31,.18); }
-#recording-live-line { fill:none; stroke:#ff842e; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
-#recording-live-cursor { fill:#fff; stroke:#ff842e; stroke-width:1.5; }
-#recording-live-hint { display:block; color:#9da9b8; font-size:.53rem; }
 .route-profile-head {
     display: flex;
     align-items: center;
