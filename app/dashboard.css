@@ -653,6 +653,9 @@ body { background:var(--mtb-graphite); color:var(--text); }
 .community-hub-segment-item:hover { transform:translateY(-1px); border-color:rgba(255,118,31,.25); background:linear-gradient(125deg,rgba(43,53,67,.85),rgba(25,32,42,.9)); }
 .community-hub-segment-heading { display:flex; min-width:0; align-items:flex-start; justify-content:space-between; gap:10px; }
 .community-hub-segment-title { min-width:0; margin:2px 0 0; color:#f4f7fb; font-size:.95rem; font-weight:760; line-height:1.3; overflow-wrap:anywhere; }
+.community-hub-segment-title-button { display:block; min-width:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; overflow-wrap:anywhere; cursor:pointer; }
+.community-hub-segment-title-button:hover { color:#ffb27c; }
+.community-hub-segment-title-button:focus-visible { border-radius:4px; outline:2px solid #42aaff; outline-offset:3px; }
 .community-hub-segment-proximity { display:inline-flex; flex:0 0 auto; align-items:center; padding:6px 8px; border:1px solid rgba(255,118,31,.25); border-radius:99px; background:rgba(255,118,31,.1); color:#ffb27c; font-size:.62rem; font-weight:760; white-space:nowrap; }
 .community-hub-segment-route { display:flex; min-width:0; align-items:center; gap:10px; margin:0; padding-top:11px; border-top:1px solid rgba(255,255,255,.07); }
 .community-hub-segment-route-icon { display:grid; width:33px; height:33px; flex:0 0 33px; place-items:center; border:1px solid rgba(22,140,255,.2); border-radius:11px; background:rgba(22,140,255,.09); color:#73bdff; font-size:1rem; }

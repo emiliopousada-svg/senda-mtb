@@ -86,6 +86,9 @@ let communityPreviewMap = null;
 let communityPreviewBaseLayer = null;
 let communityPreviewRouteLayer = null;
 let communityPreviewPoiLayer = null;
+let communitySegmentPreviewMap = null;
+let communitySegmentPreviewBaseLayer = null;
+let communitySegmentPreviewLayer = null;
 let communityDetailBackAction = openCommunityCatalog;
 let communityDetailFollowAction = null;
 let communityDetailRecord = null;
@@ -130,6 +133,7 @@ function openCommunityCatalog() {
     communityCancelSegmentCreation();
     $('community-publish').hidden = true;
     $('community-detail').hidden = true;
+    $('community-segment-map-view').hidden = true;
     closeCommunityDialog();
     setRoutesTab('community');
     $('community-activity').focus();
@@ -138,6 +142,7 @@ function openCommunityCatalog() {
 function closeCommunityDialog() {
     communityCancelSegmentCreation();
     $('community-dialog').hidden = true;
+    $('community-segment-map-view').hidden = true;
     communityShareRoute = null;
     communityDetailRecord = null;
     communityDetailLines = null;
@@ -153,6 +158,11 @@ function handleCommunityBackButton() {
         } else {
             communityDetailBackAction();
         }
+        return true;
+    }
+
+    if (!$('community-publish').hidden) {
+        openCommunityCatalog();
         return true;
     }
 
@@ -173,6 +183,7 @@ function openCommunityPublish(route) {
     }
     communityShareRoute = route;
     communityCancelSegmentCreation();
+    $('community-segment-map-view').hidden = true;
     $('community-detail').hidden = true;
     $('community-publish').hidden = false;
     $('community-title').textContent = 'Publicar ruta en la comunidad';
@@ -212,6 +223,7 @@ function communityStartedAt(value) {
 
 function openCommunityDetail(record, lines, options = {}) {
     communityCancelSegmentCreation();
+    $('community-segment-map-view').hidden = true;
     communityDetailRecord = record && record.id ? record : null;
     communityDetailLines = lines;
     const pois = Array.isArray(options.pois) ? options.pois : communityPoisFromRecord(record);
@@ -300,6 +312,50 @@ function openCommunityDetail(record, lines, options = {}) {
         } catch (error) {
             console.warn('No se pudo mostrar el mapa de detalle comunitario:', error);
             $('community-detail-map').textContent = 'No se pudo cargar el mapa de esta ruta.';
+        }
+    }, 0);
+}
+
+function openCommunitySegmentMap(segment) {
+    const lines = communityRecordLines(segment);
+    if (!lines) {
+        toast('No se puede mostrar este segmento porque su trazado no es válido.');
+        return;
+    }
+
+    communityCancelSegmentCreation();
+    $('community-detail').hidden = true;
+    $('community-publish').hidden = true;
+    $('community-segment-map-view').hidden = false;
+    $('community-title').textContent = segment.title || 'Segmento de la comunidad';
+    const status = $('community-segment-map-status');
+    status.textContent = 'Se muestra únicamente el trazado de este segmento.';
+    status.classList.remove('error');
+    $('community-dialog').hidden = false;
+
+    setTimeout(() => {
+        try {
+            if (!communitySegmentPreviewMap) {
+                communitySegmentPreviewMap = L.map('community-segment-map', { scrollWheelZoom: false });
+                const style = selectedMapStyle();
+                communitySegmentPreviewBaseLayer = !navigator.onLine || style === 'ign'
+                    ? createOfflineTileLayer()
+                    : createMapStyleLayers()[style];
+                communitySegmentPreviewBaseLayer.addTo(communitySegmentPreviewMap);
+            }
+            if (communitySegmentPreviewLayer) communitySegmentPreviewMap.removeLayer(communitySegmentPreviewLayer);
+            communitySegmentPreviewLayer = L.polyline(lines, {
+                color: '#ff8a00', weight: 6, opacity: 0.95
+            }).addTo(communitySegmentPreviewMap);
+            communitySegmentPreviewMap.invalidateSize({ pan: false });
+            const bounds = communitySegmentPreviewLayer.getBounds();
+            if (bounds.isValid()) {
+                communitySegmentPreviewMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+            }
+        } catch (error) {
+            console.warn('No se pudo mostrar el mapa del segmento comunitario:', error);
+            status.textContent = 'No se pudo cargar el mapa de este segmento.';
+            status.classList.add('error');
         }
     }, 0);
 }
@@ -1170,6 +1226,7 @@ function initCommunityRoutes() {
     $('community-detail-follow').addEventListener('click', () => {
         if (communityDetailFollowAction) communityDetailFollowAction();
     });
+    $('community-segment-map-back').addEventListener('click', closeCommunityDialog);
     $('community-create-segment').addEventListener('click', communityBeginSegmentCreation);
     $('community-segment-cancel').addEventListener('click', communityCancelSegmentCreation);
     $('community-segment-submit').addEventListener('click', communitySubmitSegment);

@@ -147,11 +147,13 @@ test('automatic scan is scheduled after local route history is restored', () => 
 test('hub restarts its catalog load rather than mixing pages after a server change', async () => {
     const makeElement = () => ({
         children: [],
+        listeners: {},
         classList: { add() {}, remove() {} },
         append(...elements) { this.children.push(...elements); },
+        appendChild(element) { this.children.push(element); return element; },
         replaceChildren(...elements) { this.children = elements; },
         setAttribute() {},
-        addEventListener() {}
+        addEventListener(type, callback) { this.listeners[type] = callback; }
     });
     const elements = new Map([
         ['community-hub-segment-list', makeElement()],
@@ -160,6 +162,7 @@ test('hub restarts its catalog load rather than mixing pages after a server chan
     ]);
     let firstResponse;
     let calls = 0;
+    let selectedSegment = null;
     const context = vm.createContext({
         $: id => elements.get(id) || null,
         document: {
@@ -170,6 +173,7 @@ test('hub restarts its catalog load rather than mixing pages after a server chan
         navigator: { onLine: true },
         lastLat: null,
         lastLon: null,
+        openCommunitySegmentMap: segment => { selectedSegment = segment; },
         requestCurrentGpsFix() {},
         communityRecordLines: segment => segment.geometry,
         communityDistanceToRoute: (_position, geometry) => geometry[0].distanceMeters
@@ -199,5 +203,17 @@ test('hub restarts its catalog load rather than mixing pages after a server chan
     assert.match(elements.get('community-hub-segments-status').textContent, /^1 segmentos/);
     const list = elements.get('community-hub-segment-list');
     assert.equal(list.children[0].children.length, 1);
-    assert.equal(list.children[0].children[0].children[0].children[0].textContent, 'Actual');
+    const findMapButton = node => {
+        if (node.className === 'community-hub-segment-title-button') return node;
+        for (const child of node.children || []) {
+            const found = findMapButton(child);
+            if (found) return found;
+        }
+        return null;
+    };
+    const mapButton = findMapButton(list);
+    assert.ok(mapButton);
+    assert.equal(mapButton.textContent, 'Actual');
+    mapButton.listeners.click();
+    assert.equal(selectedSegment && selectedSegment.title, 'Actual');
 });

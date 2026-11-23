@@ -7,11 +7,18 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const navigationSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'navigation.js'), 'utf8');
+const backButtonSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'back-button.js'), 'utf8');
 const toolsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'tools.js'), 'utf8');
 
 function navigationContext(offsets, widths) {
     const wrapperLeft = 244;
     const elements = new Map();
+    const queryResults = new Map();
+    const queryOneResults = new Map();
+    const navButtons = [5, 3, 0, 2, 1, 4].map(page => ({
+        dataset: { page: String(page) },
+        classList: { toggle() {} }
+    }));
     const swiper = {
         getBoundingClientRect: () => ({ left: wrapperLeft }),
         children: offsets.map((offsetLeft, index) => ({
@@ -21,10 +28,14 @@ function navigationContext(offsets, widths) {
         style: {}
     };
     const context = vm.createContext({
-        $: selector => elements.get(selector) || swiper,
+        $: selector => elements.get(selector) || (selector === 'swiper' ? swiper : null),
         document: {
             addEventListener() {},
-            querySelectorAll() { return []; },
+            querySelectorAll(selector) {
+                return selector === '.nav-btn' ? navButtons : (queryResults.get(selector) || []);
+            },
+            querySelector(selector) { return queryOneResults.get(selector) || null; },
+            getElementById(id) { return elements.get(id) || null; },
             documentElement: { clientWidth: widths[0] },
             body: { dataset: {} }
         },
@@ -52,7 +63,7 @@ function navigationContext(offsets, widths) {
         console: { error() {}, warn() {} }
     });
     vm.runInContext(navigationSource, context);
-    return { context, swiper, elements };
+    return { context, swiper, elements, queryResults, queryOneResults };
 }
 
 test('page navigation translates to each page actual offset', () => {
@@ -101,11 +112,189 @@ test('hardware back closes an open control-center workspace before leaving tools
 test('hardware back requests exit confirmation at home, including during recording', () => {
     const { context } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
         [390, 390, 390, 390, 390, 390, 390, 390]);
-    context.goToPage(0);
+    context.goToPage(5);
     context.isRecording = true;
+    context.handleAppBack = () => false;
 
     assert.equal(context.window.mtbHandleHardwareBack(), true);
     assert.equal(context.exitPromptCalls, 1);
+});
+
+test('hardware back follows the visible main-tab order from profile to home', () => {
+    const { context } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(4);
+    const expectedPages = [1, 2, 0, 3, 5];
+
+    for (const page of expectedPages) {
+        assert.equal(context.window.mtbHandleHardwareBack(), true);
+        assert.equal(vm.runInContext('currentPage', context), page);
+    }
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(context.exitPromptCalls, 1);
+});
+
+test('native hardware back closes a route detail before changing the page behind it', () => {
+    const { context } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(3);
+    let detailClosed = 0;
+    context.handleCommunityBackButton = () => {
+        detailClosed++;
+        return true;
+    };
+    context.$ = id => {
+        if (id === 'screen-dim-overlay') return { hidden: true };
+        if (id === 'modal') return { classList: { contains: () => false } };
+        return null;
+    };
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(detailClosed, 1);
+    assert.equal(vm.runInContext('currentPage', context), 3);
+});
+
+test('hardware back closes a native dialog before its control-center workspace', () => {
+    const { context, queryResults } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(7);
+    context.closeToolsWorkspaceOnBack = true;
+    const dialog = {
+        open: true,
+        getClientRects: () => [{}],
+        close() { this.open = false; }
+    };
+    queryResults.set('dialog[open]', [dialog]);
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(dialog.open, false);
+    assert.equal(context.toolsBackCalls, 0);
+    assert.equal(vm.runInContext('currentPage', context), 7);
+});
+
+test('hardware back closes an expanded inline editor before leaving its page', () => {
+    const { context, elements, queryResults } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(4);
+    const editor = { hidden: false, getClientRects: () => [{}] };
+    const button = {
+        getClientRects: () => [{}],
+        getAttribute: name => name === 'aria-controls' ? 'profile-editor' : null,
+        setAttribute(name, value) { this[name] = value; }
+    };
+    elements.set('profile-editor', editor);
+    queryResults.set('[aria-expanded="true"][aria-controls]', [button]);
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(editor.hidden, true);
+    assert.equal(button['aria-expanded'], 'false');
+    assert.equal(vm.runInContext('currentPage', context), 4);
+});
+
+test('hardware back closes an open disclosure before leaving its page', () => {
+    const { context, queryResults } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(2);
+    const disclosure = {
+        open: true,
+        getClientRects: () => [{}]
+    };
+    queryResults.set('details[open]', [disclosure]);
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(disclosure.open, false);
+    assert.equal(vm.runInContext('currentPage', context), 2);
+});
+
+test('hardware back ignores disclosures on pages behind the current page', () => {
+    const { context, swiper, queryResults } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(0);
+    let disclosureClosed = false;
+    const disclosure = {
+        open: true,
+        getClientRects: () => [{}],
+        closest: () => swiper.children[3]
+    };
+    Object.defineProperty(disclosure, 'open', {
+        get() { return !disclosureClosed; },
+        set(value) { disclosureClosed = !value; }
+    });
+    queryResults.set('details[open]', [disclosure]);
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(disclosureClosed, false);
+    assert.equal(vm.runInContext('currentPage', context), 3);
+});
+
+test('hardware back closes an enlarged map metric before changing tabs', () => {
+    const { context, elements } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(0);
+    let metricCollapsed = false;
+    elements.set('big-metric', { classList: { contains: name => name === 'show' } });
+    context.collapseMetric = () => { metricCollapsed = true; };
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(metricCollapsed, true);
+    assert.equal(vm.runInContext('currentPage', context), 0);
+});
+
+test('hardware back closes an open map popup before changing tabs', () => {
+    const { context, swiper } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(0);
+    let popupClosed = false;
+    const mapPage = swiper.children[0];
+    context.map = {
+        getContainer() {
+            return {
+                closest: () => mapPage,
+                querySelector: selector => selector === '.leaflet-popup' ? {} : null
+            };
+        },
+        closePopup() { popupClosed = true; }
+    };
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(popupClosed, true);
+    assert.equal(vm.runInContext('currentPage', context), 0);
+});
+
+test('hardware back returns from a community section to its default section', () => {
+    const { context, queryOneResults } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(2);
+    let selectedSection = 'segments';
+    queryOneResults.set('[data-community-section][aria-selected="true"]', {
+        dataset: { communitySection: selectedSection }
+    });
+    context.communitySetSection = section => { selectedSection = section; };
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(selectedSection, 'ranking');
+    assert.equal(vm.runInContext('currentPage', context), 2);
+});
+
+test('hardware back moves to the previous statistics slide before changing tabs', () => {
+    const { context } = navigationContext([0, 390, 780, 1170, 1560, 1950, 2340, 2730],
+        [390, 390, 390, 390, 390, 390, 390, 390]);
+    context.goToPage(1);
+    context.activeStatsSlide = 2;
+    context.setStatsSlide = index => { context.activeStatsSlide = index; };
+    vm.runInContext(backButtonSource, context);
+
+    assert.equal(context.window.mtbHandleHardwareBack(), true);
+    assert.equal(context.activeStatsSlide, 1);
+    assert.equal(vm.runInContext('currentPage', context), 1);
 });
 
 test('hardware back dismisses an open modal instead of requesting app exit', () => {
@@ -155,8 +344,7 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
         ['calendar-workspace', new FakeElement(false)],
         ['recording-settings-workspace', new FakeElement(false)],
         ['sensors-workspace', new FakeElement(false)],
-        ['offline-maps-workspace', new FakeElement(false)],
-        ['map-style-workspace', new FakeElement(false)],
+        ['maps-workspace', new FakeElement(false)],
         ['social-workspace', new FakeElement(false)],
         ['misc-settings-workspace', new FakeElement(false)],
         ['calendar-create-dialog', new FakeElement(false)]
@@ -178,8 +366,7 @@ test('closing tool workspaces restores the hub and closes the calendar dialog', 
     assert.equal(elements.get('calendar-workspace').hidden, true);
     assert.equal(elements.get('recording-settings-workspace').hidden, true);
     assert.equal(elements.get('sensors-workspace').hidden, true);
-    assert.equal(elements.get('offline-maps-workspace').hidden, true);
-    assert.equal(elements.get('map-style-workspace').hidden, true);
+    assert.equal(elements.get('maps-workspace').hidden, true);
     assert.equal(elements.get('social-workspace').hidden, true);
     assert.equal(elements.get('misc-settings-workspace').hidden, true);
     assert.equal(elements.get('calendar-create-dialog').open, false);
@@ -199,7 +386,7 @@ test('opening a control-center workspace hides the hub and shows only the chosen
     const workspaceIds = [
         'safety-workspace', 'garage-workspace', 'calendar-workspace',
         'recording-settings-workspace', 'sensors-workspace',
-        'offline-maps-workspace', 'map-style-workspace', 'social-workspace',
+        'maps-workspace', 'social-workspace',
         'misc-settings-workspace'
     ];
     const elements = new Map([

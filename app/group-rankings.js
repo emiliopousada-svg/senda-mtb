@@ -110,8 +110,8 @@ async function loadGroupRankings() {
         renderCommunityCompetitionStatus(result.season
             ? `${result.group.name} · Temporada ${result.season.seasonNumber}, semana ${result.season.currentWeek}/4 · ${result.season.daysRemaining} días restantes.`
             : `La clasificación de ${result.group.name} está disponible.`);
-        if (typeof refreshCommunityLeague === 'function') refreshCommunityLeague();
     } catch (error) {
+        if (groupName() !== requestedGroupId) return;
         console.warn('No se pudo cargar el ranking del grupo:', error);
         const message = error.status === 404
             ? 'El servidor no tiene el ranking del grupo. Copia pb_hooks/ y pb_migrations/ en PocketBase y reinícialo.'
@@ -119,6 +119,8 @@ async function loadGroupRankings() {
         status.textContent = message;
         status.classList.add('error');
         renderCommunityCompetitionStatus(message, true);
+    } finally {
+        if (typeof refreshCommunityLeague === 'function') refreshCommunityLeague();
     }
 }
 

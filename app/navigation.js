@@ -7,6 +7,7 @@ const pageHistory = [currentPage];
 const swiper = $('swiper');
 const navBtns = document.querySelectorAll('.nav-btn');
 const carouselPageOrder = [5, 3, 0, 2, 1, 4, 6, 7];
+const mainMenuPageOrder = Array.from(navBtns, button => Number(button.dataset.page));
 
 function goToAdjacentPage(direction) {
     const position = carouselPageOrder.indexOf(currentPage);
@@ -76,6 +77,12 @@ function goToPage(index) {
     renderPage(index);
 }
 
+function previousMainMenuPage(index) {
+    if (index === 6 || index === 7) return mainMenuPageOrder[0];
+    const position = mainMenuPageOrder.indexOf(index);
+    return position > 0 ? mainMenuPageOrder[position - 1] : null;
+}
+
 function goBackPage() {
     if (pageHistory.length <= 1) return false;
     pageHistory.pop();
@@ -86,6 +93,14 @@ function goBackPage() {
 // Android delega aquí el botón Atrás para navegar por las páginas antes de salir.
 // Devolver true significa que la pulsación quedó atendida por la aplicación.
 window.mtbHandleHardwareBack = function () {
+    if (typeof handleAppBack === 'function') {
+        if (handleAppBack()) return true;
+        if (typeof window.mtbRequestAppExit === 'function') {
+            window.mtbRequestAppExit();
+            return true;
+        }
+        return false;
+    }
     const modalDialog = $('modal');
     if (modalDialog && modalDialog.classList && modalDialog.classList.contains('show')) {
         $('modal-cancel').click();
@@ -99,10 +114,9 @@ window.mtbHandleHardwareBack = function () {
     if (currentPage === 7 && typeof toolsHandleBackButton === 'function' && toolsHandleBackButton()) {
         return true;
     }
-    if (currentPage > 0) {
-        const previousPage = currentPage === 5 ? 0
-            : currentPage === 6 || currentPage === 7 ? 5
-                : currentPage - 1;
+    if (typeof handleCommunityBackButton === 'function' && handleCommunityBackButton()) return true;
+    const previousPage = previousMainMenuPage(currentPage);
+    if (previousPage !== null) {
         goToPage(previousPage);
         return true;
     }

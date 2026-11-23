@@ -216,8 +216,14 @@ test('control center contains recording, sensor, map and miscellaneous settings 
 
     assert.match(toolsPage, /data-tool="recording"[\s\S]*Panel de grabación/);
     assert.match(toolsPage, /data-tool="sensors"[\s\S]*Sensores Bluetooth/);
-    assert.match(toolsPage, /data-tool="offline-maps"[\s\S]*Mapas sin conexión/);
-    assert.match(toolsPage, /data-tool="map-style"[\s\S]*Cartografía del mapa/);
+    assert.match(toolsPage, /data-tool="maps"[\s\S]*<strong>Mapas<\/strong>/);
+    assert.doesNotMatch(toolsPage, /data-tool="offline-maps"|data-tool="map-style"/);
+    const mapsWorkspace = toolsPage.slice(
+        toolsPage.indexOf('<section id="maps-workspace"'),
+        toolsPage.indexOf('<section id="social-workspace"')
+    );
+    assert.match(mapsWorkspace, /Cartografía del mapa[\s\S]*id="map-style-select"/);
+    assert.match(mapsWorkspace, /id="offline-panel"[\s\S]*Mapas sin conexión/);
     assert.match(toolsPage, /data-tool="social"[\s\S]*Social/);
     const socialStart = toolsPage.indexOf('<section id="social-workspace"');
     const socialEnd = toolsPage.indexOf('<section id="misc-settings-workspace"', socialStart);
@@ -232,7 +238,8 @@ test('control center contains recording, sensor, map and miscellaneous settings 
         assert.ok(!settingsPage.includes(`id="${id}"`), `${id} must not remain in Profile`);
     }
     assert.match(toolsPage, /tools-app-version[\s\S]*Aplicación[\s\S]*Versión instalada/);
-    assert.match(toolsSource, /case 'offline-maps'[\s\S]*openOfflineMaps\(\)/);
+    assert.match(toolsSource, /case 'maps'[\s\S]*toolsOpenWorkspace\('maps-workspace'\)[\s\S]*openOfflineMaps\(\)/);
+    assert.doesNotMatch(toolsSource, /offline-maps-workspace|map-style-workspace|case 'map-style'/);
     assert.match(toolsSource, /case 'social':[\s\S]*toolsOpenWorkspace\('social-workspace'\)/);
 });
 

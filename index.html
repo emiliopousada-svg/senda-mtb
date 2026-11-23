@@ -1101,8 +1101,7 @@
                         <button class="tool-card" type="button" data-tool="calendar"><span aria-hidden="true">▦</span><strong>Calendario</strong></button>
                         <button class="tool-card" type="button" data-tool="recording"><span aria-hidden="true">🎛</span><strong>Panel de grabación</strong></button>
                         <button class="tool-card" type="button" data-tool="sensors"><span aria-hidden="true">📡</span><strong>Sensores Bluetooth</strong></button>
-                        <button class="tool-card" type="button" data-tool="offline-maps"><span aria-hidden="true">🗺</span><strong>Mapas sin conexión</strong></button>
-                        <button class="tool-card" type="button" data-tool="map-style"><span aria-hidden="true">🌐</span><strong>Cartografía del mapa</strong></button>
+                        <button class="tool-card" type="button" data-tool="maps"><span aria-hidden="true">🗺</span><strong>Mapas</strong></button>
                         <button class="tool-card" type="button" data-tool="social"><span aria-hidden="true">🔗</span><strong>Social</strong></button>
                         <button class="tool-card" type="button" data-tool="misc-settings"><span aria-hidden="true">⚙</span><strong>Ajustes varios</strong></button>
                     </div>
@@ -1147,10 +1146,23 @@
                         <p class="hint">Las lecturas de pulso, cadencia, potencia y velocidad se guardan en las rutas grabadas. Si no llega velocidad Bluetooth, se usa el GPS.</p>
                     </section>
                 </section>
-                <div id="offline-maps-workspace" class="tools-control-workspace" hidden>
+                <section id="maps-workspace" class="tools-control-workspace" aria-labelledby="maps-title" hidden>
                     <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
+                    <section class="card" aria-labelledby="maps-title">
+                        <h2 id="maps-title">🗺️ Mapas</h2>
+                        <h3 id="map-style-title">Cartografía del mapa</h3>
+                        <label for="map-style-select" class="hint">Mapa con conexión</label>
+                        <select id="map-style-select" aria-label="Mapa a usar con conexión">
+                            <option value="topographic">⛰️ Topográfico OpenTopoMap</option>
+                            <option value="cyclosm">🚵 CyclOSM (ciclismo)</option>
+                            <option value="osm">🗺️ OpenStreetMap (callejero)</option>
+                            <option value="satellite">🛰️ Satélite Esri</option>
+                            <option value="ign">📥 Topográfico IGN (mapas descargados)</option>
+                        </select>
+                        <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexión se usa el mapa elegido; sin conexión, el IGN descargado.</p>
+                    </section>
                     <section id="offline-panel" class="card" aria-labelledby="offline-panel-title">
-                        <h2 id="offline-panel-title">🗺️ Mapas sin conexión</h2>
+                        <h3 id="offline-panel-title">Mapas sin conexión</h3>
                         <p>Descarga zonas del mapa topográfico IGN de España y Portugal. Los mapas online se consultan con conexión; su almacenamiento offline se habilitará cuando el proveedor autorice ese uso.</p>
                         <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
                         <select id="offline-region">
@@ -1189,21 +1201,6 @@
                             <button class="btn secondary" id="btn-cancel-download" type="button">Parar</button>
                         </div>
                         <button class="btn danger" id="btn-clear-offline" type="button">Borrar mapas guardados</button>
-                    </section>
-                </div>
-                <section id="map-style-workspace" class="tools-control-workspace" aria-labelledby="map-style-title" hidden>
-                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
-                    <section class="card">
-                        <h2 id="map-style-title">🗺️ Cartografía del mapa</h2>
-                        <label for="map-style-select" class="hint">Mapa con conexión</label>
-                        <select id="map-style-select" aria-label="Mapa a usar con conexión">
-                            <option value="topographic">⛰️ Topográfico OpenTopoMap</option>
-                            <option value="cyclosm">🚵 CyclOSM (ciclismo)</option>
-                            <option value="osm">🗺️ OpenStreetMap (callejero)</option>
-                            <option value="satellite">🛰️ Satélite Esri</option>
-                            <option value="ign">📥 Topográfico IGN (mapas descargados)</option>
-                        </select>
-                        <p class="hint" id="map-style-status" role="status" aria-live="polite">Con conexión se usa el mapa elegido; sin conexión, el IGN descargado.</p>
                     </section>
                 </section>
                 <section id="social-workspace" class="tools-control-workspace" aria-labelledby="social-title" hidden>
@@ -1502,6 +1499,14 @@
                 <div class="community-detail-actions">
                     <button id="community-detail-back" class="btn secondary" type="button">Volver a las rutas</button>
                     <button id="community-detail-follow" class="btn" type="button" hidden>Seguir ruta</button>
+                </div>
+            </section>
+            <section id="community-segment-map-view" hidden>
+                <p class="community-segment-map-caption">Vista del segmento seleccionado, sin el trazado completo de la ruta.</p>
+                <div id="community-segment-map" class="community-segment-map" role="region" aria-label="Mapa que muestra únicamente el segmento seleccionado"></div>
+                <p id="community-segment-map-status" class="community-status" role="status" aria-live="polite"></p>
+                <div class="community-dialog-actions">
+                    <button id="community-segment-map-back" class="btn secondary" type="button">Cerrar mapa</button>
                 </div>
             </section>
             <section id="community-publish" hidden>

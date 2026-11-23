@@ -5,6 +5,7 @@
 let groupJoined = false, groupSyncAvailable = false, friendsTimer = null, restoreGroupPending = false;
 let restoreGroupQueuedContext = null;
 let friendsRefreshPending = false, lastLivePush = 0, lastFriendsRefreshAt = 0, livePushPending = false;
+let friendsRefreshQueued = false, friendsRefreshContext = '';
 let lastGroupAuthRefreshAt = 0, lastGroupMembershipCheckAt = 0;
 let pendingLiveLocation = null, pendingLiveLocationLoaded = false;
 let pendingLiveLocationLoadPromise = null, pendingLiveLocationWrite = Promise.resolve();
@@ -13,6 +14,7 @@ let liveLocationRetryBlockedKey = '', liveLocationRetryBlockedStatus = 0;
 let myLiveRecordId = null;
 let groupLiveEndpointUnsupportedFor = '';
 const friendMarkers = new Map();
+let friendMarkersContext = '';
 const LIVE_INTERVAL_MS = 30000, FRIEND_STALE_MS = 120000;
 const LIVE_PENDING_KEY = 'pendingLiveLocation';
 const LIVE_PENDING_TTL_MS = FRIEND_STALE_MS;
@@ -323,10 +325,15 @@ function renderGroupState(connected) {
     if (connected && groupInfo && groupInfo.isAdmin) loadAdminMembers();
 }
 
+function liveLocationContextKey() {
+    return `${Cloud.server}|${Cloud.uid}|${Cloud.authGeneration}|${groupJoined ? groupName() : ''}`;
+}
+
 async function stopGroup() {
     groupJoined = false;
     groupSyncAvailable = false;
     groupInfo = null;
+    if (typeof clearCommunityLeagueForGroupChange === 'function') clearCommunityLeagueForGroupChange();
     localStorage.removeItem('mtb_pro_group_joined');
     if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
     await removeMyLiveLocation();
@@ -350,6 +357,8 @@ function startFriendsTimer() {
 }
 
 async function loadMyGroup() {
+    const previousGroupId = groupInfo ? groupInfo.id : (groupJoined ? groupName() : '');
+    const previousGroupJoined = groupJoined;
     const server = Cloud.server;
     const uid = Cloud.uid;
     const generation = Cloud.authGeneration;
@@ -369,6 +378,11 @@ async function loadMyGroup() {
     if (activeId) localStorage.setItem('mtb_pro_group_code', activeId);
     else localStorage.removeItem('mtb_pro_group_code');
     if (!groupJoined) localStorage.removeItem('mtb_pro_group_joined');
+    if (friendMarkersContext !== liveLocationContextKey()) renderFriends();
+    if ((previousGroupId !== activeId || previousGroupJoined !== groupJoined)
+        && typeof clearCommunityLeagueForGroupChange === 'function') {
+        clearCommunityLeagueForGroupChange();
+    }
     renderGroupState(groupJoined);
     if (currentPage === 2) await loadGroupRankings();
     if (!isCurrent()) return null;
@@ -492,6 +506,7 @@ async function restoreGroup() {
         if (hasPendingGroupLeave()) {
             groupJoined = false;
             groupSyncAvailable = false;
+            if (typeof clearCommunityLeagueForGroupChange === 'function') clearCommunityLeagueForGroupChange();
             try { await clearPendingLiveLocation(); }
             catch (error) { reportPendingLiveLocationStorageError(error); }
             if (!isCurrent()) return;
@@ -571,9 +586,18 @@ async function restoreGroup() {
 
 function renderFriends(items = []) {
     const now = Date.now();
+    const context = liveLocationContextKey();
+    if (friendMarkersContext !== context) {
+        for (const marker of friendMarkers.values()) {
+            if (map) map.removeLayer(marker);
+        }
+        friendMarkers.clear();
+        friendMarkersContext = context;
+    }
+    const activeGroup = groupJoined && Cloud.loggedIn() ? groupName() : '';
     const live = items.filter(x => {
         const updatedAt = Date.parse(x.updated);
-        return x.owner !== Cloud.uid
+        return Boolean(activeGroup) && x.groupCode === activeGroup && x.owner !== Cloud.uid
             && Number.isFinite(Number(x.lat)) && Number.isFinite(Number(x.lon))
             && Number.isFinite(updatedAt) && updatedAt <= now + 30000
             && now - updatedAt < FRIEND_STALE_MS;
@@ -622,17 +646,33 @@ function renderFriends(items = []) {
 }
 
 async function refreshFriends(retryAuth = true, ownsPending = false) {
-    if (!groupJoined || !Cloud.loggedIn() || !navigator.onLine || document.visibilityState !== 'visible'
-        || (friendsRefreshPending && !ownsPending)) return;
-    if (!ownsPending) friendsRefreshPending = true;
+    if (!groupJoined || !Cloud.loggedIn() || !navigator.onLine || document.visibilityState !== 'visible') return;
+    const expectedContext = liveLocationContextKey();
+    if (friendsRefreshPending && !ownsPending) {
+        if (expectedContext !== friendsRefreshContext) friendsRefreshQueued = true;
+        return;
+    }
+    if (!ownsPending) {
+        friendsRefreshPending = true;
+        friendsRefreshContext = expectedContext;
+    }
     lastFriendsRefreshAt = Date.now();
     const wasSyncAvailable = groupSyncAvailable;
+    const expectedGroup = groupName();
+    const expectedServer = Cloud.server;
+    const expectedUid = Cloud.uid;
+    const expectedAuthGeneration = Cloud.authGeneration;
+    const isAuthCurrent = () => Cloud.loggedIn() && Cloud.server === expectedServer
+        && Cloud.uid === expectedUid && Cloud.authGeneration === expectedAuthGeneration;
+    const isCurrent = () => groupJoined && groupName() === expectedGroup && isAuthCurrent();
     try {
-        const expectedGroup = groupName();
         const now = Date.now();
         if (now - lastGroupAuthRefreshAt >= GROUP_AUTH_REFRESH_MS) {
             const auth = await Cloud.refreshSession();
             if (!auth) return;
+            const revokedFromCurrentGroup = auth.groupCode === ''
+                && (!groupName() || groupName() === expectedGroup);
+            if (!isAuthCurrent() || (!revokedFromCurrentGroup && !isCurrent())) return;
             lastGroupAuthRefreshAt = now;
             if (auth.groupCode !== expectedGroup || !expectedGroup) {
                 groupJoined = false;
@@ -646,6 +686,7 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
         }
         if (now - lastGroupMembershipCheckAt >= GROUP_MEMBERSHIP_CHECK_MS) {
             const membership = await cloudApi('/api/mtb/groups/my');
+            if (!isCurrent()) return;
             lastGroupMembershipCheckAt = now;
             if (membership.activeGroupId !== expectedGroup || !expectedGroup) {
                 groupJoined = false;
@@ -669,17 +710,23 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
             }
         }
         if (!res) res = await cloudApi('/api/collections/live_locations/records?filter=' + f + '&perPage=200&sort=-updated');
+        if (!isCurrent()) return;
+        if (!res || !Array.isArray(res.items)) {
+            throw new Error('El servidor devolvió una lista de posiciones inválida.');
+        }
         if (liveLocationRetryBlockedKey === liveLocationIdentityKey()
             && (liveLocationRetryBlockedStatus === 401 || liveLocationRetryBlockedStatus === 403)) {
             liveLocationRetryBlockedKey = '';
             liveLocationRetryBlockedStatus = 0;
         }
         groupSyncAvailable = true;
-        const own = res.items.find(x => x.owner === Cloud.uid);
+        const items = res.items.filter(item => item && item.groupCode === expectedGroup);
+        const own = items.find(x => x.owner === expectedUid);
         myLiveRecordId = own ? own.id : null;
-        renderFriends(res.items);
+        renderFriends(items);
         if (!wasSyncAvailable && isRecording && !isPaused) publishMyLocation(true);
     } catch (e) {
+        if (!isCurrent()) return;
         groupSyncAvailable = false;
         renderFriends();
         if (groupJoined) {
@@ -700,7 +747,14 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
             $('group-status').textContent = 'No se pudieron cargar posiciones. Revisa la conexión y PocketBase.';
         }
     } finally {
-        if (!ownsPending) friendsRefreshPending = false;
+        if (!ownsPending) {
+            friendsRefreshPending = false;
+            friendsRefreshContext = '';
+            if (friendsRefreshQueued) {
+                friendsRefreshQueued = false;
+                Promise.resolve().then(() => refreshFriends());
+            }
+        }
     }
 }
 async function publishMyLocation(force = false) {
@@ -1008,6 +1062,7 @@ async function leaveGroupLocally() {
     localStorage.setItem(key, JSON.stringify({ groupId, uid: Cloud.uid, queuedAt: Date.now() }));
     groupJoined = false;
     groupSyncAvailable = false;
+    if (typeof clearCommunityLeagueForGroupChange === 'function') clearCommunityLeagueForGroupChange();
     Cloud.invalidateProfileReads();
     try { await clearPendingLiveLocation(); }
     catch (error) { reportPendingLiveLocationStorageError(error); }

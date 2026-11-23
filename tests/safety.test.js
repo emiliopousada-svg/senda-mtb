@@ -60,7 +60,7 @@ function loadSafetyUi(initialContacts = []) {
     };
     const source = fs.readFileSync(path.join(__dirname, '../app/safety.js'), 'utf8');
     vm.runInNewContext(source, context);
-    return { getElement, openedUrls };
+    return { getElement, openedUrls, handleBack: context.safetyHandleBackButton };
 }
 
 test('emergency phone numbers are normalized to international format', () => {
@@ -111,7 +111,7 @@ test('emergency contact lists drop invalid entries, duplicates and extras', () =
 });
 
 test('emergency contact form collapses after saving and can be reopened', () => {
-    const { getElement } = loadSafetyUi();
+    const { getElement, handleBack } = loadSafetyUi();
     const form = getElement('safety-contact-form');
     const addButton = getElement('safety-add-contact');
     const callLink = getElement('safety-call-contact');
@@ -134,6 +134,17 @@ test('emergency contact form collapses after saving and can be reopened', () => 
     addButton.listeners.click();
     assert.equal(form.hidden, false);
     assert.equal(addButton.hidden, true);
+
+    assert.equal(handleBack(), true);
+    assert.equal(form.hidden, true);
+    assert.equal(addButton.hidden, false);
+});
+
+test('hardware back preserves the required form when no emergency contacts exist', () => {
+    const { getElement, handleBack } = loadSafetyUi();
+
+    assert.equal(handleBack(), false);
+    assert.equal(getElement('safety-contact-form').hidden, false);
 });
 
 test('group live-location setting appears in miscellaneous settings, not during-ride safety', () => {

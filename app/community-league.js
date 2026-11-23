@@ -11,9 +11,9 @@ const LEAGUE_METRIC_UNITS = {
     time: { unit: 'h', decimals: 1 }
 };
 const leagueState = {
-    challenges: { loadedAt: 0, groupId: '', loading: false },
-    awards: { loadedAt: 0, groupId: '', loading: false },
-    activity: { loadedAt: 0, groupId: '', loading: false }
+    challenges: { loadedAt: 0, groupId: '', loading: false, requestId: 0 },
+    awards: { loadedAt: 0, groupId: '', loading: false, requestId: 0 },
+    activity: { loadedAt: 0, groupId: '', loading: false, requestId: 0 }
 };
 
 function leagueEl(tag, className, text) {
@@ -25,6 +25,47 @@ function leagueEl(tag, className, text) {
 
 function leagueReady() {
     return typeof Cloud !== 'undefined' && Cloud.loggedIn() && typeof groupJoined !== 'undefined' && groupJoined;
+}
+
+function leagueInvalidateState(state) {
+    state.loadedAt = 0;
+    state.groupId = '';
+    state.loading = false;
+    state.requestId++;
+}
+
+function leagueRequestContext(groupId) {
+    return {
+        groupId,
+        server: Cloud.server,
+        uid: Cloud.uid,
+        authGeneration: Cloud.authGeneration
+    };
+}
+
+function leagueRequestIsCurrent(state, requestId, context) {
+    return state.requestId === requestId && leagueReady()
+        && groupName() === context.groupId
+        && Cloud.server === context.server && Cloud.uid === context.uid
+        && Cloud.authGeneration === context.authGeneration;
+}
+
+function clearCommunityLeagueContent() {
+    renderLeagueSeason(null);
+    $('league-standings')?.replaceChildren();
+    $('league-challenges-list')?.replaceChildren();
+    $('league-current-titles')?.replaceChildren();
+    $('league-medal-table')?.replaceChildren();
+    $('league-awards-history')?.replaceChildren();
+    $('league-challenge-medals')?.replaceChildren();
+    $('community-activity-feed')?.replaceChildren();
+    ['league-challenges-status', 'league-awards-status', 'league-activity-status']
+        .forEach(id => leagueSetStatus(id, ''));
+}
+
+function clearCommunityLeagueForGroupChange() {
+    Object.values(leagueState).forEach(leagueInvalidateState);
+    clearCommunityLeagueContent();
 }
 
 function leagueSetStatus(id, message, isError = false) {
@@ -178,6 +219,7 @@ function renderLeagueChallenges(result) {
 async function loadLeagueChallenges(force = false) {
     const state = leagueState.challenges;
     if (!leagueReady()) {
+        leagueInvalidateState(state);
         renderLeagueSeason(null);
         const list = $('league-challenges-list');
         if (list) list.replaceChildren();
@@ -188,12 +230,17 @@ async function loadLeagueChallenges(force = false) {
     $('league-create')?.removeAttribute('hidden');
     const groupId = groupName();
     if (!force && state.groupId === groupId && Date.now() - state.loadedAt < LEAGUE_STALE_MS) return;
-    if (state.loading) return;
+    if (state.loading && !force) return;
+    const context = leagueRequestContext(groupId);
+    const requestId = ++state.requestId;
     state.loading = true;
     leagueSetStatus('league-challenges-status', 'Cargando desafíos…');
     try {
         const result = await cloudApi('/api/mtb/groups/challenges');
-        if (groupName() !== groupId) return;
+        if (!leagueRequestIsCurrent(state, requestId, context)) return;
+        if (!result || !result.group || result.group.id !== groupId) {
+            throw new Error('El servidor devolvió datos de otro grupo.');
+        }
         state.loadedAt = Date.now();
         state.groupId = groupId;
         renderLeagueSeason(result);
@@ -204,10 +251,11 @@ async function loadLeagueChallenges(force = false) {
             renderCommunityCompetitionStatus(`${result.group.name} · Temporada ${season.seasonNumber}, semana ${season.currentWeek}/4 · ${season.daysRemaining} días restantes.`);
         }
     } catch (error) {
+        if (!leagueRequestIsCurrent(state, requestId, context)) return;
         console.warn('No se pudieron cargar los desafíos:', error);
         leagueSetStatus('league-challenges-status', leagueErrorMessage(error, 'No se pudieron cargar los desafíos'), true);
     } finally {
-        state.loading = false;
+        if (state.requestId === requestId) state.loading = false;
     }
 }
 
@@ -285,7 +333,7 @@ function renderLeagueAwards(result) {
     if (current) renderLeagueTitles(current, result.current && result.current.titles);
     const season = result.current && result.current.season;
     if (season) {
-        leagueSetStatus('league-awards-status', `Temporada ${season.seasonNumber} · ${season.daysRemaining} ${season.daysRemaining === 1 ? 'día' : 'días'} para cerrar los títulos.`);
+        leagueSetStatus('league-awards-status', `${result.group.name} · Temporada ${season.seasonNumber} · ${season.daysRemaining} ${season.daysRemaining === 1 ? 'día' : 'días'} para cerrar los títulos.`);
     }
     const medalTable = $('league-medal-table');
     const history = $('league-awards-history');
@@ -355,6 +403,7 @@ function renderLeagueAwards(result) {
 async function loadLeagueAwards(force = false) {
     const state = leagueState.awards;
     if (!leagueReady()) {
+        leagueInvalidateState(state);
         $('league-current-titles')?.replaceChildren();
         $('league-medal-table')?.replaceChildren();
         $('league-awards-history')?.replaceChildren();
@@ -364,20 +413,26 @@ async function loadLeagueAwards(force = false) {
     }
     const groupId = groupName();
     if (!force && state.groupId === groupId && Date.now() - state.loadedAt < LEAGUE_STALE_MS) return;
-    if (state.loading) return;
+    if (state.loading && !force) return;
+    const context = leagueRequestContext(groupId);
+    const requestId = ++state.requestId;
     state.loading = true;
     leagueSetStatus('league-awards-status', 'Cargando títulos…');
     try {
         const result = await cloudApi('/api/mtb/groups/awards');
-        if (groupName() !== groupId) return;
+        if (!leagueRequestIsCurrent(state, requestId, context)) return;
+        if (!result || !result.group || result.group.id !== groupId) {
+            throw new Error('El servidor devolvió datos de otro grupo.');
+        }
         state.loadedAt = Date.now();
         state.groupId = groupId;
         renderLeagueAwards(result);
     } catch (error) {
+        if (!leagueRequestIsCurrent(state, requestId, context)) return;
         console.warn('No se pudieron cargar los títulos:', error);
         leagueSetStatus('league-awards-status', leagueErrorMessage(error, 'No se pudieron cargar los títulos'), true);
     } finally {
-        state.loading = false;
+        if (state.requestId === requestId) state.loading = false;
     }
 }
 
@@ -424,18 +479,24 @@ async function loadLeagueActivity(force = false) {
     const state = leagueState.activity;
     const feed = $('community-activity-feed');
     if (!leagueReady()) {
+        leagueInvalidateState(state);
         feed?.replaceChildren();
         leagueSetStatus('league-activity-status', 'Inicia sesión y únete a un grupo para ver su actividad.');
         return;
     }
     const groupId = groupName();
     if (!force && state.groupId === groupId && Date.now() - state.loadedAt < LEAGUE_STALE_MS) return;
-    if (state.loading) return;
+    if (state.loading && !force) return;
+    const context = leagueRequestContext(groupId);
+    const requestId = ++state.requestId;
     state.loading = true;
     leagueSetStatus('league-activity-status', 'Cargando actividad…');
     try {
         const result = await cloudApi('/api/mtb/groups/activity');
-        if (groupName() !== groupId) return;
+        if (!leagueRequestIsCurrent(state, requestId, context)) return;
+        if (!result || !result.group || result.group.id !== groupId) {
+            throw new Error('El servidor devolvió datos de otro grupo.');
+        }
         state.loadedAt = Date.now();
         state.groupId = groupId;
         const items = Array.isArray(result.items) ? result.items : [];
@@ -447,10 +508,11 @@ async function loadLeagueActivity(force = false) {
             leagueSetStatus('league-activity-status', '');
         }
     } catch (error) {
+        if (!leagueRequestIsCurrent(state, requestId, context)) return;
         console.warn('No se pudo cargar la actividad del grupo:', error);
         leagueSetStatus('league-activity-status', leagueErrorMessage(error, 'No se pudo cargar la actividad'), true);
     } finally {
-        state.loading = false;
+        if (state.requestId === requestId) state.loading = false;
     }
 }
 
@@ -470,9 +532,9 @@ function loadCommunityLeagueSection(section, force = false) {
 
 // Se llama al cambiar de grupo, iniciar/cerrar sesión o compartir una salida.
 function refreshCommunityLeague() {
-    Object.values(leagueState).forEach(state => { state.loadedAt = 0; });
+    clearCommunityLeagueForGroupChange();
     if (typeof currentPage !== 'undefined' && currentPage !== 2) return;
-    loadCommunityLeagueSection(communityActiveSection(), true);
+    return loadCommunityLeagueSection(communityActiveSection(), true);
 }
 
 document.querySelector('.community-hub')?.addEventListener('click', event => {

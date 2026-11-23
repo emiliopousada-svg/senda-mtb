@@ -94,6 +94,7 @@ test('a failed live-location refresh removes stale friends from the avatar roste
     context.renderFriends([{
         id: 'old-record',
         owner: 'friend',
+        groupCode: 'group-1',
         name: 'Friend',
         lat: 11,
         lon: 104,
@@ -113,6 +114,56 @@ test('a failed live-location refresh removes stale friends from the avatar roste
     assert.match(elements.get('friends-group-status').textContent, /No se pudo verificar/);
 });
 
+test('a session refresh that clears the group revokes access in the same live refresh', async () => {
+    const { context, cloud, storage } = groupsContext();
+    let removed = 0;
+    let reloaded = 0;
+    let rendered = 0;
+    let notified = '';
+    context.removeMyLiveLocation = async () => { removed++; };
+    context.loadMyGroup = async () => { reloaded++; };
+    context.renderFriends = () => { rendered++; };
+    context.toast = message => { notified = message; };
+    cloud.refreshSession = async () => {
+        cloud.groupCode = '';
+        return { id: cloud.uid, groupCode: '' };
+    };
+    vm.runInContext('lastGroupAuthRefreshAt = 0;', context);
+
+    await context.refreshFriends();
+
+    assert.equal(vm.runInContext('groupJoined', context), false);
+    assert.equal(removed, 1);
+    assert.equal(reloaded, 1);
+    assert.equal(rendered, 1);
+    assert.equal(storage.has('mtb_pro_group_joined'), false);
+    assert.match(notified, /revocado tu acceso/);
+});
+
+for (const [changedIdentity, changeIdentity] of [
+    ['server', (cloud) => { cloud.server = 'https://other.example'; }],
+    ['user', (cloud) => { cloud.uid = 'other-user'; }],
+    ['auth generation', (cloud) => { cloud.authGeneration++; }]
+]) {
+    test(`a session refresh for a different ${changedIdentity} is ignored`, async () => {
+        const { context, cloud } = groupsContext();
+        let resolveRefresh;
+        let removed = 0;
+        context.removeMyLiveLocation = async () => { removed++; };
+        cloud.refreshSession = () => new Promise(resolve => { resolveRefresh = resolve; });
+        vm.runInContext('lastGroupAuthRefreshAt = 0;', context);
+
+        const refreshing = context.refreshFriends();
+        await Promise.resolve();
+        changeIdentity(cloud);
+        resolveRefresh({ id: cloud.uid, groupCode: '' });
+        await refreshing;
+
+        assert.equal(removed, 0);
+        assert.equal(vm.runInContext('groupJoined', context), true);
+    });
+}
+
 test('clicking a live friend avatar opens that friend position on the map', () => {
     const { context, elements } = groupsContext();
     let selectedPage = -1;
@@ -120,11 +171,13 @@ test('clicking a live friend avatar opens that friend position on the map', () =
     let openedPopup = false;
     context.goToPage = page => { selectedPage = page; };
     context.markerMock = { openPopup() { openedPopup = true; } };
+    vm.runInContext('friendMarkersContext = liveLocationContextKey()', context);
     vm.runInContext("friendMarkers.set('friend-record', markerMock)", context);
 
     context.renderFriends([{
         id: 'friend-record',
         owner: 'friend',
+        groupCode: 'group-1',
         nickname: 'Friend',
         lat: 11,
         lon: 104,

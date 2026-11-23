@@ -296,6 +296,14 @@ function safetyRenderContacts() {
     if (sendButton) sendButton.disabled = safetyContacts.length === 0;
 }
 
+function safetyHandleBackButton() {
+    const form = safetyElement('safety-contact-form');
+    if (!safetyContactFormOpen || !safetyContacts.length || !form || form.hidden) return false;
+    safetyContactFormOpen = false;
+    safetyRenderContacts();
+    return true;
+}
+
 function safetyGetLocation() {
     const lat = typeof lastLat !== 'undefined' ? lastLat : null;
     const lon = typeof lastLon !== 'undefined' ? lastLon : null;

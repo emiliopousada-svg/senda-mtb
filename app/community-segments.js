@@ -307,7 +307,13 @@ async function communityLoadHubSegments() {
             headingRow.className = 'community-hub-segment-heading';
             const heading = document.createElement('h3');
             heading.className = 'community-hub-segment-title';
-            heading.textContent = segment.title || 'Segmento';
+            const mapButton = document.createElement('button');
+            mapButton.type = 'button';
+            mapButton.className = 'community-hub-segment-title-button';
+            mapButton.textContent = segment.title || 'Segmento';
+            mapButton.setAttribute('aria-label', `Mostrar solo el segmento ${mapButton.textContent} en el mapa`);
+            mapButton.addEventListener('click', () => openCommunitySegmentMap(segment));
+            heading.appendChild(mapButton);
             headingRow.append(heading);
             const proximity = communityHubSegmentDistanceLabel(segment.communityProximityMeters);
             if (proximity) {

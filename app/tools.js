@@ -6,8 +6,7 @@ const toolsWorkspaceIds = [
     'calendar-workspace',
     'recording-settings-workspace',
     'sensors-workspace',
-    'offline-maps-workspace',
-    'map-style-workspace',
+    'maps-workspace',
     'social-workspace',
     'misc-settings-workspace'
 ];
@@ -79,12 +78,9 @@ document.querySelector('.tools-grid')?.addEventListener('click', event => {
         case 'sensors':
             toolsOpenWorkspace('sensors-workspace');
             break;
-        case 'offline-maps':
-            toolsOpenWorkspace('offline-maps-workspace');
+        case 'maps':
+            toolsOpenWorkspace('maps-workspace');
             openOfflineMaps();
-            break;
-        case 'map-style':
-            toolsOpenWorkspace('map-style-workspace');
             break;
         case 'social':
             toolsOpenWorkspace('social-workspace');

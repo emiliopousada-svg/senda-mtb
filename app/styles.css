@@ -1324,6 +1324,10 @@ nav {
 .community-dialog-actions { display: flex; gap: 8px; }
 .community-dialog-actions .btn { flex: 1; }
 .community-detail-map { width: 100%; height: min(42vh, 320px); min-height: 220px; overflow: hidden; border-radius: 12px; background: #252525; }
+.community-segment-map-caption { margin: 2px 0 9px; color: var(--text-secondary); font-size: .82rem; }
+.community-segment-map { width: 100%; height: min(62vh, 520px); min-height: 280px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: #252525; }
+#community-segment-map-view[hidden] { display: none; }
+#community-segment-map-view .community-dialog-actions { margin-top: 12px; }
 .community-detail-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
 .community-detail-stat { display: flex; flex-direction: column; gap: 4px; padding: 11px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: #1c1c1c; }
 .community-detail-stat span { color: var(--text-secondary); font-size: .72rem; }
