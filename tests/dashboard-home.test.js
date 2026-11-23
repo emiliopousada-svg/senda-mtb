@@ -46,6 +46,10 @@ function dashboardContext(nickname, avatarUrl = '') {
         setAttribute(name, value) { this.attributes[name] = value; },
         innerHTML: ''
     };
+    const mapGps = {
+        attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; }
+    };
     const network = {
         classes: {},
         classList: { toggle(name, active) { network.classes[name] = active; } },
@@ -83,13 +87,14 @@ function dashboardContext(nickname, avatarUrl = '') {
             if (id === 'home-avatar-dialog-image') return avatarPreview;
             if (id === 'home-avatar-dialog-close') return avatarCloseButton;
             if (id === 'dashboard-gps-status') return gps;
+            if (id === 'map-live-gps') return mapGps;
             if (id === 'dashboard-network-status') return network;
             if (id === 'acc-server-status') return accountIndicator;
             return null;
         }
     });
     vm.runInContext(dashboardSource, context);
-    return { context, greeting, avatar, avatarImage, avatarPlaceholder, avatarPreview, avatarDialog, avatarCloseButton, gps, network, accountIndicator };
+    return { context, greeting, avatar, avatarImage, avatarPlaceholder, avatarPreview, avatarDialog, avatarCloseButton, gps, mapGps, network, accountIndicator };
 }
 
 test('home greeting uses the account nickname and falls back when signed out', () => {
@@ -145,11 +150,13 @@ test('home omits the recording CTA and adventure tagline but keeps its shortcuts
 });
 
 test('home GPS status shows signal quality as up to four bars', () => {
-    const { context, gps } = dashboardContext('TrailRider');
+    const { context, gps, mapGps } = dashboardContext('TrailRider');
     context.firstFix = true;
     context.lastAccuracy = 4;
     context.dashboardUpdateGpsStatus();
     assert.equal(gps.attributes['data-gps-quality'], '4');
+    assert.equal(mapGps.attributes['data-gps-quality'], '4');
+    assert.equal(mapGps.attributes['aria-label'], 'Calidad GPS: Excelente');
     assert.match(gps.innerHTML.replace(/<[^>]+>/g, ''), /GPS · Excelente/);
     assert.match(gps.innerHTML, /class="gps-status-detail"/);
     assert.equal((gps.innerHTML.match(/class="active"/g) || []).length, 4);
@@ -157,7 +164,44 @@ test('home GPS status shows signal quality as up to four bars', () => {
     context.lastAccuracy = 25;
     context.dashboardUpdateGpsStatus();
     assert.equal(gps.attributes['data-gps-quality'], '1');
+    assert.equal(mapGps.attributes['data-gps-quality'], '1');
     assert.equal((gps.innerHTML.match(/class="active"/g) || []).length, 1);
+
+    context.lastAccuracy = 15;
+    context.dashboardUpdateGpsStatus();
+    assert.equal(mapGps.attributes['data-gps-quality'], '2');
+
+    context.lastAccuracy = 35;
+    context.dashboardUpdateGpsStatus();
+    assert.equal(mapGps.attributes['data-gps-quality'], '1');
+
+    context.firstFix = false;
+    context.dashboardUpdateGpsStatus();
+    assert.equal(mapGps.attributes['data-gps-quality'], '0');
+});
+
+test('map banner exposes every top metric as an accessible expand control', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const bannerMetrics = html.match(/<div class="map-live-metrics">([\s\S]*?)<\/section>/);
+    assert.ok(bannerMetrics);
+    for (const [key, label] of [
+        ['elev', 'Desnivel positivo'],
+        ['map-distance', 'Distancia recorrida'],
+        ['speed', 'Velocidad'],
+        ['moving', 'Tiempo en movimiento']
+    ]) {
+        assert.match(bannerMetrics[1], new RegExp(`data-metric="${key}" role="button" tabindex="0" aria-label="${label}"`));
+    }
+});
+
+test('map GPS indicator uses a distinct color for each signal quality group', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const styles = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
+    assert.match(html, /id="map-live-gps" class="map-live-gps"[^>]*aria-label="Calidad GPS: Buscando"/);
+    assert.match(styles, /\.map-live-gps\[data-gps-quality="0"\]\s*\{[^}]*color:#7f8993/);
+    assert.match(styles, /\.map-live-gps\[data-gps-quality="1"\]\s*\{[^}]*color:#ff554d/);
+    assert.match(styles, /\.map-live-gps\[data-gps-quality="2"\]\s*\{[^}]*color:#ffc247/);
+    assert.match(styles, /\.map-live-gps\[data-gps-quality="3"\],\.map-live-gps\[data-gps-quality="4"\]\s*\{[^}]*color:#28d17c/);
 });
 
 test('control center contains recording, sensor, map and miscellaneous settings panels', () => {

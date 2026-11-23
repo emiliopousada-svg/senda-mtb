@@ -56,13 +56,13 @@
                 <div class="map-live-banner-head">
                     <span class="map-live-indicator" aria-hidden="true"></span>
                     <strong id="map-live-title">Lista para grabar</strong>
-                    <span class="map-live-gps"><i aria-hidden="true"></i> GPS</span>
+                    <span id="map-live-gps" class="map-live-gps" aria-live="polite" aria-label="Calidad GPS: Buscando"><i aria-hidden="true"></i> GPS</span>
                 </div>
                 <div class="map-live-metrics">
-                    <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">▲</span><strong><span id="m-elevation">0</span><small> m</small></strong><span>Desnivel +</span></div>
+                    <div class="map-live-metric" data-metric="elev" role="button" tabindex="0" aria-label="Desnivel positivo"><span class="map-live-icon" aria-hidden="true">▲</span><strong><span id="m-elevation">0</span><small> m</small></strong><span>Desnivel +</span></div>
                     <div class="map-live-metric" data-metric="map-distance" role="button" tabindex="0" aria-label="Distancia recorrida"><span class="map-live-icon" aria-hidden="true">&#8596;</span><strong><span id="m-dist">0.00</span><small> km</small></strong><span>Distancia</span></div>
-                    <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">◉</span><strong><span id="m-speed">0.0</span><small> km/h</small></strong><span>Velocidad</span></div>
-                    <div class="map-live-metric"><span class="map-live-icon" aria-hidden="true">◷</span><strong id="m-moving">00:00</strong><span>En movimiento</span></div>
+                    <div class="map-live-metric" data-metric="speed" role="button" tabindex="0" aria-label="Velocidad"><span class="map-live-icon" aria-hidden="true">◉</span><strong><span id="m-speed">0.0</span><small> km/h</small></strong><span>Velocidad</span></div>
+                    <div class="map-live-metric" data-metric="moving" role="button" tabindex="0" aria-label="Tiempo en movimiento"><span class="map-live-icon" aria-hidden="true">◷</span><strong id="m-moving">00:00</strong><span>En movimiento</span></div>
                 </div>
             </section>
 

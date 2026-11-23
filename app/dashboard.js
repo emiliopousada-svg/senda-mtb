@@ -59,14 +59,19 @@ function dashboardUpdateNav(page = currentPage) {
 
 function dashboardUpdateGpsStatus() {
     const status = $('dashboard-gps-status');
-    if (!status) return;
     const accuracy = Number(lastAccuracy);
-    const quality = !firstFix || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > MAX_ACC_M
+    const quality = !firstFix || !Number.isFinite(accuracy) || accuracy < 0
         ? 0
         : accuracy <= 5 ? 4
             : accuracy <= 10 ? 3
                 : accuracy <= 20 ? 2 : 1;
     const labels = ['Buscando', 'Débil', 'Aceptable', 'Buena', 'Excelente'];
+    const mapStatus = $('map-live-gps');
+    if (mapStatus) {
+        mapStatus.setAttribute('data-gps-quality', String(quality));
+        mapStatus.setAttribute('aria-label', `Calidad GPS: ${labels[quality]}`);
+    }
+    if (!status) return;
     const bars = Array.from({ length: 4 }, (_, index) =>
         `<i${index < quality ? ' class="active"' : ''}></i>`
     ).join('');
