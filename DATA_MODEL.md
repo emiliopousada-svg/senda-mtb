@@ -1,164 +1,42 @@
 ﻿# senda-mtb — Modelo de Datos (DATA_MODEL.md)
 
-**Versión:** 1.0  
-**Fecha:** 16 de noviembre de 2026  
-**Referencia:** Documento Maestro del Proyecto senda-mtb  
+**Versión:** 1.0 · **Fecha:** 24 de noviembre de 2026 · **Referencia:** Documento Maestro del Proyecto senda-mtb
 
 ---
 
 ## 1. Estrategia General de Persistencia
 
-El modelo de datos de **senda-mtb** sigue el principio de **local-first con sincronización asíncrona e idempotente**:
-1. **Persistencia Local Primaria:** Todas las entidades (actividades, rutas, perfiles de bicis, telemetría y puntos de interés) se guardan íntegramente en la base de datos local **IndexedDB** (`mtb_camboya_pro_db`). La aplicación es 100% funcional sin conexión.
-2. **Optimización de Telemetría GPS:** Para evitar sobrecargar la base de datos remota con millones de filas, los puntos GPS y lecturas de sensores no se almacenan como filas individuales en el backend. Se empaquetan en arrays binarios o estructuras JSON compactas asociadas al registro de la actividad.
-3. **Sincronización Idempotente:** Toda mutación local pendiente de sincronización genera un registro en la cola `sync_queue` con un identificador UUID único (`clientId`), marca temporal y tipo de acción (`CREATE`, `UPDATE`, `DELETE`).
+La persistencia de **senda-mtb** se reparte entre IndexedDB, `localStorage` y PocketBase. La disponibilidad sin conexión depende de cada función y de los datos guardados localmente; no todas las entidades se almacenan en IndexedDB.
+
+1. **Rutas y grabaciones locales:** Se guardan en IndexedDB, incluyendo puntos GPS y datos de actividad. Las fotos asociadas a POI se almacenan aparte para no cargar todos los blobs al leer rutas.
+2. **Datos auxiliares y preferencias:** `kv` guarda borradores de grabación, cachés y marcadores pendientes de algunos flujos de sincronización. Otras preferencias y algunos datos de perfil se guardan en `localStorage`.
+3. **Sincronización:** La sincronización de rutas coordina los registros locales con PocketBase. No existe un object store `sync_queue` ni una cola genérica de mutaciones con el esquema `CREATE`/`UPDATE`/`DELETE`; los flujos usan campos de ruta y claves auxiliares concretas.
 
 ---
 
-## 2. Almacenamiento Local (IndexedDB: `mtb_camboya_pro_db`)
+## 2. Persistencia Local
 
-Versión actual de esquema: **2** (con soporte de migraciones automáticas).
+Versión actual de esquema: **2**. La base `mtb_camboya_pro_db` crea estos tres object stores en `app/storage.js`:
 
-### 2.1. ObjectStore: `activities`
-Almacena las salidas grabadas por el ciclista en el dispositivo:
-```typescript
-interface ActivityRecord {
-  id: string;                    // UUID local único
-  clientId?: string;             // Identificador de sincronización idempotente
-  title: string;                 // Nombre asignado a la salida
-  activityType: 'mtb';           // Tipo de actividad
-  startedAt: number;             // Timestamp Unix (ms)
-  endedAt: number;               // Timestamp Unix (ms)
-  elapsedTimeSec: number;        // Tiempo total transcurrido
-  movingTimeSec: number;         // Tiempo en movimiento (sin pausas)
-  distanceMeters: number;        // Distancia total acumulada
-  elevationGainMeters: number;   // Desnivel positivo filtrado (paso mínimo 3 m)
-  elevationLossMeters: number;   // Desnivel negativo acumulado
-  maxSpeedMs: number;            // Velocidad máxima válida (<= 25 m/s)
-  avgSpeedMs: number;            // Velocidad media en movimiento
-  maxAltitude: number;           // Altitud máxima (m)
-  minAltitude: number;           // Altitud mínima (m)
-  vam: number;                   // Velocidad Ascensional Media (m/h) en tramos sostenidos
-  
-  // Asignación de material (Garaje)
-  bikeId?: string;               // ID de la bicicleta asignada
-  
-  // Telemetría detallada
-  track: Array<{
-    lat: number;
-    lng: number;
-    ele?: number;
-    time: number;                // Timestamp Unix (ms)
-    acc?: number;                // Precisión horizontal (m)
-    speed?: number;              // Velocidad instantánea (m/s)
-    hr?: number;                 // Frecuencia cardíaca (bpm)
-    cadence?: number;            // Cadencia de pedaleo (rpm)
-    power?: number;              // Potencia instantánea (W)
-    segmentBreak?: boolean;      // Salto por pausa o pérdida de señal
-  }>;
-  
-  // Métricas agregadas de sensores
-  sensors?: {
-    avgHr?: number;
-    maxHr?: number;
-    avgPower?: number;
-    maxPower?: number;
-    normalizedPower?: number;
-    avgCadence?: number;
-    hrZonesSec?: number[];       // Tiempo en Z1-Z5 (segundos)
-    powerZonesSec?: number[];    // Tiempo en Z1-Z7 (segundos)
-  };
-  
-  syncStatus: 'pending' | 'synced' | 'local_only';
-  remoteId?: string;             // ID asignado por PocketBase
-  updatedAt: number;
-}
-```
+### 2.1. ObjectStore: `routes`
+Usa `id` como clave primaria y contiene registros de ruta. Las salidas grabadas se representan como rutas con `kind: 'recorded'`; las rutas importadas usan `kind: 'imported'`. El registro habitual incluye `name`, `startedAt`, `movingTimeSec`, `distanceKm`, `elevationGain` y `points`. Los puntos se almacenan como arrays con coordenadas y, cuando existen, altitud, tiempo, frecuencia cardíaca, velocidad, cadencia y potencia. Los campos varían según el tipo y el origen de la ruta; no hay un esquema TypeScript rígido en IndexedDB.
 
-### 2.2. ObjectStore: `routes`
-Rutas importadas (GPX, KML, GeoJSON, FIT) o planificadas para navegación:
-```typescript
-interface RouteRecord {
-  id: string;                    // UUID local
-  name: string;                  // Nombre de la ruta
-  description?: string;
-  distanceMeters: number;
-  elevationGainMeters: number;
-  elevationLossMeters: number;
-  coordinates: Array<[number, number, number?]>; // [lat, lng, ele]
-  waypoints?: Array<{
-    lat: number;
-    lng: number;
-    name: string;
-    sym?: string;
-    desc?: string;
-  }>;
-  isFavorite: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-```
+### 2.2. ObjectStore: `kv`
+Almacén clave-valor auxiliar, sin `keyPath`. Se usa, entre otros casos, para conservar el borrador de grabación y sus bloques de puntos (`draft` y `draft:points:<índice>`), cachés locales y marcadores de sincronización pendientes como `pendingDeletes` y `pendingGroupRankingDeletes`. No equivale a una cola genérica de cambios.
 
-### 2.3. ObjectStore: `map_pois`
-Puntos de interés personales o guardados:
-```typescript
-interface MapPoiRecord {
-  id: string;
-  name: string;
-  category: 'water' | 'shelter' | 'danger' | 'viewpoint' | 'workshop' | 'generic';
-  lat: number;
-  lng: number;
-  ele?: number;
-  description?: string;
-  photoId?: string;
-  createdAt: number;
-}
-```
+### 2.3. ObjectStore: `routePhotos`
+Usa `routeId` como clave primaria. Guarda los blobs de fotos de los POI asociados a una ruta como elementos `{ index, photo }`; los metadatos de los POI permanecen en el registro de `routes`. La migración de la versión 1 a la 2 mueve los blobs existentes desde los registros de ruta a este store.
 
-### 2.4. ObjectStore: `bikes` y `components` (Módulo Garaje)
-```typescript
-interface BikeRecord {
-  id: string;
-  name: string;
-  type: 'xc' | 'trail' | 'enduro' | 'downhill' | 'gravel' | 'emtb';
-  weightKg?: number;
-  initialDistanceKm: number;     // Kilómetros previos antes de registrar en la app
-  totalDistanceKm: number;       // Kilómetros acumulados
-  totalHours: number;            // Horas acumuladas
-  photoUrl?: string;
-  active: boolean;
-  createdAt: number;
-}
+`activities`, `map_pois`, `bikes`, `components`, `emergency_contacts` y `sync_queue` **no son object stores** de esta base. Las actividades grabadas están representadas en `routes`; los POI personales se gestionan mediante PocketBase; el garaje y los contactos de seguridad se serializan en `localStorage`.
 
-interface BikeComponentRecord {
-  id: string;
-  bikeId: string;
-  type: 'chain' | 'front_tire' | 'rear_tire' | 'front_brake_pads' | 'rear_brake_pads' | 'fork' | 'rear_shock' | 'cassette';
-  name: string;
-  installedAtDate: number;
-  currentDistanceKm: number;
-  currentHours: number;
-  maxDistanceKmThreshold?: number; // Alerta de desgaste recomendada
-  maxHoursThreshold?: number;      // Alerta de mantenimiento horario (ej. suspensiones 50h/200h)
-  history: Array<{
-    date: number;
-    action: 'installed' | 'inspected' | 'serviced' | 'replaced';
-    cost?: number;
-    notes?: string;
-  }>;
-}
-```
+## 2.4. Otros datos locales
 
-### 2.5. ObjectStore: `emergency_contacts` (Guardian Mode)
-```typescript
-interface EmergencyContactRecord {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  isPrimary: boolean;
-}
-```
+`localStorage` conserva preferencias y algunos datos de funcionalidad, por ejemplo:
+* Garaje: `mtb_pro_garage` y `mtb_pro_garage_photo`.
+* Contactos de seguridad y estado de sincronización: `mtb_pro_safety_contacts` y `mtb_pro_safety_contacts_unsynced`.
+* Preferencias de navegación y seguimiento, además de marcas temporales y cursores de sincronización.
+
+El acceso a `localStorage` no está centralizado en `app/storage.js`; las claves se leen y escriben desde los módulos que las usan.
 
 ---
 
@@ -169,16 +47,19 @@ Las colecciones de PocketBase gestionan usuarios, sincronización y vida social 
 | Colección | Tipo | Regla de Acceso | Finalidad |
 | :--- | :--- | :--- | :--- |
 | `users` | Auth | Registro privado (`id = @request.auth.id`; el cliente no puede cambiar `groupCode`) | Apodo (máx. 32), peso (25–250 kg) y edad (10–100 años) del titular; avatar JPEG descargable por URL para mostrarlo en grupos. |
+| `mtb_user_preferences` | Base | Propietario autenticado (`owner = @request.auth.id`) | Preferencias JSON de la cuenta; un registro por propietario. |
 | `routes` | Base | Propietario (`owner = @request.auth.id`) | Copia de seguridad en la nube de rutas privadas. |
 | `map_pois` | Base | Propietario (`owner = @request.auth.id`) | Sincronización de puntos de interés personales. |
 | `live_locations` | Base | Miembros autorizados del mismo grupo | Ubicación efímera para seguimiento grupal; lecturas y escrituras requieren membresía vigente, y se purga automáticamente por `live_cleanup.pb.js`. |
 | `mtb_groups` | Base | Gestionado vía hooks `/api/mtb/groups/*` | Grupos privados de ciclistas, miembros y roles. |
 | `mtb_group_members` | Base | Gestionado vía hooks | Pertenencia y permisos de administración. |
 | `mtb_group_ranking_entries` | Base | Gestionado vía hooks | Resultados de actividades y clasificación del grupo. |
+| `mtb_group_challenges` | Base | Solo mediante hooks `/api/mtb/groups/*`; reglas directas deshabilitadas | Retos de grupo, métrica, objetivo y periodo. |
 | `community_routes` | Base | Lectura pública; escritura autenticada | Rutas comunitarias con comunidad autónoma, POIs y fotos (con recorte de 150 m en extremos para privacidad). El campo remoto `province` se conserva por compatibilidad. |
 | `community_route_favorites`, `community_route_ratings`, `community_route_comments` | Base | Lectura pública limitada a rutas publicadas; escritura autenticada propia | Favoritos, valoraciones y comentarios. |
 | `community_segments` | Base | Lectura pública; escritura autenticada | Trazados de segmentos competitivos. |
 | `community_route_efforts`, `community_segment_efforts` | Base | Lectura pública limitada a trazados publicados; escritura autenticada propia | Récord histórico por persona y segmento, sin pertenencia a grupo. El cliente compara salidas locales no importadas y solo publica apodo y tiempo; la base de datos impide empeorar un récord existente. |
+| `community_route_import_state` | Base | Sin acceso directo de cliente; uso interno del hook de importación | Firma y ruta de origen utilizadas para reconocer importaciones ya procesadas. |
 
 ---
 
