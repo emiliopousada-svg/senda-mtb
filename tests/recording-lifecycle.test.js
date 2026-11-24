@@ -105,6 +105,34 @@ function recordingFinishContext({ failingEffect, failDatabasePut = false, failSa
     return { context, calls, savedRoutes };
 }
 
+function draftRestoreContext(draft) {
+    const calls = [];
+    const context = vm.createContext({
+        DB: {
+            async kvGet(key) {
+                calls.push(['get', key]);
+                return draft;
+            },
+            async kvDel(key) {
+                calls.push(['delete', key]);
+            }
+        },
+        async modal() {
+            calls.push(['modal']);
+            return true;
+        }
+    });
+    const start = recordingSource.indexOf('function isDraftRecoverable(d) {');
+    const end = recordingSource.indexOf('\nif (typeof document', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${recordingSource.slice(start, end)}\nglobalThis.maybeRestoreDraft = maybeRestoreDraft;`,
+        context
+    );
+    return { context, calls };
+}
+
 for (const failingEffect of ['renderSavedRoutes', 'refreshStats', 'syncRoutes']) {
     test(`finishing a saved route still clears recording state if ${failingEffect} fails`, async () => {
         const { context, calls, savedRoutes } = recordingFinishContext({ failingEffect });
@@ -154,6 +182,14 @@ test('isDraftRecoverable validates raw draft objects before user recovery prompt
     assert.equal(isDraftRecoverable({ points: 'not an array' }), false);
     assert.equal(isDraftRecoverable({ points: [[NaN, -8.6]] }), false);
     assert.equal(isDraftRecoverable({ points: [[42.1, null]] }), false);
+    for (const totalDistance of ['12.5', 'corrupt', {}, -1, NaN, Infinity]) {
+        assert.equal(isDraftRecoverable({
+            totalDistance,
+            points: [[42.1, -8.6]]
+        }), false);
+    }
+    assert.equal(isDraftRecoverable({ points: [[42.1, -8.6]] }), true);
+    assert.equal(isDraftRecoverable({ totalDistance: null, points: [[42.1, -8.6]] }), true);
 
     assert.equal(isDraftRecoverable({
         startedAt: '2026-11-16T10:00:00Z',
@@ -163,6 +199,17 @@ test('isDraftRecoverable validates raw draft objects before user recovery prompt
             [42.236, -8.726, 125, 1700000005000, 148, null]
         ]
     }), true);
+});
+
+test('a draft with corrupt distance is discarded before prompting or restoring', async () => {
+    const { context, calls } = draftRestoreContext({
+        totalDistance: 'corrupt',
+        points: [[42.1, -8.6]]
+    });
+
+    await assert.doesNotReject(context.maybeRestoreDraft());
+
+    assert.deepEqual(calls, [['get', 'draft'], ['delete', 'draft']]);
 });
 
 test('buildSegments splits multi-segment tracks on pause breaks without cross-gap connection', () => {

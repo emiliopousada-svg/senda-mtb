@@ -960,7 +960,9 @@ function restoreDraft(d) {
 }
 
 function isDraftRecoverable(d) {
-    return !!(d && Array.isArray(d.points) && d.points.length > 0
+    const hasValidDistance = d && (d.totalDistance === undefined || d.totalDistance === null
+        || (Number.isFinite(d.totalDistance) && d.totalDistance >= 0));
+    return !!(hasValidDistance && Array.isArray(d.points) && d.points.length > 0
         && d.points.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])));
 }
 
