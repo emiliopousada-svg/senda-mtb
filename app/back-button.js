@@ -116,14 +116,29 @@ async function requestAppExit() {
             eyebrow: recording ? '● GRABACIÓN ACTIVA' : 'senda-mtb  •  CENTRO DE ACTIVIDAD',
             title: recording ? '¿Seguro que quieres salir?' : '¿Quieres salir de senda-mtb?',
             message: recording
-                ? 'La grabación sigue en curso. Si sales, podría interrumpirse y la ruta quedará sin finalizar.'
+                ? 'La ruta quedará sin finalizar. Se intentará guardar un borrador para que puedas recuperarla al volver.'
                 : 'Puedes volver cuando quieras.',
-            ok: recording ? 'Salir de todos modos' : 'Salir',
+            ok: recording ? 'Guardar borrador y salir' : 'Salir',
             cancel: recording ? 'Seguir grabando' : 'Seguir aquí',
             variant: 'exit',
             state: recording ? 'recording' : 'idle'
         });
         if (!confirmed) return;
+        if (recording && isRecording) {
+            toast('Guardando borrador antes de salir…', 10000);
+            let saved;
+            try {
+                saved = await saveDraft();
+            } catch (error) {
+                console.warn('No se pudo guardar el borrador antes de salir:', error);
+                toast('No se pudo guardar el borrador. La aplicación seguirá abierta para proteger la grabación. Libera espacio y vuelve a intentarlo.', 7000);
+                return;
+            }
+            if (!saved) {
+                toast('No se pudo guardar el borrador. La aplicación seguirá abierta para proteger la grabación. Libera espacio y vuelve a intentarlo.', 7000);
+                return;
+            }
+        }
         if (!window.MTBNativeApp || typeof window.MTBNativeApp.exitApp !== 'function') {
             throw new Error('No está disponible el cierre de la aplicación.');
         }

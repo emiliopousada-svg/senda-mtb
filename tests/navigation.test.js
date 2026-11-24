@@ -66,6 +66,72 @@ function navigationContext(offsets, widths) {
     return { context, swiper, elements, queryResults, queryOneResults };
 }
 
+function requestExitContext({ recording = true, confirmed = true, saveDraft = async () => true } = {}) {
+    const calls = [];
+    const toasts = [];
+    const start = backButtonSource.indexOf('let exitPromptOpen = false;');
+    const end = backButtonSource.indexOf('\nwindow.mtbRequestAppExit = requestAppExit;', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    const context = vm.createContext({
+        isRecording: recording,
+        async modal() {
+            calls.push('confirm');
+            return confirmed;
+        },
+        saveDraft() {
+            calls.push('save');
+            return saveDraft();
+        },
+        window: {
+            MTBNativeApp: {
+                async exitApp() { calls.push('exit'); }
+            }
+        },
+        toast: message => toasts.push(message),
+        console: { warn() {} }
+    });
+    vm.runInContext(
+        `${backButtonSource.slice(start, end)}\nglobalThis.requestAppExit = requestAppExit;`,
+        context
+    );
+    return { context, calls, toasts };
+}
+
+test('exiting during a recording waits for the draft write before native exit', async () => {
+    let resolveSave;
+    const { context, calls } = requestExitContext({
+        saveDraft: () => new Promise(resolve => { resolveSave = resolve; })
+    });
+
+    const exiting = context.requestAppExit();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(calls, ['confirm', 'save']);
+
+    resolveSave(true);
+    await exiting;
+    assert.deepEqual(calls, ['confirm', 'save', 'exit']);
+});
+
+test('exiting during a recording stays open if saving the draft fails', async () => {
+    for (const saveDraft of [async () => false, async () => { throw new Error('storage failed'); }]) {
+        const { context, calls, toasts } = requestExitContext({ saveDraft });
+
+        await context.requestAppExit();
+
+        assert.deepEqual(calls, ['confirm', 'save']);
+        assert.match(toasts[toasts.length - 1], /seguirá abierta/);
+    }
+});
+
+test('exiting while idle does not attempt to save a recording draft', async () => {
+    const { context, calls } = requestExitContext({ recording: false });
+
+    await context.requestAppExit();
+
+    assert.deepEqual(calls, ['confirm', 'exit']);
+});
+
 test('page navigation translates to each page actual offset', () => {
     const offsets = [0, 390, 780, 1170, 1560, 1950, 2340];
     const widths = [390, 390, 412, 390, 428, 390, 390];
