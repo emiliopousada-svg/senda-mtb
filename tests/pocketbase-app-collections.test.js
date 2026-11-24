@@ -86,6 +86,7 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     assert.match(routes.updateRule, /@request\.body\.owner = @request\.auth\.id/);
     assert.equal(routes.fields.getByName('owner').collectionId, users.id);
     assert.equal(routes.fields.getByName('track').required, true);
+    assert.equal(routes.fields.getByName('track').protected, true);
     assert.ok(users.fields.getByName('groupCode'));
 
     const communityRoutes = byName.get('community_routes');

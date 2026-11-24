@@ -69,6 +69,7 @@ migrate((app) => {
                 maxSelect: 1,
                 maxSize: 26214400,
                 mimeTypes: ["application/json"],
+                protected: true,
             },
         ],
         indexes: [
