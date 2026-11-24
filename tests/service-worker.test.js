@@ -111,6 +111,16 @@ test('service worker precaches every local script and stylesheet loaded by index
     assert.deepEqual(missing, [], `Faltan en SHELL_URLS de sw.js: ${missing.join(', ')}`);
 });
 
+test('cloud API and route sync load before cloud startup', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const apiIndex = html.indexOf('app/cloud-api.js');
+    const routeSyncIndex = html.indexOf('app/cloud-routes-sync.js');
+    const cloudIndex = html.indexOf('app/cloud.js');
+
+    assert.ok(apiIndex >= 0 && routeSyncIndex >= 0 && cloudIndex >= 0);
+    assert.ok(apiIndex < routeSyncIndex && routeSyncIndex < cloudIndex);
+});
+
 test('the CSP blocks inline and CDN scripts while keeping libraries local', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     const policy = html.match(/<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/i);

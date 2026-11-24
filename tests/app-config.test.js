@@ -11,11 +11,12 @@ const { resolveBuildEnvironment, applyBuildEnvironment } = require('../scripts/a
 const root = path.join(__dirname, '..');
 const configSource = fs.readFileSync(path.join(root, 'app', 'config.js'), 'utf8');
 const cloudSource = fs.readFileSync(path.join(root, 'app', 'cloud.js'), 'utf8');
+const cloudApiSource = fs.readFileSync(path.join(root, 'app', 'cloud-api.js'), 'utf8');
 
-// Carga config.js y normalizeServer() de cloud.js como lo haría el navegador.
+// Carga config.js y normalizeServer() como lo haría el navegador.
 function loadRuntime(configText) {
-    const normalizeServer = cloudSource.match(/function normalizeServer\(v\) \{[\s\S]*?\n\}/);
-    assert.ok(normalizeServer, 'normalizeServer() debe existir en app/cloud.js');
+    const normalizeServer = cloudApiSource.match(/function normalizeServer\(v\) \{[\s\S]*?\n\}/);
+    assert.ok(normalizeServer, 'normalizeServer() debe existir en app/cloud-api.js');
     const context = vm.createContext({ URL });
     vm.runInContext(`${configText}\n${normalizeServer[0]}\n;globalThis.out = { APP_CONFIG, DEFAULT_CLOUD_SERVER, normalizeServer };`, context);
     return context.out;
@@ -98,7 +99,7 @@ test('la inicialización recupera un servidor de PocketBase guardado no válido'
         }
     });
 
-    vm.runInContext(`${configSource}\n${initialization}\nglobalThis.__cloud = Cloud; globalThis.__serverWasReset = cloudServerWasResetOnLoad;`, context);
+    vm.runInContext(`${configSource}\n${cloudApiSource}\n${initialization}\nglobalThis.__cloud = Cloud; globalThis.__serverWasReset = cloudServerWasResetOnLoad;`, context);
 
     assert.equal(values.get('mtb_pro_server'), 'https://mtbpro.ddns.net');
     assert.equal(context.__cloud.loggedIn(), false);

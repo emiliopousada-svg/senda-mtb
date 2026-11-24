@@ -135,8 +135,8 @@ test('automatic scan only saves faster personal records and sends no activity tr
 });
 
 test('automatic scan is scheduled after downloaded routes are added to the library', () => {
-    const cloud = fs.readFileSync(path.join(__dirname, '..', 'app', 'cloud.js'), 'utf8');
-    assert.match(cloud, /if \(pulled > 0 && typeof communityScheduleAutomaticSegmentEffortScan === 'function'\)\s*\{\s*communityScheduleAutomaticSegmentEffortScan\(\);/);
+    const routeSync = fs.readFileSync(path.join(__dirname, '..', 'app', 'cloud-routes-sync.js'), 'utf8');
+    assert.match(routeSync, /if \(pulled > 0 && typeof communityScheduleAutomaticSegmentEffortScan === 'function'\)\s*\{\s*communityScheduleAutomaticSegmentEffortScan\(\);/);
 });
 
 test('automatic scan is scheduled after local route history is restored', () => {

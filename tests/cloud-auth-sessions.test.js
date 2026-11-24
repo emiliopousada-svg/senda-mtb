@@ -7,13 +7,21 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const cloudSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'cloud.js'), 'utf8');
+const cloudApiSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'cloud-api.js'), 'utf8');
+const routeSyncSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'cloud-routes-sync.js'), 'utf8');
 
-function sourceBetween(startMarker, endMarker) {
-    const start = cloudSource.indexOf(startMarker);
-    const end = cloudSource.indexOf(endMarker, start);
+function sourceBetween(startMarker, endMarker, source = cloudSource) {
+    const start = source.indexOf(startMarker);
+    const end = source.indexOf(endMarker, start);
     assert.notEqual(start, -1, `Missing source marker: ${startMarker}`);
     assert.notEqual(end, -1, `Missing source marker: ${endMarker}`);
-    return cloudSource.slice(start, end);
+    return source.slice(start, end);
+}
+
+function sourceFrom(startMarker, source) {
+    const start = source.indexOf(startMarker);
+    assert.notEqual(start, -1, `Missing source marker: ${startMarker}`);
+    return source.slice(start);
 }
 
 function cloudContext(cloudApi = async () => ({ record: { id: 'user-1' } })) {
@@ -104,12 +112,36 @@ function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fet
         let cloudSyncRetryGeneration = 0;
         globalThis.setSavedRoutes = routes => { savedRoutes = routes; };
         globalThis.getSavedRoutes = () => savedRoutes.slice();
-        ${sourceBetween('async function syncRoutes(', '\nfunction initSettings(')}
+        ${sourceBetween('async function flushPendingDeletes(', '\nlet syncing =', routeSyncSource)}
+        ${sourceFrom('async function syncRoutes(', routeSyncSource)}
         globalThis.syncRoutes = syncRoutes;`,
         context
     );
     context.setSavedRoutes(routes);
     return { context, cloud };
+}
+
+function pendingDeleteContext(initialPendingDeletes) {
+    let pendingDeletes = initialPendingDeletes.slice();
+    const writes = [];
+    const context = vm.createContext({
+        DB: {
+            async kvGet(key) {
+                assert.equal(key, 'pendingDeletes');
+                return pendingDeletes.slice();
+            },
+            async kvSet(key, value) {
+                writes.push({ key, value: Array.from(value) });
+                pendingDeletes = Array.from(value);
+            }
+        },
+        console: { warn() {} }
+    });
+    vm.runInContext(
+        `${sourceBetween('async function flushPendingDeletes(', '\nlet syncing =', routeSyncSource)}\nglobalThis.flushPendingDeletes = flushPendingDeletes;`,
+        context
+    );
+    return { context, writes, getPendingDeletes: () => pendingDeletes.slice() };
 }
 
 test('stale session restoration cannot replace a newer login', async () => {
@@ -372,7 +404,7 @@ test('cloud API requests can stay pinned to the server captured by a sync', asyn
         }
     });
     vm.runInContext(
-        sourceBetween('async function cloudApi(', '\nfunction normalizeServer('),
+        sourceBetween('async function cloudApi(', '\nfunction normalizeServer(', cloudApiSource),
         context
     );
 
@@ -403,7 +435,7 @@ test('cloud API authorization reads the token from the session storage abstracti
         }
     });
     vm.runInContext(
-        sourceBetween('async function cloudApi(', '\nfunction normalizeServer('),
+        sourceBetween('async function cloudApi(', '\nfunction normalizeServer(', cloudApiSource),
         context
     );
 
@@ -420,7 +452,7 @@ test('remote route pagination stops when the captured sync context changes', asy
         }
     });
     vm.runInContext(
-        sourceBetween('function cloudSyncStorageKey(', '\nfunction newestRemoteUpdate('),
+        sourceBetween('function cloudSyncStorageKey(', '\nfunction newestRemoteUpdate(', routeSyncSource),
         context
     );
     let current = true;
@@ -459,6 +491,70 @@ test('completed local route deletion updates memory before stopping a stale sync
     await context.syncRoutes();
 
     assert.deepEqual(Array.from(context.getSavedRoutes()), []);
+});
+
+test('pending route deletes clear successful and not-found entries', async () => {
+    const { context, writes, getPendingDeletes } = pendingDeleteContext(['deleted-route', 'already-gone']);
+    const requests = [];
+    const failures = [];
+
+    const skipped = await context.flushPendingDeletes({
+        isCurrentSync: () => true,
+        async syncCloudApi(path, method) {
+            requests.push({ path, method });
+            if (path.endsWith('/already-gone')) {
+                throw Object.assign(new Error('not found'), { status: 404 });
+            }
+        },
+        noteSyncFailure(...failure) { failures.push(failure); }
+    });
+
+    assert.deepEqual(requests.map(request => request.method), ['DELETE', 'DELETE']);
+    assert.deepEqual(getPendingDeletes(), []);
+    assert.deepEqual(writes, [{ key: 'pendingDeletes', value: [] }]);
+    assert.deepEqual(Array.from(skipped), ['deleted-route', 'already-gone']);
+    assert.deepEqual(failures, []);
+});
+
+test('pending route delete errors remain queued and are reported for retry', async () => {
+    const { context, writes, getPendingDeletes } = pendingDeleteContext(['retry-route']);
+    const failures = [];
+    const retryableError = Object.assign(new Error('server unavailable'), {
+        status: 503,
+        retryable: true
+    });
+
+    await context.flushPendingDeletes({
+        isCurrentSync: () => true,
+        async syncCloudApi() { throw retryableError; },
+        noteSyncFailure(...failure) { failures.push(failure); }
+    });
+
+    assert.deepEqual(getPendingDeletes(), ['retry-route']);
+    assert.deepEqual(writes, [{ key: 'pendingDeletes', value: ['retry-route'] }]);
+    assert.equal(failures.length, 1);
+    assert.equal(failures[0][1], retryableError);
+});
+
+test('pending route deletes stop without persisting when the session changes', async () => {
+    const pending = ['route-one', 'route-two'];
+    const { context, writes, getPendingDeletes } = pendingDeleteContext(pending);
+    let current = true;
+    let requestCount = 0;
+
+    const result = await context.flushPendingDeletes({
+        isCurrentSync: () => current,
+        async syncCloudApi() {
+            requestCount++;
+            current = false;
+        },
+        noteSyncFailure() {}
+    });
+
+    assert.equal(result, null);
+    assert.equal(requestCount, 1);
+    assert.deepEqual(getPendingDeletes(), pending);
+    assert.deepEqual(writes, []);
 });
 
 test('a full audit on another server does not delete a locally saved remote route', async () => {
@@ -586,6 +682,43 @@ test('a queued sync does not run for a different account after its delay', async
     queuedCallback();
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(inventoryCalls, 1);
+});
+
+test('a queued sync for the same account runs once after the current sync', async () => {
+    let resolveFirstInventory;
+    let signalFirstInventoryStarted;
+    let signalSecondRender;
+    let inventoryCalls = 0;
+    let renderCalls = 0;
+    const firstInventoryStarted = new Promise(resolve => { signalFirstInventoryStarted = resolve; });
+    const secondRender = new Promise(resolve => { signalSecondRender = resolve; });
+    const { context } = routeSyncContext({
+        fetchRemoteRoutes: () => {
+            inventoryCalls++;
+            if (inventoryCalls === 1) {
+                signalFirstInventoryStarted();
+                return new Promise(resolve => { resolveFirstInventory = resolve; });
+            }
+            return Promise.resolve({ records: [], fullAudit: true });
+        }
+    });
+    context.renderSavedRoutes = () => {
+        renderCalls++;
+        if (renderCalls === 2) signalSecondRender();
+    };
+    let queuedCallback;
+    context.setTimeout = callback => { queuedCallback = callback; return 1; };
+
+    const firstSync = context.syncRoutes();
+    await firstInventoryStarted;
+    await context.syncRoutes();
+    resolveFirstInventory({ records: [], fullAudit: true });
+    await firstSync;
+
+    assert.equal(typeof queuedCallback, 'function');
+    queuedCallback();
+    await secondRender;
+    assert.equal(inventoryCalls, 2);
 });
 
 test('registration uploads an optional compressed avatar with the account record', async () => {
@@ -846,7 +979,7 @@ test('logout clears local session state when the server already returned 401', a
     context.renderAccount = () => {};
     context.toast = () => {};
     vm.runInContext(
-        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nasync function putLocal(')}`,
+        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nfunction initSettings(')}`,
         context
     );
 
@@ -865,7 +998,7 @@ test('a late group stop does not clear a session created on another server', asy
     context.renderAccount = () => {};
     context.toast = () => {};
     vm.runInContext(
-        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nasync function putLocal(')}`,
+        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nfunction initSettings(')}`,
         context
     );
 
@@ -895,7 +1028,7 @@ test('only one logout can wait for group shutdown at a time', async () => {
     context.renderAccount = () => {};
     context.toast = () => {};
     vm.runInContext(
-        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nasync function putLocal(')}`,
+        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nfunction initSettings(')}`,
         context
     );
 
@@ -917,7 +1050,7 @@ test('a failed group shutdown leaves the local session intact', async () => {
     context.toast = () => {};
     context.console = { warn() {} };
     vm.runInContext(
-        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nasync function putLocal(')}`,
+        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nfunction initSettings(')}`,
         context
     );
 

@@ -46,6 +46,8 @@ const SHELL_URLS = [
   'app/tools.js',
   'app/ui.js',
   'lib/native-app.js',
+  'app/cloud-api.js',
+  'app/cloud-routes-sync.js',
   'app/cloud-preferences.js',
   'app/cloud.js',
   'app/profile.js',
