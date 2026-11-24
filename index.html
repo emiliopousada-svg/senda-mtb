@@ -476,7 +476,7 @@
             </div>
             <div class="card">
                 <h2>👥 Grupos y amigos (Live)</h2>
-                <p class="hint">Crea un grupo para administrarlo o únete con una invitación. La ubicación solo se comparte mientras grabas y formas parte del grupo.</p>
+                <p class="hint">Los grupos son opcionales: puedes grabar rutas y consultar tus estadísticas personales sin unirte a uno. Al unirte, compartir ubicación seguirá desactivado hasta que lo actives.</p>
                 <p class="hint">En el grupo se mostrará el apodo de tu cuenta.</p>
                 <div id="group-setup">
                     <input type="text" id="group-name" placeholder="Nombre del grupo" maxlength="40">
@@ -491,7 +491,14 @@
                 <div id="group-connected" style="display:none;margin-top:12px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                         <span style="display:flex;align-items:center;gap:9px;font-weight:700;"><span class="group-led" aria-hidden="true"></span><span id="group-connected-label">Grupo activo</span></span>
-                        <button class="btn-small secondary" id="btn-leave" type="button">Salir y conservar acceso</button>
+                        <button class="btn-small secondary" id="btn-leave" type="button">Salir del grupo</button>
+                    </div>
+                    <div id="group-sharing-controls" class="group-sharing-controls">
+                        <label class="setting-toggle" for="safety-group-sharing">
+                            <input type="checkbox" id="safety-group-sharing">
+                            <span><strong>Compartir mi ubicación en directo con este grupo</strong><span class="hint">Desactivado por defecto. Si lo activas, los miembros del grupo podrán ver tu posición mientras grabas. Puedes dejar de compartir sin salir del grupo.</span></span>
+                        </label>
+                        <p id="safety-group-status" class="hint" role="status" aria-live="polite"></p>
                     </div>
                     <details id="group-admin-panel" class="group-admin-panel" style="display:none;">
                         <summary class="group-admin-summary">Administrar grupo</summary>
@@ -1164,10 +1171,6 @@
                         <label class="setting-toggle" for="setting-large-controls">
                             <input type="checkbox" id="setting-large-controls">
                             <span><strong>Controles grandes y alto contraste</strong><span class="hint">Aumenta el tamaño y el contraste de los controles del mapa y de la navegación inferior.</span></span>
-                        </label>
-                        <label class="setting-toggle" for="safety-group-sharing">
-                            <input type="checkbox" id="safety-group-sharing">
-                            <span><strong>Compartir ubicación en directo con mi grupo mientras grabo</strong><span class="hint">Comparte tu posición con el grupo cuando estés grabando una ruta.</span></span>
                         </label>
                     </section>
                 </section>

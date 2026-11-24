@@ -635,5 +635,7 @@ test('recording requires a signed-in account with a nickname', () => {
     assert.equal(rideAccountRequirement(cloud(false, 'Emilio')), 'login');
     assert.equal(rideAccountRequirement(cloud(true, '')), 'nickname');
     assert.equal(rideAccountRequirement(cloud(true, '   ')), 'nickname');
-    assert.equal(rideAccountRequirement(cloud(true, 'Emilio')), null);
+    const privateAccount = cloud(true, 'Emilio');
+    assert.equal(privateAccount.groupCode, undefined);
+    assert.equal(rideAccountRequirement(privateAccount), null);
 });

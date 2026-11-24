@@ -237,6 +237,79 @@ test('disabling safety group tracking prevents live-location publishing and retr
     assert.equal(apiCalls, 0);
 });
 
+test('live-location publishing fails closed unless the safety opt-in is available', async () => {
+    const { context } = groupsContext();
+    let apiCalls = 0;
+    context.isRecording = true;
+    context.isPaused = false;
+    context.lastLat = 40;
+    context.lastLon = -3;
+    context.lastPositionAt = Date.now();
+    context.lastAccuracy = 5;
+    context.cloudApi = async () => { apiCalls++; };
+
+    await context.publishMyLocation(true);
+
+    assert.equal(apiCalls, 0);
+});
+
+test('explicit live-location opt-in publishes only the active group location', async () => {
+    const { context } = groupsContext();
+    const writes = [];
+    context.safetyGroupTrackingEnabled = () => true;
+    context.MAX_ACC_M = 100;
+    context.isRecording = true;
+    context.isPaused = false;
+    context.lastLat = 40;
+    context.lastLon = -3;
+    context.lastPositionAt = Date.now();
+    context.lastAccuracy = 5;
+    context.DB = {
+        async kvGet() { return null; },
+        async kvDel() {},
+        async kvSet() {}
+    };
+    context.refreshFriends = () => {};
+    context.cloudApi = async (url, method, payload) => {
+        if (method === 'POST') writes.push({ url, payload });
+        if (method === 'POST') return { id: 'location-1' };
+        if (url.includes('/api/collections/live_locations/records?')) return { items: [] };
+        throw new Error(`Unexpected request: ${url}`);
+    };
+
+    await context.publishMyLocation(true);
+
+    assert.equal(writes.length, 1);
+    assert.match(writes[0].url, /\/api\/collections\/live_locations\/records$/);
+    assert.equal(writes[0].payload.groupCode, 'group-1');
+    assert.equal(writes[0].payload.lat, 40);
+    assert.equal(writes[0].payload.lon, -3);
+});
+
+test('stopping location sharing finds and removes a server record after app restart', async () => {
+    const { context } = groupsContext();
+    const requests = [];
+    context.DB = {
+        async kvDel() {},
+        async kvGet() { return null; },
+        async kvSet() {}
+    };
+    context.cloudApi = async (url, method = 'GET') => {
+        requests.push({ url, method });
+        if (url.includes('/api/collections/live_locations/records?')) {
+            return { items: [{ id: 'old-location' }] };
+        }
+        if (method === 'DELETE') return {};
+        throw new Error(`Unexpected request: ${url}`);
+    };
+
+    assert.equal(await context.removeMyLiveLocation(), true);
+    assert.equal(requests.length, 2);
+    assert.match(requests[0].url, /owner%20%3D%20%22current-user%22/);
+    assert.equal(requests[1].url, '/api/collections/live_locations/records/old-location');
+    assert.equal(requests[1].method, 'DELETE');
+});
+
 test('selecting a group stops before changing pending state when the account changes', async () => {
     const { context, cloud, storage } = groupsContext();
     context.removeMyLiveLocation = async () => {};

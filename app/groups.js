@@ -27,6 +27,16 @@ let groupInfo = null, groupChoices = [];
 
 function groupName() { return Cloud.groupCode || ''; }
 
+function groupLocationSharingEnabled() {
+    return typeof safetyGroupTrackingEnabled === 'function' && safetyGroupTrackingEnabled();
+}
+
+function disableGroupLocationSharing() {
+    return typeof safetySetGroupTracking === 'function'
+        ? safetySetGroupTracking(false)
+        : removeMyLiveLocation();
+}
+
 function reportPendingLiveLocationStorageError(error) {
     console.warn('No se pudo guardar la posición pendiente del grupo:', error);
     $('group-status').textContent = 'No se pudo guardar la posición pendiente; se reintentará mientras la aplicación siga abierta.';
@@ -319,9 +329,12 @@ function renderGroupState(connected) {
     $('group-status').textContent = connected
         ? !groupSyncAvailable ? 'Grupo guardado en este dispositivo. Se sincronizará al recuperar conexión.'
             : !Cloud.nickname ? 'Añade un apodo a tu cuenta para identificarte en el grupo.'
-                : (isRecording && !isPaused ? 'Grupo activo: compartiendo tu posición.' : 'Tu posición se compartirá cuando grabes.')
+                : groupLocationSharingEnabled()
+                    ? (isRecording && !isPaused ? 'Ubicación en directo activada para este grupo.' : 'Ubicación activada; se compartirá al grabar.')
+                    : 'Grupo activo. Ubicación en directo desactivada; puedes ver estadísticas sin compartirla.'
         : !Cloud.nickname ? 'Añade un apodo a tu cuenta antes de entrar en un grupo.'
-            : 'Puedes volver a entrar en tus grupos autorizados. El administrador puede revocar el acceso.';
+            : 'Puedes volver a entrar en tus grupos autorizados. Los grupos son opcionales para grabar rutas y consultar tus estadísticas personales.';
+    if (typeof safetyRender === 'function') safetyRender();
     if (connected && groupInfo && groupInfo.isAdmin) loadAdminMembers();
 }
 
@@ -330,13 +343,14 @@ function liveLocationContextKey() {
 }
 
 async function stopGroup() {
+    const stopSharing = disableGroupLocationSharing();
     groupJoined = false;
     groupSyncAvailable = false;
     groupInfo = null;
     if (typeof clearCommunityLeagueForGroupChange === 'function') clearCommunityLeagueForGroupChange();
     localStorage.removeItem('mtb_pro_group_joined');
     if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
-    await removeMyLiveLocation();
+    await stopSharing;
     renderGroupState(false);
     renderFriends();
     if (currentPage === 2) await loadGroupRankings();
@@ -369,6 +383,9 @@ async function loadMyGroup() {
     if (!isCurrent()) return null;
     groupChoices = Array.isArray(result.groups) ? result.groups : [];
     const activeId = result.activeGroupId || '';
+    if (previousGroupJoined && previousGroupId && activeId !== previousGroupId) {
+        await disableGroupLocationSharing();
+    }
     groupInfo = groupChoices.find(group => group.id === activeId) || null;
     // PocketBase es la fuente de verdad. La marca local solo era una caché y
     // puede desaparecer al actualizar/reinstalar la app aunque siga la membresía.
@@ -457,7 +474,7 @@ async function selectGroup(groupId) {
         const switchingActiveGroup = groupJoined && groupName() !== groupId;
         if (switchingActiveGroup) {
             if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
-            await removeMyLiveLocation();
+            await disableGroupLocationSharing();
             if (!isCurrent()) return;
         }
         await cloudApi('/api/mtb/groups/select', 'POST', { groupId }, { server });
@@ -771,7 +788,7 @@ async function refreshFriends(retryAuth = true, ownsPending = false) {
     }
 }
 async function publishMyLocation(force = false) {
-    if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+    if (!groupLocationSharingEnabled()
         || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused || lastLat === null || lastLon === null
         || !Number.isFinite(lastLat) || lastLat < -90 || lastLat > 90
         || !Number.isFinite(lastLon) || lastLon < -180 || lastLon > 180
@@ -784,7 +801,7 @@ async function publishMyLocation(force = false) {
         return;
     }
     await loadPendingLiveLocation();
-    if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+    if (!groupLocationSharingEnabled()
         || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused) return;
     if (!pendingLiveLocation && !force && Date.now() - lastLivePush < LIVE_INTERVAL_MS && navigator.onLine) return;
     const snapshot = updatePendingLiveLocation(nickname);
@@ -810,7 +827,7 @@ async function publishMyLocation(force = false) {
 }
 
 async function retryPendingLiveLocation() {
-    if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+    if (!groupLocationSharingEnabled()
         || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused || !navigator.onLine) return;
     if (liveLocationRetryIsBlocked()) return;
     await loadPendingLiveLocation();
@@ -833,7 +850,7 @@ async function retryPendingLiveLocation() {
 }
 
 async function sendPendingLiveLocation(snapshot) {
-    if (typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled()) {
+    if (!groupLocationSharingEnabled()) {
         await removeMyLiveLocation();
         return;
     }
@@ -842,7 +859,7 @@ async function sendPendingLiveLocation(snapshot) {
     try {
         try { await persistPendingLiveLocation(); }
         catch (error) { reportPendingLiveLocationStorageError(error); }
-        if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+        if (!groupLocationSharingEnabled()
             || !groupJoined || !Cloud.loggedIn() || !isRecording || isPaused
             || groupName() !== snapshot.groupCode || Cloud.uid !== snapshot.ownerId) {
             await removeMyLiveLocation();
@@ -866,7 +883,7 @@ async function sendPendingLiveLocation(snapshot) {
             const rec = await cloudApi('/api/collections/live_locations/records', 'POST', payload);
             myLiveRecordId = rec.id;
         }
-        if ((typeof safetyGroupTrackingEnabled === 'function' && !safetyGroupTrackingEnabled())
+        if (!groupLocationSharingEnabled()
             || !groupJoined || !isRecording || isPaused || groupName() !== snapshot.groupCode || Cloud.uid !== snapshot.ownerId) {
             await removeMyLiveLocation();
             return;
@@ -896,7 +913,7 @@ async function sendPendingLiveLocation(snapshot) {
                 ? `Error al compartir ubicaci\u00f3n: ${e.message}. Se reintentar\u00e1 autom\u00e1ticamente.`
                 : 'Sin conexi\u00f3n: la posici\u00f3n m\u00e1s reciente queda pendiente y se reintentar\u00e1 al recuperar cobertura.'
             : `No se pudo compartir la posici\u00f3n: ${e.message}. Se detuvieron los reintentos autom\u00e1ticos.`;
-        if ((typeof safetyGroupTrackingEnabled !== 'function' || safetyGroupTrackingEnabled())
+        if (groupLocationSharingEnabled()
             && groupJoined && Cloud.loggedIn() && isRecording && !isPaused
             && groupName() === snapshot.groupCode && Cloud.uid === snapshot.ownerId) {
             if (willRetry) {
@@ -917,15 +934,47 @@ async function sendPendingLiveLocation(snapshot) {
 }
 
 async function removeMyLiveLocation() {
-    try { await clearPendingLiveLocation(); }
-    catch (error) { reportPendingLiveLocationStorageError(error); }
+    const server = Cloud.server;
+    const ownerId = Cloud.uid;
+    const activeGroup = groupJoined ? groupName() : '';
     const id = myLiveRecordId;
     myLiveRecordId = null;
-    if (id && Cloud.loggedIn()) {
-        try { await cloudApi(`/api/collections/live_locations/records/${id}`, 'DELETE'); }
-        catch (e) { console.warn('No se pudo retirar la posición:', e); }
+    let removed = true;
+    try { await clearPendingLiveLocation(); }
+    catch (error) {
+        reportPendingLiveLocationStorageError(error);
+        removed = false;
+    }
+    let recordId = id;
+    if (!recordId && activeGroup && Cloud.loggedIn()) {
+        try {
+            const filter = encodeURIComponent(`owner = "${ownerId}" && groupCode = "${activeGroup}"`);
+            const result = await cloudApi(
+                `/api/collections/live_locations/records?filter=${filter}&perPage=1`,
+                'GET',
+                null,
+                { server }
+            );
+            if (Cloud.server !== server || Cloud.uid !== ownerId) return false;
+            recordId = result.items && result.items[0] ? result.items[0].id : null;
+        } catch (error) {
+            if (error.status !== 404) {
+                console.warn('No se pudo buscar la última posición del grupo:', error);
+                removed = false;
+            }
+        }
+    }
+    if (recordId && Cloud.loggedIn() && Cloud.server === server && Cloud.uid === ownerId) {
+        try { await cloudApi(`/api/collections/live_locations/records/${recordId}`, 'DELETE', null, { server }); }
+        catch (error) {
+            if (error.status !== 404) {
+                console.warn('No se pudo retirar la posición:', error);
+                removed = false;
+            }
+        }
     }
     renderFriends();
+    return removed;
 }
 
 async function connectGroup(action) {
@@ -1072,17 +1121,17 @@ async function leaveGroupLocally() {
     const generation = Cloud.authGeneration;
     const isCurrent = () => Cloud.loggedIn() && Cloud.server === server
         && Cloud.uid === uid && Cloud.authGeneration === generation;
+    const stopSharing = disableGroupLocationSharing();
     localStorage.setItem(key, JSON.stringify({ groupId, uid: Cloud.uid, queuedAt: Date.now() }));
     groupJoined = false;
     groupSyncAvailable = false;
     if (typeof clearCommunityLeagueForGroupChange === 'function') clearCommunityLeagueForGroupChange();
     Cloud.invalidateProfileReads();
-    try { await clearPendingLiveLocation(); }
+    try { await stopSharing; }
     catch (error) { reportPendingLiveLocationStorageError(error); }
     if (!isCurrent()) return;
     if (groupInfo && !groupChoices.some(group => group.id === groupId)) groupChoices.push(groupInfo);
     groupInfo = null;
-    myLiveRecordId = null;
     localStorage.removeItem('mtb_pro_group_joined');
     localStorage.removeItem('mtb_pro_group_code');
     if (friendsTimer) { clearInterval(friendsTimer); friendsTimer = null; }
