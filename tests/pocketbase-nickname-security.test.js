@@ -8,18 +8,21 @@ const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 
-function loadNicknameHooks() {
+function loadNicknameHooks(matches = [], expectedNicknameKey) {
     const handlers = {};
     const context = vm.createContext({
         BadRequestError: class BadRequestError extends Error {},
         $app: {
             findRecordsByFilter(collection, filter, sort, limit, offset, params) {
                 assert.equal(collection, 'users');
-                assert.equal(filter, 'id != {:id} && nickname:lower = {:nickname}');
+                assert.equal(filter, 'id != {:id} && nicknameKey = {:nicknameKey}');
                 assert.equal(sort, '');
                 assert.equal(limit, 1);
                 assert.equal(offset, 0);
-                return params.matches || [];
+                if (expectedNicknameKey !== undefined) {
+                    assert.equal(params.nicknameKey, expectedNicknameKey);
+                }
+                return matches;
             }
         },
         onRecordCreateRequest(handler, collection) {
@@ -41,6 +44,7 @@ function loadNicknameHooks() {
 function makeRecord(values, isNew) {
     const original = { ...values };
     return {
+        id: 'user123',
         values,
         isNew: () => isNew,
         original: () => ({ getString: (name) => String(original[name] || '') }),
@@ -58,6 +62,18 @@ test('non-superusers cannot claim SENDA-MTB with different casing', () => {
     };
 
     assert.throws(() => hooks.create(event), /reservado/);
+});
+
+test('nickname uniqueness normalizes Unicode before checking collisions', () => {
+    const hooks = loadNicknameHooks([{}], 'álex');
+    const event = {
+        record: makeRecord({ nickname: 'Álex' }, true),
+        hasSuperuserAuth: () => false,
+        next() { assert.fail('normalized duplicate nickname should be rejected'); }
+    };
+
+    assert.throws(() => hooks.create(event), /ya está en uso/);
+    assert.equal(event.record.values.nicknameKey, 'álex');
 });
 
 test('superusers can assign the reserved nickname', () => {
@@ -123,6 +139,118 @@ test('nickname index migration adds and removes a case-insensitive unique index'
     down(app);
     assert.deepEqual(users.indexes, ['CREATE INDEX idx_users_email ON users (email)']);
     assert.equal(saveCount, 2);
+});
+
+test('Unicode nickname migration backfills normalized keys and replaces the ASCII index', () => {
+    let up;
+    let down;
+    const records = [
+        {
+            id: 'user-one',
+            values: { nickname: 'Álex' },
+            getString(name) { return String(this.values[name] || ''); },
+            set(name, value) { this.values[name] = value; }
+        },
+        {
+            id: 'user-two',
+            values: { nickname: 'SENDA-MTB' },
+            getString(name) { return String(this.values[name] || ''); },
+            set(name, value) { this.values[name] = value; }
+        }
+    ];
+    const fields = [
+        { name: 'nickname', type: () => 'text' }
+    ];
+    const users = {
+        fields: {
+            getByName(name) { return fields.find((field) => field.name === name) || null; },
+            add(field) { fields.push(field); },
+            removeByName(name) {
+                const index = fields.findIndex((field) => field.name === name);
+                if (index >= 0) fields.splice(index, 1);
+            }
+        },
+        indexes: [
+            'CREATE INDEX idx_users_email ON users (email)',
+            "CREATE UNIQUE INDEX idx_users_nickname_lower ON users (lower(nickname)) WHERE nickname != ''"
+        ]
+    };
+    const app = {
+        findCollectionByNameOrId(name) {
+            assert.equal(name, 'users');
+            return users;
+        },
+        findAllRecords(name) {
+            assert.equal(name, 'users');
+            return records;
+        },
+        save() {}
+    };
+    const context = vm.createContext({
+        TextField: class {
+            constructor(options) { Object.assign(this, options); }
+            type() { return 'text'; }
+        },
+        migrate(upCallback, downCallback) {
+            up = upCallback;
+            down = downCallback;
+        }
+    });
+    vm.runInContext(
+        fs.readFileSync(path.join(root, 'pb_migrations', '1794836008_unicode_nickname_uniqueness.js'), 'utf8'),
+        context
+    );
+
+    up(app);
+    assert.equal(records[0].values.nicknameKey, 'álex');
+    assert.equal(records[1].values.nicknameKey, 'senda-mtb');
+    assert.equal(users.fields.getByName('nicknameKey').hidden, true);
+    assert.deepEqual(users.indexes, [
+        'CREATE INDEX idx_users_email ON users (email)',
+        'CREATE UNIQUE INDEX idx_users_nickname_key ON users (nicknameKey) WHERE nicknameKey != \'\''
+    ]);
+
+    down(app);
+    assert.equal(users.fields.getByName('nicknameKey'), null);
+    assert.deepEqual(users.indexes, [
+        'CREATE INDEX idx_users_email ON users (email)',
+        "CREATE UNIQUE INDEX idx_users_nickname_lower ON users (lower(nickname)) WHERE nickname != ''"
+    ]);
+});
+
+test('Unicode nickname migration aborts when existing records collide after normalization', () => {
+    let up;
+    const records = [
+        { id: 'user-one', getString: () => 'Álex' },
+        { id: 'user-two', getString: () => 'álex' }
+    ];
+    const fields = [{ name: 'nickname', type: () => 'text' }];
+    const users = {
+        fields: {
+            getByName(name) { return fields.find((field) => field.name === name) || null; },
+            add(field) { fields.push(field); }
+        },
+        indexes: []
+    };
+    const app = {
+        findCollectionByNameOrId: () => users,
+        findAllRecords: () => records,
+        save() { assert.fail('migration must detect collisions before saving changes'); }
+    };
+    const context = vm.createContext({
+        TextField: class {
+            constructor(options) { Object.assign(this, options); }
+            type() { return 'text'; }
+        },
+        migrate(upCallback) { up = upCallback; }
+    });
+    vm.runInContext(
+        fs.readFileSync(path.join(root, 'pb_migrations', '1794836008_unicode_nickname_uniqueness.js'), 'utf8'),
+        context
+    );
+
+    assert.throws(() => up(app), /colliding nicknames/);
+    assert.equal(users.fields.getByName('nicknameKey'), null);
 });
 
 function runImporter(ownerId) {

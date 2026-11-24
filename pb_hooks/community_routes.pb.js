@@ -75,7 +75,7 @@ function indexCommunityRouteBounds(e) {
         const bytes = [];
         try {
             while (bytes.length < size) {
-                const chunk = new Array(Math.min(8192, size - bytes.length)).fill(0);
+                const chunk = new Uint8Array(Math.min(8192, size - bytes.length));
                 const count = reader.read(chunk);
                 if (!Number.isInteger(count) || count <= 0 || count > chunk.length) {
                     throw new BadRequestError("No se pudo verificar la foto.");

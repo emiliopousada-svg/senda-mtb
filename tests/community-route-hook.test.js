@@ -198,6 +198,7 @@ function jpegFile(bytes) {
             open() {
                 return {
                     read(buffer) {
+                        assert.equal(ArrayBuffer.isView(buffer), true);
                         const count = Math.min(buffer.length, bytes.length - offset);
                         for (let i = 0; i < count; i++) buffer[i] = bytes[offset++];
                         return count;
