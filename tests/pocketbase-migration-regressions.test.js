@@ -25,6 +25,10 @@ function loadMigration(fileName) {
             constructor(definition) { Object.assign(this, definition); }
             type() { return 'number'; }
         },
+        BoolField: class {
+            constructor(definition) { Object.assign(this, definition); }
+            type() { return 'bool'; }
+        },
         RelationField: class {
             constructor(definition) { Object.assign(this, definition); }
             type() { return 'relation'; }
@@ -247,5 +251,61 @@ test('community route access migration requires an account and restores prior ru
         assert.equal(collection.listRule, previousRules[name], name);
         assert.equal(collection.viewRule, previousRules[name], name);
     }
+});
+
+test('published community route track migration creates a hidden persistent lock', () => {
+    const migration = loadMigration('1794836014_lock_published_community_route_tracks.js');
+    const fields = [];
+    const collection = {
+        fields: {
+            getByName(name) { return fields.find(field => field.name === name) || null; },
+            add(field) {
+                field.id = field.name;
+                fields.push(field);
+            },
+            removeById(id) {
+                const index = fields.findIndex(field => field.id === id);
+                if (index >= 0) fields.splice(index, 1);
+            }
+        }
+    };
+    const records = [
+        {
+            id: 'existing-route',
+            locked: false,
+            getBool(name) { return name === 'trackLocked' && this.locked; },
+            set(name, value) { if (name === 'trackLocked') this.locked = value; }
+        }
+    ];
+    let collectionSaves = 0;
+    let recordSaves = 0;
+    const app = {
+        findCollectionByNameOrId(name) {
+            assert.equal(name, 'community_routes');
+            return collection;
+        },
+        findRecordsByFilter(name, filter, sort, limit, offset) {
+            assert.equal(name, 'community_routes');
+            assert.equal(filter, 'id != ""');
+            return offset === 0 ? records : [];
+        },
+        save(value) {
+            if (value === collection) collectionSaves++;
+            else recordSaves++;
+        }
+    };
+
+    migration.up(app);
+
+    assert.equal(fields.length, 1);
+    assert.equal(fields[0].name, 'trackLocked');
+    assert.equal(fields[0].hidden, true);
+    assert.equal(records[0].locked, true);
+    assert.equal(collectionSaves, 1);
+    assert.equal(recordSaves, 1);
+
+    migration.down(app);
+    assert.equal(fields.length, 0);
+    assert.equal(collectionSaves, 2);
 });
 

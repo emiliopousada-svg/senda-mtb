@@ -17,8 +17,15 @@ function indexCommunityRouteBounds(e) {
     if (!nickname) throw new BadRequestError("Configura un apodo antes de publicar rutas.");
     if (!internalWrite) e.record.set("createdBy", nickname);
 
-    const shouldTrimTrack = e.record.isNew()
-        || e.record.getString("trackJson") !== e.record.original().getString("trackJson");
+    const originalRecord = e.record.isNew() ? null : e.record.original();
+    const shouldTrimTrack = !originalRecord
+        || e.record.getString("trackJson") !== originalRecord.getString("trackJson");
+    const trackLocked = Boolean(originalRecord
+        && (originalRecord.getBool("trackLocked") || originalRecord.getBool("published")));
+    if (originalRecord && shouldTrimTrack && trackLocked) {
+        throw new BadRequestError("El trazado no se puede modificar después de publicar la ruta.");
+    }
+    e.record.set("trackLocked", trackLocked || e.record.getBool("published"));
     const communityRouteTrimMeters = 150;
     const communityRouteMaxPhotoBytes = 614400;
 
