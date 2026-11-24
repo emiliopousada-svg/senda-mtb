@@ -15,7 +15,6 @@ const METRICS = {
     'avg-speed': { src: 'm-avg-speed', label: 'Velocidad media', unit: 'km/h', color: '#55baff' },
     moving: { src: 'm-moving',   label: 'Tiempo en movimiento', unit: '' },
     'map-total-time': { src: 'm-time', label: 'Tiempo total', unit: '' },
-    'map-altitude': { src: 'map-panel-altitude', label: 'Altitud', unit: 'm' },
     'map-distance': { src: 'm-dist', label: 'Distancia', unit: 'km' },
     'map-cadence': { src: 'm-cadence', label: 'Cadencia', unit: 'rpm', color: '#48c7a0' },
     'map-heart-rate': { src: 'm-hr', label: 'Pulso', unit: 'ppm', color: '#ef5350' }

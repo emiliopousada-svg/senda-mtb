@@ -69,7 +69,7 @@ test('cloud preferences reject invalid values and fill safe defaults', () => {
     assert.equal(preferences.weeklyGoalKm, 100);
     assert.equal(preferences.maxHeartRate, null);
     assert.equal(preferences.ftpWatts, null);
-    assert.deepEqual(preferences.recordingVisibleMetrics, ['map-total-time', 'map-heart-rate', 'map-altitude', 'map-cadence']);
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['map-total-time', 'map-heart-rate', 'map-cadence']);
     assert.equal(Object.hasOwn(preferences, 'dashboardCardOrder'), false);
     assert.equal(Object.hasOwn(preferences, 'adminToken'), false);
 });
@@ -82,8 +82,8 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
         weeklyGoalKm: 50,
         maxHeartRate: 190,
         ftpWatts: 250,
-        recordingMetricOrder: ['map-altitude', 'map-altitude', 'unknown'],
-        recordingVisibleMetrics: ['map-altitude', 'unknown', 'map-altitude']
+        recordingMetricOrder: ['map-altitude', 'map-cadence', 'map-altitude', 'unknown'],
+        recordingVisibleMetrics: ['map-altitude', 'map-cadence', 'unknown', 'map-altitude']
     });
 
     assert.equal(preferences.routeSound, false);
@@ -92,9 +92,8 @@ test('cloud preferences preserve valid false values and normalize ordered lists'
     assert.equal(preferences.weeklyGoalKm, 50);
     assert.equal(preferences.maxHeartRate, 190);
     assert.equal(preferences.ftpWatts, 250);
-    assert.equal(preferences.recordingMetricOrder[0], 'map-altitude');
-    assert.equal(preferences.recordingMetricOrder.length, 4);
-    assert.deepEqual(preferences.recordingVisibleMetrics, ['map-altitude', 'map-cadence']);
+    assert.deepEqual(preferences.recordingMetricOrder, ['map-cadence', 'map-total-time', 'map-heart-rate']);
+    assert.deepEqual(preferences.recordingVisibleMetrics, ['map-cadence']);
 });
 
 test('cloud preferences retain only supported map metrics', () => {
@@ -102,7 +101,7 @@ test('cloud preferences retain only supported map metrics', () => {
         recordingMetricOrder: ['map-total-time', 'speed', 'map-distance'],
         recordingVisibleMetrics: ['map-total-time', 'speed', 'map-distance']
     });
-    assert.deepEqual(preferences.recordingMetricOrder, ['map-total-time', 'map-heart-rate', 'map-altitude', 'map-cadence']);
+    assert.deepEqual(preferences.recordingMetricOrder, ['map-total-time', 'map-heart-rate', 'map-cadence']);
     assert.deepEqual(preferences.recordingVisibleMetrics, ['map-total-time', 'map-cadence']);
     assert.equal(preferences.recordingMetricOrder.includes('speed'), false);
 });

@@ -7,10 +7,10 @@ const CLOUD_PREFERENCES_DEBOUNCE_MS = 700;
 const CLOUD_PREFERENCES_RETRY_INITIAL_MS = 5000;
 const CLOUD_PREFERENCES_RETRY_MAX_MS = 60000;
 const CLOUD_PREFERENCE_RECORDING_METRICS = [
-    'map-total-time', 'map-heart-rate', 'map-altitude', 'map-cadence'
+    'map-total-time', 'map-heart-rate', 'map-cadence'
 ];
 const CLOUD_PREFERENCE_DEFAULT_VISIBLE_METRICS = [
-    'map-total-time', 'map-heart-rate', 'map-altitude', 'map-cadence'
+    'map-total-time', 'map-heart-rate', 'map-cadence'
 ];
 const DEFAULT_CLOUD_PREFERENCES = {
     version: 2,

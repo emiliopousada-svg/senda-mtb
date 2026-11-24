@@ -401,14 +401,6 @@ function setBtnState(s) {
         if (typeof mapSideControlsScheduleAutoCollapse === 'function') mapSideControlsScheduleAutoCollapse();
     }
     $('btn-route-photo').hidden = s === 'idle';
-    if (s !== 'idle') recordingUpdateMapAltitude();
-}
-
-function recordingUpdateMapAltitude() {
-    const samples = points.slice(-240).filter(point => Array.isArray(point) && Number.isFinite(point[2]));
-    const latest = samples.at(-1);
-    const mapAltitude = $('map-panel-altitude');
-    if (mapAltitude) mapAltitude.textContent = latest ? Math.round(latest[2]).toString() : '--';
 }
 
 function autoPauseMovementThreshold(accuracy) {
@@ -670,7 +662,86 @@ async function ensureRideAccount() {
     return false;
 }
 
+const MAP_RECORDING_HOLD_MS = 3000;
+const MAP_RECORDING_HOLD_MOVE_THRESHOLD_PX = 12;
+
+function bindMapRecordingHold(button) {
+    let holdTimer = null;
+    let activePointerId = null;
+    let pointerStart = null;
+    let activeKeyboardKey = null;
+    let suppressKeyboardClick = false;
+
+    const clearHold = () => {
+        if (holdTimer !== null) {
+            window.clearTimeout(holdTimer);
+            holdTimer = null;
+        }
+        button.classList.remove('is-holding');
+    };
+    const startHold = () => {
+        if (holdTimer !== null) return;
+        button.classList.add('is-holding');
+        holdTimer = window.setTimeout(() => {
+            holdTimer = null;
+            button.classList.remove('is-holding');
+            button.click();
+        }, MAP_RECORDING_HOLD_MS);
+    };
+    const finishPointer = event => {
+        if (activePointerId !== event.pointerId) return;
+        activePointerId = null;
+        pointerStart = null;
+        clearHold();
+    };
+
+    button.addEventListener('pointerdown', event => {
+        if (event.isPrimary === false || event.button !== 0 || button.disabled || holdTimer !== null) return;
+        activePointerId = event.pointerId;
+        pointerStart = [event.clientX, event.clientY];
+        button.setPointerCapture(event.pointerId);
+        startHold();
+    });
+    button.addEventListener('pointermove', event => {
+        if (activePointerId !== event.pointerId || !pointerStart) return;
+        const dx = event.clientX - pointerStart[0];
+        const dy = event.clientY - pointerStart[1];
+        if (dx * dx + dy * dy > MAP_RECORDING_HOLD_MOVE_THRESHOLD_PX ** 2) finishPointer(event);
+    });
+    button.addEventListener('pointerup', finishPointer);
+    button.addEventListener('pointercancel', finishPointer);
+    button.addEventListener('lostpointercapture', finishPointer);
+    button.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        if (event.repeat || activeKeyboardKey || holdTimer !== null || button.disabled) return;
+        activeKeyboardKey = event.key;
+        suppressKeyboardClick = true;
+        startHold();
+    });
+    button.addEventListener('keyup', event => {
+        if (activeKeyboardKey !== event.key) return;
+        event.preventDefault();
+        activeKeyboardKey = null;
+        clearHold();
+        window.setTimeout(() => { suppressKeyboardClick = false; }, 0);
+    });
+    button.addEventListener('blur', () => {
+        activeKeyboardKey = null;
+        activePointerId = null;
+        pointerStart = null;
+        clearHold();
+    });
+    button.addEventListener('contextmenu', event => event.preventDefault());
+    button.addEventListener('click', event => {
+        if (!event.isTrusted || (event.detail === 0 && !suppressKeyboardClick)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }, true);
+}
+
 if (typeof btnStart !== 'undefined' && btnStart) {
+    bindMapRecordingHold(btnStart);
     btnStart.addEventListener('click', async () => {
         if (!isRecording) {
             if (!(await ensureRideAccount())) return;
@@ -682,6 +753,7 @@ if (typeof btnStart !== 'undefined' && btnStart) {
 }
 
 if (typeof btnStop !== 'undefined' && btnStop) {
+    bindMapRecordingHold(btnStop);
     btnStop.addEventListener('click', async () => {
         const ok = await modal({ message: '¿Finalizar y guardar esta ruta?', ok: 'Guardar', cancel: 'Seguir grabando' });
         if (ok) await finishRecording();
@@ -968,7 +1040,6 @@ function restoreDraft(d) {
         if (index > 0 && p[5] === 1) elev.reset();
         elev.add(p[2]);
     });
-    recordingUpdateMapAltitude();
     segments = buildSegments(points);
     isRecording = true;
     isPaused = true;

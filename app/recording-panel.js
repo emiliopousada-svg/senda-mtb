@@ -6,7 +6,6 @@ const RECORDING_PANEL_SCHEMA_KEY = 'mtb_pro_recording_panel_schema';
 const RECORDING_PANEL_METRICS = [
     { id: 'map-total-time', label: 'Tiempo total' },
     { id: 'map-heart-rate', label: 'Pulso' },
-    { id: 'map-altitude', label: 'Altitud' },
     { id: 'map-cadence', label: 'Cadencia' }
 ];
 let recordingPanelPreferences = RECORDING_PANEL_METRICS.map(metric => metric.id);
@@ -27,7 +26,7 @@ function applyRecordingPanelPreferences() {
         document.querySelector(`.m-box[data-metric="${id}"]`)?.dataset.metricVisible !== 'false'
     );
     const count = Math.max(1, visible.length);
-    // Panel inferior del mapa: hasta 5 métricas en una fila; con más, dos filas equilibradas.
+    // Distribuye las métricas visibles en una fila o en dos filas equilibradas.
     const columns = count <= 5 ? count : Math.ceil(count / 2);
     bar.style.setProperty('--recording-metric-columns', String(columns));
     recordingPanelPreferences.forEach((id, index) => {

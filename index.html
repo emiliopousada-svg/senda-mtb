@@ -142,11 +142,6 @@
                         <div class="m-val" style="color: #ef5350;"><span id="m-hr">--</span><small> ppm</small></div>
                         <div class="m-lbl">PULSACIONES</div>
                     </div>
-                    <div class="map-live-stat m-box" data-metric="map-altitude" role="button">
-                        <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2.5 19 7-12 4.1 6.3 2.4-3.8L22 19z"></path><path d="m7.2 19 2.3-3.9 2.5 3.9"></path></svg></span>
-                        <div class="m-val"><span id="map-panel-altitude">--</span><small> m</small></div>
-                        <div class="m-lbl">ALTITUD</div>
-                    </div>
                     <div class="map-live-stat m-box" data-metric="map-cadence" role="button">
                         <span class="map-live-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"></circle><path d="M12 9.8 8.5 5.5M12 14.2l4.2 4.2M9.8 12H4"></path><circle cx="7.1" cy="4.2" r="1.5"></circle><circle cx="17.8" cy="19.5" r="1.5"></circle></svg></span>
                         <div class="m-val"><span id="m-cadence">--</span><small> rpm</small></div>
@@ -154,14 +149,16 @@
                     </div>
                 </div>
                 <div class="controls-overlay map-recording-actions">
-                    <button class="btn-main-action" id="btn-start" type="button">
+                    <button class="btn-main-action" id="btn-start" type="button" title="Mantén pulsado 3 segundos para iniciar, pausar o reanudar">
                         <span id="ico-start" aria-hidden="true">▶</span> <span id="lbl-start">Iniciar actividad</span>
+                        <span class="map-recording-hold-progress" aria-hidden="true"></span>
                     </button>
                     <button class="map-follow-route-button" id="btn-follow-route" type="button" aria-label="Seguir una ruta">
                         <span class="map-route-action-icon" id="btn-follow-route-icon" aria-hidden="true">↗</span>
                         <span id="btn-follow-route-label">Seguir ruta</span>
                     </button>
-                    <button class="btn-icon-only btn-danger-stop" id="btn-stop" type="button" title="Finalizar ruta" aria-label="Finalizar ruta" hidden><span aria-hidden="true">⚑</span><span class="map-stop-label">Finalizar</span></button>
+                    <button class="btn-icon-only btn-danger-stop" id="btn-stop" type="button" title="Mantén pulsado 3 segundos para finalizar la ruta" aria-label="Finalizar ruta" hidden><span aria-hidden="true">⚑</span><span class="map-stop-label">Finalizar</span><span class="map-recording-hold-progress" aria-hidden="true"></span></button>
+                    <p class="map-recording-hold-hint">Mantén pulsado 3 segundos para iniciar, pausar, reanudar o finalizar la grabación.</p>
                 </div>
                 </div>
             </div>

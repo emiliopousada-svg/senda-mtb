@@ -221,6 +221,17 @@ test('collapsing the map panel keeps ride metrics visible and hides its actions'
     assert.doesNotMatch(css, /#page-map\.panel-collapsed[^}]*\.map-bottom-panel\s*\{[^}]*opacity:0/);
 });
 
+test('map lower panel omits altitude and centers the remaining metric values', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.css'), 'utf8');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    assert.doesNotMatch(html, /data-metric="map-altitude"|id="map-panel-altitude"/);
+    assert.match(html, /data-metric="map-total-time"[\s\S]*data-metric="map-heart-rate"[\s\S]*data-metric="map-cadence"/);
+    assert.match(css, /\.map-bottom-panel \.map-live-stat\s*\{[^}]*align-items:center;[^}]*justify-content:center;[^}]*text-align:center;/);
+    assert.match(css, /\.map-bottom-panel \.map-live-stat \.m-val,\.map-bottom-panel \.map-live-stat \.m-lbl\s*\{[^}]*width:100%;[^}]*text-align:center;/);
+    assert.match(css, /\.map-bottom-panel \.metrics-bar\s*\{[^}]*repeat\(var\(--recording-metric-columns,3\)/);
+    assert.match(css, /#page-map\.panel-collapsed \.map-bottom-panel \.metrics-bar\s*\{[^}]*repeat\(3,minmax\(0,1fr\)\)/);
+});
+
 test('collapsed map panel contributes to the map stack height', () => {
     const styles = new Map();
     const observers = [];

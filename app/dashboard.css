@@ -957,26 +957,26 @@ input:focus,select:focus,textarea:focus { border-color:rgba(22,140,255,.75); out
 .cockpit-title-caption::after { transform:scaleX(-1); }
 .cockpit-status-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin-bottom:13px; }
 .cockpit-state,.cockpit-status-chip { display:inline-flex; min-height:30px; align-items:center; gap:7px; padding:0 11px; border:1px solid rgba(255,255,255,.09); border-radius:999px; background:#171c24; color:#b8c2ce; font-size:.68rem; font-weight:700; }
-.cockpit-state::before { width:7px; height:7px; border-radius:50%; background:#87909b; content:""; }
+.cockpit-state::before { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#87909b; box-shadow:0 0 0 3px rgba(135,144,155,.12); content:""; }
 .cockpit-state[data-state="recording"] { border-color:rgba(53,209,122,.3); color:#83e3ab; }
-.cockpit-state[data-state="recording"]::before { background:#35d17a; box-shadow:0 0 0 4px rgba(53,209,122,.15),0 0 12px rgba(53,209,122,.55); }
+.cockpit-state[data-state="recording"]::before { background:#35d17a; box-shadow:0 0 0 5px rgba(53,209,122,.15),0 0 14px rgba(53,209,122,.55); }
 .cockpit-state[data-state="paused"] { color:#ffd27b; }
-.cockpit-state[data-state="paused"]::before { background:#ffc34d; box-shadow:0 0 0 4px rgba(255,195,77,.12); }
+.cockpit-state[data-state="paused"]::before { background:#ffc34d; box-shadow:0 0 0 5px rgba(255,195,77,.12); }
 .cockpit-status-chip.ready { color:#83e3ab; }
-#cockpit-gps-status::before { width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:#596574; content:""; }
+#cockpit-gps-status::before { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#596574; content:""; }
 #cockpit-gps-status[data-gps-quality="1"] { border-color:rgba(255,101,101,.35); color:#ff8585; box-shadow:0 0 9px rgba(255,101,101,.14); }
 #cockpit-gps-status[data-gps-quality="2"] { border-color:rgba(255,184,77,.35); color:#ffc66f; box-shadow:0 0 9px rgba(255,184,77,.12); }
 #cockpit-gps-status[data-gps-quality="3"] { border-color:rgba(215,213,75,.35); color:#e4e184; box-shadow:0 0 9px rgba(215,213,75,.1); }
 #cockpit-gps-status[data-gps-quality="4"] { border-color:rgba(53,209,122,.35); color:#83e3ab; box-shadow:0 0 9px rgba(53,209,122,.12); }
-#cockpit-gps-status[data-gps-quality="1"]::before { background:#ff6565; box-shadow:0 0 7px rgba(255,101,101,.75); }
-#cockpit-gps-status[data-gps-quality="2"]::before { background:#ffb84d; box-shadow:0 0 7px rgba(255,184,77,.65); }
-#cockpit-gps-status[data-gps-quality="3"]::before { background:#d7d54b; box-shadow:0 0 7px rgba(215,213,75,.6); }
-#cockpit-gps-status[data-gps-quality="4"]::before { background:#35d17a; box-shadow:0 0 7px rgba(53,209,122,.7); }
+#cockpit-gps-status[data-gps-quality="1"]::before { background:#ff6565; box-shadow:0 0 9px rgba(255,101,101,.75); }
+#cockpit-gps-status[data-gps-quality="2"]::before { background:#ffb84d; box-shadow:0 0 9px rgba(255,184,77,.65); }
+#cockpit-gps-status[data-gps-quality="3"]::before { background:#d7d54b; box-shadow:0 0 9px rgba(215,213,75,.6); }
+#cockpit-gps-status[data-gps-quality="4"]::before { background:#35d17a; box-shadow:0 0 9px rgba(53,209,122,.7); }
 .cockpit-status-chip.connected { border-color:rgba(53,209,122,.24); color:#83e3ab; }
-.cockpit-connectivity-icon { width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:#7f8a98; }
-.cockpit-status-chip.connected .cockpit-connectivity-icon { background:#35d17a; box-shadow:0 0 0 3px rgba(53,209,122,.13); }
+.cockpit-connectivity-icon { width:10px; height:10px; flex:0 0 10px; border-radius:50%; background:#7f8a98; }
+.cockpit-status-chip.connected .cockpit-connectivity-icon { background:#35d17a; box-shadow:0 0 0 4px rgba(53,209,122,.13); }
 .cockpit-status-chip.offline { color:#ffb47d; }
-.cockpit-status-chip.offline .cockpit-connectivity-icon { background:#ff9858; box-shadow:0 0 0 3px rgba(255,152,88,.13); }
+.cockpit-status-chip.offline .cockpit-connectivity-icon { background:#ff9858; box-shadow:0 0 0 4px rgba(255,152,88,.13); }
 .cockpit-trip-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
 .cockpit-summary-card,.cockpit-speed-panel { border:1px solid rgba(255,255,255,.075); border-radius:15px; background:linear-gradient(145deg,rgba(28,34,43,.98),rgba(17,21,28,.98)); box-shadow:0 12px 28px rgba(0,0,0,.14); }
 .cockpit-summary-card { min-width:0; min-height:82px; display:flex; flex-direction:column; justify-content:center; gap:7px; padding:13px 15px; }
@@ -1052,6 +1052,8 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
     .cockpit-summary-card strong { font-size:1.16rem; }
     .cockpit-status-row { gap:3px; }
     .cockpit-state,.cockpit-status-chip { min-height:27px; padding:0 4px; font-size:.52rem; }
+    .cockpit-state::before,#cockpit-gps-status::before { width:8px; height:8px; flex-basis:8px; }
+    .cockpit-connectivity-icon { width:9px; height:9px; flex-basis:9px; }
     .cockpit-oled-toggle { min-height:27px; gap:3px; padding:0 5px; font-size:.54rem; }
     .cockpit-oled-toggle strong { padding:2px 3px; font-size:.48rem; }
 }
@@ -1351,8 +1353,9 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 .map-live-metric strong small { color:#c0c6cf; font-size:.48em; font-weight:600; }
 .map-live-metric > span:last-child { color:#aeb5bf; font-size:clamp(.55rem,2.5vw,.72rem); }
 .map-bottom-panel { bottom:calc(env(safe-area-inset-bottom,0px) + 78px); padding:12px; gap:12px; border-radius:25px; background:rgba(7,9,10,.94); box-shadow:0 -6px 32px rgba(0,0,0,.42); }
-.map-bottom-panel .metrics-bar { display:grid; grid-template-columns:repeat(var(--recording-metric-columns,4),minmax(0,1fr)); gap:0; }
+.map-bottom-panel .metrics-bar { display:grid; grid-template-columns:repeat(var(--recording-metric-columns,3),minmax(0,1fr)); gap:0; }
 .map-bottom-panel .map-live-stat { display:flex; min-width:0; min-height:82px; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; }
+.map-bottom-panel .map-live-stat .m-val,.map-bottom-panel .map-live-stat .m-lbl { width:100%; text-align:center; }
 .map-bottom-panel .map-live-stat[hidden] { display:none; }
 .map-live-stat-icon { display:grid; width:23px; height:23px; place-items:center; margin-bottom:1px; color:#dce1e7; }
 .map-live-stat-icon svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
@@ -1367,6 +1370,11 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 .map-recording-actions #btn-start,.map-recording-actions #btn-follow-route,.map-recording-actions #btn-stop { display:flex; width:auto; min-width:0; min-height:58px; height:auto; align-items:center; justify-content:center; gap:10px; border-radius:999px; font-size:clamp(.78rem,3.5vw,1rem); font-weight:800; }
 .map-recording-actions #btn-stop[hidden],.map-recording-actions #btn-follow-route[hidden] { display:none; }
 .map-recording-actions #btn-start { border:2px solid #ff9d22; color:#fff; background:linear-gradient(100deg,rgba(83,45,9,.88),rgba(20,15,10,.96)); box-shadow:inset 0 0 20px rgba(255,151,27,.15); }
+.map-recording-actions #btn-start,.map-recording-actions #btn-stop { position:relative; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+.map-recording-hold-progress { position:absolute; z-index:1; right:10px; bottom:4px; left:10px; height:3px; border-radius:99px; background:currentColor; opacity:0; pointer-events:none; transform:scaleX(0); transform-origin:left center; }
+.map-recording-actions #btn-start.is-holding .map-recording-hold-progress,.map-recording-actions #btn-stop.is-holding .map-recording-hold-progress { opacity:.9; animation:map-recording-hold-fill 3s linear forwards; }
+@keyframes map-recording-hold-fill { to { transform:scaleX(1); } }
+.map-recording-hold-hint { grid-column:1/-1; margin:-3px 0 0; color:#aab5c3; font-size:.62rem; line-height:1.25; text-align:center; }
 .map-recording-actions #btn-start.recording { border-color:#ff9d22; color:#fff; background:linear-gradient(100deg,rgba(83,45,9,.88),rgba(20,15,10,.96)); }
 .map-recording-actions #ico-start { color:#ff741d; font-size:1.45rem; font-weight:900; letter-spacing:-.1em; }
 .map-recording-actions #btn-follow-route { border:1px solid rgba(92,174,255,.55); color:#eaf5ff; background:linear-gradient(120deg,rgba(24,66,94,.96),rgba(15,30,43,.98)); box-shadow:0 8px 22px rgba(0,0,0,.2); }
@@ -1480,7 +1488,7 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
     }
     #page-map .map-bottom-panel-content {
         display:grid;
-        grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(220px,33vw) minmax(0,1fr) minmax(0,1fr);
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(220px,33vw) minmax(0,1fr);
         align-items:center;
         gap:3px;
     }
@@ -1508,7 +1516,6 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
         grid-template-columns:repeat(3,minmax(0,1fr));
     }
     #page-map .map-bottom-panel .metrics-bar .map-live-stat:nth-child(3) { grid-column:4; grid-row:1; }
-    #page-map .map-bottom-panel .metrics-bar .map-live-stat:nth-child(4) { grid-column:5; grid-row:1; }
     #page-map .map-recording-actions #btn-start,
     #page-map .map-recording-actions #btn-follow-route,
     #page-map .map-recording-actions #btn-stop {
@@ -1523,7 +1530,7 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 #page-map.panel-collapsed .map-bottom-panel-content { display:flex; }
 #page-map.panel-collapsed .map-bottom-panel .metrics-bar {
     display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
+    grid-template-columns:repeat(3,minmax(0,1fr));
     flex:1 1 auto;
 }
 #page-map.panel-collapsed .map-bottom-panel .controls-overlay { display:none !important; }

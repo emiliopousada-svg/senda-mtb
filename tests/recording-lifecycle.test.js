@@ -195,6 +195,75 @@ function recordingWakeContext() {
     return { context, calls };
 }
 
+function recordingHoldContext() {
+    const listeners = new Map();
+    const classes = new Set();
+    const timers = new Map();
+    let nextTimerId = 1;
+    const button = {
+        disabled: false,
+        classList: {
+            add(name) { classes.add(name); },
+            remove(name) { classes.delete(name); },
+            contains(name) { return classes.has(name); }
+        },
+        addEventListener(type, handler, options) {
+            const entries = listeners.get(type) || [];
+            entries.push({ handler, capture: options === true || Boolean(options && options.capture) });
+            listeners.set(type, entries);
+        },
+        setPointerCapture(pointerId) { this.capturedPointerId = pointerId; },
+        dispatch(type, values = {}) {
+            const event = {
+                type,
+                pointerId: 1,
+                button: 0,
+                clientX: 0,
+                clientY: 0,
+                key: '',
+                repeat: false,
+                isPrimary: true,
+                detail: 1,
+                isTrusted: true,
+                defaultPrevented: false,
+                immediatePropagationStopped: false,
+                preventDefault() { this.defaultPrevented = true; },
+                stopImmediatePropagation() { this.immediatePropagationStopped = true; },
+                ...values
+            };
+            const entries = [...(listeners.get(type) || [])].sort((a, b) => Number(b.capture) - Number(a.capture));
+            for (const { handler } of entries) {
+                handler.call(this, event);
+                if (event.immediatePropagationStopped) break;
+            }
+            return event;
+        },
+        click() { this.dispatch('click', { detail: 0, isTrusted: false }); }
+    };
+    const context = vm.createContext({
+        window: {
+            setTimeout(callback, delay) {
+                const id = nextTimerId++;
+                timers.set(id, { callback, delay });
+                return id;
+            },
+            clearTimeout(id) { timers.delete(id); }
+        }
+    });
+    const start = recordingSource.indexOf('const MAP_RECORDING_HOLD_MS = 3000;');
+    const end = recordingSource.indexOf('\nif (typeof btnStart', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${recordingSource.slice(start, end)}\nglobalThis.bindMapRecordingHold = bindMapRecordingHold;`,
+        context
+    );
+    context.bindMapRecordingHold(button);
+    const activations = { count: 0 };
+    button.addEventListener('click', () => { activations.count++; });
+    return { button, timers, activations };
+}
+
 for (const failingEffect of ['renderSavedRoutes', 'refreshStats', 'syncRoutes']) {
     test(`finishing a saved route still clears recording state if ${failingEffect} fails`, async () => {
         const { context, calls, savedRoutes } = recordingFinishContext({ failingEffect });
@@ -335,6 +404,60 @@ test('recording acquires native screen-on state and releases it on pause or fini
         ['native', false],
         ['releaseWebWakeLock']
     ]);
+});
+
+test('map recording tap is canceled before the three-second hold completes', () => {
+    const { button, timers, activations } = recordingHoldContext();
+    button.dispatch('pointerdown', { pointerId: 7 });
+
+    assert.deepEqual([...timers.values()].map(timer => timer.delay), [3000]);
+    button.dispatch('pointerup', { pointerId: 7 });
+    const click = button.dispatch('click', { detail: 1 });
+
+    assert.equal(timers.size, 0);
+    assert.equal(activations.count, 0);
+    assert.equal(click.defaultPrevented, true);
+});
+
+test('map recording hold cancels when the pointer moves away from the button', () => {
+    const { button, timers, activations } = recordingHoldContext();
+    button.dispatch('pointerdown', { pointerId: 5, clientX: 10, clientY: 10 });
+    button.dispatch('pointermove', { pointerId: 5, clientX: 23, clientY: 10 });
+
+    assert.equal(timers.size, 0);
+    assert.equal(activations.count, 0);
+});
+
+test('map recording action activates once after a full hold and ignores pointer release click', () => {
+    const { button, timers, activations } = recordingHoldContext();
+    button.dispatch('pointerdown', { pointerId: 3 });
+    const [timerId, timer] = [...timers.entries()][0];
+    assert.equal(timer.delay, 3000);
+
+    timers.delete(timerId);
+    timer.callback();
+    button.dispatch('pointerup', { pointerId: 3 });
+    const click = button.dispatch('click', { detail: 1 });
+
+    assert.equal(activations.count, 1);
+    assert.equal(click.defaultPrevented, true);
+});
+
+test('map recording hold supports keyboard input and leaves programmatic clicks available', () => {
+    const { button, timers, activations } = recordingHoldContext();
+    button.click();
+    assert.equal(activations.count, 1);
+
+    const keydown = button.dispatch('keydown', { key: 'Enter' });
+    assert.equal(keydown.defaultPrevented, true);
+    const [timerId, timer] = [...timers.entries()].find(([, value]) => value.delay === 3000);
+    timers.delete(timerId);
+    timer.callback();
+    button.dispatch('keyup', { key: 'Enter' });
+    const keyboardClick = button.dispatch('click', { detail: 0 });
+
+    assert.equal(activations.count, 2);
+    assert.equal(keyboardClick.defaultPrevented, true);
 });
 
 test('buildSegments splits multi-segment tracks on pause breaks without cross-gap connection', () => {
