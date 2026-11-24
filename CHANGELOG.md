@@ -5,6 +5,16 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.40] - 2026-11-24
+
+### Añadido
+* **POI del mapa:** límite de 500 puntos por propietario, protegido también por un trigger atómico de PocketBase frente a creaciones concurrentes.
+
+### Mejorado
+* **Sincronización de rutas:** sincronización de tracks privados y sus metadatos, incluidos descripción, POI y fotos; se valida el tamaño de los tracks y se renuevan los tokens de descarga cuando hace falta.
+* **Grabación:** los borradores se guardan en bloques y se validan al recuperar, mejorando la fiabilidad de recuperación y del guardado al salir.
+* **Seguimiento y estabilidad:** mejoras en el control de pantalla activa, las estadísticas y el almacenamiento local.
+
 ## [0.2.37] - 2026-11-23
 
 ### Añadido
