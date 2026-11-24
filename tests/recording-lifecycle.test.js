@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 
 const {
     bearingBetween,
@@ -21,6 +24,127 @@ const {
     isDraftRecoverable,
     rideAccountRequirement
 } = require('../app/recording.js');
+
+const recordingSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'recording.js'), 'utf8');
+
+function recordingFinishContext({ failingEffect, failDatabasePut = false, failSafetyCleanup = false } = {}) {
+    const calls = [];
+    const savedRoutes = [];
+    const context = vm.createContext({
+        DB: {
+            async put(route) {
+                calls.push(['put', route]);
+                if (failDatabasePut) throw new Error('storage full');
+            },
+            async kvDel() { calls.push(['clearDraft']); }
+        },
+        points: [
+            [42.1, -8.6, 100, 1000, 120, null],
+            [42.2, -8.7, 105, 2000, 122, null]
+        ],
+        totalDistance: 1,
+        routeNameWithoutActivity: route => route.name,
+        fmtDate: () => '2026-11-24',
+        promptRequiredRouteName: async () => 'Test route',
+        routePhotoProcessing: null,
+        movingMs: 1000,
+        segStart: null,
+        startedAt: '2026-11-24T10:00:00Z',
+        isRecording: true,
+        isPaused: false,
+        recordingActivityType: 'mtb',
+        elev: { gain: 10 },
+        getRouteNickname: () => 'Rider',
+        followedRoute: null,
+        recordingPois: [],
+        routeActivityPrefix: () => '',
+        fmtDur: () => '1 min',
+        savedRoutes,
+        toast: message => calls.push(['toast', message]),
+        console: { warn: (...args) => calls.push(['warn', ...args]) },
+        navigator: { vibrate: null },
+        localStorage: { getItem: () => '0' },
+        communityScheduleAutomaticSegmentEffortScan() {},
+        garageRouteSaved: () => true,
+        renderSavedRoutes() {
+            calls.push(['renderSavedRoutes']);
+            if (failingEffect === 'renderSavedRoutes') throw new Error('render failed');
+        },
+        refreshStats() {
+            calls.push(['refreshStats']);
+            if (failingEffect === 'refreshStats') throw new Error('stats failed');
+        },
+        syncRoutes() {
+            calls.push(['syncRoutes']);
+            if (failingEffect === 'syncRoutes') return Promise.reject(new Error('sync failed'));
+        },
+        safetyOnRecordingStopped: async () => {
+            calls.push(['safetyStopped']);
+            if (failSafetyCleanup) throw new Error('safety cleanup failed');
+        },
+        safetyRender: () => calls.push(['safetyRender']),
+        refreshGpsMode: () => calls.push(['refreshGpsMode']),
+        resetAutoPauseState: () => calls.push(['resetAutoPauseState']),
+        stopTimers: () => calls.push(['stopTimers']),
+        stopRideAdvisories: () => calls.push(['stopRideAdvisories']),
+        releaseWake: () => calls.push(['releaseWake']),
+        stopBgWatcher: () => calls.push(['stopBgWatcher']),
+        removeMyLiveLocation: () => calls.push(['removeLiveLocation']),
+        setBtnState: state => calls.push(['button', state]),
+        $: () => ({ textContent: '' }),
+        clearDraft: async () => calls.push(['clearDraft']),
+        saveDraft: () => calls.push(['saveDraft']),
+        download: async () => {},
+        routeToGpx: () => ''
+    });
+    const start = recordingSource.indexOf('async function finishRecording() {');
+    const end = recordingSource.indexOf('\n// --- Borrador:', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(recordingSource.slice(start, end), context);
+    return { context, calls, savedRoutes };
+}
+
+for (const failingEffect of ['renderSavedRoutes', 'refreshStats', 'syncRoutes']) {
+    test(`finishing a saved route still clears recording state if ${failingEffect} fails`, async () => {
+        const { context, calls, savedRoutes } = recordingFinishContext({ failingEffect });
+
+        await assert.doesNotReject(context.finishRecording());
+        await new Promise(resolve => setImmediate(resolve));
+
+        assert.equal(savedRoutes.length, 1);
+        assert.equal(context.isRecording, false);
+        assert.equal(context.isPaused, false);
+        assert.ok(calls.some(([name]) => name === 'stopBgWatcher'));
+        assert.ok(calls.some(([name]) => name === 'clearDraft'));
+        assert.ok(calls.some(([name, value]) => name === 'button' && value === 'idle'));
+        assert.ok(calls.some(([name]) => name === 'warn'));
+    });
+}
+
+test('a cleanup error does not prevent clearing the draft after saving', async () => {
+    const { context, calls } = recordingFinishContext({ failSafetyCleanup: true });
+
+    await assert.doesNotReject(context.finishRecording());
+
+    assert.equal(context.isRecording, false);
+    assert.equal(context.isPaused, false);
+    assert.ok(calls.some(([name]) => name === 'clearDraft'));
+    assert.ok(calls.some(([name, value]) => name === 'button' && value === 'idle'));
+    assert.ok(calls.some(([name]) => name === 'warn'));
+});
+
+test('a storage failure preserves the paused recording and draft for retry', async () => {
+    const { context, calls, savedRoutes } = recordingFinishContext({ failDatabasePut: true });
+
+    await assert.doesNotReject(context.finishRecording());
+
+    assert.equal(savedRoutes.length, 0);
+    assert.equal(context.isRecording, true);
+    assert.equal(context.isPaused, true);
+    assert.ok(calls.some(([name]) => name === 'saveDraft'));
+    assert.equal(calls.some(([name]) => name === 'clearDraft'), false);
+});
 
 test('isDraftRecoverable validates raw draft objects before user recovery prompt', () => {
     assert.equal(isDraftRecoverable(null), false);

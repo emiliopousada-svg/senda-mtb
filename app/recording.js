@@ -688,58 +688,89 @@ async function finishRecording() {
     }
     if (segStart) { movingMs += Date.now() - segStart; segStart = null; }
     const sec = Math.round(movingMs / 1000);
-    if (hasRoute) {
-        isPaused = true;
-        resetAutoPauseState();
-        stopTimers();
-        stopRideAdvisories();
-        releaseWake();
-        stopBgWatcher();
-        removeMyLiveLocation();
-        setBtnState('paused');
-        $('m-speed').textContent = '0.0';
-    }
-    if (hasRoute) {
-        const hrs = points.map(p => p[4]).filter(h => Number.isFinite(h) && h > 0);
-        const route = {
-            id: Date.now(),
-            kind: 'recorded',
-            activityType: recordingActivityType,
-            name: `${routeActivityPrefix(recordingActivityType)}${routeName}`,
-            createdBy: (typeof getRouteNickname === 'function' && getRouteNickname()) || 'Usuario local',
-            startedAt,
-            movingTimeSec: sec,
-            distanceKm: +totalDistance.toFixed(3),
-            elevationGain: Math.round(elev.gain),
-            hrAvg: hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : null,
-            followedImportedRoute: followedRoute && followedRoute.kind === 'imported' ? followedRoute.name : null,
-            pois: recordingPois.slice(),
-            points
-        };
-        if (!await saveRoute(route)) {
-            saveDraft();
-            toast('La ruta sigue en pausa. Libera espacio y vuelve a intentar guardarla; también puedes exportarla como GPX.');
-            return;
+    let routeSaved = !hasRoute;
+    try {
+        if (hasRoute) {
+            isPaused = true;
+            resetAutoPauseState();
+            stopTimers();
+            stopRideAdvisories();
+            releaseWake();
+            stopBgWatcher();
+            removeMyLiveLocation();
+            setBtnState('paused');
+            $('m-speed').textContent = '0.0';
+            const hrs = points.map(p => p[4]).filter(h => Number.isFinite(h) && h > 0);
+            const route = {
+                id: Date.now(),
+                kind: 'recorded',
+                activityType: recordingActivityType,
+                name: `${routeActivityPrefix(recordingActivityType)}${routeName}`,
+                createdBy: (typeof getRouteNickname === 'function' && getRouteNickname()) || 'Usuario local',
+                startedAt,
+                movingTimeSec: sec,
+                distanceKm: +totalDistance.toFixed(3),
+                elevationGain: Math.round(elev.gain),
+                hrAvg: hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : null,
+                followedImportedRoute: followedRoute && followedRoute.kind === 'imported' ? followedRoute.name : null,
+                pois: recordingPois.slice(),
+                points
+            };
+            if (!await saveRoute(route)) {
+                saveDraft();
+                toast('La ruta sigue en pausa. Libera espacio y vuelve a intentar guardarla; también puedes exportarla como GPX.');
+                return;
+            }
+            routeSaved = true;
+            toast(`✅ Ruta guardada: ${route.distanceKm.toFixed(2)} km · ${fmtDur(sec)} · +${route.elevationGain} m`, 5000);
+        } else {
+            toast('La ruta es muy corta y no se ha guardado.');
         }
-        toast(`✅ Ruta guardada: ${route.distanceKm.toFixed(2)} km · ${fmtDur(sec)} · +${route.elevationGain} m`, 5000);
-    } else {
-        toast('La ruta es muy corta y no se ha guardado.');
+    } finally {
+        if (routeSaved) {
+            const cleanupFailures = [];
+            const runCleanup = async (label, action) => {
+                try {
+                    await action();
+                } catch (error) {
+                    cleanupFailures.push(label);
+                    console.warn(`No se pudo completar ${label} al finalizar la ruta:`, error);
+                }
+            };
+            isRecording = false;
+            isPaused = false;
+            await runCleanup('detener la protección de grabación', async () => {
+                if (typeof safetyOnRecordingStopped === 'function') await safetyOnRecordingStopped();
+            });
+            await runCleanup('actualizar la protección de grabación', async () => {
+                if (typeof safetyRender === 'function') safetyRender();
+            });
+            await runCleanup('emitir la vibración de finalización', async () => {
+                if (navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') {
+                    navigator.vibrate([70, 45, 130]);
+                }
+            });
+            await runCleanup('actualizar el modo GPS', refreshGpsMode);
+            await runCleanup('restablecer la pausa automática', resetAutoPauseState);
+            await runCleanup('detener los temporizadores', stopTimers);
+            await runCleanup('detener los avisos de ruta', stopRideAdvisories);
+            await runCleanup('liberar el bloqueo de pantalla', releaseWake);
+            await runCleanup('detener el GPS en segundo plano', stopBgWatcher);
+            await runCleanup('eliminar la ubicación en directo', removeMyLiveLocation);
+            await runCleanup('restablecer el botón de grabación', async () => {
+                setBtnState('idle');
+                $('m-speed').textContent = '0.0';
+            });
+            await runCleanup('borrar el borrador', clearDraft);
+            if (cleanupFailures.length) {
+                try {
+                    toast(`La ruta se guardó, pero hubo errores al finalizar: ${cleanupFailures.join(', ')}.`, 6000);
+                } catch (error) {
+                    console.warn('No se pudo mostrar el aviso de errores al finalizar la ruta:', error);
+                }
+            }
+        }
     }
-    isRecording = false;
-    isPaused = false;
-    if (typeof safetyOnRecordingStopped === 'function') await safetyOnRecordingStopped();
-    if (typeof safetyRender === 'function') safetyRender();
-    if (navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate([70, 45, 130]);
-    refreshGpsMode();
-    resetAutoPauseState();
-    stopTimers();
-    stopRideAdvisories();
-    releaseWake();
-    stopBgWatcher();
-    removeMyLiveLocation();
-    setBtnState('idle');
-    $('m-speed').textContent = '0.0';
-    await clearDraft();
 }
 
 async function saveRoute(r) {
@@ -761,16 +792,38 @@ async function saveRoute(r) {
         }
         return false;
     }
-    savedRoutes.unshift(r);
-    if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
-        communityScheduleAutomaticSegmentEffortScan();
-    }
-    if (typeof garageRouteSaved === 'function' && !garageRouteSaved(r)) {
-        toast('La ruta se guardó, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
-    }
-    renderSavedRoutes();
-    refreshStats();
-    syncRoutes();
+    const reportSideEffectError = (description, error) => {
+        console.warn(`La ruta se guardó, pero no se pudo ${description}:`, error);
+        try {
+            toast(`La ruta se guardó, pero no se pudo ${description}.`, 6000);
+        } catch (toastError) {
+            console.warn('No se pudo mostrar el aviso de error posterior al guardado:', toastError);
+        }
+    };
+    const runSideEffect = (description, action) => {
+        try {
+            const result = action();
+            if (result && typeof result.then === 'function') {
+                Promise.resolve(result).catch(error => reportSideEffectError(description, error));
+            }
+        } catch (error) {
+            reportSideEffectError(description, error);
+        }
+    };
+    runSideEffect('actualizar la lista de rutas', () => savedRoutes.unshift(r));
+    runSideEffect('programar el análisis de segmentos', () => {
+        if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
+            return communityScheduleAutomaticSegmentEffortScan();
+        }
+    });
+    runSideEffect('actualizar el mantenimiento preventivo', () => {
+        if (typeof garageRouteSaved === 'function' && !garageRouteSaved(r)) {
+            throw new Error('No se pudo actualizar el mantenimiento preventivo.');
+        }
+    });
+    runSideEffect('mostrar las rutas guardadas', renderSavedRoutes);
+    runSideEffect('actualizar las estadísticas', refreshStats);
+    runSideEffect('sincronizar con la nube', syncRoutes);
     return true;
 }
 
