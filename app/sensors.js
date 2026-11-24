@@ -16,7 +16,8 @@ function onHrChange(e) {
     }
     currentHr = bpm;
     $('m-hr').textContent = bpm;
-    if ($('sensor-hr-status').textContent.includes('sin lectura válida')) {
+    const hrStatus = $('sensor-hr-status');
+    if (hrStatus && hrStatus.textContent.includes('sin lectura válida')) {
         setHrConnectionState(true, true, `Conectado: ${(bleDevice && bleDevice.name) || 'Pulsómetro'}`);
     }
 }

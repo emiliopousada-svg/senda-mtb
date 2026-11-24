@@ -229,18 +229,11 @@ test('control center contains recording, sensor, map and miscellaneous settings 
     assert.doesNotMatch(toolsPage, /data-tool="offline-maps"|data-tool="map-style"/);
     const mapsWorkspace = toolsPage.slice(
         toolsPage.indexOf('<section id="maps-workspace"'),
-        toolsPage.indexOf('<section id="social-workspace"')
+        toolsPage.indexOf('<section id="misc-settings-workspace"')
     );
     assert.match(mapsWorkspace, /Cartografía del mapa[\s\S]*id="map-style-select"/);
     assert.match(mapsWorkspace, /id="offline-panel"[\s\S]*Mapas sin conexión/);
-    assert.match(toolsPage, /data-tool="social"[\s\S]*Social/);
-    const socialStart = toolsPage.indexOf('<section id="social-workspace"');
-    const socialEnd = toolsPage.indexOf('<section id="misc-settings-workspace"', socialStart);
-    const socialWorkspace = toolsPage.slice(socialStart, socialEnd);
-    for (const platform of ['facebook', 'instagram', 'tiktok']) {
-        assert.match(socialWorkspace, new RegExp(`data-social-platform="${platform}"`));
-    }
-    assert.doesNotMatch(socialWorkspace, /Strava|strava|<a\b/);
+    assert.doesNotMatch(toolsPage, /data-tool="social"|social-workspace|Facebook|Instagram|TikTok/);
     assert.match(toolsPage, /data-tool="misc-settings"[\s\S]*Ajustes varios/);
     for (const id of ['recording-metric-config', 'settings-sensors', 'offline-panel', 'map-style-select', 'setting-route-sound', 'app-version']) {
         assert.ok(toolsPage.includes(`id="${id}"`), `${id} must be in the control center`);
@@ -249,7 +242,7 @@ test('control center contains recording, sensor, map and miscellaneous settings 
     assert.match(toolsPage, /tools-app-version[\s\S]*Aplicación[\s\S]*Versión instalada/);
     assert.match(toolsSource, /case 'maps'[\s\S]*toolsOpenWorkspace\('maps-workspace'\)[\s\S]*openOfflineMaps\(\)/);
     assert.doesNotMatch(toolsSource, /offline-maps-workspace|map-style-workspace|case 'map-style'/);
-    assert.match(toolsSource, /case 'social':[\s\S]*toolsOpenWorkspace\('social-workspace'\)/);
+    assert.doesNotMatch(toolsSource, /case 'social'|social-workspace/);
 });
 
 test('home network status follows internet connectivity, independently of server health', () => {

@@ -523,12 +523,15 @@ function communityUploadTrack(route) {
 
 function communityTrackBounds(lines) {
     const points = lines.flat();
-    return {
-        minLat: Math.min(...points.map(point => point[0])),
-        maxLat: Math.max(...points.map(point => point[0])),
-        minLng: Math.min(...points.map(point => point[1])),
-        maxLng: Math.max(...points.map(point => point[1]))
-    };
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (let i = 0; i < points.length; i++) {
+        const lat = points[i][0], lng = points[i][1];
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+    }
+    return { minLat, maxLat, minLng, maxLng };
 }
 
 // Busca una publicación propia de la misma salida (misma distancia y tiempo en movimiento).

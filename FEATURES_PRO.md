@@ -29,12 +29,12 @@ Este inventario separa lo que ya funciona en esta versión de lo que depende de 
 | Mapas offline por regiones | Disponible desde el Centro de control para regiones de España y Portugal mediante el proveedor IGN compatible. La cobertura mundial depende de proveedores que autoricen descarga y uso offline. |
 | Comparación de rutas | Implementada: compara perfiles de altitud y métricas de dos rutas guardadas. |
 | Récords y logros | Ya disponible para récords personales y medallas. |
-| Perfil deportivo | Totales desde Stats, bicicleta y kilómetros desde Garaje, logros por hitos verificables y parámetros de entrenamiento. La localidad es local; las rutas compartidas se consultan con sesión y conexión. Seguidores, seguidos e integraciones externas aún no están disponibles. |
+| Perfil deportivo | Totales desde Stats, bicicleta y kilómetros desde Garaje, logros por hitos verificables y parámetros de entrenamiento. La localidad es local; las rutas compartidas se consultan con sesión y conexión. |
 | Panel de sensores Bluetooth | Ya disponible; necesita un sensor BLE compatible y permisos del dispositivo. |
 | Sincronización de preferencias | Sincronización privada por cuenta para ajustes de mapa, panel, métricas y entrenamiento; requiere aplicar la migración PocketBase `mtb_user_preferences`. |
 | Clasificaciones de grupos | Ya disponible cuando se configura un backend PocketBase propio y la cuenta tiene acceso. |
 | Menú Comunidad | Implementado con seis pestañas: Ranking, Segmentos, Desafíos, Mi grupo, Logros y Actividad. |
-| Navegación principal | Seis accesos inferiores (Inicio, Rutas, Mapa, Comunidad, Stats y Perfil); el Centro de control reúne Seguridad, Garaje, Calendario, panel de grabación, sensores Bluetooth, mapas sin conexión, cartografía, Social (integraciones futuras) y ajustes varios. Social aún no conecta servicios externos. SENDA AI sigue pendiente. |
+| Navegación principal | Seis accesos inferiores (Inicio, Rutas, Mapa, Comunidad, Stats y Perfil); el Centro de control reúne Seguridad, Garaje, Calendario, panel de grabación, sensores Bluetooth, mapas sin conexión, cartografía y ajustes varios. |
 | Liga privada de cuatro semanas | Diseño y puntuación base documentados; requiere desplegar colecciones, validadores, temporadas e historial del módulo competitivo en PocketBase antes de habilitar escrituras. |
 | Modo nocturno automático | Pendiente de programación horaria; la interfaz actual mantiene el tema oscuro. |
 | Transiciones entre pantallas | Disponibles en el carrusel de páginas, con soporte de movimiento reducido del sistema. |
@@ -83,16 +83,6 @@ Estas propuestas forman parte del alcance de producto. No se deben mostrar como 
 - Crear una tarjeta de actividad para compartir, con vista previa y control explícito de los datos incluidos.
 - La ubicación precisa, las fotos y los vídeos serán privados por defecto. Antes de compartir, permitir ocultar coordenadas, elegir imágenes y revisar la tarjeta. Los archivos multimedia deben almacenarse aparte de los registros GPS y con límites de tamaño claros.
 - Si una imagen no tiene coordenadas válidas o el usuario no concede permiso para leerlas, permitir asociarla manualmente sin inventar la ubicación.
-
-### Inteligencia artificial MTB
-
-- El inicio incluye una tarjeta conceptual de SENDA AI; las respuestas son ejemplos y el formulario no envía información mientras el servicio no esté conectado.
-- Ofrecer un asistente conectado a un servicio propio para explicar estadísticas, comparar actividades, resumir salidas, detectar tendencias y ayudar a planificar entrenamientos o temporadas.
-- Recomendar rutas solo a partir de preferencias y datos disponibles (distancia, desnivel, dificultad física y técnica conocida); explicar por qué se recomienda cada ruta y señalar los datos que faltan.
-- Ayudar a preparar desafíos de grupo como borradores revisables por un administrador. No publicar retos ni modificar clasificaciones automáticamente.
-- Mantener los cálculos deterministas de métricas (por ejemplo, distancia y desnivel) en el motor de la aplicación/servidor. La IA interpreta esos resultados y no debe inventar mediciones, diagnosticar ni presentar estimaciones como hechos.
-- El servicio será independiente del PocketBase original y usará credenciales únicamente en el servidor. Antes de enviar actividades, fotos, ubicación o datos de perfil, informar qué se comparte y pedir consentimiento explícito; permitir usar las funciones locales sin activar el asistente.
-- Diseñar el servicio para responder con cautela cuando el historial sea corto o incompleto y mostrar las actividades/periodo que respaldan cada conclusión.
 
 ### Ecosistema profesional
 

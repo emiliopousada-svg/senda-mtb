@@ -113,6 +113,7 @@ function collapseMetric() {
 
 function expandMetric(key) {
     const m = METRICS[key];
+    if (!m) return;
     expandedMetric = key;
     $('big-label').textContent = m.label;
     $('big-unit').textContent = m.unit;

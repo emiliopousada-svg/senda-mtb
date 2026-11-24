@@ -228,10 +228,14 @@ function dashboardLastRidePreviewPath(route) {
         segment.map(([longitude, latitude]) => [longitude * longitudeScale, latitude])
     );
     const allPoints = projected.flat();
-    const minX = Math.min(...allPoints.map(point => point[0]));
-    const maxX = Math.max(...allPoints.map(point => point[0]));
-    const minY = Math.min(...allPoints.map(point => point[1]));
-    const maxY = Math.max(...allPoints.map(point => point[1]));
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < allPoints.length; i++) {
+        const x = allPoints[i][0], y = allPoints[i][1];
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+    }
     const rangeX = maxX - minX;
     const rangeY = maxY - minY;
     const scale = Math.min(60 / Math.max(rangeX, 0.000001), 56 / Math.max(rangeY, 0.000001));
@@ -249,10 +253,14 @@ function dashboardCreateTerrainMap(route, container, routeKey) {
     if (!segments.length) return false;
 
     const coordinates = segments.flat();
-    const longitudes = coordinates.map(point => point[0]);
-    const latitudes = coordinates.map(point => point[1]);
-    const minLng = Math.min(...longitudes), maxLng = Math.max(...longitudes);
-    const minLat = Math.min(...latitudes), maxLat = Math.max(...latitudes);
+    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+    for (let i = 0; i < coordinates.length; i++) {
+        const lng = coordinates[i][0], lat = coordinates[i][1];
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+    }
     const middle = coordinates[Math.floor(coordinates.length / 2)];
     const mapElement = document.createElement('div');
     mapElement.className = 'dashboard-terrain-map';

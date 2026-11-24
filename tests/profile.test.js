@@ -277,7 +277,7 @@ test('profile duration uses moving time as whole hours and minutes', () => {
     assert.equal(profileFormatDuration(3660), '1 h 1 min');
 });
 
-test('profile renders account identity and social icons without placeholder integrations', () => {
+test('profile renders account identity without external social placeholders', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const source = fs.readFileSync(path.join(root, 'app', 'profile.js'), 'utf8');
     const navigation = fs.readFileSync(path.join(root, 'app', 'navigation.js'), 'utf8');
@@ -297,11 +297,8 @@ test('profile renders account identity and social icons without placeholder inte
         'profile-total-ascent', 'profile-total-time', 'profile-bike-image', 'profile-achievements',
         'profile-hr-max', 'profile-ftp', 'profile-account-details', 'profile-account-status'
     ]) assert.ok(profilePage.includes(`id="${id}"`), `${id} must be present in Profile`);
-    for (const network of ['Facebook', 'Instagram', 'TikTok']) {
-        assert.match(profilePage, new RegExp(`aria-label="${network}"`));
-    }
+    assert.doesNotMatch(profilePage, /profile-social-title|Facebook|Instagram|TikTok/);
     assert.doesNotMatch(profilePage, /Strava|Herramientas → Social/);
-    assert.match(profilePage, /id="profile-social-title">Social/);
     assert.doesNotMatch(profilePage, /SERVICIOS EXTERNOS|Garmin Connect|Komoot|Apple Salud|Próximamente/);
     assert.match(profilePage, /Se guarda en tu cuenta si has iniciado sesión/);
     assert.match(profilePage, /<label for="acc-home-location">Localidad habitual<\/label>/);

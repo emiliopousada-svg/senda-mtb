@@ -315,6 +315,7 @@ function updateGpsAvatarMarkers() {
 function onPos(pos) {
     if (!pos || !pos.coords || !Number.isFinite(pos.coords.latitude) || !Number.isFinite(pos.coords.longitude)) return;
     const { latitude: lat, longitude: lon, accuracy, speed } = pos.coords;
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
     const ll = [lat, lon];
     lastLat = lat;
     lastLon = lon;
@@ -367,7 +368,7 @@ function onPos(pos) {
         visualHeading = heading;
     }
 
-    if (Date.now() - lastPosSave > 15000) {
+    if (Date.now() - lastPosSave > 15000 && Number.isFinite(accuracy) && accuracy >= 0 && accuracy <= 500) {
         lastPosSave = Date.now();
         try { localStorage.setItem('mtb_pro_last_pos', JSON.stringify(ll)); } catch (e) {}
     }
