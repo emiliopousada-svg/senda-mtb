@@ -204,6 +204,8 @@ function buildImportedRoute(parsed, routeName) {
             }
             if (p[2] !== null) segmentAltitudeCount++;
             el.add(p[2]);
+            // Keep ascent aligned with retained points when large tracks are reduced.
+            p[9] = el.gain;
             full.push(p);
             prev = p;
             first = false;

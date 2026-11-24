@@ -142,6 +142,25 @@ test('uses stored metrics when legacy activity tracks lack usable GPS or altitud
     assert.equal(result.descentM, 0);
 });
 
+test('preserves stored full-track metrics for imported routes with reduced points', () => {
+    const result = engine.analyzeRoute({
+        kind: 'imported',
+        startedAt: new Date(timestamp).toISOString(),
+        distanceKm: 12.5,
+        elevationGain: 320,
+        movingTimeSec: 3600,
+        points: [
+            trackPoint(0, 0, 100, 0),
+            trackPoint(0, 0.001, 100, 10)
+        ]
+    });
+
+    assert.ok(result.calculatedDistanceKm < 0.2);
+    assert.equal(result.distanceKm, 12.5);
+    assert.equal(result.ascentM, 320);
+    assert.equal(result.averageSpeed, 12.5);
+});
+
 test('estimates missing moving time from valid timed GPS intervals', () => {
     const result = engine.analyzeRoute({
         startedAt: new Date(timestamp).toISOString(),

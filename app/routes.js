@@ -253,6 +253,13 @@ function routeMovingTime(route) {
         : Number(route.movingTimeSec) || 0;
 }
 
+function routeMovingTimeLabel(route, label) {
+    const analysis = typeof statsAnalyzeRoute === 'function' ? statsAnalyzeRoute(route) : null;
+    return analysis && analysis.movingTimeEstimated && routeMovingTime(route) > 0
+        ? `${label} (estimado)`
+        : label;
+}
+
 function routeDistanceKm(route) {
     const stored = route.distanceKm == null ? null : Number(route.distanceKm);
     if (Number.isFinite(stored) && (stored > 0 || route.kind !== 'imported')) return stored;
@@ -526,7 +533,8 @@ function createRouteCard(route) {
             ? new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(distanceKm)
             : '—', 'km'],
         [routeHasElevationData(route) ? String(Math.round(Number(route.elevationGain) || 0)) : '—', 'Desnivel (m)'],
-        [routeMovingTime(route) > 0 ? routeTimeSummary(routeMovingTime(route)) : '—', 'Tiempo'],
+        [routeMovingTime(route) > 0 ? routeTimeSummary(routeMovingTime(route)) : '—',
+            routeMovingTimeLabel(route, 'Tiempo')],
         [Number.isFinite(routeAverageSpeed(route)) ? `${routeAverageSpeed(route).toFixed(1)}` : '—', 'km/h media']
     ].forEach(([value, label]) => {
         const metric = document.createElement('div');
@@ -620,7 +628,8 @@ async function openSavedRouteDetail(route, options = {}) {
         ] : autonomousCommunity ? [['Comunidad autónoma', autonomousCommunity]] : []),
         ['Distancia', distanceKm != null ? `${distanceKm.toFixed(1)} km` : 'No disponible'],
         ['Desnivel', routeHasElevationData(route) ? `+${Math.round(Number(route.elevationGain) || 0)} m` : 'No disponible'],
-        ['Tiempo en movimiento', routeMovingTime(route) > 0 ? fmtDur(routeMovingTime(route)) : 'No disponible'],
+        [routeMovingTimeLabel(route, 'Tiempo en movimiento'),
+            routeMovingTime(route) > 0 ? fmtDur(routeMovingTime(route)) : 'No disponible'],
         ['Velocidad media', Number.isFinite(routeAverageSpeed(route)) ? `${routeAverageSpeed(route).toFixed(1)} km/h` : 'No disponible'],
         ['Velocidad máxima', typeof statsAnalyzeRoute === 'function' && Number.isFinite(statsAnalyzeRoute(route).maxSpeed)
             ? `${statsAnalyzeRoute(route).maxSpeed.toFixed(1)} km/h` : 'No disponible'],

@@ -251,7 +251,8 @@ function gainCumulative(points) {
     points.forEach((p, i) => {
         if (i > 0 && p[5] === 1) tracker.reset();
         tracker.add(p[2] == null ? null : Number(p[2]));
-        out[i] = tracker.gain;
+        const storedGain = p[9] == null ? NaN : Number(p[9]);
+        out[i] = Number.isFinite(storedGain) && storedGain >= 0 ? storedGain : tracker.gain;
     });
     return out;
 }

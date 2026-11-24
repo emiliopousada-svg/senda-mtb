@@ -219,8 +219,14 @@ function renderMapRouteProfile(r) {
     routeProfilePointCount = points.length;
     $('map-route-name').textContent = r.name || 'Ruta cargada';
 
-    const valid = points.map((p, i) => ({ i, z: p[2] == null ? NaN : Number(p[2]) }))
-        .filter(p => Number.isFinite(p.z));
+    const elevationTracker = MTBStatisticsEngine.createElevationTracker();
+    const valid = [];
+    points.forEach((point, index) => {
+        if (index > 0 && Array.isArray(point) && point[5] === 1) elevationTracker.reset();
+        const altitude = Array.isArray(point) && point[2] != null ? Number(point[2]) : null;
+        const smoothedAltitude = elevationTracker.add(altitude);
+        if (smoothedAltitude !== null) valid.push({ i: index, z: smoothedAltitude });
+    });
     if (valid.length < 2) {
         $('map-route-alt').textContent = 'Sin datos de altitud';
         $('map-route-area').setAttribute('d', '');
