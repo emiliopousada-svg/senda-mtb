@@ -8,7 +8,7 @@ const path = require('path');
 const vm = require('vm');
 
 const CONFIG_PATH = path.join(__dirname, '..', 'app', 'config.js');
-const LOCAL_HTTP_SERVER = /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?(?:\/.*)?$/i;
+const LOCAL_HTTP_SERVER = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?(?:\/.*)?$/i;
 
 // Lee la tabla de entornos de app/config.js para no duplicarla aquí.
 function loadEnvironments(configText = fs.readFileSync(CONFIG_PATH, 'utf8')) {

@@ -34,10 +34,54 @@ function scheduleCloudSyncRetry(uid, server, generation) {
 const Cloud = {
     sessionActive: false,
     sessionState: 'unknown',
+    secureTokenKey: 'pocketbase-session-token',
+    secureTokenCache: null,
+    secureTokenLoaded: false,
+    secureTokenQueue: Promise.resolve(),
     authGeneration: 0,
     profileGeneration: 0,
     serverSwitchInFlight: false,
     logoutInProgress: false,
+    usesSecureTokenStorage() {
+        if (typeof MTBNativeApp !== 'undefined'
+            && typeof MTBNativeApp.isNativePlatform === 'function') {
+            return MTBNativeApp.isNativePlatform();
+        }
+        if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) {
+            throw new Error('El almacenamiento seguro de la sesión no está disponible.');
+        }
+        return false;
+    },
+    enqueueSecureTokenOperation(operation) {
+        const result = this.secureTokenQueue.then(operation, operation);
+        this.secureTokenQueue = result.then(() => undefined, () => undefined);
+        return result;
+    },
+    getSessionToken() {
+        if (!this.usesSecureTokenStorage()) return localStorage.getItem('mtb_pro_token');
+        if (this.secureTokenLoaded) return Promise.resolve(this.secureTokenCache);
+        return this.enqueueSecureTokenOperation(async () => {
+            if (this.secureTokenLoaded) return this.secureTokenCache;
+            const token = await MTBNativeApp.getSecureItem(this.secureTokenKey);
+            if (token) {
+                localStorage.removeItem('mtb_pro_token');
+                this.secureTokenCache = token;
+                this.secureTokenLoaded = true;
+                return token;
+            }
+            const legacyToken = localStorage.getItem('mtb_pro_token');
+            if (!legacyToken) {
+                this.secureTokenCache = null;
+                this.secureTokenLoaded = true;
+                return null;
+            }
+            await MTBNativeApp.setSecureItem(this.secureTokenKey, legacyToken);
+            localStorage.removeItem('mtb_pro_token');
+            this.secureTokenCache = legacyToken;
+            this.secureTokenLoaded = true;
+            return legacyToken;
+        });
+    },
     get server() {
         const stored = localStorage.getItem('mtb_pro_server');
         return normalizeServer(stored || DEFAULT_CLOUD_SERVER);
@@ -48,8 +92,16 @@ const Cloud = {
         if (current !== normalized && (this.loggedIn() || this.serverSwitchInFlight)) {
             throw new Error('Cambia el servidor desde sus ajustes para revocar primero la sesión actual.');
         }
+        if (current && current !== normalized) {
+            const clearing = this.clearSession();
+            if (clearing && typeof clearing.then === 'function') {
+                return clearing.then(() => {
+                    localStorage.setItem('mtb_pro_server', normalized);
+                    return normalized;
+                });
+            }
+        }
         localStorage.setItem('mtb_pro_server', normalized);
-        if (current && current !== normalized) this.clearSession();
         return normalized;
     },
     async switchServer(nextServer) {
@@ -75,8 +127,8 @@ const Cloud = {
             if (this.server !== current || this.uid !== uid || this.authGeneration !== generation) {
                 throw new Error('La sesión cambió durante el cambio de servidor. Vuelve a intentarlo.');
             }
+            await this.clearSession();
             localStorage.setItem('mtb_pro_server', normalized);
-            this.clearSession();
             return normalized;
         } catch (error) {
             if (this.loggedIn() && this.server === current && this.uid === uid
@@ -96,23 +148,40 @@ const Cloud = {
         this.profileGeneration++;
     },
     loggedIn()   { return !!(this.server && this.sessionActive && this.uid); },
-    setSession(rec, token) {
-        if (!this.sessionActive || this.uid !== rec.id) this.authGeneration++;
-        if (this.groupCode !== (rec.groupCode || '')) this.profileGeneration++;
-        this.sessionActive = true;
-        this.sessionState = 'active';
-        if (typeof token === 'string' && token) localStorage.setItem('mtb_pro_token', token);
-        localStorage.setItem('mtb_pro_uid', rec.id);
-        localStorage.setItem('mtb_pro_avatar_last_uid', rec.id);
-        localStorage.setItem('mtb_pro_email', rec.email || '');
-        if (rec.nickname) localStorage.setItem('mtb_pro_nickname', String(rec.nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
-        else localStorage.removeItem('mtb_pro_nickname');
-        localStorage.setItem('mtb_pro_group_code', rec.groupCode || '');
-        if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
-        if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
-        if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
-            communityScheduleAutomaticSegmentEffortScan();
+    setSession(rec, token, expectedGeneration) {
+        const applySession = () => {
+            if (expectedGeneration !== undefined && expectedGeneration !== this.authGeneration) return false;
+            if (!this.sessionActive || this.uid !== rec.id) this.authGeneration++;
+            if (this.groupCode !== (rec.groupCode || '')) this.profileGeneration++;
+            this.sessionActive = true;
+            this.sessionState = 'active';
+            localStorage.setItem('mtb_pro_uid', rec.id);
+            localStorage.setItem('mtb_pro_avatar_last_uid', rec.id);
+            localStorage.setItem('mtb_pro_email', rec.email || '');
+            if (rec.nickname) localStorage.setItem('mtb_pro_nickname', String(rec.nickname).trim().slice(0, ROUTE_NICKNAME_LIMIT));
+            else localStorage.removeItem('mtb_pro_nickname');
+            localStorage.setItem('mtb_pro_group_code', rec.groupCode || '');
+            if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
+            if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
+            if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
+                communityScheduleAutomaticSegmentEffortScan();
+            }
+            return true;
+        };
+        if (typeof token === 'string' && token) {
+            if (this.usesSecureTokenStorage()) {
+                return this.enqueueSecureTokenOperation(async () => {
+                    if (expectedGeneration !== undefined && expectedGeneration !== this.authGeneration) return false;
+                    await MTBNativeApp.setSecureItem(this.secureTokenKey, token);
+                    localStorage.removeItem('mtb_pro_token');
+                    this.secureTokenCache = token;
+                    this.secureTokenLoaded = true;
+                    return applySession();
+                });
+            }
+            localStorage.setItem('mtb_pro_token', token);
         }
+        return applySession();
     },
     async refreshSession() {
         const server = this.server;
@@ -135,31 +204,40 @@ const Cloud = {
         if (server !== this.server || uid !== this.uid || generation !== this.authGeneration
             || profileGeneration !== this.profileGeneration || !this.loggedIn()) return null;
         if (result.record.id !== uid) {
-            this.clearSession();
+            await this.clearSession();
             return null;
         }
-        this.setSession(result.record, result.token);
-        return result.record;
+        return await this.setSession(result.record, result.token, generation)
+            ? result.record
+            : null;
     },
     async restoreSession() {
         if (this.serverSwitchInFlight) return null;
-        if (!localStorage.getItem('mtb_pro_token')) {
-            this.clearSession();
-            return null;
-        }
+        const server = this.server;
         const generation = this.authGeneration;
         this.sessionState = 'pending';
         try {
-            const result = await cloudApi('/api/collections/users/auth-refresh', 'POST');
+            let token = this.getSessionToken();
+            if (token && typeof token.then === 'function') token = await token;
+            if (generation !== this.authGeneration || server !== this.server) return null;
+            if (!token) {
+                await this.clearSession();
+                return null;
+            }
+            const result = await cloudApi('/api/collections/users/auth-refresh', 'POST', null, {
+                authorization: token,
+                server
+            });
             if (!result || !result.record || !result.record.id) {
                 throw new Error('El servidor no devolvió una sesión válida.');
             }
-            if (generation !== this.authGeneration) return null;
-            this.setSession(result.record, result.token);
-            return result.record;
+            if (generation !== this.authGeneration || server !== this.server) return null;
+            return await this.setSession(result.record, result.token, generation)
+                ? result.record
+                : null;
         } catch (error) {
-            if (generation !== this.authGeneration) return null;
-            if (error.status === 401) this.clearSession();
+            if (generation !== this.authGeneration || server !== this.server) return null;
+            if (error.status === 401) await this.clearSession();
             else this.sessionState = 'unknown';
             throw error;
         }
@@ -168,12 +246,22 @@ const Cloud = {
         this.authGeneration++;
         this.sessionActive = false;
         this.sessionState = 'none';
+        this.secureTokenCache = null;
+        this.secureTokenLoaded = true;
         cancelCloudSyncRetry();
         if (typeof cancelCloudPreferencesSync === 'function') cancelCloudPreferencesSync();
         ['mtb_pro_token', 'mtb_pro_uid', 'mtb_pro_email', 'mtb_pro_nickname', 'mtb_pro_group_code'].forEach(k => localStorage.removeItem(k));
         if (typeof resetAccountProfileCache === 'function') resetAccountProfileCache();
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
         if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
+        if (this.usesSecureTokenStorage()) {
+            return this.enqueueSecureTokenOperation(async () => {
+                await MTBNativeApp.removeSecureItem(this.secureTokenKey);
+                this.secureTokenCache = null;
+                this.secureTokenLoaded = true;
+            });
+        }
+        return null;
     }
 };
 
@@ -183,7 +271,16 @@ try {
 } catch (error) {
     console.warn('La dirección de servidor guardada no es válida:', error);
     localStorage.setItem('mtb_pro_server', DEFAULT_CLOUD_SERVER);
-    Cloud.clearSession();
+    try {
+        const clearing = Cloud.clearSession();
+        if (clearing && typeof clearing.catch === 'function') {
+            void clearing.catch(clearError => {
+                console.error('No se pudo borrar la sesión segura después de corregir el servidor:', clearError);
+            });
+        }
+    } catch (clearError) {
+        console.error('No se pudo borrar la sesión segura después de corregir el servidor:', clearError);
+    }
     cloudServerWasResetOnLoad = true;
 }
 
@@ -329,7 +426,7 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
     if (typeof options === 'object' && options?.authorization) {
         headers.Authorization = options.authorization;
     } else {
-        const token = localStorage.getItem('mtb_pro_token');
+        const token = await Cloud.getSessionToken();
         if (token) headers.Authorization = token;
     }
     let payload;
@@ -339,7 +436,7 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
     const url = new URL(server + path);
     const isLocalHttp = APP_CONFIG.allowLocalHttpServer
         && url.protocol === 'http:'
-        && (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]');
+        && (url.hostname === 'localhost' || url.hostname === '127.0.0.1');
     if ((url.protocol !== 'https:' && !isLocalHttp) || url.username || url.password) {
         throw new Error('El servidor debe usar una dirección HTTPS válida.');
     }
@@ -394,7 +491,7 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
 
 function normalizeServer(v) {
     // Se declara dentro de la función: Cloud la llama al cargar el script, antes de esta línea.
-    const LOCAL_HTTP_SERVER = /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?(?:\/.*)?$/i;
+    const LOCAL_HTTP_SERVER = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?(?:\/.*)?$/i;
     v = String(v || '').trim().replace(/\/+$/, '');
     if (!v) return '';
     // Solo en desarrollo se admite un PocketBase local sin TLS; en el resto de entornos se exige HTTPS.
@@ -561,9 +658,10 @@ async function accAuth(register) {
     if (heightCm && (!Number.isInteger(Number(heightCm)) || Number(heightCm) < 120 || Number(heightCm) > 230)) { toast('La altura debe estar entre 120 y 230 cm.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
     localStorage.setItem('mtb_pro_server', server);
-    Cloud.clearSession();
-    const authGeneration = Cloud.authGeneration;
     try {
+        const clearing = Cloud.clearSession();
+        if (clearing && typeof clearing.then === 'function') await clearing;
+        const authGeneration = Cloud.authGeneration;
         if (register) {
             const profile = { email, password: pass, passwordConfirm: pass, nickname };
             if (weightKg) profile.weightKg = Number(weightKg);
@@ -587,7 +685,9 @@ async function accAuth(register) {
         if (!auth.token || !auth.record || !auth.record.id) {
             throw new Error('El servidor no devolvió una sesión válida.');
         }
-        Cloud.setSession(auth.record, auth.token);
+        if (!await Cloud.setSession(auth.record, auth.token, authGeneration)) {
+            throw new Error('La sesión cambió durante el inicio de sesión. Vuelve a intentarlo.');
+        }
         if (!register && homeLocation && typeof profileSetPendingAccountLocation === 'function') {
             profileSetPendingAccountLocation(auth.record.id, homeLocation);
         }
@@ -649,7 +749,11 @@ async function saveAccountNickname() {
         }
     } catch (error) {
         if (error.status === 401 && isCurrent()) {
-            Cloud.clearSession();
+            try { await Cloud.clearSession(); }
+            catch (clearError) {
+                console.error('No se pudo borrar la sesión segura al caducar:', clearError);
+                toast('No se pudo borrar la sesión segura. Cierra la app y vuelve a intentarlo.', 6000);
+            }
             renderAccount();
             toast('La sesión ha caducado. Vuelve a entrar.', 5000);
             return;
@@ -671,7 +775,12 @@ async function logoutCloudAccount() {
     try {
         await stopGroup();
         if (!sameAuthContext()) return;
-        Cloud.clearSession();
+        try { await Cloud.clearSession(); }
+        catch (error) {
+            console.error('No se pudo borrar la sesión segura al cerrar sesión:', error);
+            toast('No se pudo completar el cierre de sesión: ' + error.message, 6000);
+            throw error;
+        }
         renderFriends();
         renderAccount();
         toast('Sesión cerrada. Tus rutas siguen en este móvil.');
@@ -812,7 +921,7 @@ async function syncRoutes(manual = false) {
             if (!isCurrentSync()) return;
         } catch (e) {
             if (e.status === 401) {
-                Cloud.clearSession();
+                await Cloud.clearSession();
                 toast('La sesión ha caducado. Vuelve a entrar.', 5000);
                 return;
             }
@@ -1281,7 +1390,16 @@ function initAccount() {
     } catch (error) {
         console.warn('La dirección de servidor guardada no es válida:', error);
         localStorage.setItem('mtb_pro_server', DEFAULT_CLOUD_SERVER);
-        Cloud.clearSession();
+        try {
+            const clearing = Cloud.clearSession();
+            if (clearing && typeof clearing.catch === 'function') {
+                void clearing.catch(clearError => {
+                    console.error('No se pudo borrar la sesión segura después de corregir el servidor:', clearError);
+                });
+            }
+        } catch (clearError) {
+            console.error('No se pudo borrar la sesión segura después de corregir el servidor:', clearError);
+        }
         toast('La dirección de servidor guardada no era válida; se ha restaurado el servidor predeterminado.', 6000);
     }
     if (cloudServerWasResetOnLoad) {

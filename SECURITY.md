@@ -27,14 +27,17 @@ re-encodes photos, and the hook rejects uploaded JPEGs with EXIF/XMP, IPTC, or
 comment metadata. Photos uploaded before this validation was deployed are not
 cleaned automatically and may need a separate review.
 
-The API bearer token supports persistent sign-in and is stored in browser
-`localStorage`. JavaScript running in the app origin can access it, so script
-injection or a compromised third-party script could expose the session. API
-requests now bypass browser caches and reject redirects to avoid persisting
-private API responses or following unexpected redirects. These measures do not
-protect against same-origin script execution. A stronger design needs a
-short-lived token behind a server-side session, or platform secure storage for
-the native app.
+The API bearer token supports persistent sign-in. Native Android and iOS builds
+store it using platform secure storage; existing native sessions are migrated
+from `localStorage` after the secure write succeeds. Web builds continue to use
+browser `localStorage`, so JavaScript running in the app origin can access the
+token. The app applies a Content Security Policy that blocks inline scripts and
+loads application libraries locally, but this does not protect against every
+form of same-origin script execution. Because PocketBase servers and map
+providers are configurable, the policy permits HTTPS connections and images;
+it is not a complete boundary against data exfiltration. API requests also
+bypass browser caches and reject redirects to avoid persisting private API
+responses or following unexpected redirects.
 
 Profile fields such as email, age, weight, avatar, and `groupCode` must not be
 publicly listable, and only the authenticated owner should be able to update

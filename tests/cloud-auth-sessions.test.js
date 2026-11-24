@@ -128,6 +128,56 @@ test('stale session restoration cannot replace a newer login', async () => {
     assert.equal(context.Cloud.uid, 'new-user');
 });
 
+test('native legacy session tokens are copied to secure storage before local removal', async () => {
+    const secureValues = new Map();
+    const { context, values } = cloudContext();
+    context.MTBNativeApp = {
+        isNativePlatform: () => true,
+        async getSecureItem(key) { return secureValues.get(key) || null; },
+        async setSecureItem(key, value) { secureValues.set(key, value); },
+        async removeSecureItem(key) { secureValues.delete(key); }
+    };
+    values.set('mtb_pro_token', 'legacy-token');
+
+    assert.equal(await context.Cloud.getSessionToken(), 'legacy-token');
+    assert.equal(secureValues.get(context.Cloud.secureTokenKey), 'legacy-token');
+    assert.equal(values.has('mtb_pro_token'), false);
+});
+
+test('native legacy token remains available when secure migration fails', async () => {
+    const { context, values } = cloudContext();
+    context.MTBNativeApp = {
+        isNativePlatform: () => true,
+        async getSecureItem() { return null; },
+        async setSecureItem() { throw new Error('secure storage unavailable'); },
+        async removeSecureItem() {}
+    };
+    values.set('mtb_pro_token', 'legacy-token');
+
+    await assert.rejects(context.Cloud.getSessionToken(), /secure storage unavailable/);
+    assert.equal(values.get('mtb_pro_token'), 'legacy-token');
+});
+
+test('native session tokens are written and removed through secure storage', async () => {
+    const secureValues = new Map();
+    const { context, values } = cloudContext();
+    context.MTBNativeApp = {
+        isNativePlatform: () => true,
+        async getSecureItem(key) { return secureValues.get(key) || null; },
+        async setSecureItem(key, value) { secureValues.set(key, value); },
+        async removeSecureItem(key) { secureValues.delete(key); }
+    };
+
+    await context.Cloud.setSession({ id: 'user-1' }, 'native-token', context.Cloud.authGeneration);
+    assert.equal(secureValues.get(context.Cloud.secureTokenKey), 'native-token');
+    assert.equal(values.has('mtb_pro_token'), false);
+    assert.equal(context.Cloud.loggedIn(), true);
+
+    await context.Cloud.clearSession();
+    assert.equal(secureValues.has(context.Cloud.secureTokenKey), false);
+    assert.equal(context.Cloud.loggedIn(), false);
+});
+
 test('changing servers invalidates an in-flight session restoration', async () => {
     let resolveRequest;
     const { context } = cloudContext(() => new Promise(resolve => {
@@ -307,7 +357,7 @@ test('cloud API requests can stay pinned to the server captured by a sync', asyn
     const context = vm.createContext({
         APP_CONFIG: {},
         CLOUD_TIMEOUT_MS: 1000,
-        Cloud: { server: 'https://new.example' },
+        Cloud: { server: 'https://new.example', async getSessionToken() { return null; } },
         AbortController,
         FormData,
         URL,
@@ -329,6 +379,36 @@ test('cloud API requests can stay pinned to the server captured by a sync', asyn
     await context.cloudApi('/api/collections/routes/records', 'GET', null, { server: 'https://old.example' });
     assert.deepEqual(requests, ['https://old.example/api/collections/routes/records']);
     assert.equal(requestOptions.credentials, 'omit');
+});
+
+test('cloud API authorization reads the token from the session storage abstraction', async () => {
+    let requestOptions;
+    const context = vm.createContext({
+        APP_CONFIG: {},
+        CLOUD_TIMEOUT_MS: 1000,
+        Cloud: {
+            server: 'https://server.example',
+            async getSessionToken() { return 'secure-token'; }
+        },
+        AbortController,
+        FormData,
+        URL,
+        clearTimeout,
+        localStorage: { getItem() { return null; } },
+        setTimeout,
+        isRetryableCloudStatus: () => false,
+        fetch: async (_url, options) => {
+            requestOptions = options;
+            return { ok: true, status: 200, json: async () => ({}) };
+        }
+    });
+    vm.runInContext(
+        sourceBetween('async function cloudApi(', '\nfunction normalizeServer('),
+        context
+    );
+
+    await context.cloudApi('/api/collections/routes/records');
+    assert.equal(requestOptions.headers.Authorization, 'secure-token');
 });
 
 test('remote route pagination stops when the captured sync context changes', async () => {

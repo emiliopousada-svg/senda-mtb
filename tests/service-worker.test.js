@@ -111,6 +111,18 @@ test('service worker precaches every local script and stylesheet loaded by index
     assert.deepEqual(missing, [], `Faltan en SHELL_URLS de sw.js: ${missing.join(', ')}`);
 });
 
+test('the CSP blocks inline and CDN scripts while keeping libraries local', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const policy = html.match(/<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/i);
+    assert.ok(policy, 'index.html must declare a Content Security Policy');
+    assert.match(policy[1], /(?:^|;)\s*script-src 'self'(?:;|$)/);
+    assert.doesNotMatch(policy[1], /script-src[^;]*unsafe-inline/i);
+    assert.doesNotMatch(html, /<script\b[^>]*\bsrc=["']https?:\/\//i);
+    assert.doesNotMatch(html, /\son(?:click|load|error|submit|change|input)\s*=/i);
+    assert.match(html, /src="lib\/maplibre-gl\.js"/);
+    assert.match(html, /href="lib\/maplibre-gl\.css"/);
+});
+
 test('manifest icons exist with the declared sizes', () => {
     const root = path.join(__dirname, '..');
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8').replace(/^\uFEFF/, ''));

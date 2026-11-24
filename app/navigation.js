@@ -9,6 +9,11 @@ const navBtns = document.querySelectorAll('.nav-btn');
 const carouselPageOrder = [5, 3, 0, 2, 1, 4, 6, 7];
 const mainMenuPageOrder = Array.from(navBtns, button => Number(button.dataset.page));
 
+document.querySelector('.brand-lockup')?.addEventListener('click', event => {
+    event.preventDefault();
+    goToPage(5);
+});
+
 function goToAdjacentPage(direction) {
     const position = carouselPageOrder.indexOf(currentPage);
     const nextPage = carouselPageOrder[position + direction];

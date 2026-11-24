@@ -2,7 +2,7 @@
 // - Guarda la app y las librerías para que abra sin conexión.
 // - Los mapas offline (teselas del IGN) se guardan en IndexedDB desde la propia aplicación.
 // prepare-web.js sustituye la versión y el hash del service worker en cada build.
-const SHELL = 'mtbpro-shell-v__APP_VERSION__-v16-__SW_HASH__';
+const SHELL = 'mtbpro-shell-v__APP_VERSION__-v17-__SW_HASH__';
 
 const SHELL_URLS = [
   './',
@@ -67,8 +67,8 @@ const SHELL_URLS = [
   'lib/leaflet/images/marker-icon-2x.png',
   'lib/leaflet/images/marker-shadow.png',
   'lib/chart.umd.js',
-  'https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css',
-  'https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js'
+  'lib/maplibre-gl.css',
+  'lib/maplibre-gl.js'
 ];
 
 const APP_SCOPE = new URL(self.registration.scope);
@@ -114,8 +114,6 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (isAppRequest(req, url)) {
     e.respondWith(networkFirst(req));
-  } else if (url.hostname === 'unpkg.com' || url.hostname === 'cdn.jsdelivr.net') {
-    e.respondWith(staleWhileRevalidate(req));
   }
 });
 
@@ -151,13 +149,4 @@ async function networkFirst(req) {
   } catch (error) {
     return (await cache.match(req)) || Response.error();
   }
-}
-
-async function staleWhileRevalidate(req) {
-  const cache = await caches.open(SHELL);
-  const hit = await cache.match(req);
-  const net = fetch(req)
-    .then(res => { if (isCacheableResponse(res)) cache.put(req, res.clone()); return res; })
-    .catch(() => null);
-  return hit || (await net) || Response.error();
 }

@@ -1,6 +1,5 @@
 // Prepara la carpeta www/ que empaqueta Capacitor dentro del APK.
-// Copia la app y sustituye los enlaces a CDN por copias locales,
-// para que el APK no dependa de internet para arrancar.
+// Copia la app y sus dependencias locales para que no dependa de CDN.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -53,8 +52,19 @@ fs.copyFileSync(path.join(nm, 'leaflet/dist/leaflet.js'), path.join(www, 'lib/le
 fs.copyFileSync(path.join(root, 'vendor/leaflet-rotate.umd.min.js'), path.join(www, 'lib/leaflet/leaflet-rotate.umd.min.js'));
 fs.cpSync(path.join(nm, 'leaflet/dist/images'), path.join(www, 'lib/leaflet/images'), { recursive: true });
 fs.copyFileSync(path.join(nm, 'chart.js/dist/chart.umd.js'), path.join(www, 'lib/chart.umd.js'));
+fs.copyFileSync(path.join(nm, 'maplibre-gl/dist/maplibre-gl.css'), path.join(www, 'lib/maplibre-gl.css'));
 
 // El módulo BLE usa imports de npm: se empaqueta como script clásico para Capacitor.
+require('esbuild').buildSync({
+  entryPoints: [path.join(nm, 'maplibre-gl/dist/maplibre-gl.mjs')],
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  globalName: 'maplibregl',
+  target: 'es2019',
+  outfile: path.join(www, 'lib/maplibre-gl.js')
+});
+
 require('esbuild').buildSync({
   entryPoints: [path.join(root, 'src', 'ble.js')],
   bundle: true,
@@ -91,16 +101,6 @@ if (!versionLabel.test(html)) {
   throw new Error('No se pudo encontrar la etiqueta de versión en index.html');
 }
 html = html.replace(versionLabel, `$1v${appVersion} (build ${appBuild})$2`);
-const swaps = [
-  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'lib/leaflet/leaflet.css'],
-  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'lib/leaflet/leaflet.js'],
-  ['https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js', 'lib/leaflet/leaflet-rotate.umd.min.js'],
-  ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js', 'lib/chart.umd.js']
-];
-for (const [from, to] of swaps) {
-  if (!html.includes(from)) throw new Error('No encuentro este enlace en index.html: ' + from);
-  html = html.split(from).join(to);
-}
 fs.writeFileSync(file, html);
 
 // Comprueba que el HTML que se empaquetará no referencia scripts o CSS locales ausentes.

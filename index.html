@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; worker-src 'self' blob:; font-src 'self' data:; form-action 'self'">
     <title>senda-mtb</title>
     <!-- Enlace al manifiesto PWA -->
     <link rel="manifest" href="manifest.json">
@@ -13,12 +14,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
-    <!-- Vista satélite con terreno 3D en la tarjeta de última ruta -->
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" integrity="sha384-gNYNsUmuZqDYiT3gbirWTV5K7rt71RoveS/yXAaU09d4ZUmeDVTD3XoqB6uJAIFR" crossorigin="anonymous">
-    <!-- Chart.js (versión fijada) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="lib/leaflet/leaflet.css">
+    <link rel="stylesheet" href="lib/maplibre-gl.css">
+    <script src="lib/chart.umd.js"></script>
 
     <link rel="stylesheet" href="app/styles.css">
     <link rel="stylesheet" href="app/dashboard.css">
@@ -26,7 +24,7 @@
 <body>
 
     <aside class="desktop-sidebar" aria-label="Navegación principal">
-        <a class="brand-lockup" href="#inicio" onclick="goToPage(5); return false;">
+        <a class="brand-lockup" href="#inicio">
             <img src="icon-512.png" alt="">
             <span>senda-<span>mtb</span></span>
         </a>
@@ -1500,11 +1498,10 @@
         </section>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/gh/tomickigrzegorz/leaflet-rotate@v0.3.0/dist/leaflet-rotate.umd.min.js" integrity="sha384-zQ2gLZyzlwLsRBTdbKJz8LFb7cHALlWKi6ShsPsbldaC8kUTk6ntQhzGq2JWxXhX" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js" integrity="sha384-1qC0PnXk2fgMDybOtZF1ui4LM5Sxm7o0TbEkwfxTTVdlZvuNENNGCKUub7d644HP" crossorigin="anonymous"></script>
-    <!-- Ordered classic scripts share app state and keep inline HTML handlers working. -->
+    <script src="lib/leaflet/leaflet.js"></script>
+    <script src="lib/leaflet/leaflet-rotate.umd.min.js"></script>
+    <script src="lib/maplibre-gl.js"></script>
+    <!-- Ordered classic scripts share app state. -->
     <script src="app/config.js"></script>
     <script src="app/statistics-engine.js"></script>
     <script src="app/storage.js"></script>
