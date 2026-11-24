@@ -151,7 +151,9 @@ function renderAccountProfile(record = {}, force = false, submittedSnapshot = nu
             const pendingValue = localStorage.getItem(accountAvatarPendingKey(uid));
             const parsedPending = pendingValue ? JSON.parse(pendingValue) : null;
             if (parsedPending && typeof parsedPending === 'object' && !Array.isArray(parsedPending)) pendingProfile = parsedPending;
-        } catch (_) {}
+        } catch (error) {
+            if (typeof console !== 'undefined') console.warn('No se pudo leer el perfil pendiente guardado:', error);
+        }
     }
     const profileRecord = { ...record };
     const pendingClears = new Set(Array.isArray(pendingProfile?.clearedFields) ? pendingProfile.clearedFields : []);

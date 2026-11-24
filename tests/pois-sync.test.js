@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-function setupPois() {
+function setupPois(savedValue, warnings = []) {
     const pendingPoi = {
         id: 100,
         clientId: '100-local',
@@ -17,7 +17,7 @@ function setupPois() {
         lng: 104,
         pendingShare: true
     };
-    const storage = new Map([['mtb_pro_saved_fountains', JSON.stringify([pendingPoi])]]);
+    const storage = new Map([['mtb_pro_saved_fountains', savedValue ?? JSON.stringify([pendingPoi])]]);
     const context = vm.createContext({
         Cloud: {
             server: 'https://mtbpro.ddns.net',
@@ -39,7 +39,7 @@ function setupPois() {
         $: () => ({ addEventListener() {} }),
         map: null,
         toast() {},
-        console: { warn() {} },
+        console: { warn(...args) { warnings.push(args); } },
         setInterval() { return 1; }
     });
     vm.runInContext(
@@ -48,6 +48,15 @@ function setupPois() {
     );
     return context;
 }
+
+test('invalid saved POI data falls back safely and reports the read error', () => {
+    const warnings = [];
+    const context = setupPois('{invalid', warnings);
+
+    assert.equal(vm.runInContext('savedFountains.length', context), 0);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0][0], /puntos guardados/);
+});
 
 test('manual POI sync bypasses the automatic retry delay and uploads queued points', async () => {
     const context = setupPois();

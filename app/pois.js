@@ -3,7 +3,10 @@
 //  FUENTES DE AGUA Y PARADAS EN BARES
 // ============================================================
 let savedFountains = [];
-try { savedFountains = JSON.parse(localStorage.getItem('mtb_pro_saved_fountains') || '[]'); } catch (e) {}
+try { savedFountains = JSON.parse(localStorage.getItem('mtb_pro_saved_fountains') || '[]'); }
+catch (error) {
+    if (typeof console !== 'undefined') console.warn('No se pudieron leer los puntos guardados en el dispositivo:', error);
+}
 // Elimina los puntos importados (archivo/OSM) de versiones anteriores; la función ya no existe.
 if (savedFountains.some(p => p && p.type === 'imported')) {
     savedFountains = savedFountains.filter(p => !(p && p.type === 'imported'));

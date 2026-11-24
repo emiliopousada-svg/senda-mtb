@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-function accountProfileContext() {
+function accountProfileContext({ pendingValue = null, warnings = [] } = {}) {
     const inputs = {
         'acc-profile-weight': { value: '' },
         'acc-profile-age': { value: '' }
@@ -16,6 +16,8 @@ function accountProfileContext() {
         Cloud: { uid: 'user-1' },
         document: { activeElement: null },
         $: id => inputs[id] || null,
+        localStorage: { getItem: () => pendingValue },
+        console: { warn(...args) { warnings.push(args); } },
         profileApplyAccountLocation: record => appliedLocations.push(record.homeLocation || ''),
         statsApplyAccountProfile() {}
     });
@@ -44,6 +46,18 @@ test('account profile applies the saved locality even without performance fields
     assert.deepEqual(appliedLocations, ['Ponte Caldelas, Galicia']);
     assert.equal(inputs['acc-profile-weight'].value, '');
     assert.equal(inputs['acc-profile-age'].value, '');
+});
+
+test('corrupt pending account profile falls back to server data and reports the read error', () => {
+    const warnings = [];
+    const { context, inputs } = accountProfileContext({ pendingValue: '{invalid', warnings });
+
+    context.renderAccountProfile({ weightKg: 72, age: 34 });
+
+    assert.equal(inputs['acc-profile-weight'].value, '72');
+    assert.equal(inputs['acc-profile-age'].value, '34');
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0][0], /perfil pendiente/);
 });
 
 test('account avatar URL works before cloud.js defines Cloud', () => {

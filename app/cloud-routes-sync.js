@@ -138,14 +138,6 @@ function routeDataFromSync(trackData) {
 }
 async function putLocal(r, options) { await DB.put(r, options); }
 
-async function queueRemoteDelete(remoteId) {
-    try {
-        const p = (await DB.kvGet('pendingDeletes')) || [];
-        p.push(remoteId);
-        await DB.kvSet('pendingDeletes', p);
-    } catch (e) {}
-}
-
 async function routeForm(r) {
     const route = r && typeof r === 'object' ? r : {};
     if (typeof DB !== 'undefined' && typeof DB.loadRoutePhotos === 'function') {
