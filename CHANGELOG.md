@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [Unreleased]
+
+### Corregido
+* **Estado de conexión:** Inicio muestra explícitamente el estado de internet; el indicador del Perfil refleja PocketBase y también se actualiza al recibir respuestas de sincronización.
+
 ## [0.2.41] - 2026-11-24
 
 ### Seguridad

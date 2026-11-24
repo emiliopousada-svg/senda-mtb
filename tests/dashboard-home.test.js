@@ -62,10 +62,12 @@ function dashboardContext(nickname, avatarUrl = '') {
         classList: { toggle(name, active) { accountIndicator.classes[name] = active; } },
         attributes: {},
         setAttribute(name, value) { this.attributes[name] = value; },
+        label: { textContent: 'Servidor' },
+        querySelector(selector) { return selector === 'span' ? this.label : null; },
         title: ''
     };
     const context = vm.createContext({
-        Cloud: { nickname },
+        Cloud: { nickname, server: 'https://server.example' },
         getAccountAvatarUrl: () => avatarUrl,
         currentPage: 5,
         activeStatsSlide: 0,
@@ -73,6 +75,9 @@ function dashboardContext(nickname, avatarUrl = '') {
         lastAccuracy: null,
         MAX_ACC_M: 30,
         navigator: { onLine: true },
+        AbortController,
+        setTimeout,
+        clearTimeout,
         window: { addEventListener() {} },
         document: {
             addEventListener() {},
@@ -247,19 +252,39 @@ test('control center contains recording, sensor, map and miscellaneous settings 
     assert.match(toolsSource, /case 'social':[\s\S]*toolsOpenWorkspace\('social-workspace'\)/);
 });
 
-test('home network status glows online and switches to offline state', () => {
+test('home network status follows internet connectivity, independently of server health', () => {
     const { context, network, accountIndicator } = dashboardContext('TrailRider');
     assert.equal(network.classes.connected, true);
     assert.match(network.innerHTML, /En línea/);
-    assert.equal(accountIndicator.classes.connected, true);
-    assert.equal(accountIndicator.attributes['aria-label'], 'Estado del servidor: conectado');
+    assert.equal(accountIndicator.classes.connected, undefined);
 
+    context.dashboardSetServerStatus('connected');
     context.navigator.onLine = false;
     context.dashboardUpdateNetworkStatus();
     assert.equal(network.classes.connected, false);
     assert.equal(network.classes.offline, true);
     assert.match(network.innerHTML, /Sin conexión/);
-    assert.equal(accountIndicator.classes.connected, false);
+    assert.equal(accountIndicator.classes.connected, true);
+    assert.equal(accountIndicator.classes.offline, false);
+    assert.equal(accountIndicator.attributes['aria-label'], 'Estado del servidor: conectado');
+});
+
+test('server indicator reflects the PocketBase health endpoint response', async () => {
+    const { context, accountIndicator } = dashboardContext('TrailRider');
+    let requestedUrl = '';
+    context.fetch = async (url, options) => {
+        requestedUrl = url;
+        assert.equal(options.cache, 'no-store');
+        return { ok: true };
+    };
+
+    assert.equal(await context.dashboardCheckServerStatus(), true);
+    assert.equal(requestedUrl, 'https://server.example/api/health');
+    assert.equal(accountIndicator.classes.connected, true);
+    assert.equal(accountIndicator.label.textContent, 'Conectado');
+
+    context.fetch = async () => { throw new Error('server unavailable'); };
+    assert.equal(await context.dashboardCheckServerStatus(), false);
     assert.equal(accountIndicator.classes.offline, true);
     assert.equal(accountIndicator.attributes['aria-label'], 'Estado del servidor: sin conexión');
 });

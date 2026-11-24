@@ -46,6 +46,7 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
             cache: 'no-store',
             redirect: 'error'
         });
+        if (typeof dashboardSetServerStatus === 'function') dashboardSetServerStatus('connected', server);
         if (!res.ok) {
             let msg = '';
             try {

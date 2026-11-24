@@ -684,6 +684,8 @@ function initAccount() {
                 toast('Servidor cambiado: vuelve a iniciar sesión.', 4000);
             }
             renderAccount();
+            dashboardSetServerStatus('checking');
+            void dashboardCheckServerStatus();
         });
     }
 
@@ -703,6 +705,7 @@ function initAccount() {
         if (document.visibilityState === 'visible' && navigator.onLine) syncWhenOnline();
     });
     renderAccount();
+    dashboardStartServerStatusUpdates();
     Cloud.restoreSession().then(record => {
         if (!record) return;
         renderAccountProfile(record);

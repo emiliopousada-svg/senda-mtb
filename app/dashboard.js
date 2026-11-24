@@ -91,13 +91,91 @@ function dashboardUpdateNetworkStatus() {
         status.innerHTML = online ? '<i></i><span>En línea</span>' : '<i></i><span>Sin conexión</span>';
     }
 
-    const accountIndicator = $('acc-server-status');
-    if (accountIndicator) {
-        accountIndicator.classList.toggle('connected', online);
-        accountIndicator.classList.toggle('offline', !online);
-        accountIndicator.setAttribute('aria-label', online ? 'Estado del servidor: conectado' : 'Estado del servidor: sin conexión');
-    }
     if (typeof renderProfileManualSyncButton === 'function') renderProfileManualSyncButton();
+}
+
+function dashboardSetServerStatus(state, server) {
+    if (server && typeof Cloud !== 'undefined') {
+        try {
+            if (Cloud.server !== server) return;
+        } catch (error) {
+            return;
+        }
+    }
+    const indicator = $('acc-server-status');
+    if (!indicator) return;
+    const status = {
+        checking: ['Comprobando…', 'Estado del servidor: comprobando'],
+        connected: ['Conectado', 'Estado del servidor: conectado'],
+        offline: ['Sin conexión', 'Estado del servidor: sin conexión']
+    }[state];
+    if (!status) return;
+
+    if (state === 'connected') dashboardServerHealthCheckId++;
+    indicator.classList.toggle('connected', state === 'connected');
+    indicator.classList.toggle('offline', state === 'offline');
+    indicator.setAttribute('aria-label', status[1]);
+    indicator.title = status[1];
+    const label = indicator.querySelector('span');
+    if (label) label.textContent = status[0];
+}
+
+let dashboardServerHealthCheckId = 0;
+let dashboardServerHealthPoll = null;
+const DASHBOARD_SERVER_HEALTH_INTERVAL_MS = 30000;
+
+async function dashboardCheckServerStatus() {
+    if (typeof Cloud === 'undefined') return false;
+
+    let server;
+    try { server = Cloud.server; }
+    catch (error) {
+        dashboardSetServerStatus('offline');
+        return false;
+    }
+    if (!server) {
+        dashboardSetServerStatus('offline');
+        return false;
+    }
+
+    const checkId = ++dashboardServerHealthCheckId;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+        const response = await fetch(`${server}/api/health`, {
+            method: 'GET',
+            signal: controller.signal,
+            credentials: 'omit',
+            cache: 'no-store',
+            redirect: 'error'
+        });
+        if (checkId !== dashboardServerHealthCheckId || Cloud.server !== server) return false;
+        dashboardSetServerStatus(response.ok ? 'connected' : 'offline', server);
+        return response.ok;
+    } catch (error) {
+        if (checkId !== dashboardServerHealthCheckId) return false;
+        try {
+            if (Cloud.server !== server) return false;
+        } catch (serverError) {
+            // The configured server is invalid; show the same unavailable state.
+        }
+        dashboardSetServerStatus('offline');
+        return false;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function dashboardStartServerStatusUpdates() {
+    if (dashboardServerHealthPoll !== null) return;
+    dashboardSetServerStatus('checking');
+    void dashboardCheckServerStatus();
+    dashboardServerHealthPoll = setInterval(() => {
+        if (document.visibilityState === 'visible') void dashboardCheckServerStatus();
+    }, DASHBOARD_SERVER_HEALTH_INTERVAL_MS);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') void dashboardCheckServerStatus();
+    });
 }
 
 function dashboardLatestRecordedRoute() {
@@ -469,9 +547,11 @@ dashboardUpdateGreeting();
 dashboardUpdateNetworkStatus();
 window.addEventListener('online', () => {
     dashboardUpdateNetworkStatus();
+    void dashboardCheckServerStatus();
     dashboardRenderMapPreview(dashboardLatestRecordedRoute());
 });
 window.addEventListener('offline', () => {
     dashboardUpdateNetworkStatus();
+    void dashboardCheckServerStatus();
     dashboardRenderMapPreview(dashboardLatestRecordedRoute());
 });
