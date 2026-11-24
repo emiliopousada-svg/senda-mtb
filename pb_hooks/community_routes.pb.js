@@ -101,16 +101,40 @@ function indexCommunityRouteBounds(e) {
             if (offset >= bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
 
             const marker = bytes[offset++];
-            if (marker === 0xd9) return;
+            if (marker === 0xd9) {
+                if (offset !== bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
+                return;
+            }
             if (marker === 0xda) {
                 if (offset + 2 > bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
                 const scanLength = bytes[offset] * 256 + bytes[offset + 1];
                 if (scanLength < 2 || offset + scanLength > bytes.length) {
                     throw new BadRequestError("La foto debe ser un JPEG válido.");
                 }
-                return;
+                offset += scanLength;
+                let nextMarkerFound = false;
+                while (offset < bytes.length) {
+                    if (bytes[offset] !== 0xff) { offset++; continue; }
+                    const markerStart = offset;
+                    offset++;
+                    while (offset < bytes.length && bytes[offset] === 0xff) offset++;
+                    if (offset >= bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
+                    const scanMarker = bytes[offset];
+                    if (scanMarker === 0x00 || (scanMarker >= 0xd0 && scanMarker <= 0xd7)) {
+                        offset++;
+                        continue;
+                    }
+                    offset = markerStart;
+                    nextMarkerFound = true;
+                    break;
+                }
+                if (!nextMarkerFound) throw new BadRequestError("La foto debe ser un JPEG válido.");
+                continue;
             }
-            if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+            if (marker === 0x01) continue;
+            if (marker === 0x00 || marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd7)) {
+                throw new BadRequestError("La foto debe ser un JPEG válido.");
+            }
             if (offset + 2 > bytes.length) throw new BadRequestError("La foto debe ser un JPEG válido.");
 
             const segmentLength = bytes[offset] * 256 + bytes[offset + 1];

@@ -221,11 +221,33 @@ test('community route hook rejects new photos containing EXIF metadata', () => {
     assert.throws(() => save(duplicateRouteValues()), /contiene metadatos/);
 });
 
+test('community route hook rejects EXIF metadata after the first JPEG scan', () => {
+    const exifAfterScan = [
+        0xff, 0xd8,
+        0xff, 0xda, 0x00, 0x02, 0x11, 0x22,
+        0xff, 0xe1, 0x00, 0x08, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+        0xff, 0xda, 0x00, 0x02, 0x33,
+        0xff, 0xd9
+    ];
+    const save = communityRouteHookWith(() => [], [jpegFile(exifAfterScan)]);
+
+    assert.throws(() => save(duplicateRouteValues()), /contiene metadatos/);
+});
+
 test('community route hook accepts a re-encoded JPEG without metadata', () => {
     const cleanJpeg = [0xff, 0xd8, 0xff, 0xe0, 0x00, 0x02, 0xff, 0xda, 0x00, 0x02, 0xff, 0xd9];
     const save = communityRouteHookWith(() => [], [jpegFile(cleanJpeg)]);
 
     assert.equal(save(duplicateRouteValues()), true);
+});
+
+test('community route hook rejects bytes appended after JPEG EOI', () => {
+    const cleanJpegWithTrailingData = [
+        0xff, 0xd8, 0xff, 0xda, 0x00, 0x02, 0x11, 0xff, 0xd9, 0x00
+    ];
+    const save = communityRouteHookWith(() => [], [jpegFile(cleanJpegWithTrailingData)]);
+
+    assert.throws(() => save(duplicateRouteValues()), /JPEG válido/);
 });
 
 test('community route hook aborts publishing when the duplicate check fails', () => {

@@ -76,6 +76,26 @@ test('nickname uniqueness normalizes Unicode before checking collisions', () => 
     assert.equal(event.record.values.nicknameKey, 'álex');
 });
 
+test('nickname hook works when PocketBase runs the serialized handler in isolation', () => {
+    const hooks = loadNicknameHooks();
+    const isolatedContext = vm.createContext({
+        BadRequestError: class BadRequestError extends Error {},
+        $app: { findRecordsByFilter: () => [] }
+    });
+    const isolatedHandler = vm.runInContext(`(${hooks.create.toString()})`, isolatedContext);
+    const record = makeRecord({ nickname: 'Álex' }, true);
+    let continued = false;
+
+    isolatedHandler({
+        record,
+        hasSuperuserAuth: () => false,
+        next() { continued = true; }
+    });
+
+    assert.equal(continued, true);
+    assert.equal(record.values.nicknameKey, 'álex');
+});
+
 test('superusers can assign the reserved nickname', () => {
     const hooks = loadNicknameHooks();
     let continued = false;

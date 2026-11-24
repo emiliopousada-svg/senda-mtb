@@ -1,12 +1,12 @@
 // Keeps each public account nickname unique and stable once selected.
-const userNicknameKey = (value) => String(value || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .normalize("NFKC")
-    .toLowerCase()
-    .normalize("NFKC");
-
 const validateUserNickname = (e) => {
+    const userNicknameKey = (value) => String(value || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .normalize("NFKC")
+        .toLowerCase()
+        .normalize("NFKC");
+
     const isSuperuser = e.hasSuperuserAuth();
     const isNew = e.record.isNew();
     const originalNickname = isNew ? "" : e.record.original().getString("nickname");
