@@ -15,6 +15,18 @@ function screenControlPlugin() {
     return cap.Plugins && cap.Plugins.ScreenControl || null;
 }
 
+async function screenSetRecordingKeepAwake(enabled) {
+    const plugin = screenControlPlugin();
+    if (!plugin || typeof plugin.setKeepScreenOn !== 'function') return false;
+    try {
+        await plugin.setKeepScreenOn({ enabled });
+        return true;
+    } catch (error) {
+        console.warn(`No se pudo ${enabled ? 'mantener' : 'liberar'} la pantalla durante la grabación:`, error);
+        return false;
+    }
+}
+
 function screenSetDimmed(dimmed) {
     const overlay = $('screen-dim-overlay');
     if (!overlay || screenDimmed === dimmed) return;

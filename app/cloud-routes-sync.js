@@ -1,5 +1,6 @@
 const ROUTE_FULL_AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ROUTE_SYNC_CURSOR_OVERLAP_MS = 5000;
+const ROUTE_TRACK_MAX_BYTES = 26214400;
 function cloudSyncStorageKey(name, server = Cloud.server, uid = Cloud.uid) {
     return `mtb_pro_${name}_${encodeURIComponent(server)}_${uid}`;
 }
@@ -123,7 +124,19 @@ function normalizeRemoteTrack(raw) {
 function getRouteNickname() {
     return String(Cloud.nickname || '').trim().slice(0, ROUTE_NICKNAME_LIMIT);
 }
-async function putLocal(r) { await DB.put(r); }
+function routeDataFromSync(trackData) {
+    const points = normalizeRemoteTrack(trackData);
+    if (!points) return null;
+    const hasPrivateMetadata = Boolean(trackData && !Array.isArray(trackData)
+        && trackData.format === 2);
+    return {
+        points,
+        hasPrivateMetadata,
+        description: hasPrivateMetadata ? String(trackData.description || '').slice(0, 500) : null,
+        pois: hasPrivateMetadata ? routePoisFromSync(trackData.pois) : null
+    };
+}
+async function putLocal(r, options) { await DB.put(r, options); }
 
 async function queueRemoteDelete(remoteId) {
     try {
@@ -133,20 +146,40 @@ async function queueRemoteDelete(remoteId) {
     } catch (e) {}
 }
 
-function routeForm(r) {
+async function routeForm(r) {
     const route = r && typeof r === 'object' ? r : {};
+    if (typeof DB !== 'undefined' && typeof DB.loadRoutePhotos === 'function') {
+        await DB.loadRoutePhotos(route);
+    }
+    const points = Array.isArray(route.points) ? route.points : [];
+    const pois = await routePoisForSync(Array.isArray(route.pois) ? route.pois : []);
+    const trackBlob = new Blob([JSON.stringify({
+        format: 2,
+        points,
+        description: String(route.description || '').slice(0, 500),
+        pois
+    })], { type: 'application/json' });
+    if (trackBlob.size > ROUTE_TRACK_MAX_BYTES) {
+        throw new Error('El track supera el límite de 25 MiB de sincronización. Sigue guardado en este teléfono; exporta o reduce la ruta antes de volver a sincronizar.');
+    }
+
     const fd = new FormData();
     fd.append('owner', Cloud.uid);
     fd.append('clientId', String(route.id ?? Date.now()));
     fd.append('name', String(route.name ?? 'Ruta sin nombre'));
     if (route.createdBy) fd.append('createdBy', String(route.createdBy).slice(0, ROUTE_NICKNAME_LIMIT));
     fd.append('kind', route.kind || 'recorded');
+    const activityType = typeof ACTIVITY_TYPES !== 'undefined'
+        && Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, route.activityType)
+        ? route.activityType
+        : activityTypeFromName(route.name);
+    if (activityType) fd.append('activityType', activityType);
     fd.append('startedAt', route.startedAt || new Date().toISOString());
     fd.append('movingTimeSec', String(route.movingTimeSec || 0));
     fd.append('distanceKm', String(route.distanceKm || 0));
     fd.append('elevationGain', String(route.elevationGain || 0));
     fd.append('hrAvg', String(route.hrAvg ?? 0));
-    fd.append('track', new Blob([JSON.stringify(Array.isArray(route.points) ? route.points : [])], { type: 'application/json' }), 'track.json');
+    fd.append('track', trackBlob, 'track.json');
     return fd;
 }
 
@@ -347,6 +380,65 @@ async function syncRoutes(manual = false) {
         const byClient = new Map(remote.map(x => [Number(x.clientId), x]));
         const byRemoteId = new Map(remote.map(x => [x.id, x]));
         const blockedIds = new Set();
+        const FILE_TOKEN_REFRESH_INTERVAL_MS = 60_000;
+        let fileToken = '';
+        let fileTokenIssuedAt = 0;
+        const refreshFileToken = async () => {
+            const result = await syncCloudApi('/api/files/token', 'POST');
+            if (!isCurrentSync()) return null;
+            if (!result || !result.token) throw new Error('El servidor no devolvió un token de descarga.');
+            fileToken = result.token;
+            fileTokenIssuedAt = Date.now();
+            return fileToken;
+        };
+        const downloadTrack = async rec => {
+            let retriedWithFreshToken = false;
+            while (true) {
+                if (!isCurrentSync()) return null;
+                if (!fileToken || Date.now() - fileTokenIssuedAt >= FILE_TOKEN_REFRESH_INTERVAL_MS) {
+                    if (!await refreshFileToken()) return null;
+                }
+                const dlController = new AbortController();
+                const dlTimer = setTimeout(() => dlController.abort(), 15000);
+                let res;
+                try {
+                    res = await fetch(`${retryServer}/api/files/routes/${rec.id}/${encodeURIComponent(rec.track)}?token=${encodeURIComponent(fileToken)}`, { signal: dlController.signal });
+                } catch (error) {
+                    if (error && (error.status === undefined || error.name === 'AbortError')) error.retryable = true;
+                    throw error;
+                } finally {
+                    clearTimeout(dlTimer);
+                }
+                if (!isCurrentSync()) return null;
+                if (res.ok) return res;
+                if (!retriedWithFreshToken && [401, 403, 404].includes(res.status)) {
+                    retriedWithFreshToken = true;
+                    if (!await refreshFileToken()) return null;
+                    continue;
+                }
+                const error = new Error(`El servidor respondió ${res.status}`);
+                error.status = res.status;
+                error.retryable = isRetryableCloudStatus(res.status);
+                throw error;
+            }
+        };
+        const downloadRouteData = async rec => {
+            const res = await downloadTrack(rec);
+            if (!res || !isCurrentSync()) return null;
+            let trackData;
+            try { trackData = JSON.parse(await res.text()); }
+            catch (_) { throw new Error('El archivo del track no contiene JSON válido'); }
+            if (!isCurrentSync()) return null;
+            const routeData = routeDataFromSync(trackData);
+            if (!routeData) {
+                const shape = Array.isArray(trackData) ? `array (${trackData.length} elementos)`
+                    : trackData && typeof trackData === 'object'
+                        ? `objeto (${Object.keys(trackData).slice(0, 6).join(', ') || 'sin campos'})`
+                        : typeof trackData;
+                throw new Error(`El formato del track no es compatible: ${shape}`);
+            }
+            return routeData;
+        };
         for (const r of [...savedRoutes]) {
             if (!isCurrentSync()) return;
             const previousCreator = r.createdBy || '';
@@ -410,8 +502,38 @@ async function syncRoutes(manual = false) {
                 r.remoteId = matched.id;
                 r.remoteServer = retryServer;
                 const remoteName = matched.name || r.name;
-                const remoteActivity = activityTypeFromName(remoteName) || r.activityType || 'mtb';
+                const remoteActivity = (Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, matched.activityType)
+                    ? matched.activityType
+                    : null) || activityTypeFromName(remoteName) || r.activityType || 'mtb';
                 const remoteCreator = nickname;
+                let remoteTrackChanged = false;
+                let replacePhotos = false;
+                let uploadLocalMetadata = false;
+                const remoteUpdated = String(matched.updated || matched.created || 'unknown');
+                if (matched.track && (!r.remoteUpdated || remoteUpdated !== r.remoteUpdated)) {
+                    try {
+                        const routeData = await downloadRouteData(matched);
+                        if (!isCurrentSync()) return;
+                        if (!routeData) return;
+                        r.points = routeData.points;
+                        if (routeData.hasPrivateMetadata) {
+                            r.description = routeData.description;
+                            r.pois = routeData.pois;
+                            replacePhotos = true;
+                        } else if (r.description || (Array.isArray(r.pois) && r.pois.length > 0)) {
+                            uploadLocalMetadata = true;
+                            r.dirty = true;
+                        }
+                        r.remoteUpdated = remoteUpdated;
+                        remoteTrackChanged = true;
+                    } catch (e) {
+                        if (!isCurrentSync()) return;
+                        blockedIds.add(r.id);
+                        noteSyncFailure(`No se pudo actualizar «${r.name || 'ruta'}» desde el servidor: ${e.message}`, e);
+                        console.warn(`No se pudo descargar la actualización remota de la ruta ${r.id}:`, e);
+                        continue;
+                    }
+                }
                 if (remoteCreator && matched.createdBy !== remoteCreator) {
                     try {
                         await syncCloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', { createdBy: remoteCreator });
@@ -425,14 +547,14 @@ async function syncRoutes(manual = false) {
                 }
                 const changed = remoteIdChanged || previousRemoteServer !== retryServer
                     || r.name !== remoteName || r.activityType !== remoteActivity
-                    || previousCreator !== remoteCreator;
+                    || previousCreator !== remoteCreator || remoteTrackChanged;
                 r.name = remoteName;
                 r.activityType = remoteActivity;
                 if (remoteCreator) r.createdBy = remoteCreator;
-                r.dirty = false;
+                r.dirty = uploadLocalMetadata;
                 if (changed) {
                     if (!isCurrentSync()) return;
-                    try { await putLocal(r); }
+                    try { await putLocal(r, { replacePhotos }); }
                     catch (e) {
                         if (!isCurrentSync()) return;
                         blockedIds.add(r.id);
@@ -445,7 +567,7 @@ async function syncRoutes(manual = false) {
                     await syncRouteRanking(r);
                     if (!isCurrentSync()) return;
                 }
-                continue;
+                if (!uploadLocalMetadata) continue;
             }
             if (blockedIds.has(r.id)) continue;
             if (matched) {
@@ -461,15 +583,14 @@ async function syncRoutes(manual = false) {
                 continue;
             }
             try {
-                let rec;
-                if (remoteIdOnCurrentServer) rec = await syncCloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', {
-                    name: r.name,
-                    ...(r.createdBy ? { createdBy: String(r.createdBy).slice(0, ROUTE_NICKNAME_LIMIT) } : {})
-                });
-                else rec = await syncCloudApi('/api/collections/routes/records', 'POST', routeForm(r), { timeoutMs: 60000 });
+                const form = await routeForm(r);
+                const rec = remoteIdOnCurrentServer
+                    ? await syncCloudApi(`/api/collections/routes/records/${r.remoteId}`, 'PATCH', form, { timeoutMs: 60000 })
+                    : await syncCloudApi('/api/collections/routes/records', 'POST', form, { timeoutMs: 60000 });
                 if (!isCurrentSync()) return;
                 r.remoteId = rec.id;
                 r.remoteServer = retryServer;
+                r.remoteUpdated = String(rec.updated || rec.created || 'unknown');
                 r.dirty = false;
                 if (r.kind === 'recorded' && Cloud.groupCode) {
                     await syncRouteRanking(r);
@@ -502,17 +623,6 @@ async function syncRoutes(manual = false) {
         const localIds = new Set(savedRoutes.map(r => r.id));
         const missing = remote.filter(x => !skip.has(x.id) && x.track && !localIds.has(Number(x.clientId)));
         if (missing.length) {
-            const FILE_TOKEN_REFRESH_INTERVAL_MS = 60_000;
-            let fileToken = '';
-            let fileTokenIssuedAt = 0;
-            const refreshFileToken = async () => {
-                const result = await syncCloudApi('/api/files/token', 'POST');
-                if (!isCurrentSync()) return null;
-                if (!result || !result.token) throw new Error('El servidor no devolvió un token de descarga.');
-                fileToken = result.token;
-                fileTokenIssuedAt = Date.now();
-                return fileToken;
-            };
             const downloadTrack = async rec => {
                 let retriedWithFreshToken = false;
                 while (true) {
@@ -547,34 +657,27 @@ async function syncRoutes(manual = false) {
             for (const rec of missing) {
                 if (!isCurrentSync()) return;
                 try {
-                    const res = await downloadTrack(rec);
+                    const routeData = await downloadRouteData(rec);
                     if (!isCurrentSync()) return;
-                    let trackData;
-                    try { trackData = JSON.parse(await res.text()); }
-                    catch (_) { throw new Error('El archivo del track no contiene JSON válido'); }
-                    if (!isCurrentSync()) return;
-                    const points = normalizeRemoteTrack(trackData);
-                    if (!points) {
-                        const shape = Array.isArray(trackData) ? `array (${trackData.length} elementos)`
-                            : trackData && typeof trackData === 'object'
-                                ? `objeto (${Object.keys(trackData).slice(0, 6).join(', ') || 'sin campos'})`
-                                : typeof trackData;
-                        throw new Error(`El formato del track no es compatible: ${shape}`);
-                    }
+                    if (!routeData) return;
                     const id = Number(rec.clientId);
                     if (!Number.isSafeInteger(id) || id < 0) throw new Error('El identificador de ruta no es válido');
                     const r = {
                         id, remoteId: rec.id, remoteServer: retryServer, dirty: false,
                         kind: rec.kind || 'recorded', name: rec.name, startedAt: rec.startedAt,
+                        remoteUpdated: String(rec.updated || rec.created || 'unknown'),
                         createdBy: rec.createdBy || 'Usuario local',
                         activityType: Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, rec.activityType)
                             ? rec.activityType
                             : activityTypeFromName(rec.name),
                         movingTimeSec: rec.movingTimeSec || 0, distanceKm: rec.distanceKm || 0,
-                        elevationGain: rec.elevationGain || 0, hrAvg: rec.hrAvg || null, points
+                        elevationGain: rec.elevationGain || 0, hrAvg: rec.hrAvg || null,
+                        description: routeData.description || '',
+                        pois: routeData.pois || [],
+                        points: routeData.points
                     };
                     if (!isCurrentSync()) return;
-                    await putLocal(r);
+                    await putLocal(r, { replacePhotos: routeData.hasPrivateMetadata });
                     savedRoutes.push(r);
                     pulled++;
                     garageUsageChanged = true;

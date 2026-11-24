@@ -58,7 +58,8 @@ function routeSyncContext({
     putLocal,
     fetchRemoteRoutes,
     cloudApi,
-    pendingDeleteReadError
+    pendingDeleteReadError,
+    remoteTrackData = [[0, 0], [1, 1]]
 } = {}) {
     let downloadedTrackCount = 0;
     const toasts = [];
@@ -97,7 +98,7 @@ function routeSyncContext({
             downloadedTrackCount++;
             return {
                 ok: true,
-                async text() { return JSON.stringify([[0, 0], [1, 1]]); }
+                async text() { return JSON.stringify(remoteTrackData); }
             };
         },
         fetchRemoteRoutes: fetchRemoteRoutes || (async () => ({ records: remote, fullAudit: true })),
@@ -106,6 +107,17 @@ function routeSyncContext({
         localStorage: { getItem() { return null; }, setItem() {} },
         navigator: { onLine: true },
         normalizeRemoteTrack: () => [[0, 0], [1, 1]],
+        routeDataFromSync(trackData) {
+            const points = Array.isArray(trackData) ? trackData : trackData && trackData.points;
+            if (!Array.isArray(points)) return null;
+            const hasPrivateMetadata = Boolean(trackData && !Array.isArray(trackData) && trackData.format === 2);
+            return {
+                points,
+                hasPrivateMetadata,
+                description: hasPrivateMetadata ? trackData.description : null,
+                pois: hasPrivateMetadata ? trackData.pois : null
+            };
+        },
         routeForm: route => route,
         renderAccount() {},
         renderAccountProfile() {},
@@ -115,6 +127,7 @@ function routeSyncContext({
         clearTimeout,
         syncPendingGroupRankingDeletes: async () => true,
         toast(message) { toasts.push(message); },
+        activityTypeFromName: () => null,
         $: () => ({ textContent: '' }),
         console: { warn() {} },
         async putLocal(route) {
@@ -686,6 +699,95 @@ test('completed route download updates memory before stopping a stale sync', asy
     assert.equal(routes.length, 1);
     assert.equal(routes[0].id, 2);
     assert.equal(routes[0].remoteId, 'remote-2');
+});
+
+test('updated remote routes refresh private descriptions and photo POIs', async () => {
+    const remoteUpdated = '2026-11-24 15:00:00.000Z';
+    const { context, getDownloadedTrackCount } = routeSyncContext({
+        routes: [{
+            id: 9,
+            remoteId: 'remote-9',
+            remoteServer: 'https://server.example',
+            remoteUpdated: '2026-11-23 15:00:00.000Z',
+            kind: 'recorded',
+            name: 'Old name',
+            description: 'Old description',
+            pois: [],
+            points: [[0, 0]],
+            dirty: false
+        }],
+        remote: [{
+            id: 'remote-9',
+            clientId: 9,
+            track: 'track.json',
+            updated: remoteUpdated,
+            createdBy: 'Rider',
+            kind: 'recorded',
+            name: 'Old name',
+            activityType: 'mtb'
+        }],
+        remoteTrackData: {
+            format: 2,
+            points: [[1, 2]],
+            description: 'Updated description',
+            pois: [{ lat: 1, lng: 2, caption: 'Foto', photoData: 'encoded' }]
+        }
+    });
+
+    await context.syncRoutes();
+
+    const [route] = context.getSavedRoutes();
+    assert.equal(getDownloadedTrackCount(), 1);
+    assert.equal(route.remoteUpdated, remoteUpdated);
+    assert.equal(route.description, 'Updated description');
+    assert.deepEqual(Array.from(route.points[0]), [1, 2]);
+    assert.equal(route.pois[0].caption, 'Foto');
+});
+
+test('legacy remote track updates preserve local private metadata', async () => {
+    const remoteUpdated = '2026-11-24 15:00:00.000Z';
+    let patchedRoute;
+    const { context, getDownloadedTrackCount } = routeSyncContext({
+        routes: [{
+            id: 10,
+            remoteId: 'remote-10',
+            remoteServer: 'https://server.example',
+            remoteUpdated: '2026-11-23 15:00:00.000Z',
+            kind: 'recorded',
+            name: 'Legacy route',
+            description: 'Keep this description',
+            pois: [{ lat: 1, lng: 2, caption: 'Local photo' }],
+            points: [[0, 0]],
+            dirty: false
+        }],
+        remote: [{
+            id: 'remote-10',
+            clientId: 10,
+            track: 'legacy.json',
+            updated: remoteUpdated,
+            createdBy: 'Rider',
+            kind: 'recorded',
+            name: 'Legacy route'
+        }],
+        remoteTrackData: [[3, 4], [5, 6]],
+        cloudApi: async (path, method, body) => {
+            if (path.endsWith('/remote-10')) {
+                patchedRoute = body;
+                return { id: 'remote-10', updated: remoteUpdated };
+            }
+            return { token: 'file-token' };
+        }
+    });
+
+    await context.syncRoutes();
+
+    const [route] = context.getSavedRoutes();
+    assert.equal(getDownloadedTrackCount(), 1);
+    assert.equal(route.remoteUpdated, remoteUpdated);
+    assert.equal(route.description, 'Keep this description');
+    assert.equal(route.pois[0].caption, 'Local photo');
+    assert.deepEqual(Array.from(route.points[0]), [3, 4]);
+    assert.equal(patchedRoute.description, 'Keep this description');
 });
 
 test('a queued sync does not run for a different account after its delay', async () => {

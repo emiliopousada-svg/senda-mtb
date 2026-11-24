@@ -11,6 +11,32 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "ScreenControl")
 public class ScreenControlPlugin extends Plugin {
     @PluginMethod
+    public void setKeepScreenOn(PluginCall call) {
+        Boolean enabled = call.getBoolean("enabled");
+        if (enabled == null) {
+            call.reject("Falta indicar si se debe mantener activa la pantalla.");
+            return;
+        }
+        if (getActivity() == null) {
+            call.reject("La actividad de la aplicación no está disponible.");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            Window window = getActivity() == null ? null : getActivity().getWindow();
+            if (window == null) {
+                call.reject("No se pudo acceder a la ventana de la aplicación.");
+                return;
+            }
+            if (enabled) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
+            call.resolve();
+        });
+    }
+
+    @PluginMethod
     public void dim(PluginCall call) {
         setScreenBrightness(call, 0.03f);
     }

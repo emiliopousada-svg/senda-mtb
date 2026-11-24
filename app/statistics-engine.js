@@ -149,6 +149,10 @@
             currentClimbDistanceKm = 0;
             currentClimbAscentM = 0;
         };
+        const appendProfileGap = () => {
+            if (profile.length && profile[profile.length - 1].y === null) return;
+            profile.push({ x: distanceM / 1000, y: null });
+        };
         const resetSegment = () => {
             finishClimb();
             previous = null;
@@ -193,9 +197,9 @@
                 } else {
                     legMeters = candidateMeters;
                     distanceM += legMeters;
-                    if (hasValidDelta && elapsed <= config.maxTimeDeltaSec) {
-                        deltaSeconds = elapsed;
+                    if (hasValidDelta) {
                         if (candidateMeters / elapsed >= 0.5) estimatedMovingTimeSec += elapsed;
+                        if (elapsed <= config.maxTimeDeltaSec) deltaSeconds = elapsed;
                     }
                 }
             }
@@ -214,6 +218,7 @@
                 gradeAnchor = null;
                 currentSlope = null;
                 previousSmoothedAltitude = null;
+                appendProfileGap();
             }
 
             const speed = finiteNumber(point[6]);
@@ -304,7 +309,7 @@
                 }
             }
 
-            if ((startsSegment || breakPending) && profile.length > 0) profile.push({ x: distanceM / 1000, y: null });
+            if ((startsSegment || breakPending) && profile.length > 0) appendProfileGap();
             if (smoothedAltitude !== null) {
                 profile.push({
                     x: distanceM / 1000,

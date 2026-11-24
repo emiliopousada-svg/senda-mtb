@@ -2,6 +2,8 @@
 
 //  AVISO DE DESVÍO
 // ============================================================
+const ROUTE_GLOBAL_RESCAN_INTERVAL_MS = 5000;
+
 function pointSegDistM(p, a, b) { // metros de p al segmento a-b (proyección local)
     const k = Math.cos(p[0] * Math.PI / 180);
     const ax = (a[1] - p[1]) * k * 111320, ay = (a[0] - p[0]) * 110540;
@@ -141,8 +143,11 @@ function findFollowedRouteMatch(lat, lon) {
     };
 
     let match = scan(Math.max(0, hint - 30), Math.min(lastSegment, hint + 180));
-    // Al empezar lejos de la ruta o tras un salto GPS, buscar el trazado completo.
-    if (match.distance > 250) match = scan(0, lastSegment);
+    if (match.distance > 250
+        && Date.now() - (followedRoute.lastGlobalScanAt || 0) >= ROUTE_GLOBAL_RESCAN_INTERVAL_MS) {
+        match = scan(0, lastSegment);
+        followedRoute.lastGlobalScanAt = Date.now();
+    }
     match.fraction = pointSegFraction([lat, lon], pts[match.index], pts[match.index + 1]);
     followedRoute.progressIndex = match.index;
     return match;
@@ -247,14 +252,13 @@ function updateMapRouteProfilePosition(match) {
     const bestIndex = match.index;
     const x = bestIndex / Math.max(routeProfilePointCount - 1, 1) * 320;
     if (!isRecording && followedRoute.gainCum) $('m-elevation').textContent = Math.round(followedRoute.gainCum[bestIndex] || 0);
-    let before = routeProfileCoords[0], after = routeProfileCoords[routeProfileCoords.length - 1];
-    for (let i = 1; i < routeProfileCoords.length; i++) {
-        if (routeProfileCoords[i].i >= bestIndex) {
-            before = routeProfileCoords[i - 1];
-            after = routeProfileCoords[i];
-            break;
-        }
+    let low = 0, high = routeProfileCoords.length - 1;
+    while (low + 1 < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (routeProfileCoords[middle].i < bestIndex) low = middle;
+        else high = middle;
     }
+    const before = routeProfileCoords[low], after = routeProfileCoords[high];
     const span = after.i - before.i;
     const t = span ? Math.max(0, Math.min(1, (bestIndex - before.i) / span)) : 0;
     const y = before.y + (after.y - before.y) * t;
@@ -284,7 +288,8 @@ function followRoute(r) {
         nextManeuverWakeIndex: 0,
         pois: Array.isArray(r.pois) ? r.pois : [],
         gainCum: gainCumulative(r.points),
-        progressIndex: 0
+        progressIndex: 0,
+        lastGlobalScanAt: 0
     };
     showRoutePoisOnMap([...(isRecording ? recordingPois : []), ...followedRoute.pois]);
     renderMapRouteProfile(r);

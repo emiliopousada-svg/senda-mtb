@@ -38,9 +38,9 @@ function loadCreateHandler(countRecords) {
     }));
 }
 
-function createEvent() {
+function createEvent({ superuser = false } = {}) {
     return {
-        hasSuperuserAuth: () => false,
+        hasSuperuserAuth: () => superuser,
         auth: { id: 'user123' },
         record: {
             values: { owner: 'user123', name: 'Bar' },
@@ -71,6 +71,7 @@ test('map POI create hook counts records with a PocketBase dbx expression', () =
     assert.equal(countArgs[1].kind, 'hash');
     assert.equal(countArgs[1].values.owner, 'user123');
     assert.equal(event.record.values.createdBy, 'Rider');
+    assert.equal(event.record.values.quotaExemptForLimit, false);
     assert.equal(event.nextCalled, true);
 });
 
@@ -108,4 +109,16 @@ test('map POI create hook rejects accounts at the shared POI limit', () => {
 
     assert.throws(() => handler(event), /máximo de 500 puntos compartidos/);
     assert.equal(event.nextCalled, false);
+});
+
+test('map POI create hook marks superuser records as exempt from the owner limit', () => {
+    const handler = loadCreateHandler(() => {
+        throw new Error('superuser requests must not count POIs');
+    });
+    const event = createEvent({ superuser: true });
+
+    handler(event);
+
+    assert.equal(event.record.values.quotaExemptForLimit, true);
+    assert.equal(event.nextCalled, true);
 });

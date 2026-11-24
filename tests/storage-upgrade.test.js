@@ -49,3 +49,31 @@ test('IndexedDB explains when an old tab blocks the schema upgrade', () => {
 
     assert.match(state.messages[0], /Cierra las otras pesta/);
 });
+
+test('route photo replacements clear stale blobs without affecting legacy writes', async () => {
+    const { context } = storageContext();
+    const operations = [];
+    context.testDB.db = {
+        transaction() {
+            const tx = {
+                objectStore(name) {
+                    return {
+                        put(value) { operations.push(['put', name, value.routeId ?? value.id]); },
+                        delete(key) { operations.push(['delete', name, key]); }
+                    };
+                }
+            };
+            queueMicrotask(() => tx.oncomplete());
+            return tx;
+        }
+    };
+
+    await context.testDB.put({ id: 41, pois: [] }, { replacePhotos: true });
+    await context.testDB.put({ id: 42, pois: [] });
+
+    assert.deepEqual(operations, [
+        ['put', 'routes', 41],
+        ['delete', 'routePhotos', 41],
+        ['put', 'routes', 42]
+    ]);
+});

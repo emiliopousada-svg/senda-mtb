@@ -51,6 +51,8 @@ Las migraciones `pb_migrations/1794835006_add_community_route_source_path.js` y 
 
 La app solicita la comunidad autónoma al publicar; conserva el nombre histórico del campo `province` en PocketBase para no romper rutas y clientes existentes. Consulta [CONFIGURAR-RUTAS-COMUNIDAD.md](./CONFIGURAR-RUTAS-COMUNIDAD.md) para desplegar y verificar los campos y hooks.
 
+La migración `pb_migrations/1794836009_enforce_map_poi_owner_limit.js` hace cumplir en SQLite el máximo de 500 POIs por propietario con un trigger atómico, evitando que creaciones concurrentes superen el límite. Aplica la migración antes de desplegar `pb_hooks/map_pois.pb.js`; el hook mantiene el rechazo anticipado y marca las creaciones de superusuario como exentas.
+
 La migración `pb_migrations/1794836000_create_group_challenges.js` añade los campos automáticos `created` y `updated` a `mtb_group_ranking_entries` (las marcas antiguas usan como fecha el `clientId` de la salida) y crea `mtb_group_challenges`. El `down` de esta migración conserva intencionadamente la colección y los datos al hacer rollback, porque no puede distinguir una colección preexistente de otra creada por la migración. El rollback también conserva los campos de fecha añadidos al ranking. El hook `pb_hooks/group_league.pb.js` publica, para el grupo del usuario autenticado:
 
 | Ruta | Uso |

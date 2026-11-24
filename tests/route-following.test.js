@@ -80,7 +80,7 @@ function routeContext({ maxMathArguments = Infinity } = {}) {
         messages,
         navigationWakes,
         elements,
-        api: vm.runInContext('({ buildRouteCumulativeDistances, buildRouteManeuvers, checkUpcomingRouteTurn, checkOffRoute })', context)
+        api: vm.runInContext('({ buildRouteCumulativeDistances, buildRouteManeuvers, findFollowedRouteMatch, updateMapRouteProfilePosition, checkUpcomingRouteTurn, checkOffRoute })', context)
     };
 }
 
@@ -174,4 +174,47 @@ test('route deviation wakes the dimmed OLED cockpit once and return to route kee
     api.checkOffRoute(42, -8, { distance: 20 });
     assert.equal(navigationWakes.length, 1);
     assert.equal(announcements[1], 'Has vuelto a la ruta.');
+});
+
+test('route matching rate-limits full scans while the rider remains far from a large route', () => {
+    const { context, api } = routeContext();
+    context.followedRoute = {
+        pts: Array.from({ length: 1000 }, (_, index) => [42, -8 + index * 0.00001]),
+        progressIndex: 0,
+        lastGlobalScanAt: Date.now()
+    };
+    let segmentChecks = 0;
+    context.pointSegDistM = () => {
+        segmentChecks++;
+        return 300;
+    };
+    context.pointSegFraction = () => 0;
+
+    api.findFollowedRouteMatch(42, -8);
+    assert.equal(segmentChecks, 181);
+
+    const localScanChecks = segmentChecks;
+    context.followedRoute.lastGlobalScanAt = Date.now() - 6000;
+    api.findFollowedRouteMatch(42, -8);
+    assert.equal(segmentChecks - localScanChecks, 181 + 999);
+});
+
+test('route profile cursor finds its interpolation bracket logarithmically', () => {
+    const { context, elements, api } = routeContext();
+    const coords = Array.from({ length: 32768 }, (_, index) => ({ i: index, x: index, y: index }));
+    let reads = 0;
+    context.routeProfileCoords = new Proxy(coords, {
+        get(target, property, receiver) {
+            if (/^(0|[1-9]\d*)$/.test(String(property))) reads++;
+            return Reflect.get(target, property, receiver);
+        }
+    });
+    context.routeProfilePointCount = coords.length;
+    context.followedRoute = { gainCum: null };
+    context.isRecording = false;
+
+    api.updateMapRouteProfilePosition({ index: 16384 });
+
+    assert.equal(elements.get('map-route-cursor').attributes.get('cy'), '16384.0');
+    assert.ok(reads < 100, `expected logarithmic access count, got ${reads}`);
 });

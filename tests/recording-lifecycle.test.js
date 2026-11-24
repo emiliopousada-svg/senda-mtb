@@ -105,18 +105,18 @@ function recordingFinishContext({ failingEffect, failDatabasePut = false, failSa
     return { context, calls, savedRoutes };
 }
 
-function draftRestoreContext(draft) {
+function draftRestoreContext(draft, chunks = []) {
     const calls = [];
     const context = vm.createContext({
+        DRAFT_POINTS_CHUNK_SIZE: 500,
         DB: {
             async kvGet(key) {
                 calls.push(['get', key]);
                 return draft;
             },
-            async kvDel(key) {
-                calls.push(['delete', key]);
-            }
+            async kvGetDraftPointChunks() { return chunks; }
         },
+        async clearDraft() { calls.push(['delete', 'draft']); },
         async modal() {
             calls.push(['modal']);
             return true;
@@ -127,7 +127,69 @@ function draftRestoreContext(draft) {
     assert.notEqual(start, -1);
     assert.notEqual(end, -1);
     vm.runInContext(
-        `${recordingSource.slice(start, end)}\nglobalThis.maybeRestoreDraft = maybeRestoreDraft;`,
+        `${recordingSource.slice(start, end)}\nglobalThis.maybeRestoreDraft = maybeRestoreDraft; globalThis.hydrateDraft = hydrateDraft;`,
+        context
+    );
+    return { context, calls };
+}
+
+function draftSaveContext(initialPoints) {
+    const writes = [];
+    const context = vm.createContext({
+        DRAFT_POINTS_CHUNK_SIZE: 500,
+        DB: {
+            async kvSaveDraft(draft, chunks) {
+                writes.push({ draft, chunks });
+            }
+        },
+        Date,
+        clearTimeout() {},
+        console: { warn() {} },
+        isRecording: true,
+        points: initialPoints,
+        totalDistance: 1,
+        movingMs: 1000,
+        segStart: null,
+        startedAt: '2026-11-24T10:00:00Z',
+        recordingActivityType: 'mtb',
+        recordingPois: [],
+        draftSaveTimer: null,
+        draftSaveMaxWaitTimer: null,
+        draftSavePromise: null,
+        pendingDraft: null,
+        draftStateVersion: 1,
+        draftRevision: 0,
+        draftSavedRevision: 0,
+        draftSavedPointCount: 0
+    });
+    const start = recordingSource.indexOf('function draftMovingMs() {');
+    const end = recordingSource.indexOf('\nasync function clearDraft()', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${recordingSource.slice(start, end)}\nglobalThis.saveDraft = saveDraft;`,
+        context
+    );
+    return { context, writes };
+}
+
+function recordingWakeContext() {
+    const calls = [];
+    const context = vm.createContext({
+        async screenSetRecordingKeepAwake(enabled) {
+            calls.push(['native', enabled]);
+            return true;
+        },
+        screenReleaseWakeLock() { calls.push(['releaseWebWakeLock']); },
+        async screenEnsureAwake() { calls.push(['ensureAwake']); },
+        navigator: {}
+    });
+    const start = recordingSource.indexOf('async function acquireWake() {');
+    const end = recordingSource.indexOf('\n// ---- GPS en segundo plano', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${recordingSource.slice(start, end)}\nglobalThis.acquireWake = acquireWake; globalThis.releaseWake = releaseWake;`,
         context
     );
     return { context, calls };
@@ -210,6 +272,69 @@ test('a draft with corrupt distance is discarded before prompting or restoring',
     await assert.doesNotReject(context.maybeRestoreDraft());
 
     assert.deepEqual(calls, [['get', 'draft'], ['delete', 'draft']]);
+});
+
+test('draft autosaves persist only new point chunks and small metadata', async () => {
+    const points = Array.from({ length: 600 }, (_, index) => [42, -8, null, index, null]);
+    const { context, writes } = draftSaveContext(points);
+
+    await context.saveDraft();
+    assert.equal(writes[0].draft.format, 2);
+    assert.equal('points' in writes[0].draft, false);
+    assert.deepEqual(Array.from(writes[0].chunks, chunk => chunk.points.length), [500, 100]);
+
+    context.points.push([42, -8, null, 600, null], [42, -8, null, 601, null]);
+    context.draftStateVersion++;
+    await context.saveDraft();
+    assert.deepEqual(
+        Array.from(writes[1].chunks, chunk => [chunk.index, chunk.points.length]),
+        [[1, 102]]
+    );
+
+    context.movingMs += 1000;
+    await context.saveDraft();
+    assert.equal(writes[2].chunks.length, 0);
+});
+
+test('chunked draft hydration validates and combines contiguous point chunks', async () => {
+    const { context } = draftRestoreContext({
+        format: 2,
+        pointCount: 3,
+        pointChunkCount: 1,
+        totalDistance: 0.1
+    }, [{
+        index: 0,
+        points: [[42, -8], [42.1, -8.1], [42.2, -8.2]]
+    }]);
+
+    const draft = await context.hydrateDraft({
+        format: 2,
+        pointCount: 3,
+        pointChunkCount: 1,
+        totalDistance: 0.1
+    });
+    assert.equal(draft.points.length, 3);
+
+    const corrupt = await context.hydrateDraft({
+        format: 2,
+        pointCount: 3,
+        pointChunkCount: 2,
+        totalDistance: 0.1
+    });
+    assert.equal(corrupt, null);
+});
+
+test('recording acquires native screen-on state and releases it on pause or finish', async () => {
+    const { context, calls } = recordingWakeContext();
+
+    await context.acquireWake();
+    await context.releaseWake();
+
+    assert.deepEqual(calls, [
+        ['native', true],
+        ['native', false],
+        ['releaseWebWakeLock']
+    ]);
 });
 
 test('buildSegments splits multi-segment tracks on pause breaks without cross-gap connection', () => {

@@ -2,7 +2,10 @@
 // Las reglas y límites de campos siguen definidos en map_pois.json.
 onRecordCreateRequest((e) => {
     const MAX_SHARED_POIS_PER_USER = 500;
-    if (e.hasSuperuserAuth()) return e.next();
+    if (e.hasSuperuserAuth()) {
+        e.record.set("quotaExemptForLimit", true);
+        return e.next();
+    }
     if (!e.auth) throw new BadRequestError("Inicia sesión para compartir puntos del mapa.")
 
     const ownerId = e.auth.id
@@ -14,6 +17,7 @@ onRecordCreateRequest((e) => {
     const nickname = user.getString("nickname").trim()
     if (!nickname) throw new BadRequestError("Configura un apodo antes de compartir puntos del mapa.")
     e.record.set("createdBy", nickname)
+    e.record.set("quotaExemptForLimit", false)
 
     const name = e.record.getString("name").trim();
     const lat = Number(e.record.get("lat"));

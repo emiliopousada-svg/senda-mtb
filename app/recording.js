@@ -8,6 +8,7 @@ let routePhotoCapturePosition = null;
 let routePhotoProcessing = null;
 const DRAFT_SAVE_DEBOUNCE_MS = 1500;
 const DRAFT_SAVE_MAX_WAIT_MS = 5000;
+const DRAFT_POINTS_CHUNK_SIZE = 500;
 let draftSaveTimer = null;
 let draftSaveMaxWaitTimer = null;
 let draftSavePromise = null;
@@ -15,6 +16,7 @@ let pendingDraft = null;
 let draftStateVersion = 0;
 let draftRevision = 0;
 let draftSavedRevision = 0;
+let draftSavedPointCount = 0;
 
 function clearRoutePolylines() {
     routePolylines.forEach(polyline => { if (map) map.removeLayer(polyline); });
@@ -47,6 +49,8 @@ function renderRecordingSegments(routeSegments) {
 }
 
 async function acquireWake() {
+    if (typeof screenSetRecordingKeepAwake === 'function'
+        && await screenSetRecordingKeepAwake(true)) return;
     if (typeof screenEnsureAwake === 'function') {
         await screenEnsureAwake();
         return;
@@ -59,8 +63,16 @@ async function acquireWake() {
     } catch (e) {}
 }
 function releaseWake() {
-    if (typeof screenEnsureAwake === 'function') return;
-    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+    let nativeRelease;
+    if (typeof screenSetRecordingKeepAwake === 'function') {
+        nativeRelease = screenSetRecordingKeepAwake(false);
+    }
+    if (typeof screenReleaseWakeLock === 'function') screenReleaseWakeLock();
+    else if (typeof screenEnsureAwake !== 'function' && wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+    }
+    return nativeRelease;
 }
 
 // ---- GPS en segundo plano (solo dentro del APK) ----
@@ -325,7 +337,7 @@ function stopBgWatcher() {
 
 // Empieza a recibir posiciones: en segundo plano si se puede; si no, pantalla encendida
 async function beginTracking(showToast) {
-    acquireWake();
+    await acquireWake();
     const ok = await startBgWatcher();
     if (ok) {
         if (showToast) {
@@ -467,6 +479,7 @@ function resetAutoPauseState() {
 function resetRecordingState() {
     resetAutoPauseState();
     points = [];
+    draftSavedPointCount = 0;
     segments = [];
     totalDistance = 0;
     elev = makeElevTracker();
@@ -864,11 +877,13 @@ function saveDraft() {
             revision: ++draftRevision,
             stateVersion: draftStateVersion,
             value: {
+                format: 2,
+                pointCount: points.length,
+                pointChunkCount: Math.ceil(points.length / DRAFT_POINTS_CHUNK_SIZE),
                 startedAt,
                 activityType: recordingActivityType,
                 movingMs: movingMsSnapshot,
                 totalDistance,
-                points: points.slice(),
                 pois: recordingPois.slice(),
                 savedAt: Date.now()
             }
@@ -887,11 +902,21 @@ function persistPendingDraft() {
         while (pendingDraft && pendingDraft.revision > draftSavedRevision) {
             const snapshot = pendingDraft;
             try {
-                await DB.kvSet('draft', snapshot.value);
+                const chunks = [];
+                if (snapshot.value.pointCount > draftSavedPointCount) {
+                    const firstChunk = Math.floor(draftSavedPointCount / DRAFT_POINTS_CHUNK_SIZE);
+                    for (let index = firstChunk; index < snapshot.value.pointChunkCount; index++) {
+                        const start = index * DRAFT_POINTS_CHUNK_SIZE;
+                        const end = Math.min(start + DRAFT_POINTS_CHUNK_SIZE, snapshot.value.pointCount);
+                        chunks.push({ index, points: points.slice(start, end) });
+                    }
+                }
+                await DB.kvSaveDraft(snapshot.value, chunks);
             } catch (error) {
                 console.warn('No se pudo guardar el borrador de la ruta:', error);
                 return false;
             }
+            draftSavedPointCount = snapshot.value.pointCount;
             draftSavedRevision = snapshot.revision;
         }
         return true;
@@ -908,7 +933,11 @@ async function clearDraft() {
     pendingDraft = null;
     if (draftSavePromise) await draftSavePromise;
     try {
-        await DB.kvDel('draft');
+        await DB.kvClearDraft();
+        draftSavedPointCount = 0;
+        draftSavedRevision = 0;
+        draftRevision = 0;
+        draftStateVersion = 0;
     } catch (error) {
         console.warn('No se pudo borrar el borrador de la ruta:', error);
     }
@@ -926,6 +955,7 @@ function buildSegments(pts) {
 function restoreDraft(d) {
     resetRecordingState();
     points = d.points;
+    draftSavedPointCount = d.format === 2 ? points.length : 0;
     recordingPois = Array.isArray(d.pois) ? d.pois.filter(routePoiCoordinatesValid) : [];
     showRoutePoisOnMap([...(followedRoute ? followedRoute.pois : []), ...recordingPois]);
     startedAt = d.startedAt || new Date().toISOString();
@@ -966,10 +996,42 @@ function isDraftRecoverable(d) {
         && d.points.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])));
 }
 
+async function hydrateDraft(d) {
+    if (!d || d.format !== 2) return d;
+    if (!Number.isSafeInteger(d.pointCount) || d.pointCount < 0
+        || !Number.isSafeInteger(d.pointChunkCount)
+        || d.pointChunkCount !== Math.ceil(d.pointCount / DRAFT_POINTS_CHUNK_SIZE)) return null;
+
+    const chunks = await DB.kvGetDraftPointChunks();
+    if (chunks.length !== d.pointChunkCount) return null;
+    const points = [];
+    for (let index = 0; index < chunks.length; index++) {
+        const chunk = chunks[index];
+        const expectedLength = Math.min(
+            DRAFT_POINTS_CHUNK_SIZE,
+            d.pointCount - index * DRAFT_POINTS_CHUNK_SIZE
+        );
+        if (chunk.index !== index || !Array.isArray(chunk.points)
+            || chunk.points.length !== expectedLength) return null;
+        chunk.points.forEach(point => points.push(point));
+    }
+    return { ...d, points };
+}
+
 async function maybeRestoreDraft() {
-    let d = null;
-    try { d = await DB.kvGet('draft'); } catch (e) {}
-    if (!d) return;
+    let d;
+    try {
+        d = await DB.kvGet('draft');
+        if (!d) return;
+        d = await hydrateDraft(d);
+    } catch (error) {
+        console.warn('No se pudo leer el borrador de la ruta:', error);
+        return;
+    }
+    if (!d) {
+        await clearDraft();
+        return;
+    }
     if (isDraftRecoverable(d)) {
         const saved = d.savedAt ? ` · guardada ${new Date(d.savedAt).toLocaleString('es-ES')}` : '';
         const ok = await modal({
@@ -978,7 +1040,7 @@ async function maybeRestoreDraft() {
         });
         if (ok) { restoreDraft(d); return; }
     }
-    DB.kvDel('draft').catch(() => {});
+    await clearDraft();
 }
 
 if (typeof document !== 'undefined') {

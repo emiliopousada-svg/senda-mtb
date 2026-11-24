@@ -73,7 +73,7 @@ const DB = {
         });
     },
     all()       { return this.run('routes', 'readonly',  s => s.getAll()); },
-    put(route)  {
+    put(route, options = {})  {
         return new Promise((resolve, reject) => {
             if (!this.db) return reject(new Error('no-db'));
             try {
@@ -89,7 +89,9 @@ const DB = {
                     });
                 }
                 tx.objectStore('routes').put(record);
-                if (photos.length) tx.objectStore('routePhotos').put({ routeId: route.id, photos });
+                const photoStore = tx.objectStore('routePhotos');
+                if (photos.length) photoStore.put({ routeId: route.id, photos });
+                else if (options.replacePhotos) photoStore.delete(route.id);
                 tx.oncomplete = () => resolve();
                 tx.onerror = () => reject(tx.error || new Error('save-failed'));
                 tx.onabort = () => reject(tx.error || new Error('save-aborted'));
@@ -162,7 +164,70 @@ const DB = {
     kvGet(k)    { return this.run('kv', 'readonly',  s => s.get(k)); },
     kvSet(k, v) { return this.run('kv', 'readwrite', s => s.put(v, k)); },
     kvDel(k)    { return this.run('kv', 'readwrite', s => s.delete(k)); },
-    kvKeys()    { return this.run('kv', 'readonly',  s => s.getAllKeys()); }
+    kvKeys()    { return this.run('kv', 'readonly',  s => s.getAllKeys()); },
+    kvSaveDraft(draft, chunks) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('no-db'));
+            try {
+                const tx = this.db.transaction('kv', 'readwrite');
+                const store = tx.objectStore('kv');
+                chunks.forEach(chunk => store.put(chunk.points, `draft:points:${chunk.index}`));
+                store.put(draft, 'draft');
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error || new Error('draft-save-failed'));
+                tx.onabort = () => reject(tx.error || new Error('draft-save-aborted'));
+            } catch (error) { reject(error); }
+        });
+    },
+    kvGetDraftPointChunks() {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('no-db'));
+            try {
+                const tx = this.db.transaction('kv', 'readonly');
+                const store = tx.objectStore('kv');
+                let requests = [];
+                const keysRequest = store.getAllKeys();
+                keysRequest.onsuccess = () => {
+                    const prefix = 'draft:points:';
+                    const entries = keysRequest.result
+                        .filter(key => typeof key === 'string' && /^draft:points:\d+$/.test(key))
+                        .map(key => ({ key, index: Number(key.slice(prefix.length)) }))
+                        .sort((a, b) => a.index - b.index);
+                    requests = entries.map(entry => ({
+                        index: entry.index,
+                        request: store.get(entry.key)
+                    }));
+                };
+                tx.oncomplete = () => resolve(requests.map(entry => ({
+                    index: entry.index,
+                    points: entry.request.result
+                })));
+                tx.onerror = () => reject(tx.error || new Error('draft-load-failed'));
+                tx.onabort = () => reject(tx.error || new Error('draft-load-aborted'));
+            } catch (error) { reject(error); }
+        });
+    },
+    kvClearDraft() {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('no-db'));
+            try {
+                const tx = this.db.transaction('kv', 'readwrite');
+                const store = tx.objectStore('kv');
+                store.delete('draft');
+                const keysRequest = store.getAllKeys();
+                keysRequest.onsuccess = () => {
+                    keysRequest.result.forEach(key => {
+                        if (typeof key === 'string' && key.startsWith('draft:points:')) {
+                            store.delete(key);
+                        }
+                    });
+                };
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error || new Error('draft-delete-failed'));
+                tx.onabort = () => reject(tx.error || new Error('draft-delete-aborted'));
+            } catch (error) { reject(error); }
+        });
+    }
 };
 
 /*

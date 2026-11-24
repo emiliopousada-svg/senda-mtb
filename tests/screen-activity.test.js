@@ -38,6 +38,10 @@ function screenContext(oledSaverEnabled) {
                 isNativePlatform: () => true,
                 Plugins: {
                     ScreenControl: {
+                        setKeepScreenOn: ({ enabled }) => {
+                            actions.push(['keepScreenOn', enabled]);
+                            return Promise.resolve();
+                        },
                         dim: () => { actions.push('dim'); return Promise.resolve(); },
                         wake: () => { actions.push('wake'); return Promise.resolve(); }
                     }
@@ -80,4 +84,16 @@ test('normal screen timing remains unchanged and navigation cues do not wake it'
     assert.deepEqual(actions, ['dim']);
     assert.equal(overlay.hidden, false);
     assert.equal(timers.length, 1);
+});
+
+test('recording toggles the native keep-screen-on flag without changing dimming behavior', async () => {
+    const { context, actions } = screenContext(false);
+
+    assert.equal(await context.screenSetRecordingKeepAwake(true), true);
+    assert.equal(await context.screenSetRecordingKeepAwake(false), true);
+
+    assert.deepEqual(actions, [
+        ['keepScreenOn', true],
+        ['keepScreenOn', false]
+    ]);
 });

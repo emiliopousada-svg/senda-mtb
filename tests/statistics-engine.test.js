@@ -156,6 +156,38 @@ test('estimates missing moving time from valid timed GPS intervals', () => {
     assert.ok(result.movingTimeSec > 0);
 });
 
+test('includes plausible long GPS intervals in estimated moving time, not sensor zones', () => {
+    const result = engine.analyzeRoute({
+        startedAt: new Date(timestamp).toISOString(),
+        points: [
+            trackPoint(0, 0, 100, 0, [120, null, null, null, 200]),
+            trackPoint(0, 0.09, 100, 3600, [120, null, null, null, 200])
+        ]
+    }, { ftpWatts: 200 });
+
+    assert.equal(result.movingTimeSec, 3600);
+    assert.ok(result.averageSpeed > 9.9 && result.averageSpeed < 10.1);
+    assert.equal(result.zoneMeasuredSeconds, 0);
+    assert.equal(result.powerZoneMeasuredSeconds, 0);
+});
+
+test('elevation profile inserts one gap for consecutive points without altitude', () => {
+    const result = engine.analyzeRoute({
+        startedAt: new Date(timestamp).toISOString(),
+        points: [
+            trackPoint(0, 0, 100, 0),
+            trackPoint(0, 0.0001, 101, 10),
+            trackPoint(0, 0.0002, null, 20),
+            trackPoint(0, 0.0003, null, 30),
+            trackPoint(0, 0.0004, 105, 40)
+        ]
+    });
+
+    const gaps = result.profile.filter(point => point.y === null);
+    assert.equal(gaps.length, 1);
+    assert.ok(result.profile.some(point => Number.isFinite(point.y)));
+});
+
 test('aggregates elapsed, climbing, sensor and heart-rate zone statistics', () => {
     const route = {
         startedAt: new Date(timestamp).toISOString(),
