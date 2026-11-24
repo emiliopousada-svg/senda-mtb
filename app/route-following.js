@@ -222,8 +222,11 @@ function renderMapRouteProfile(r) {
         return;
     }
 
-    const min = Math.min(...valid.map(p => p.z));
-    const max = Math.max(...valid.map(p => p.z));
+    let min = Infinity, max = -Infinity;
+    for (const point of valid) {
+        if (point.z < min) min = point.z;
+        if (point.z > max) max = point.z;
+    }
     const range = Math.max(max - min, 1);
     routeProfileCoords = valid.map(p => ({
         i: p.i,

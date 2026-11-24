@@ -8,12 +8,37 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'app', 'route-following.js'), 'utf8');
 
-function routeContext() {
+function routeContext({ maxMathArguments = Infinity } = {}) {
     const announcements = [];
     const messages = [];
     const navigationWakes = [];
+    const elements = new Map();
+    const math = Object.create(Math);
+    math.min = (...values) => {
+        if (values.length > maxMathArguments) throw new RangeError('too many arguments');
+        return Math.min(...values);
+    };
+    math.max = (...values) => {
+        if (values.length > maxMathArguments) throw new RangeError('too many arguments');
+        return Math.max(...values);
+    };
+    const getElement = id => {
+        if (!elements.has(id)) {
+            const element = {
+                textContent: '',
+                attributes: new Map(),
+                classes: new Set(),
+                style: {},
+                addEventListener() {},
+                setAttribute(name, value) { this.attributes.set(name, String(value)); },
+                classList: { add(name) { element.classes.add(name); } }
+            };
+            elements.set(id, element);
+        }
+        return elements.get(id);
+    };
     const context = vm.createContext({
-        Math,
+        Math: math,
         Number,
         Array,
         OFFROUTE_M: 60,
@@ -46,7 +71,7 @@ function routeContext() {
         },
         screenWakeForNavigation: () => navigationWakes.push(true),
         toast: message => messages.push(message),
-        $: () => ({ addEventListener() {} })
+        $: getElement
     });
     vm.runInContext(source, context);
     return {
@@ -54,6 +79,7 @@ function routeContext() {
         announcements,
         messages,
         navigationWakes,
+        elements,
         api: vm.runInContext('({ buildRouteCumulativeDistances, buildRouteManeuvers, checkUpcomingRouteTurn, checkOffRoute })', context)
     };
 }
@@ -84,6 +110,17 @@ test('route maneuver analysis finds left and right turns but ignores straight tr
 
     const straight = Array.from({ length: 21 }, (_, index) => meterPoint(index * 10, 0));
     assert.equal(api.buildRouteManeuvers(straight, api.buildRouteCumulativeDistances(straight)).length, 0);
+});
+
+test('route profile renders 100,000 elevation points without expanding math arguments', () => {
+    const { context, elements } = routeContext({ maxMathArguments: 1000 });
+    const points = Array.from({ length: 100000 }, (_, index) => [42, -8, 100 + index % 20]);
+    context.routeProfileCoords = [];
+    context.routeProfilePointCount = 0;
+
+    context.renderMapRouteProfile({ name: 'Long route', points, elevationGain: 0 });
+
+    assert.equal(elements.get('map-route-alt').textContent, '100–119 m · +0 m');
 });
 
 test('voice guidance announces a turn once when it is within 50 metres and ignores off-route fixes', () => {
