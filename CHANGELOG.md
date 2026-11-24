@@ -5,10 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
-## [Unreleased]
+## [0.2.42] - 2026-11-24
+
+### Mejorado
+* **Cockpit:** se amplían los indicadores de estado en móvil manteniendo la fila ordenada.
 
 ### Corregido
-* **Estado de conexión:** Inicio muestra explícitamente el estado de internet; el indicador del Perfil refleja PocketBase y también se actualiza al recibir respuestas de sincronización.
+* **Estado de conexión:** Inicio refleja la conexión a internet; el Perfil comprueba PocketBase y se actualiza también al recibir respuestas de sincronización.
 
 ## [0.2.41] - 2026-11-24
 
