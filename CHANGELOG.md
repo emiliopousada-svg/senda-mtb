@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.41] - 2026-11-24
+
+### Seguridad
+* **Rutas comunitarias:** se exige iniciar sesión para explorar, guardar o descargar rutas; PocketBase protege también los registros y datos relacionados.
+* **Acceso a funciones:** se exige iniciar sesión para descargar mapas offline e importar tracks. Las copias comunitarias locales se ocultan al cerrar sesión y no se sincronizan sin una sesión activa.
+
 ## [0.2.40] - 2026-11-24
 
 ### Añadido

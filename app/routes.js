@@ -8,16 +8,41 @@ const routeSortByTab = { done: 'recent', pending: 'recent' };
 let routeCardImageUrls = [];
 let routeCardMaps = [];
 let routeCardMapObserver = null;
+let communitySavedRouteDetailOpen = false;
+let routesAccessState = null;
 
 function updateRouteSummaryCounts() {
     $('routes-count-done').textContent = String(savedRoutes.filter(route => route.kind === 'recorded' || !route.kind).length);
-    $('routes-count-pending').textContent = String(savedRoutes.filter(route => route.kind === 'imported').length);
+    $('routes-count-pending').textContent = String(savedRoutes.filter(route => routeBelongsInRoutesTab(route, 'pending')).length);
 }
 
 function routeBelongsInRoutesTab(route, tab) {
+    if (route.communityRouteId && !(typeof Cloud !== 'undefined' && Cloud.loggedIn())) return false;
     if (tab === 'pending') return route.kind === 'imported';
     if (tab === 'done') return route.kind === 'recorded' || !route.kind;
     return false;
+}
+
+function routesUpdateImportAccess() {
+    const hasAccount = typeof Cloud !== 'undefined' && Cloud.loggedIn();
+    const importBox = $('routes-import-box');
+    const loginNote = $('routes-import-login');
+    if (importBox) importBox.hidden = routesTab !== 'pending' || !hasAccount;
+    if (loginNote) loginNote.hidden = routesTab !== 'pending' || hasAccount;
+}
+
+function routesResetCommunityRouteDetail() {
+    communitySavedRouteDetailOpen = false;
+}
+
+function routesHandleAccountStateChange() {
+    const hasAccount = typeof Cloud !== 'undefined' && Cloud.loggedIn();
+    if (routesAccessState === hasAccount) return;
+    routesAccessState = hasAccount;
+    if (!hasAccount && communitySavedRouteDetailOpen && typeof closeCommunityDialog === 'function') {
+        closeCommunityDialog();
+    }
+    renderSavedRoutes();
 }
 
 function routeCanPublishCommunity(route) {
@@ -370,12 +395,13 @@ async function shareSavedRoute(route) {
 }
 
 function setRoutesTab(tab) {
+    if (tab === 'community' && !requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
     routesTab = tab;
     routesShowAll = tab === 'pending';
     if (tab === 'done' || tab === 'pending') $('route-sort-filter').value = routeSortByTab[tab];
     const communityTab = tab === 'community';
     document.querySelectorAll('[data-routes-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.routesTab === tab)));
-    $('routes-import-box').hidden = tab !== 'pending';
+    routesUpdateImportAccess();
     $('routes-latest-section').hidden = tab !== 'done';
     $('routes-show-all').hidden = tab !== 'done';
     $('community-tab').hidden = !communityTab;
@@ -559,14 +585,19 @@ $('routes-show-all').addEventListener('click', () => {
 });
 
 async function openSavedRouteDetail(route, options = {}) {
+    if (route.communityRouteId
+        && !requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
     const returnRoutesTab = routesTab;
     try { await DB.loadRoutePhotos(route); }
     catch (error) { console.warn('No se pudieron cargar las fotos de la ruta:', error); }
+    if (route.communityRouteId
+        && !requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
     const lines = communityRawSegments(route.points);
     if (!lines.length) {
         toast('Esta ruta no contiene un trazado que se pueda mostrar.');
         return;
     }
+    communitySavedRouteDetailOpen = Boolean(route.communityRouteId);
     const creator = routeCreatorName(route);
     const activity = ACTIVITY_TYPES[activityTypeForRoute(route)]?.label || 'No disponible';
     const distanceKm = routeDistanceKm(route);
@@ -617,8 +648,12 @@ async function openSavedRouteDetail(route, options = {}) {
         values,
         actions: [
             ['Compartir', () => shareSavedRoute(route)],
-            ['Exportar GPX', () => download(`${String(route.name || 'ruta').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_')}.gpx`,
-                routeToGpx(route), 'application/gpx+xml')]
+            ['Exportar GPX', () => {
+                if (route.communityRouteId
+                    && !requireSignedIn('Inicia sesión o crea una cuenta para descargar rutas comunitarias.')) return;
+                download(`${String(route.name || 'ruta').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_')}.gpx`,
+                    routeToGpx(route), 'application/gpx+xml');
+            }]
         ]
     });
 }
@@ -631,6 +666,7 @@ $('route-sort-filter').addEventListener('change', () => {
 });
 
 $('btn-import-route').addEventListener('click', async () => {
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para importar una ruta.')) return;
     const input = $('route-file-input');
     const file = input.files[0];
     if (!file) { toast('Elige primero un archivo GPX, KML o GeoJSON.'); return; }
@@ -652,6 +688,7 @@ $('btn-import-route').addEventListener('click', async () => {
         toast(`No se pudo importar el track: ${e.message || e}`);
         return;
     }
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para importar una ruta.')) return;
     if (await saveRoute(route)) {
         input.value = '';
         toast('Track importado y almacenado.');
@@ -664,6 +701,8 @@ $('saved-routes-list').addEventListener('click', async e => {
     const id = Number(btn.closest('.route-item').dataset.id);
     const r = savedRoutes.find(x => x.id === id);
     if (!r) return;
+    if (r.communityRouteId
+        && !requireSignedIn('Inicia sesión o crea una cuenta para acceder a rutas comunitarias.')) return;
 
     if (btn.dataset.act === 'view') {
         await openSavedRouteDetail(r);

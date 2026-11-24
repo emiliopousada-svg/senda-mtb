@@ -92,3 +92,40 @@ test('challenge migration rollback preserves a collection that existed before mi
     assert.deepEqual(deleted, []);
 });
 
+test('community route access migration requires an account and restores prior rules on rollback', () => {
+    const migration = loadMigration('1794836010_require_auth_for_community_routes.js');
+    const previousRules = {
+        community_routes: 'published = true',
+        community_segments: 'route.published = true',
+        community_route_efforts: 'route.published = true',
+        community_segment_efforts: 'segment.route.published = true',
+        community_route_ratings: 'route.published = true',
+        community_route_comments: 'route.published = true'
+    };
+    const collections = new Map(Object.entries(previousRules).map(([name, rule]) => [
+        name, { name, listRule: rule, viewRule: rule }
+    ]));
+    const app = {
+        findCollectionByNameOrId(name) {
+            const collection = collections.get(name);
+            if (!collection) throw new Error(`Missing collection: ${name}`);
+            return collection;
+        },
+        save() {}
+    };
+
+    migration.up(app);
+
+    for (const [name, collection] of collections) {
+        assert.match(collection.listRule, /^@request\.auth\.id != "" && /, name);
+        assert.equal(collection.viewRule, collection.listRule, name);
+    }
+
+    migration.down(app);
+
+    for (const [name, collection] of collections) {
+        assert.equal(collection.listRule, previousRules[name], name);
+        assert.equal(collection.viewRule, previousRules[name], name);
+    }
+});
+

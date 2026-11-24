@@ -46,6 +46,23 @@ let stopOfflineDownload = false;
 let offlineDownloadRunning = false;
 let pendingMapStyleTransition = null;
 
+function offlineMapsUpdateAccessState() {
+    const hasAccount = typeof Cloud !== 'undefined' && Cloud.loggedIn();
+    const controls = $('offline-download-controls');
+    const loginNote = $('offline-login-required');
+    if (controls) controls.hidden = !hasAccount;
+    if (loginNote) loginNote.hidden = hasAccount;
+    if (!hasAccount && offlineDownloadRunning) {
+        stopOfflineDownload = true;
+        const status = $('offline-storage-note');
+        if (status) status.textContent = 'Descarga pausada al cerrar sesión.';
+    }
+}
+
+function offlineMapsRequireAccount() {
+    return requireSignedIn('Inicia sesión o crea una cuenta para descargar mapas sin conexión.');
+}
+
 function openOfflineDb() {
     if (offlineDbPromise) return offlineDbPromise;
     offlineDbPromise = new Promise((resolve, reject) => {
@@ -761,6 +778,7 @@ function setOfflineProgress(done, total, errors, stats = null) {
     $('offline-progress-text').textContent = `${done.toLocaleString('es-ES')} / ${total.toLocaleString('es-ES')} teselas (${pct}%)${errors ? ` · ${errors} errores` : ''}${storage}`;
 }
 async function downloadRegionOffline() {
+    if (!offlineMapsRequireAccount()) return;
     if (offlineDownloadRunning) return;
     const regionSelect = $('offline-region');
     const region = regionSelect.value;
@@ -774,6 +792,7 @@ async function downloadRegionOffline() {
 }
 
 async function downloadVisibleDetailOffline() {
+    if (!offlineMapsRequireAccount()) return;
     if (offlineDownloadRunning) return;
     if (!map) { toast('El mapa todavía no está listo.'); return; }
     let tiles;
@@ -783,6 +802,7 @@ async function downloadVisibleDetailOffline() {
 }
 
 async function downloadTileSetOffline(tiles, regionName, detailName, downloadButton) {
+    if (!offlineMapsRequireAccount()) return;
     if (offlineDownloadRunning) return;
     if (!tiles.length) { toast('No hay teselas en el área seleccionada.'); return; }
     if (tiles.length > MAX_TILES_PER_DOWNLOAD) {
@@ -818,7 +838,7 @@ async function downloadTileSetOffline(tiles, regionName, detailName, downloadBut
         message: `Se incorporarán hasta ${newTiles.toLocaleString('es-ES')} teselas IGN al mapa descargado de ${regionName} con detalle ${detailName}.${storageNote} Usa Wi-Fi y mantén la aplicación abierta. Las teselas descargadas se omiten y las de caché se reutilizan.`,
         ok: 'Descargar'
     });
-    if (!confirmed) return;
+    if (!confirmed || !offlineMapsRequireAccount()) return;
     offlineDownloadRunning = true; stopOfflineDownload = false;
     let done = 0, errors = 0, cursor = 0, budgetReached = false, quotaReached = false;
     downloadButton.disabled = true;
@@ -997,6 +1017,7 @@ if (typeof $ === 'function') {
         }
     });
     updateQuickMapStyleButton();
+    offlineMapsUpdateAccessState();
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -254,6 +254,7 @@ const Cloud = {
         if (typeof resetAccountProfileCache === 'function') resetAccountProfileCache();
         if (typeof renderAccountAvatar === 'function') renderAccountAvatar();
         if (typeof dashboardUpdateGreeting === 'function') dashboardUpdateGreeting();
+        if (typeof refreshRestrictedFeatureAccess === 'function') refreshRestrictedFeatureAccess();
         if (this.usesSecureTokenStorage()) {
             return this.enqueueSecureTokenOperation(async () => {
                 await MTBNativeApp.removeSecureItem(this.secureTokenKey);
@@ -264,6 +265,20 @@ const Cloud = {
         return null;
     }
 };
+
+function requireSignedIn(message) {
+    if (Cloud.loggedIn()) return true;
+    toast(message || 'Inicia sesión o crea una cuenta para usar esta función.', 5000);
+    goToPage(4);
+    return false;
+}
+
+function refreshRestrictedFeatureAccess() {
+    if (typeof communityHandleAccountStateChange === 'function') communityHandleAccountStateChange();
+    if (typeof routesHandleAccountStateChange === 'function') routesHandleAccountStateChange();
+    if (typeof offlineMapsUpdateAccessState === 'function') offlineMapsUpdateAccessState();
+    if (typeof routesUpdateImportAccess === 'function') routesUpdateImportAccess();
+}
 
 let cloudServerWasResetOnLoad = false;
 try {
@@ -365,6 +380,7 @@ function renderAccount() {
     renderProfileManualSyncButton();
     if (typeof profileUpdateAccountStatus === 'function') profileUpdateAccountStatus();
     if (typeof renderCloudPreferencesStatus === 'function') renderCloudPreferencesStatus();
+    if (typeof refreshRestrictedFeatureAccess === 'function') refreshRestrictedFeatureAccess();
 }
 
 let profileAccountDetailsSessionState = null;

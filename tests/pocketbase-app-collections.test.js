@@ -89,8 +89,19 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     assert.ok(users.fields.getByName('groupCode'));
 
     const communityRoutes = byName.get('community_routes');
+    assert.equal(communityRoutes.listRule, '@request.auth.id != "" && published = true');
+    assert.equal(communityRoutes.viewRule, communityRoutes.listRule);
     assert.equal(communityRoutes.fields.getByName('trackJson').required, true);
     assert.equal(communityRoutes.fields.getByName('trackJson').max, 262144);
+    ['community_segments', 'community_route_efforts', 'community_route_ratings', 'community_route_comments']
+        .forEach(name => {
+            const collection = byName.get(name);
+            assert.match(collection.listRule, /^@request\.auth\.id != "" && /);
+            assert.equal(collection.viewRule, collection.listRule);
+        });
+    const segmentEfforts = byName.get('community_segment_efforts');
+    assert.equal(segmentEfforts.listRule, '@request.auth.id != "" && segment.route.published = true');
+    assert.equal(segmentEfforts.viewRule, segmentEfforts.listRule);
 
     const liveLocations = byName.get('live_locations');
     assert.equal(liveLocations.fields.getByName('groupCode').type, 'relation');

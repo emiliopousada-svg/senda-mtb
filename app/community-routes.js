@@ -130,6 +130,7 @@ function communityFillAutonomousCommunities(select) {
 }
 
 function openCommunityCatalog() {
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
     communityCancelSegmentCreation();
     $('community-publish').hidden = true;
     $('community-detail').hidden = true;
@@ -148,6 +149,19 @@ function closeCommunityDialog() {
     communityDetailLines = null;
     if (communityPreviewPoiLayer) communityPreviewPoiLayer.dispose();
     communityPreviewPoiLayer = null;
+    if (typeof routesResetCommunityRouteDetail === 'function') routesResetCommunityRouteDetail();
+}
+
+function communityHandleAccountStateChange() {
+    if (Cloud.loggedIn()) return;
+    communitySearchActive = false;
+    communityCatalogRoutes = [];
+    if (map) communityVisibleLayers.forEach(layer => map.removeLayer(layer));
+    communityVisibleLayers.clear();
+    if (communityDetailRecord || communityShareRoute) closeCommunityDialog();
+    if (routesTab === 'community') setRoutesTab('done');
+    renderCommunityRoutes([]);
+    communitySetStatus('Inicia sesión o crea una cuenta para ver rutas comunitarias.', true);
 }
 
 function handleCommunityBackButton() {
@@ -172,11 +186,7 @@ function handleCommunityBackButton() {
 }
 
 function openCommunityPublish(route) {
-    if (!Cloud.loggedIn()) {
-        toast('Entra en tu cuenta para proponer una ruta a la comunidad.', 5000);
-        goToPage(4);
-        return;
-    }
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para proponer una ruta a la comunidad.')) return;
     if (!navigator.onLine) {
         toast('Necesitas conexión para enviar una ruta a la comunidad.', 4500);
         return;
@@ -222,6 +232,8 @@ function communityStartedAt(value) {
 }
 
 function openCommunityDetail(record, lines, options = {}) {
+    if (record && typeof record.id === 'string'
+        && !requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
     communityCancelSegmentCreation();
     $('community-segment-map-view').hidden = true;
     communityDetailRecord = record && record.id ? record : null;
@@ -656,6 +668,7 @@ async function submitCommunityRoute() {
 }
 
 async function loadCommunityFavorites() {
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return false;
     if (!Cloud.loggedIn()) {
         communitySetStatus('Inicia sesión para consultar tus rutas favoritas.', true);
         return;
@@ -687,6 +700,10 @@ async function loadCommunityFavorites() {
         } catch (error) {
             if (error.status !== 400) throw error;
             response = await cloudApi(favoriteUrl(false));
+        }
+        if (!Cloud.loggedIn()) {
+            communityHandleAccountStateChange();
+            return false;
         }
         communityCatalogRoutes = (Array.isArray(response.items) ? response.items : [])
             .map(item => item.expand && item.expand.route)
@@ -734,6 +751,7 @@ function communityLocalRoute(record, lines) {
 }
 
 async function saveCommunityOffline(record, lines) {
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para guardar rutas comunitarias.')) return false;
     const existing = savedRoutes.find(route => route.communityRouteId === record.id);
     if (existing) {
         toast('Esta ruta ya está guardada en este dispositivo.');
@@ -746,6 +764,7 @@ async function saveCommunityOffline(record, lines) {
     route.kind = 'imported';
     route.movingTimeSec = 0;
     route.dirty = true;
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para guardar rutas comunitarias.')) return false;
     try {
         await DB.put(route);
         savedRoutes.unshift(route);
@@ -854,7 +873,11 @@ function communityPopup(record, lines) {
     follow.type = 'button';
     follow.textContent = 'Seguir ruta';
     follow.className = 'btn';
-    follow.addEventListener('click', () => followRoute(communityLocalRoute(record, lines)));
+    follow.addEventListener('click', () => {
+        if (requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) {
+            followRoute(communityLocalRoute(record, lines));
+        }
+    });
     const save = document.createElement('button');
     save.type = 'button';
     save.textContent = 'Guardar sin conexión';
@@ -865,6 +888,7 @@ function communityPopup(record, lines) {
 }
 
 function toggleCommunityRoute(record, lines, button) {
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
     if (!map) return;
     const oldLayer = communityVisibleLayers.get(record.id);
     if (oldLayer) {
@@ -939,6 +963,7 @@ function renderCommunityRoutes(records) {
         follow.className = 'btn';
         follow.textContent = 'Seguir';
         follow.addEventListener('click', () => {
+            if (!requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
             followRoute(communityLocalRoute(record, lines));
             closeCommunityDialog();
         });
@@ -952,6 +977,7 @@ function renderCommunityRoutes(records) {
         gpx.className = 'btn secondary';
         gpx.textContent = 'Descargar GPX';
         gpx.addEventListener('click', () => {
+            if (!requireSignedIn('Inicia sesión o crea una cuenta para descargar rutas comunitarias.')) return;
             const route = communityLocalRoute(record, lines);
             const filename = String(record.title || 'ruta-comunitaria')
                 .replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_').trim() || 'ruta-comunitaria';
@@ -1021,6 +1047,10 @@ async function communityFetchRouteMetadata(page, filter, includeBounds) {
 }
 
 async function loadCommunityRoutes() {
+    if (!requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) {
+        communityHandleAccountStateChange();
+        return false;
+    }
     const searchPosition = lastLat === null || lastLon === null ? null : [lastLat, lastLon];
     const locality = $('community-locality-search').value.trim().slice(0, 80);
     const author = $('community-author-search').value.trim().slice(0, 32);
@@ -1039,6 +1069,10 @@ async function loadCommunityRoutes() {
     const activity = $('community-activity').value;
     const radiusKm = Number($('community-radius').value) || 25;
     const cached = await readCommunitySearchCache(activity, radiusKm, searchPosition, locality, author, difficulty, minAscent);
+    if (!Cloud.loggedIn()) {
+        communityHandleAccountStateChange();
+        return false;
+    }
     let displayedCache = false;
     if (cached) {
         communityCatalogRoutes = cached.routes;
@@ -1172,6 +1206,10 @@ async function loadCommunityRoutes() {
         if (checked >= candidates.length) tracksComplete = true;
         const metadataTruncated = metadata.length >= COMMUNITY_MAX_METADATA_CANDIDATES && page <= totalPages;
         const searchLimited = metadataTruncated || legacyTruncated || (!tracksComplete && checked < candidates.length);
+        if (!Cloud.loggedIn()) {
+            communityHandleAccountStateChange();
+            return false;
+        }
         communityCatalogRoutes = nearbyRoutes.slice(0, COMMUNITY_MAX_RESULTS);
         renderCommunityRoutes(communityCatalogRoutes);
         DB.kvSet(COMMUNITY_SEARCH_CACHE_KEY, {
@@ -1198,6 +1236,10 @@ async function loadCommunityRoutes() {
                     : 'No hay rutas publicadas dentro de ' + radiusKm + ' km con estos filtros.');
         return true;
     } catch (error) {
+        if (!Cloud.loggedIn()) {
+            communityHandleAccountStateChange();
+            return false;
+        }
         console.warn('No se pudo cargar el catálogo comunitario:', error);
         communitySetStatus(error.status === 404
             ? 'El servidor aún no tiene la colección community_routes instalada.'

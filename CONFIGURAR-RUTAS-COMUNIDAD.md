@@ -25,6 +25,17 @@ Esta migración añade los campos cuando faltan y no sustituye campos existentes
 
 La migración inicial define los límites al crear `community_routes` desde cero. Las migraciones posteriores reparan colecciones existentes sin reemplazar los datos.
 
+## Exigir sesión para consultar rutas comunitarias
+
+La app requiere iniciar sesión para explorar, guardar o descargar rutas comunitarias. Para aplicar el mismo requisito en el servidor:
+
+1. Haz una copia de seguridad de PocketBase.
+2. Copia `pb_migrations/1794836010_require_auth_for_community_routes.js` a la carpeta `pb_migrations` del servidor.
+3. Ejecuta `pocketbase migrate up` con el mismo binario y directorio de datos que usa el servicio. Si las migraciones automáticas están habilitadas, reiniciar PocketBase también las aplicará.
+4. Comprueba que sin sesión no se obtiene ninguna ruta publicada y que con una cuenta autenticada sí se pueden consultar.
+
+La migración actualiza las reglas existentes de lectura de `community_routes`, `community_segments`, `community_route_efforts`, `community_segment_efforts`, `community_route_ratings` y `community_route_comments`. Conserva los registros y exige también que la ruta relacionada siga publicada. `community_route_favorites` ya limita la lectura a su propietario. No hace falta modificar `pb_hooks/` ni editar reglas manualmente en el panel.
+
 ## Hooks
 
 La publicación y la privacidad de la ruta también dependen de los hooks del repositorio. Copia los archivos necesarios desde `pb_hooks` a la carpeta de hooks configurada en el servidor (por defecto, `pb_hooks`) y reinicia PocketBase para cargarlos. No sobrescribas hooks existentes sin revisar primero los cambios.

@@ -523,6 +523,26 @@ test('completed local route deletion updates memory before stopping a stale sync
     assert.deepEqual(Array.from(context.getSavedRoutes()), []);
 });
 
+test('route sync does not contact the server without an active session', async () => {
+    const requests = [];
+    const { context, cloud } = routeSyncContext({
+        routes: [{ id: 1, kind: 'imported', communityRouteId: 'community-1', dirty: true }],
+        fetchRemoteRoutes: async () => {
+            requests.push('fetch');
+            return { records: [], fullAudit: true };
+        },
+        cloudApi: async () => {
+            requests.push('api');
+            return { items: [] };
+        }
+    });
+    cloud.active = false;
+
+    await context.syncRoutes();
+
+    assert.deepEqual(requests, []);
+});
+
 test('pending route deletes clear successful and not-found entries', async () => {
     const { context, writes, getPendingDeletes } = pendingDeleteContext(['deleted-route', 'already-gone']);
     const requests = [];

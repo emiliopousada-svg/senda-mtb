@@ -617,6 +617,7 @@
                         <button class="btn secondary" id="btn-import-route" type="button">📥 Importar track</button>
                         <p class="hint">Importa GPX, KML, GeoJSON o FIT. Los tracks guardados se pueden previsualizar, exportar o seguir; al grabar una salida siguiendo un track, se guarda como actividad realizada.</p>
                     </div>
+                    <p class="hint" id="routes-import-login" role="status" hidden>Inicia sesión o crea una cuenta para importar rutas.</p>
                     <div class="routes-filters">
                         <div>
                             <label for="route-activity-filter" class="hint">Tipo de ruta</label>
@@ -1123,41 +1124,44 @@
                     <section id="offline-panel" class="card" aria-labelledby="offline-panel-title">
                         <h3 id="offline-panel-title">Mapas sin conexión</h3>
                         <p>Descarga zonas del mapa topográfico IGN de España y Portugal. Los mapas online se consultan con conexión; su almacenamiento offline se habilitará cuando el proveedor autorice ese uso.</p>
-                        <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
-                        <select id="offline-region">
-                            <option value="andalucia">Andalucía</option>
-                            <option value="aragon">Aragón</option>
-                            <option value="asturias">Principado de Asturias</option>
-                            <option value="baleares">Islas Baleares</option>
-                            <option value="canarias">Canarias</option>
-                            <option value="cantabria">Cantabria</option>
-                            <option value="castilla-la-mancha">Castilla-La Mancha</option>
-                            <option value="castilla-y-leon">Castilla y León</option>
-                            <option value="cataluna">Cataluña</option>
-                            <option value="comunidad-valenciana">Comunidad Valenciana</option>
-                            <option value="extremadura">Extremadura</option>
-                            <option value="galicia" selected>Galicia</option>
-                            <option value="madrid">Comunidad de Madrid</option>
-                            <option value="murcia">Región de Murcia</option>
-                            <option value="navarra">Comunidad Foral de Navarra</option>
-                            <option value="pais-vasco">País Vasco</option>
-                            <option value="la-rioja">La Rioja</option>
-                            <option value="portugal">Portugal (área continental)</option>
-                        </select>
-                        <label for="offline-detail" style="font-size:.8rem;color:#ddd;">Nivel de detalle</label>
-                        <select id="offline-detail">
-                            <option value="13" selected>Estándar (zoom 7–13)</option>
-                            <option value="14">Alto (zoom 7–14, ocupa bastante más)</option>
-                        </select>
-                        <div id="offline-estimate-info" class="hint" style="margin: 8px 0; font-size: 0.85rem;"></div>
-                        <p class="hint">La descarga cubre el área geográfica aproximada de la comunidad y puede incluir zonas limítrofes. Se muestra el número de teselas antes de iniciar.</p>
-                        <div id="offline-progress"><div id="offline-progress-fill"></div></div>
-                        <div id="offline-progress-text">Preparado para descargar</div>
-                        <p id="offline-storage-note">Se necesita conexión Wi-Fi y espacio libre. Mantén la aplicación abierta durante la descarga. Los mapas IGN descargados tienen un presupuesto de 256 MiB medido por tamaño real; las cachés automáticas se limitan por teselas y también consumen cuota.</p>
-                        <div class="offline-actions">
-                            <button class="btn" id="btn-download-region" type="button">Descargar / reanudar</button>
-                            <button class="btn secondary" id="btn-download-visible-detail" type="button">Descargar detalle de la vista (15–17)</button>
-                            <button class="btn secondary" id="btn-cancel-download" type="button">Parar</button>
+                        <p class="hint" id="offline-login-required" role="status">Inicia sesión o crea una cuenta para descargar mapas sin conexión.</p>
+                        <div id="offline-download-controls" hidden>
+                            <label for="offline-region" style="font-size:.8rem;color:#ddd;">Región</label>
+                            <select id="offline-region">
+                                <option value="andalucia">Andalucía</option>
+                                <option value="aragon">Aragón</option>
+                                <option value="asturias">Principado de Asturias</option>
+                                <option value="baleares">Islas Baleares</option>
+                                <option value="canarias">Canarias</option>
+                                <option value="cantabria">Cantabria</option>
+                                <option value="castilla-la-mancha">Castilla-La Mancha</option>
+                                <option value="castilla-y-leon">Castilla y León</option>
+                                <option value="cataluna">Cataluña</option>
+                                <option value="comunidad-valenciana">Comunidad Valenciana</option>
+                                <option value="extremadura">Extremadura</option>
+                                <option value="galicia" selected>Galicia</option>
+                                <option value="madrid">Comunidad de Madrid</option>
+                                <option value="murcia">Región de Murcia</option>
+                                <option value="navarra">Comunidad Foral de Navarra</option>
+                                <option value="pais-vasco">País Vasco</option>
+                                <option value="la-rioja">La Rioja</option>
+                                <option value="portugal">Portugal (área continental)</option>
+                            </select>
+                            <label for="offline-detail" style="font-size:.8rem;color:#ddd;">Nivel de detalle</label>
+                            <select id="offline-detail">
+                                <option value="13" selected>Estándar (zoom 7–13)</option>
+                                <option value="14">Alto (zoom 7–14, ocupa bastante más)</option>
+                            </select>
+                            <div id="offline-estimate-info" class="hint" style="margin: 8px 0; font-size: 0.85rem;"></div>
+                            <p class="hint">La descarga cubre el área geográfica aproximada de la comunidad y puede incluir zonas limítrofes. Se muestra el número de teselas antes de iniciar.</p>
+                            <div id="offline-progress"><div id="offline-progress-fill"></div></div>
+                            <div id="offline-progress-text">Preparado para descargar</div>
+                            <p id="offline-storage-note">Se necesita conexión Wi-Fi y espacio libre. Mantén la aplicación abierta durante la descarga. Los mapas IGN descargados tienen un presupuesto de 256 MiB medido por tamaño real; las cachés automáticas se limitan por teselas y también consumen cuota.</p>
+                            <div class="offline-actions">
+                                <button class="btn" id="btn-download-region" type="button">Descargar / reanudar</button>
+                                <button class="btn secondary" id="btn-download-visible-detail" type="button">Descargar detalle de la vista (15–17)</button>
+                                <button class="btn secondary" id="btn-cancel-download" type="button">Parar</button>
+                            </div>
                         </div>
                         <button class="btn danger" id="btn-clear-offline" type="button">Borrar mapas guardados</button>
                     </section>
