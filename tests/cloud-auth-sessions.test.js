@@ -55,14 +55,18 @@ function routeSyncContext({
     routes = [],
     remote = [],
     deleteRoute,
+    moveRouteToTrash,
     putLocal,
     fetchRemoteRoutes,
     cloudApi,
     pendingDeleteReadError,
+    remoteDeletionConfirmed = true,
     remoteTrackData = [[0, 0], [1, 1]]
 } = {}) {
     let downloadedTrackCount = 0;
     const toasts = [];
+    const remoteDeletionDialogs = [];
+    const downloads = [];
     const cloud = {
         active: true,
         uid: 'user-a',
@@ -86,6 +90,11 @@ function routeSyncContext({
             async kvSet() {},
             async deleteRoute(...args) {
                 if (deleteRoute) return deleteRoute(...args);
+            },
+            async moveRouteToTrash(...args) {
+                if (moveRouteToTrash) return moveRouteToTrash(...args);
+                if (deleteRoute) await deleteRoute(args[0], null, args[2]);
+                return true;
             }
         },
         FormData,
@@ -127,6 +136,14 @@ function routeSyncContext({
         clearTimeout,
         syncPendingGroupRankingDeletes: async () => true,
         toast(message) { toasts.push(message); },
+        modal: async options => {
+            remoteDeletionDialogs.push(options);
+            return typeof remoteDeletionConfirmed === 'function'
+                ? remoteDeletionConfirmed(options)
+                : remoteDeletionConfirmed;
+        },
+        routesToGpx(routes) { return routes.map(route => route.name).join('|'); },
+        async download(...args) { downloads.push(args); },
         activityTypeFromName: () => null,
         $: () => ({ textContent: '' }),
         console: { warn() {} },
@@ -148,7 +165,14 @@ function routeSyncContext({
         context
     );
     context.setSavedRoutes(routes);
-    return { context, cloud, getDownloadedTrackCount: () => downloadedTrackCount, toasts };
+    return {
+        context,
+        cloud,
+        getDownloadedTrackCount: () => downloadedTrackCount,
+        toasts,
+        remoteDeletionDialogs,
+        downloads
+    };
 }
 
 function pendingDeleteContext(initialPendingDeletes) {
@@ -524,6 +548,143 @@ test('completed local route deletion updates memory before stopping a stale sync
     await context.syncRoutes();
 
     assert.deepEqual(Array.from(context.getSavedRoutes()), []);
+});
+
+test('a missing remote route is exported once and moved to local trash after confirmation', async () => {
+    const archived = [];
+    const { context, remoteDeletionDialogs, downloads } = routeSyncContext({
+        routes: [{
+            id: 21,
+            remoteId: 'remote-21',
+            remoteServer: 'https://server.example',
+            kind: 'recorded',
+            name: 'Bosque',
+            dirty: true
+        }],
+        moveRouteToTrash: async (...args) => {
+            archived.push(args);
+            return true;
+        }
+    });
+
+    await context.syncRoutes();
+
+    assert.equal(remoteDeletionDialogs.length, 1);
+    assert.match(remoteDeletionDialogs[0].message, /Bosque/);
+    assert.equal(downloads.length, 1);
+    assert.match(downloads[0][0], /^rutas-papelera-\d{4}-\d{2}-\d{2}\.gpx$/);
+    assert.equal(downloads[0][1], 'Bosque');
+    assert.equal(archived.length, 1);
+    assert.equal(archived[0][0], 21);
+    assert.deepEqual(Array.from(context.getSavedRoutes()), []);
+});
+
+test('postponing a remote deletion keeps the local route and blocks automatic re-upload', async () => {
+    const persisted = [];
+    let archiveCount = 0;
+    const { context, downloads } = routeSyncContext({
+        routes: [{
+            id: 22,
+            remoteId: 'remote-22',
+            remoteServer: 'https://server.example',
+            kind: 'recorded',
+            name: 'Ridge',
+            dirty: true
+        }],
+        remoteDeletionConfirmed: false,
+        putLocal: async route => persisted.push(route.remoteDeletionPending),
+        moveRouteToTrash: async () => { archiveCount++; }
+    });
+
+    await context.syncRoutes();
+
+    const [route] = context.getSavedRoutes();
+    assert.ok(route);
+    assert.equal(route.remoteDeletionPending.server, 'https://server.example');
+    assert.equal(route.remoteDeletionPending.remoteId, 'remote-22');
+    assert.equal(persisted.length, 1);
+    assert.equal(route.dirty, true);
+    assert.equal(archiveCount, 0);
+    assert.equal(downloads.length, 0);
+});
+
+test('a deferred deletion marker clears if the route reappears in the remote inventory', async () => {
+    const persisted = [];
+    const { context } = routeSyncContext({
+        routes: [{
+            id: 25,
+            remoteId: 'remote-25',
+            remoteServer: 'https://server.example',
+            remoteDeletionPending: {
+                server: 'https://server.example',
+                remoteId: 'remote-25',
+                detectedAt: Date.now()
+            },
+            kind: 'recorded',
+            name: 'Ridge',
+            dirty: false
+        }],
+        remote: [{ id: 'remote-25', clientId: 25, name: 'Ridge' }],
+        putLocal: async route => persisted.push({ ...route })
+    });
+
+    await context.syncRoutes();
+
+    const [route] = context.getSavedRoutes();
+    assert.equal(route.remoteDeletionPending, undefined);
+    assert.equal(persisted.length, 1);
+});
+
+test('a 404 while updating a remote route defers re-upload until deletion is reviewed', async () => {
+    const requests = [];
+    const persisted = [];
+    const { context } = routeSyncContext({
+        routes: [{
+            id: 24,
+            remoteId: 'remote-24',
+            remoteServer: 'https://server.example',
+            kind: 'recorded',
+            name: 'Ridge',
+            dirty: true
+        }],
+        fetchRemoteRoutes: async () => ({
+            records: [{ id: 'remote-24', clientId: 24, name: 'Ridge' }],
+            fullAudit: false
+        }),
+        cloudApi: async (path, method) => {
+            requests.push({ path, method });
+            if (method === 'PATCH') throw Object.assign(new Error('not found'), { status: 404 });
+            return { token: 'file-token' };
+        },
+        putLocal: async route => persisted.push({ ...route })
+    });
+
+    await context.syncRoutes();
+
+    const [route] = context.getSavedRoutes();
+    assert.equal(route.remoteId, 'remote-24');
+    assert.equal(route.remoteDeletionPending.remoteId, 'remote-24');
+    assert.deepEqual(requests.map(request => request.method), ['PATCH']);
+    assert.equal(persisted.length, 1);
+});
+
+test('background sync defers remote deletion confirmation and keeps the route local', async () => {
+    const { context, remoteDeletionDialogs, downloads } = routeSyncContext({
+        routes: [{
+            id: 23,
+            remoteId: 'remote-23',
+            remoteServer: 'https://server.example',
+            kind: 'local',
+            name: 'Forest'
+        }]
+    });
+    context.document = { visibilityState: 'hidden' };
+
+    await context.syncRoutes();
+
+    assert.equal(remoteDeletionDialogs.length, 0);
+    assert.equal(downloads.length, 0);
+    assert.ok(context.getSavedRoutes()[0].remoteDeletionPending);
 });
 
 test('route sync does not contact the server without an active session', async () => {

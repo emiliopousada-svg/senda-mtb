@@ -734,6 +734,16 @@ async function init() {
         if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
             communityScheduleAutomaticSegmentEffortScan();
         }
+        try { await DB.purgeExpiredTrashedRoutes(); }
+        catch (error) {
+            console.warn('No se pudieron purgar las rutas caducadas de la papelera:', error);
+            toast('No se pudieron eliminar las rutas caducadas de la papelera.', 6000);
+        }
+        try { await refreshRouteTrash(); }
+        catch (error) {
+            console.warn('No se pudo cargar la papelera de rutas:', error);
+            toast('No se pudo cargar la papelera de rutas.', 6000);
+        }
     } catch (e) {
         console.warn('Sin IndexedDB:', e);
         toast('⚠️ Sin almacenamiento persistente: las rutas se perderán al cerrar la app.', 6000);

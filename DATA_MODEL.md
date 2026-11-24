@@ -8,7 +8,7 @@
 
 La persistencia de **senda-mtb** se reparte entre IndexedDB, `localStorage` y PocketBase. La disponibilidad sin conexión depende de cada función y de los datos guardados localmente; no todas las entidades se almacenan en IndexedDB.
 
-1. **Rutas y grabaciones locales:** Se guardan en IndexedDB, incluyendo puntos GPS y datos de actividad. Las fotos asociadas a POI se almacenan aparte para no cargar todos los blobs al leer rutas.
+1. **Rutas y grabaciones locales:** Se guardan en IndexedDB, incluyendo puntos GPS y datos de actividad. Las fotos asociadas a POI se almacenan aparte para no cargar todos los blobs al leer rutas. Las rutas que el usuario acepta retirar tras desaparecer del servidor permanecen en `routes` durante 30 días y conservan sus fotos hasta restaurarse o caducar.
 2. **Datos auxiliares y preferencias:** `kv` guarda borradores de grabación, cachés y marcadores pendientes de algunos flujos de sincronización. Otras preferencias y algunos datos de perfil se guardan en `localStorage`.
 3. **Sincronización:** La sincronización de rutas coordina los registros locales con PocketBase. No existe un object store `sync_queue` ni una cola genérica de mutaciones con el esquema `CREATE`/`UPDATE`/`DELETE`; los flujos usan campos de ruta y claves auxiliares concretas.
 
@@ -19,13 +19,13 @@ La persistencia de **senda-mtb** se reparte entre IndexedDB, `localStorage` y Po
 Versión actual de esquema: **2**. La base `mtb_camboya_pro_db` crea estos tres object stores en `app/storage.js`:
 
 ### 2.1. ObjectStore: `routes`
-Usa `id` como clave primaria y contiene registros de ruta. Las salidas grabadas se representan como rutas con `kind: 'recorded'`; las rutas importadas usan `kind: 'imported'`. El registro habitual incluye `name`, `startedAt`, `movingTimeSec`, `distanceKm`, `elevationGain` y `points`. Los puntos se almacenan como arrays con coordenadas y, cuando existen, altitud, tiempo, frecuencia cardíaca, velocidad, cadencia y potencia. Los campos varían según el tipo y el origen de la ruta; no hay un esquema TypeScript rígido en IndexedDB.
+Usa `id` como clave primaria y contiene registros de ruta. Las salidas grabadas se representan como rutas con `kind: 'recorded'`; las rutas importadas usan `kind: 'imported'`. El registro habitual incluye `name`, `startedAt`, `movingTimeSec`, `distanceKm`, `elevationGain` y `points`. Los puntos se almacenan como arrays con coordenadas y, cuando existen, altitud, tiempo, frecuencia cardíaca, velocidad, cadencia y potencia. `trashedAt` identifica una ruta en la papelera; `remoteDeletionPending` evita que una ruta cuya revisión se pospuso vuelva a subirse automáticamente. Los campos varían según el tipo y el origen de la ruta; no hay un esquema TypeScript rígido en IndexedDB.
 
 ### 2.2. ObjectStore: `kv`
 Almacén clave-valor auxiliar, sin `keyPath`. Se usa, entre otros casos, para conservar el borrador de grabación y sus bloques de puntos (`draft` y `draft:points:<índice>`), cachés locales y marcadores de sincronización pendientes como `pendingDeletes` y `pendingGroupRankingDeletes`. No equivale a una cola genérica de cambios.
 
 ### 2.3. ObjectStore: `routePhotos`
-Usa `routeId` como clave primaria. Guarda los blobs de fotos de los POI asociados a una ruta como elementos `{ index, photo }`; los metadatos de los POI permanecen en el registro de `routes`. La migración de la versión 1 a la 2 mueve los blobs existentes desde los registros de ruta a este store.
+Usa `routeId` como clave primaria. Guarda los blobs de fotos de los POI asociados a una ruta como elementos `{ index, photo }`; los metadatos de los POI permanecen en el registro de `routes`. La migración de la versión 1 a la 2 mueve los blobs existentes desde los registros de ruta a este store. Las fotos se eliminan junto a la ruta cuando se purga la papelera al cumplir 30 días o cuando el usuario la elimina definitivamente.
 
 `activities`, `map_pois`, `bikes`, `components`, `emergency_contacts` y `sync_queue` **no son object stores** de esta base. Las actividades grabadas están representadas en `routes`; los POI personales se gestionan mediante PocketBase; el garaje y los contactos de seguridad se serializan en `localStorage`.
 

@@ -30,6 +30,21 @@ function routeToGpx(r) {
     return out.join('\n');
 }
 
+function routesToGpx(routes) {
+    const tracks = (Array.isArray(routes) ? routes : []).map(route => {
+        const gpx = routeToGpx(route);
+        const start = gpx.indexOf('<trk>');
+        const end = gpx.lastIndexOf('</trk>') + '</trk>'.length;
+        return start >= 0 && end > start ? gpx.slice(start, end) : '';
+    }).filter(Boolean);
+    return [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<gpx version="1.1" creator="senda-mtb" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">',
+        ...tracks,
+        '</gpx>'
+    ].join('\n');
+}
+
 function xmlLocalName(element) {
     return String(element.localName || element.nodeName || '').split(':').pop().toLowerCase();
 }

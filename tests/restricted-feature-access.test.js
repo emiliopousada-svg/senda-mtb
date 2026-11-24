@@ -123,6 +123,7 @@ test('community routes, offline map downloads, and route imports use the account
     assert.match(offlineMaps, /async function downloadTileSetOffline\([^)]*\) \{\s*if \(!offlineMapsRequireAccount\(\)\) return;/);
     assert.match(routes, /if \(tab === 'community' && !requireSignedIn\(/);
     assert.match(routes, /\$\('btn-import-route'\)\.addEventListener\('click', async \(\) => \{\s*if \(!requireSignedIn\(/);
-    assert.match(routes, /const r = savedRoutes\.find\(x => x\.id === id\);\s*if \(!r\) return;\s*if \(r\.communityRouteId\s*&& !requireSignedIn\(/);
+    assert.match(routes, /const inTrash = routesTab === 'trash';\s*const r = \(inTrash \? trashedRoutes : savedRoutes\)\.find\(x => x\.id === id\);\s*if \(!r\) return;\s*if \(inTrash\) \{/);
+    assert.match(routes, /if \(r\.communityRouteId\s*&& !requireSignedIn\(/);
     assert.match(routeSync, /async function syncRoutes\(manual = false\) \{\s*if \(!Cloud\.loggedIn\(\)\) return;/);
 });

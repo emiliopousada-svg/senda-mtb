@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [Unreleased]
+
+### Corregido
+* **Sincronización de rutas:** una ruta que falta en una auditoría remota ya no se borra sin confirmación. Se puede exportar el lote a GPX y conservarlo 30 días en una papelera local, con opción de restaurar o eliminar definitivamente.
+
 ## [0.2.43] - 2026-11-24
 
 ### Documentación
