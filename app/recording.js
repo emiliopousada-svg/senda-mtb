@@ -19,13 +19,13 @@ let draftSavedRevision = 0;
 let draftSavedPointCount = 0;
 
 function clearRoutePolylines() {
+    if (typeof resetGpsRouteRenderer === 'function') resetGpsRouteRenderer();
     routePolylines.forEach(polyline => { if (map) map.removeLayer(polyline); });
     routePolylines = [];
     routePolyline = null;
     routePolylinePointCount = 0;
     routePolylinePoints = [];
     routePolylineLastPoint = null;
-    pendingRouteRenderPoints.length = 0;
 }
 
 function renderRecordingSegments(routeSegments) {
@@ -46,6 +46,7 @@ function renderRecordingSegments(routeSegments) {
             start = end - 1;
         }
     });
+    routeRenderedPointCount = points.length;
 }
 
 async function acquireWake() {
@@ -472,7 +473,6 @@ function resetRecordingState() {
     resetAutoPauseState();
     points = [];
     draftSavedPointCount = 0;
-    segments = [];
     totalDistance = 0;
     elev = makeElevTracker();
     lastAccepted = null;
@@ -1056,7 +1056,6 @@ function restoreDraft(d) {
         if (index > 0 && p[5] === 1) elev.reset();
         elev.add(p[2]);
     });
-    segments = buildSegments(points);
     isRecording = true;
     isPaused = true;
     resumeBreak = true;
@@ -1066,7 +1065,7 @@ function restoreDraft(d) {
     $('m-moving').textContent = fmtClock(Math.floor(movingMs / 1000));
     $('m-time').textContent = fmtClock(totalSec());
     if (map) {
-        renderRecordingSegments(segments);
+        renderRecordingSegments(buildSegments(points));
         const b = L.latLngBounds([]);
         routePolylines.forEach(polyline => b.extend(polyline.getBounds()));
         if (b.isValid()) map.fitBounds(b, { padding: [30, 30] });

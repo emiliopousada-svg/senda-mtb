@@ -60,7 +60,8 @@ function parseTrack(text, fname) {
         if (!trimmed.startsWith('{')) throw new Error('El archivo GeoJSON no contiene un objeto válido.');
         const geoms = [];
         (function walk(o, depth = 0) {
-            if (!o || typeof o !== 'object' || depth > 32) return;
+            if (depth > 32) throw new Error('El archivo GeoJSON supera la profundidad máxima permitida.');
+            if (!o || typeof o !== 'object') return;
             if (o.type === 'FeatureCollection' && Array.isArray(o.features)) {
                 o.features.forEach(f => walk(f, depth + 1));
             } else if (o.type === 'Feature') {
@@ -78,10 +79,11 @@ function parseTrack(text, fname) {
                 throw new Error(`el track supera el límite de ${MAX_IMPORTED_TRACK_POINTS.toLocaleString('es-ES')} puntos`);
             }
             return line.map(c => {
-                if (!Array.isArray(c) || c.length < 2) {
+                if (!Array.isArray(c) || c.length < 2
+                    || typeof c[0] !== 'number' || typeof c[1] !== 'number') {
                     throw new Error('El archivo GeoJSON contiene una coordenada geográfica no válida.');
                 }
-                const lon = Number(c[0]), lat = Number(c[1]);
+                const lon = c[0], lat = c[1];
                 if (!Number.isFinite(lat) || !Number.isFinite(lon)
                     || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
                     throw new Error('El archivo GeoJSON contiene una coordenada geográfica no válida.');

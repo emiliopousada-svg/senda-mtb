@@ -131,7 +131,7 @@ test('pauseRecording ignores duplicate calls and negative elapsed deltas', () =>
     assert.equal(context.movingMs, 1000);
 });
 
-test('parseTrack rejects invalid GeoJSON coordinates and malformed collections safely', () => {
+test('parseTrack rejects invalid GeoJSON coordinates, malformed collections, and excessive nesting', () => {
     const routeFilesSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'route-files.js'), 'utf8');
     const context = vm.createContext({
         Array,
@@ -151,6 +151,36 @@ test('parseTrack rejects invalid GeoJSON coordinates and malformed collections s
     assert.throws(
         () => context.parseTrack('{"type":"LineString","coordinates":[[999,42],[10,42]]}', 'bad.geojson'),
         /coordenada geográfica no válida/
+    );
+
+    for (const coordinate of [[null, 42], [false, 42], [[], 42], ['10', 42]]) {
+        const geoJson = JSON.stringify({ type: 'LineString', coordinates: [coordinate, [11, 43]] });
+        assert.throws(
+            () => context.parseTrack(geoJson, 'bad.geojson'),
+            /coordenada geográfica no válida/
+        );
+    }
+
+    const validTrack = context.parseTrack(
+        '{"type":"LineString","coordinates":[[10,42],[11,43]]}',
+        'valid.geojson'
+    );
+    assert.deepEqual(Array.from(validTrack.segs[0][0]), [42, 10, null, null]);
+
+    let deeplyNested = { type: 'LineString', coordinates: [[10, 42], [11, 43]] };
+    for (let i = 0; i < 33; i++) {
+        deeplyNested = { type: 'GeometryCollection', geometries: [deeplyNested] };
+    }
+    const mixedDepthCollection = {
+        type: 'GeometryCollection',
+        geometries: [
+            { type: 'LineString', coordinates: [[10, 42], [11, 43]] },
+            deeplyNested
+        ]
+    };
+    assert.throws(
+        () => context.parseTrack(JSON.stringify(mixedDepthCollection), 'deep.geojson'),
+        /profundidad máxima permitida/
     );
 });
 

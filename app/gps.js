@@ -18,6 +18,7 @@ const GPS_ACTIVE_OPTIONS = { enableHighAccuracy: true, maximumAge: 0, timeout: 1
 const GPS_FOLLOW_OPTIONS = { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 };
 const GPS_RECENTER_ACCURACY_M = 100;
 const GPS_VISUAL_UPDATE_INTERVAL_MS = 1000;
+const GPS_ROUTE_RENDER_BATCH_SIZE = 1000;
 let gpsWatchId = null, gpsRetryTimer = null, gpsRetryDelay = 2000;
 let gpsHighAccuracyMode = null;
 let gpsPermissionDenied = false, gpsPermissionNoticeShown = false;
@@ -26,8 +27,8 @@ let gpsRecenterPending = true;
 let lastGpsSpeedFix = null;
 let lastElevationFix = null;
 let pendingGpsVisualState = null, gpsVisualTimer = null, gpsVisualFrame = null;
+let routeRenderFrame = null;
 let lastGpsVisualUpdateAt = 0;
-let pendingRouteRenderPoints = [];
 
 function gpsSpeedFromFix(position, timestamp, accuracy) {
     if (!Number.isFinite(timestamp) || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > GPS_MAX_ACC_M) return null;
@@ -63,12 +64,14 @@ function isUsableAltitude(coords, previous, elapsedSeconds) {
 
 function scheduleGpsVisualUpdate(state) {
     pendingGpsVisualState = state;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
     if (gpsVisualTimer !== null || gpsVisualFrame !== null) return;
     const delay = Math.max(0, GPS_VISUAL_UPDATE_INTERVAL_MS - (Date.now() - lastGpsVisualUpdateAt));
     gpsVisualTimer = setTimeout(() => {
         gpsVisualTimer = null;
         const render = () => {
             gpsVisualFrame = null;
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
             const latest = pendingGpsVisualState;
             pendingGpsVisualState = null;
             if (!latest) return;
@@ -80,29 +83,71 @@ function scheduleGpsVisualUpdate(state) {
     }, delay);
 }
 
+function scheduleRouteRenderFrame() {
+    if (routeRenderFrame !== null || !map || routeRenderedPointCount >= points.length
+        || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
+    if (typeof requestAnimationFrame === 'function') {
+        routeRenderFrame = requestAnimationFrame(() => {
+            routeRenderFrame = null;
+            renderPendingRoutePoints();
+        });
+    } else {
+        renderPendingRoutePoints();
+    }
+}
+
 function renderPendingRoutePoints() {
-    if (!map || !pendingRouteRenderPoints.length) return;
-    const pending = pendingRouteRenderPoints;
-    pendingRouteRenderPoints = [];
+    if (!map || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
+    const batchSize = typeof requestAnimationFrame === 'function'
+        ? GPS_ROUTE_RENDER_BATCH_SIZE
+        : points.length;
+    const end = Math.min(points.length, routeRenderedPointCount + batchSize);
+    if (routeRenderedPointCount >= end) return;
     const changedLayers = new Map();
     const newLayers = [];
-    pending.forEach(item => {
-        if (item.break || !routePolyline || routePolylinePointCount >= MAX_ROUTE_RENDER_POINTS) {
-            const continuesChunk = !item.break && routePolyline && routePolylineLastPoint;
-            routePolylinePoints = continuesChunk ? [routePolylineLastPoint, item.ll] : [item.ll];
+    for (let index = routeRenderedPointCount; index < end; index++) {
+        const point = points[index];
+        const ll = [point[0], point[1]];
+        const breakSegment = point[5] === 1;
+        if (breakSegment || !routePolyline || routePolylinePointCount >= MAX_ROUTE_RENDER_POINTS) {
+            const continuesChunk = !breakSegment && routePolyline && routePolylineLastPoint;
+            routePolylinePoints = continuesChunk ? [routePolylineLastPoint, ll] : [ll];
             routePolyline = L.polyline(routePolylinePoints, { color: '#ff9800', weight: 5 });
             routePolylines.push(routePolyline);
             newLayers.push(routePolyline);
             routePolylinePointCount = routePolylinePoints.length;
         } else {
-            routePolylinePoints.push(item.ll);
+            routePolylinePoints.push(ll);
             routePolylinePointCount++;
             changedLayers.set(routePolyline, routePolylinePoints);
         }
-        routePolylineLastPoint = item.ll;
-    });
+        routePolylineLastPoint = ll;
+    }
+    routeRenderedPointCount = end;
     changedLayers.forEach((latlngs, layer) => layer.setLatLngs(latlngs));
     newLayers.forEach(layer => layer.addTo(map));
+    if (routeRenderedPointCount < points.length) scheduleRouteRenderFrame();
+}
+
+function resetGpsRouteRenderer() {
+    if (routeRenderFrame !== null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(routeRenderFrame);
+    }
+    routeRenderFrame = null;
+    routeRenderedPointCount = 0;
+}
+
+function pauseGpsVisualUpdates() {
+    if (gpsVisualTimer !== null) clearTimeout(gpsVisualTimer);
+    gpsVisualTimer = null;
+    if (gpsVisualFrame !== null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(gpsVisualFrame);
+    }
+    gpsVisualFrame = null;
+    if (routeRenderFrame !== null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(routeRenderFrame);
+    }
+    routeRenderFrame = null;
 }
 
 function renderGpsVisualUpdate(state) {
@@ -246,10 +291,15 @@ async function resumeGpsAfterForeground() {
 if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
+            pauseGpsVisualUpdates();
             gpsRecenterPending = true;
             if (bgActive || !isRecording) clearGpsWatch();
         }
-        else resumeGpsAfterForeground();
+        else {
+            resumeGpsAfterForeground();
+            if (pendingGpsVisualState) scheduleGpsVisualUpdate(pendingGpsVisualState);
+            else scheduleRouteRenderFrame();
+        }
     });
 }
 if (typeof window !== 'undefined') {
@@ -324,9 +374,6 @@ function onPos(pos) {
     lastPositionAt = Date.now();
     if (typeof document !== 'undefined' && document.getElementById('safety-workspace')?.hidden === false
         && typeof safetyRenderLocation === 'function') safetyRenderLocation();
-    if (isRecording && !isPaused) {
-        refreshBatteryStatus();
-    }
     const followedMatch = followedRoute ? findFollowedRouteMatch(lat, lon) : null;
     if (followedMatch) checkUpcomingRouteTurn(followedMatch);
     if (followedMatch && !isPaused && (isRecording
@@ -440,10 +487,7 @@ function onPos(pos) {
         lastElevationFix = { timestamp: t, altitude: recordedAltitude };
     }
 
-    if (brk || segments.length === 0) segments.push([]);
-    segments[segments.length - 1].push(ll);
     lastAccepted = { ll, t };
-    pendingRouteRenderPoints.push({ ll, break: brk });
     scheduleGpsVisualUpdate(visualState);
     scheduleDraftSave();
 
