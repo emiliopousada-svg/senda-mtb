@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.43] - 2026-11-24
+
+### Documentación
+* **Arquitectura y datos:** se alinean `ARCHITECTURE.md` y `DATA_MODEL.md` con los límites reales de la aplicación, los stores de IndexedDB y las colecciones de PocketBase.
+
 ## [0.2.42] - 2026-11-24
 
 ### Mejorado
