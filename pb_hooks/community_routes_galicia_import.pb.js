@@ -172,14 +172,6 @@ function run() {
             if (parsed.segments[i].length > 1) { raw.push(parsed.segments[i]); count += parsed.segments[i].length; }
         }
         if (count < 2 || count > maxPoints) throw new Error("el track debe contener entre 2 y " + maxPoints + " puntos");
-        let distanceM = 0, gain = 0;
-        for (let lineIndex = 0; lineIndex < raw.length; lineIndex++) {
-            const line = raw[lineIndex];
-            for (let i = 1; i < line.length; i++) {
-                distanceM += distance(line[i - 1], line[i]);
-                if (line[i][2] != null && line[i - 1][2] != null && line[i][2] > line[i - 1][2]) gain += line[i][2] - line[i - 1][2];
-            }
-        }
         let lines = trimStart(raw, 150);
         const reversed = [];
         for (let i = lines.length - 1; i >= 0; i--) {
@@ -199,6 +191,16 @@ function run() {
         if (points.length < 2) throw new Error("ruta demasiado corta después del recorte de privacidad");
         const fittedTrack = fitTrackJson(lines, 250000);
         lines = fittedTrack.lines;
+        let distanceM = 0, gain = 0;
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
+            for (let i = 1; i < line.length; i++) {
+                distanceM += distance(line[i - 1], line[i]);
+                if (line[i][2] != null && line[i - 1][2] != null && line[i][2] > line[i - 1][2]) {
+                    gain += line[i][2] - line[i - 1][2];
+                }
+            }
+        }
         const sourcePath = sourcePrefix + relativePath;
         let record;
         try { record = $app.findFirstRecordByData("community_routes", "sourcePath", sourcePath); }

@@ -138,6 +138,80 @@ test('group ranking migration adds route binding and trusted activity date idemp
     assert.equal(saves, 1);
 });
 
+test('community route metrics migration recalculates distance and clears unverified fields', () => {
+    const migration = loadMigration('1794836013_recalculate_community_route_metrics.js');
+    const records = [
+        {
+            id: 'user-route',
+            values: {
+                trackJson: JSON.stringify([[[0, 0], [0, 0.01]]]),
+                distanceKm: 42.3,
+                elevationGain: 500,
+                movingTimeSec: 7200,
+                sourcePath: '',
+                owner: 'user123'
+            },
+            getString(name) { return this.values[name] || ''; },
+            get(name) { return this.values[name]; },
+            set(name, value) { this.values[name] = value; }
+        },
+        {
+            id: 'official-route',
+            values: {
+                trackJson: JSON.stringify([[[0, 0], [0, 0.01, 20]]]),
+                distanceKm: 99,
+                elevationGain: 120,
+                movingTimeSec: 3600,
+                sourcePath: 'galicia/routes/example.gpx',
+                owner: 'official'
+            },
+            getString(name) { return this.values[name] || ''; },
+            get(name) { return this.values[name]; },
+            set(name, value) { this.values[name] = value; }
+        },
+        {
+            id: 'spoofed-source-route',
+            values: {
+                trackJson: JSON.stringify([[[0, 0], [0, 0.01]]]),
+                distanceKm: 99,
+                elevationGain: 600,
+                movingTimeSec: 3600,
+                sourcePath: 'galicia/routes/forged.gpx',
+                owner: 'user123'
+            },
+            getString(name) { return this.values[name] || ''; },
+            get(name) { return this.values[name]; },
+            set(name, value) { this.values[name] = value; }
+        }
+    ];
+    let saved = 0;
+    const app = {
+        findRecordById(collection, id) {
+            assert.equal(collection, 'users');
+            return { getString: name => name === 'nickname' && id === 'official' ? 'SENDA-MTB' : 'Rider' };
+        },
+        findRecordsByFilter(collection, filter, sort, limit, offset) {
+            assert.equal(collection, 'community_routes');
+            assert.equal(filter, 'id != ""');
+            assert.equal(sort, 'id');
+            assert.equal(limit, 200);
+            return offset === 0 ? records : [];
+        },
+        save() { saved++; }
+    };
+
+    migration.up(app);
+
+    for (const record of records) {
+        assert.ok(record.values.distanceKm > 1.1 && record.values.distanceKm < 1.12);
+        assert.equal(record.values.movingTimeSec, 0);
+    }
+    assert.equal(records[0].values.elevationGain, 0);
+    assert.equal(records[1].values.elevationGain, 120);
+    assert.equal(records[2].values.elevationGain, 0);
+    assert.equal(saved, 3);
+});
+
 test('community route access migration requires an account and restores prior rules on rollback', () => {
     const migration = loadMigration('1794836010_require_auth_for_community_routes.js');
     const previousRules = {

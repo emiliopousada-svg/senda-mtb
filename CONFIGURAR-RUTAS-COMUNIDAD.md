@@ -40,7 +40,9 @@ La migración actualiza las reglas existentes de lectura de `community_routes`, 
 
 La publicación y la privacidad de la ruta también dependen de los hooks del repositorio. Copia los archivos necesarios desde `pb_hooks` a la carpeta de hooks configurada en el servidor (por defecto, `pb_hooks`) y reinicia PocketBase para cargarlos. No sobrescribas hooks existentes sin revisar primero los cambios.
 
-`community_routes.pb.js` también impide que un usuario publique dos veces la misma ruta: rechaza la publicación si ya tiene otra con el mismo trazado recortado, o con la misma distancia (±50 m) y el mismo tiempo en movimiento. Tras actualizar el hook, reinicia PocketBase.
+`community_routes.pb.js` calcula la distancia sobre el trazado después del recorte de privacidad y no acepta las métricas de distancia enviadas por el cliente. Para rutas publicadas por usuarios, el desnivel y el tiempo en movimiento no se verifican y se guardan como no disponibles; el desnivel de las importaciones oficiales sigue derivándose de los datos de elevación del archivo fuente. La detección de duplicados usa el trazado recortado exacto, no las métricas declaradas por el cliente.
+
+Instala también `pb_migrations/1794836013_recalculate_community_route_metrics.js` y ejecuta `pocketbase migrate up` para recalcular la distancia de las publicaciones existentes y retirar sus valores no verificables de desnivel y tiempo. Tras actualizar el hook, reinicia PocketBase.
 
 ## Importación automática de rutas oficiales de Galicia
 
