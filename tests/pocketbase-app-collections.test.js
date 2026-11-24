@@ -104,6 +104,11 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     assert.equal(segmentEfforts.listRule, '@request.auth.id != "" && segment.route.published = true');
     assert.equal(segmentEfforts.viewRule, segmentEfforts.listRule);
 
+    const ranking = byName.get('mtb_group_ranking_entries');
+    assert.equal(ranking.fields.getByName('route').collectionId, routes.id);
+    assert.equal(ranking.fields.getByName('route').required, false);
+    assert.equal(ranking.fields.getByName('routeSyncedAt').type, 'date');
+
     const liveLocations = byName.get('live_locations');
     assert.equal(liveLocations.fields.getByName('groupCode').type, 'relation');
     assert.match(liveLocations.listRule, /@collection\.mtb_group_members\.group \?= groupCode/);

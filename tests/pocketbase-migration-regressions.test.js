@@ -25,6 +25,14 @@ function loadMigration(fileName) {
             constructor(definition) { Object.assign(this, definition); }
             type() { return 'number'; }
         },
+        RelationField: class {
+            constructor(definition) { Object.assign(this, definition); }
+            type() { return 'relation'; }
+        },
+        DateField: class {
+            constructor(definition) { Object.assign(this, definition); }
+            type() { return 'date'; }
+        },
         migrate(upCallback, downCallback) {
             up = upCallback;
             down = downCallback;
@@ -90,6 +98,44 @@ test('challenge migration rollback preserves a collection that existed before mi
     assert.ok(collections.includes(existingChallenges));
     assert.deepEqual(existingChallenges.records, [{ id: 'existing-challenge' }]);
     assert.deepEqual(deleted, []);
+});
+
+test('group ranking migration adds route binding and trusted activity date idempotently', () => {
+    const migration = loadMigration('1794836012_bind_group_rankings_to_verified_routes.js');
+    const fields = [];
+    const ranking = {
+        name: 'mtb_group_ranking_entries',
+        fields: {
+            getByName(name) { return fields.find(field => field.name === name) || null; },
+            add(field) {
+                field.id = field.name;
+                fields.push(field);
+            },
+            removeById(id) {
+                const index = fields.findIndex(field => field.id === id);
+                if (index >= 0) fields.splice(index, 1);
+            }
+        }
+    };
+    const routes = { name: 'routes', id: 'routes-id' };
+    let saves = 0;
+    const app = {
+        findCollectionByNameOrId(name) {
+            if (name === ranking.name) return ranking;
+            if (name === routes.name) return routes;
+            throw new Error(`Unexpected collection: ${name}`);
+        },
+        save() { saves++; }
+    };
+
+    migration.up(app);
+    migration.up(app);
+
+    assert.equal(fields.length, 2);
+    assert.equal(fields.find(field => field.name === 'route').collectionId, routes.id);
+    assert.equal(fields.find(field => field.name === 'route').cascadeDelete, true);
+    assert.equal(fields.find(field => field.name === 'routeSyncedAt').type(), 'date');
+    assert.equal(saves, 1);
 });
 
 test('community route access migration requires an account and restores prior rules on rollback', () => {

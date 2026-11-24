@@ -76,6 +76,7 @@ migrate((app) => {
             "CREATE UNIQUE INDEX idx_routes_owner_client_id ON routes (owner, clientId)",
         ],
     })
+    const routes = app.findCollectionByNameOrId("routes")
 
     createCollectionIfMissing(app, {
         type: "base",
@@ -182,6 +183,8 @@ migrate((app) => {
         fields: [
             relationField("group", groups.id),
             relationField("owner", users.id),
+            relationField("route", routes.id, false),
+            { name: "routeSyncedAt", type: "date" },
             { name: "clientId", type: "number", required: true, min: 1, max: 9007199254740991, onlyInt: true },
             numberField("distanceKm", 0, 1000),
             numberField("movingTimeSec", 0, 604800, true),

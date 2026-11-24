@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
     groupRankingSummaryFromEntries,
+    calculateGroupActivityMetrics,
+    entryTimeMs,
     findRecordsByIds,
     loadActiveGroupContext
 } = require('../pb_hooks/groups_utils.js');
@@ -53,6 +55,31 @@ test('group ranking summary includes only entries within the active season', () 
         totalElevationM: 300,
         leaguePoints: 45
     });
+});
+
+test('group ranking activity metrics are recalculated from synchronized track points', () => {
+    const metrics = calculateGroupActivityMetrics({
+        format: 2,
+        points: [
+            [0, 0, 100, 1_800_000_000_000],
+            [0, 0.001, 110, 1_800_000_100_000],
+            [0, 0.002, 120, 1_800_000_200_000]
+        ]
+    });
+
+    assert.ok(metrics.distanceKm > 0.22 && metrics.distanceKm < 0.23);
+    assert.equal(metrics.movingTimeSec, 200);
+    assert.ok(metrics.maxSpeedKmh > 3.9 && metrics.maxSpeedKmh < 4.1);
+    assert.equal(metrics.elevationGain, 10);
+});
+
+test('verified ranking entries use the server-supplied activity date, not the client id', () => {
+    const entry = rankingEntry('rider-1', '2026-11-16T12:00:00.000Z', {
+        clientId: Date.parse('2026-01-05T00:00:00.000Z'),
+        routeSyncedAt: '2026-11-16T12:00:00.000Z'
+    });
+
+    assert.equal(entryTimeMs(entry), Date.parse('2026-11-16T12:00:00.000Z'));
 });
 
 test('findRecordsByIds deduplicates ids and splits lookups into bounded batches', () => {

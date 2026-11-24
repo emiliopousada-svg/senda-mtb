@@ -292,7 +292,7 @@ async function syncRoutes(manual = false) {
         route.groupRankingPending
         || (route.groupRankingOwnerId === retryUid
             && route.groupRankingServer === retryServer
-            && !route.groupRankingGroupId)
+            && (!route.groupRankingGroupId || route.groupRankingVerified !== true))
     );
     const cursorKey = cloudSyncStorageKey('routes_sync_cursor', retryServer, retryUid);
     const auditKey = cloudSyncStorageKey('routes_full_audit_at', retryServer, retryUid);
