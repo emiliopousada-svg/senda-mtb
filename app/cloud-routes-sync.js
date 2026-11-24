@@ -152,15 +152,14 @@ function routeForm(r) {
 
 async function flushPendingDeletes({ isCurrentSync, syncCloudApi, noteSyncFailure }) {
     let pendingDeletes = [];
-    let pendingDeletesAvailable = true;
     try {
         pendingDeletes = (await DB.kvGet('pendingDeletes')) || [];
         if (!isCurrentSync()) return null;
     } catch (error) {
         if (!isCurrentSync()) return null;
-        pendingDeletesAvailable = false;
         noteSyncFailure(`No se pudo leer la cola de borrados: ${error.message}`);
         console.warn('No se pudo leer la cola de borrados:', error);
+        return null;
     }
 
     const remaining = [];
@@ -179,16 +178,14 @@ async function flushPendingDeletes({ isCurrentSync, syncCloudApi, noteSyncFailur
         if (!isCurrentSync()) return null;
     }
 
-    if (pendingDeletesAvailable) {
+    if (!isCurrentSync()) return null;
+    try {
+        await DB.kvSet('pendingDeletes', remaining);
         if (!isCurrentSync()) return null;
-        try {
-            await DB.kvSet('pendingDeletes', remaining);
-            if (!isCurrentSync()) return null;
-        } catch (error) {
-            if (!isCurrentSync()) return null;
-            noteSyncFailure(`No se pudo guardar la cola de borrados: ${error.message}`);
-            console.warn('No se pudo guardar la cola de borrados:', error);
-        }
+    } catch (error) {
+        if (!isCurrentSync()) return null;
+        noteSyncFailure(`No se pudo guardar la cola de borrados: ${error.message}`);
+        console.warn('No se pudo guardar la cola de borrados:', error);
     }
     return new Set(pendingDeletes);
 }
@@ -338,7 +335,13 @@ async function syncRoutes(manual = false) {
             syncCloudApi,
             noteSyncFailure
         });
-        if (!isCurrentSync() || !skip) return;
+        if (!isCurrentSync()) return;
+        if (!skip) {
+            if (manual) {
+                toast(`⚠️ Sincronización interrumpida: ${syncFailureDetails.join(' · ') || 'No se pudo leer la cola de borrados.'}`, 10000);
+            }
+            return;
+        }
 
         // 3) reconciliar lo remoto y subir cambios locales sin bloquear otras rutas
         const byClient = new Map(remote.map(x => [Number(x.clientId), x]));

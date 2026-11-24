@@ -51,7 +51,17 @@ function cloudContext(cloudApi = async () => ({ record: { id: 'user-1' } })) {
     return { context, values };
 }
 
-function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fetchRemoteRoutes, cloudApi } = {}) {
+function routeSyncContext({
+    routes = [],
+    remote = [],
+    deleteRoute,
+    putLocal,
+    fetchRemoteRoutes,
+    cloudApi,
+    pendingDeleteReadError
+} = {}) {
+    let downloadedTrackCount = 0;
+    const toasts = [];
     const cloud = {
         active: true,
         uid: 'user-a',
@@ -68,7 +78,10 @@ function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fet
         CLOUD_SYNC_RETRY_INITIAL_MS: 5000,
         Cloud: cloud,
         DB: {
-            async kvGet() { return []; },
+            async kvGet() {
+                if (pendingDeleteReadError) throw pendingDeleteReadError;
+                return [];
+            },
             async kvSet() {},
             async deleteRoute(...args) {
                 if (deleteRoute) return deleteRoute(...args);
@@ -80,10 +93,13 @@ function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fet
         clearCloudSyncRetryTimer() {},
         cloudSyncStorageKey() { return 'sync-state'; },
         cloudApi: cloudApi || (async () => ({ token: 'file-token' })),
-        fetch: async () => ({
-            ok: true,
-            async text() { return JSON.stringify([[0, 0], [1, 1]]); }
-        }),
+        fetch: async () => {
+            downloadedTrackCount++;
+            return {
+                ok: true,
+                async text() { return JSON.stringify([[0, 0], [1, 1]]); }
+            };
+        },
         fetchRemoteRoutes: fetchRemoteRoutes || (async () => ({ records: remote, fullAudit: true })),
         garageRoutesChanged() { return true; },
         isRetryableCloudStatus: () => false,
@@ -98,6 +114,7 @@ function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fet
         setTimeout,
         clearTimeout,
         syncPendingGroupRankingDeletes: async () => true,
+        toast(message) { toasts.push(message); },
         $: () => ({ textContent: '' }),
         console: { warn() {} },
         async putLocal(route) {
@@ -118,7 +135,7 @@ function routeSyncContext({ routes = [], remote = [], deleteRoute, putLocal, fet
         context
     );
     context.setSavedRoutes(routes);
-    return { context, cloud };
+    return { context, cloud, getDownloadedTrackCount: () => downloadedTrackCount, toasts };
 }
 
 function pendingDeleteContext(initialPendingDeletes) {
@@ -534,6 +551,25 @@ test('pending route delete errors remain queued and are reported for retry', asy
     assert.deepEqual(writes, [{ key: 'pendingDeletes', value: ['retry-route'] }]);
     assert.equal(failures.length, 1);
     assert.equal(failures[0][1], retryableError);
+});
+
+test('route sync does not redownload routes when the pending-delete queue cannot be read', async () => {
+    const { context, getDownloadedTrackCount, toasts } = routeSyncContext({
+        remote: [{
+            id: 'deleted-remotely',
+            clientId: 42,
+            name: 'Deleted route',
+            track: 'track.json'
+        }],
+        pendingDeleteReadError: new Error('storage unavailable')
+    });
+
+    await context.syncRoutes(true);
+
+    assert.deepEqual(Array.from(context.getSavedRoutes()), []);
+    assert.equal(getDownloadedTrackCount(), 0);
+    assert.equal(toasts.length, 1);
+    assert.match(toasts[0], /No se pudo leer la cola de borrados: storage unavailable/);
 });
 
 test('pending route deletes stop without persisting when the session changes', async () => {
