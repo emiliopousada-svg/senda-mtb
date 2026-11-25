@@ -10,7 +10,7 @@ const AUTOMATIC_IGN_STORE = 'automatic-ign-tiles';
 const ONLINE_TILE_STORE = 'online-tiles';
 const MAX_AUTOMATIC_IGN_TILES = 2500;
 const MAX_CACHED_ONLINE_TILES = 2500;
-// Enable persistent offline storage only after the selected provider explicitly permits it.
+// Persistent offline storage for online styles stays disabled until provider terms allow it.
 const ONLINE_TILE_OFFLINE_CACHE_ENABLED = false;
 const MAX_DOWNLOADED_IGN_TILES = 30000;
 const MAX_TILES_PER_DOWNLOAD = 25000;
@@ -269,6 +269,17 @@ async function countNewDownloadedTiles(tiles) {
     });
 }
 function onlineTileKey(style, z, x, y) { return `${style}/${z}/${x}/${y}`; }
+function formatOnlineTileCacheStatus(count) {
+    if (ONLINE_TILE_OFFLINE_CACHE_ENABLED) {
+        return `${count.toLocaleString('es-ES')} teselas online en caché`;
+    }
+    return count
+        ? `${count.toLocaleString('es-ES')} teselas online heredadas (inactivas; no se usan sin conexión)`
+        : 'caché persistente online desactivada';
+}
+function isTileProviderRateLimit(error) {
+    return Boolean(error && error.status === 429);
+}
 async function getCachedOnlineTile(style, z, x, y) {
     const db = await openOfflineDb();
     return new Promise((resolve, reject) => {
@@ -333,7 +344,11 @@ async function fetchAndStoreTile(z, x, y, automatic = false, downloadedByteLimit
         return cached;
     }
     const response = await fetch(ignTileUrl(z, x, y), { mode: 'cors', cache: 'force-cache' });
-    if (!response.ok) throw new Error(`IGN respondió ${response.status}`);
+    if (!response.ok) {
+        const error = new Error(`IGN respondió ${response.status}`);
+        error.status = response.status;
+        throw error;
+    }
     const blob = await response.blob();
     if (!blob || !blob.size) throw new Error('Tesela vacía');
     await saveOfflineTile(z, x, y, blob, automatic, downloadedByteLimit);
@@ -857,13 +872,14 @@ async function downloadTileSetOffline(tiles, regionName, detailName, downloadBut
     if (!confirmed || !offlineMapsRequireAccount()) return;
     offlineDownloadRunning = true; stopOfflineDownload = false;
     let done = 0, errors = 0, cursor = 0, budgetReached = false, quotaReached = false;
+    let providerRateLimited = false;
     downloadButton.disabled = true;
     $('offline-storage-note').textContent = `Descargando ${regionName}. Mantén la app abierta y conectada a Wi-Fi. Si la paras, repite la descarga para la misma región o vuelve a encuadrar la misma zona; las teselas ya guardadas se conservan.`;
     setOfflineProgress(0, tiles.length, 0, downloadedStats);
     try {
         await openOfflineDb();
         const workers = Array.from({ length: 3 }, async () => {
-            while (!stopOfflineDownload && !budgetReached) {
+            while (!stopOfflineDownload && !budgetReached && !providerRateLimited) {
                 const i = cursor++;
                 if (i >= tiles.length) break;
                 const t = tiles[i];
@@ -873,13 +889,17 @@ async function downloadTileSetOffline(tiles, regionName, detailName, downloadBut
                     if (error.code === 'OFFLINE_MAP_BUDGET' || error.name === 'QuotaExceededError') {
                         budgetReached = true;
                         quotaReached = error.name === 'QuotaExceededError';
+                    } else if (isTileProviderRateLimit(error)) {
+                        providerRateLimited = true;
+                        errors++;
+                        console.warn('IGN limitó temporalmente las solicitudes; se detiene la descarga.');
                     } else {
                         errors++;
                         console.warn('No se pudo descargar tesela', t, error);
                     }
                 }
                 done++;
-                if (done % 10 === 0 || done === tiles.length || budgetReached) {
+                if (done % 10 === 0 || done === tiles.length || budgetReached || providerRateLimited) {
                     const stats = await getDownloadedIgnStats();
                     setOfflineProgress(done, tiles.length, errors, stats);
                 }
@@ -890,6 +910,11 @@ async function downloadTileSetOffline(tiles, regionName, detailName, downloadBut
         if (stopOfflineDownload) {
             $('offline-progress-text').textContent += ' · Pausado';
             toast('Descarga pausada. Puedes reanudarla más tarde.');
+        } else if (providerRateLimited) {
+            const remaining = await countNewDownloadedTiles(tiles);
+            $('offline-progress-text').textContent += ' · Límite del proveedor';
+            $('offline-storage-note').textContent = `IGN respondió HTTP 429 y limitó temporalmente las solicitudes. Se guardaron ${stored.count.toLocaleString('es-ES')} teselas (${formatOfflineBytes(stored.bytes)}). Quedan ${remaining.toLocaleString('es-ES')} teselas sin guardar. Espera antes de volver a intentarlo.`;
+            toast('IGN limitó temporalmente las solicitudes. Descarga detenida; inténtalo más tarde.', 8000);
         } else if (budgetReached) {
             const remaining = await countNewDownloadedTiles(tiles);
             const remainingCapacity = Math.max(0, budget.limitBytes - stored.bytes);
@@ -903,7 +928,7 @@ async function downloadTileSetOffline(tiles, regionName, detailName, downloadBut
             toast(`Descarga detenida: quedan ${remaining.toLocaleString('es-ES')} teselas sin guardar`, 7000);
         } else {
             setOfflineProgress(done, tiles.length, errors, stored);
-            $('offline-storage-note').textContent = `Proceso terminado. Teselas IGN descargadas: ${stored.count.toLocaleString('es-ES')} (${formatOfflineBytes(stored.bytes)} de ${formatOfflineBytes(MAX_DOWNLOADED_IGN_BYTES)}); caché automática: ${automatic.toLocaleString('es-ES')}. Las cachés automática y online se contabilizan aparte y reducen la cuota disponible. Los errores se pueden reintentar volviendo a pulsar descargar.`;
+            $('offline-storage-note').textContent = `Proceso terminado. Teselas IGN descargadas: ${stored.count.toLocaleString('es-ES')} (${formatOfflineBytes(stored.bytes)} de ${formatOfflineBytes(MAX_DOWNLOADED_IGN_BYTES)}); caché IGN automática: ${automatic.toLocaleString('es-ES')}. La caché persistente de estilos online está desactivada; cualquier tesela online antigua permanece inactiva y se elimina con «Borrar mapas». Los datos guardados consumen cuota del dispositivo. Los errores se pueden reintentar volviendo a pulsar descargar.`;
             toast(errors ? `Mapa descargado con ${errors} teselas pendientes` : `Mapa de ${regionName} guardado para usar sin conexión`, 5000);
         }
     } catch (e) {
@@ -966,7 +991,7 @@ async function openOfflineMaps() {
                 usado = ` Espacio usado por la app: ${Math.round((est.usage || 0) / 1048576)} MB.`;
             }
         } catch (error) { console.warn('No se pudo estimar el espacio usado:', error); }
-        $('offline-storage-note').textContent = `${stats.count.toLocaleString('es-ES')} teselas IGN descargadas (${formatOfflineBytes(stats.bytes)} de ${formatOfflineBytes(MAX_DOWNLOADED_IGN_BYTES)}; quedan ${formatOfflineBytes(budget.availableBytes)} disponibles), ${automaticCount.toLocaleString('es-ES')} de caché IGN automática y ${onlineCount.toLocaleString('es-ES')} teselas online en caché.${budget.note}${usado} El presupuesto se aplica a los mapas descargados; las cachés automática y online tienen límites propios y consumen cuota del dispositivo. Puedes reanudar una descarga incompleta.`;
+        $('offline-storage-note').textContent = `${stats.count.toLocaleString('es-ES')} teselas IGN descargadas (${formatOfflineBytes(stats.bytes)} de ${formatOfflineBytes(MAX_DOWNLOADED_IGN_BYTES)}; quedan ${formatOfflineBytes(budget.availableBytes)} disponibles), ${automaticCount.toLocaleString('es-ES')} de caché IGN automática y ${formatOnlineTileCacheStatus(onlineCount)}.${budget.note}${usado} El presupuesto limita los mapas IGN descargados. Las teselas IGN automáticas y las teselas online heredadas también consumen cuota del dispositivo; puedes eliminarlas con «Borrar mapas». Puedes reanudar una descarga incompleta.`;
     } catch (e) {
         console.warn('No se pudieron cargar los mapas offline:', e);
         $('offline-storage-note').textContent = 'El almacenamiento local aún no está inicializado.';
@@ -1048,6 +1073,8 @@ if (typeof module !== 'undefined' && module.exports) {
         MAX_DOWNLOADED_IGN_TILES,
         MAX_TILES_PER_DOWNLOAD,
         ONLINE_TILE_OFFLINE_CACHE_ENABLED,
+        formatOnlineTileCacheStatus,
+        isTileProviderRateLimit,
         ignTileUrl,
         tileKey,
         onlineTileKey
