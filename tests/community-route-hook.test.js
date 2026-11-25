@@ -21,7 +21,12 @@ test('community route create hook trims the track and calculates its bounds', ()
         onRecordCreateRequest(handler, name) {
             if (name === 'community_routes') createHandler = handler;
         },
-        onRecordUpdateRequest() {}
+        onRecordUpdateRequest() {},
+        __hooks: 'hooks',
+        require(name) {
+            assert.equal(name, 'hooks/community_quota_utils.js');
+            return { enforceCommunityWriteQuota() {} };
+        }
     });
     const hook = fs.readFileSync(
         path.join(__dirname, '..', 'pb_hooks', 'community_routes.pb.js'),
@@ -31,6 +36,7 @@ test('community route create hook trims the track and calculates its bounds', ()
 
     const values = {
         owner: 'user123',
+        quotaExemptForLimit: true,
         trackJson: JSON.stringify([[[0, 0], [0.001, 0.001], [0.5, 0.5]]]),
         poisJson: '[]',
         published: true
@@ -53,6 +59,7 @@ test('community route create hook trims the track and calculates its bounds', ()
     assert.equal(nextCalled, true);
     assert.equal(values.createdBy, 'Rider');
     assert.equal(values.trackLocked, true);
+    assert.equal(values.quotaExemptForLimit, false);
     const trimmed = JSON.parse(values.trackJson);
     assert.ok(trimmed[0].length >= 2);
     assert.ok(trimmed[0][0][0] > 0);
@@ -62,7 +69,7 @@ test('community route create hook trims the track and calculates its bounds', ()
     assert.equal(Number.isFinite(values.maxLng), true);
 });
 
-function communityRouteHookWith(findRecordsByFilter, uploadedFiles = [], nickname = 'Rider') {
+function communityRouteHookWith(findRecordsByFilter, uploadedFiles = [], nickname = 'Rider', enforceQuota = () => {}) {
     let createHandler;
     let updateHandler;
     const context = vm.createContext({
@@ -76,6 +83,11 @@ function communityRouteHookWith(findRecordsByFilter, uploadedFiles = [], nicknam
         },
         onRecordUpdateRequest(handler, name) {
             if (name === 'community_routes') updateHandler = handler;
+        },
+        __hooks: 'hooks',
+        require(name) {
+            assert.equal(name, 'hooks/community_quota_utils.js');
+            return { enforceCommunityWriteQuota: enforceQuota };
         }
     });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'pb_hooks', 'community_routes.pb.js'), 'utf8'), context);
@@ -152,6 +164,17 @@ test('community route hook accepts a route that is not yet published', () => {
     assert.ok(values.distanceKm > 78 && values.distanceKm < 79);
     assert.equal(values.elevationGain, 0);
     assert.equal(values.movingTimeSec, 0);
+});
+
+test('community route hook rejects a publication when the owner quota is exhausted', () => {
+    const create = communityRouteHookWith(
+        () => [],
+        [],
+        'Rider',
+        () => { throw new Error('route quota reached'); }
+    );
+
+    assert.throws(() => create(duplicateRouteValues()), /route quota reached/);
 });
 
 test('community route hook rejects client changes to the server-owned source path', () => {

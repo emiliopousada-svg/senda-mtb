@@ -1,6 +1,7 @@
 // Calcula en PocketBase la caja geográfica que usa el catálogo para filtrar candidatos.
 function indexCommunityRouteBounds(e) {
     const internalWrite = e.hasSuperuserAuth() || !e.auth;
+    e.record.set("quotaExemptForLimit", Boolean(e.hasSuperuserAuth()));
     if (!internalWrite && e.record.getString("owner") !== e.auth.id) {
         throw new BadRequestError("El propietario de la ruta no coincide con la sesión.");
     }
@@ -289,6 +290,12 @@ function indexCommunityRouteBounds(e) {
     // Si la consulta falla, la publicación se aborta: no se acepta sin comprobar duplicados.
     const duplicates = $app.findRecordsByFilter("community_routes", filter, "", 1, 0, params) || [];
     if (duplicates.length) throw new BadRequestError("Esta ruta ya está publicada en la comunidad.");
+    const isNewPublication = e.record.getBool("published")
+        && (!originalRecord || !originalRecord.getBool("published"));
+    if (!internalWrite && isNewPublication) {
+        const { enforceCommunityWriteQuota } = require(`${__hooks}/community_quota_utils.js`);
+        enforceCommunityWriteQuota($app, owner, "route");
+    }
     e.next();
 }
 

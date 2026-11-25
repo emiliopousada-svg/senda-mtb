@@ -2,6 +2,7 @@
 
 routerAdd("POST", "/api/mtb/groups/create", (e) => {
     const { requireSafeValue, requireNickname } = require(`${__hooks}/groups_utils.js`);
+    const { enforceCommunityWriteQuota } = require(`${__hooks}/community_quota_utils.js`);
     try {
         const body = new DynamicModel({ name: "" });
         e.bindBody(body);
@@ -15,6 +16,7 @@ routerAdd("POST", "/api/mtb/groups/create", (e) => {
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
             const nickname = requireNickname(user.getString("nickname"));
+            enforceCommunityWriteQuota(txApp, user.id, "group");
             const group = new Record(txApp.findCollectionByNameOrId("mtb_groups"));
             group.set("name", name);
             if (iconFiles.length) group.set("icon", iconFiles);

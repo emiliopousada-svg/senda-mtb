@@ -1,0 +1,24 @@
+name: PocketBase staging smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-smoke:
+    runs-on: ubuntu-24.04
+    environment:
+      name: pocketbase-staging
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Check staging PocketBase
+        env:
+          MTB_STAGING_SERVER: ${{ vars.MTB_STAGING_SERVER }}
+          PB_STAGING_SMOKE_EMAIL: ${{ secrets.PB_STAGING_SMOKE_EMAIL }}
+          PB_STAGING_SMOKE_PASSWORD: ${{ secrets.PB_STAGING_SMOKE_PASSWORD }}
+        run: npm run test:pocketbase:staging

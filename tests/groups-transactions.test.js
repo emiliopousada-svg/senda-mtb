@@ -19,7 +19,7 @@ class MockRecord {
     getFloat(field) { return Number(this.values[field]) || 0; }
 }
 
-function groupHookEnvironment({ failUserSave = false } = {}) {
+function groupHookEnvironment({ failUserSave = false, enforceQuota = () => {} } = {}) {
     let nextId = 1;
     let state = new Map([
         ['users', new Map([['user-1', new MockRecord({ name: 'users' }, 'user-1', { nickname: 'Rider', groupCode: '' })]])],
@@ -80,7 +80,12 @@ function groupHookEnvironment({ failUserSave = false } = {}) {
         $security: { randomString() { return 'ABCDEF123456'; } },
         __hooks: 'hooks',
         routerAdd(_method, route, handler) { routes.set(route, handler); },
-        require() { return groupsUtils; },
+        require(name) {
+            if (name === 'hooks/community_quota_utils.js') {
+                return { enforceCommunityWriteQuota: enforceQuota };
+            }
+            return groupsUtils;
+        },
         DynamicModel: class {
             constructor(defaults) { Object.assign(this, defaults); }
         },
@@ -125,6 +130,20 @@ test('group creation commits the group, membership, and active group together', 
     assert.equal(getRecords('mtb_groups').length, 1);
     assert.equal(getRecords('mtb_group_members').length, 1);
     assert.equal(getRecords('users')[0].getString('groupCode'), getRecords('mtb_groups')[0].id);
+});
+
+test('group creation rejects an exhausted quota without persisting partial records', () => {
+    const { routes, getRecords } = groupHookEnvironment({
+        enforceQuota() { throw new Error('group quota reached'); }
+    });
+
+    const response = routes.get('/api/mtb/groups/create')(createGroupRequest());
+
+    assert.equal(response.status, 400);
+    assert.match(response.body.message, /group quota reached/);
+    assert.deepEqual(getRecords('mtb_groups'), []);
+    assert.deepEqual(getRecords('mtb_group_members'), []);
+    assert.equal(getRecords('users')[0].getString('groupCode'), '');
 });
 
 test('challenge count and insert both run inside the same transaction', () => {
