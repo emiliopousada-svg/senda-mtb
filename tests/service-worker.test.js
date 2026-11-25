@@ -98,6 +98,49 @@ test('failed service worker install deletes only its new cache and keeps the act
     assert.equal(cacheNames.has(installedShell), false);
 });
 
+test('service worker activation deletes old app shells but preserves unrelated origin caches', async () => {
+    const handlers = new Map();
+    const deleted = [];
+    const claimed = { value: false };
+    const cacheNames = new Set([
+        'mtbpro-shell-v0.2.25-v15',
+        'other-app-shell-v4',
+        'shared-library-cache'
+    ]);
+    const self = {
+        registration: { scope: 'https://example.test/mtb/' },
+        addEventListener: (type, handler) => handlers.set(type, handler),
+        clients: { claim: async () => { claimed.value = true; } }
+    };
+    const context = {
+        self,
+        URL,
+        Headers,
+        Response,
+        caches: {
+            async keys() { return Array.from(cacheNames); },
+            async delete(name) {
+                deleted.push(name);
+                return cacheNames.delete(name);
+            }
+        }
+    };
+    vm.createContext(context);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8'), context);
+    const shell = vm.runInContext('SHELL', context);
+    cacheNames.add(shell);
+
+    let activationPromise;
+    handlers.get('activate')({ waitUntil: promise => { activationPromise = promise; } });
+    await activationPromise;
+
+    assert.deepEqual(deleted, ['mtbpro-shell-v0.2.25-v15']);
+    assert.equal(cacheNames.has(shell), true);
+    assert.equal(cacheNames.has('other-app-shell-v4'), true);
+    assert.equal(cacheNames.has('shared-library-cache'), true);
+    assert.equal(claimed.value, true);
+});
+
 test('service worker precaches every local script and stylesheet loaded by index.html', () => {
     const root = path.join(__dirname, '..');
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
