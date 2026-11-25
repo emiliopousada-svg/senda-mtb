@@ -57,7 +57,7 @@ function safetyBuildSOSMessage(location = {}) {
 }
 
 let safetyContacts = [];
-let safetySettings = { groupLiveTracking: true };
+let safetySettings = { groupLiveTrackingScope: '' };
 let safetyContactFormOpen = false;
 
 function safetyElement(id) {
@@ -100,7 +100,9 @@ function safetyLoadState() {
             const parsedSettings = JSON.parse(settingsValue);
             if (!parsedSettings || typeof parsedSettings !== 'object') throw new Error('La configuración de seguridad guardada no es válida.');
             safetySettings = {
-                groupLiveTracking: typeof parsedSettings.groupLiveTracking === 'boolean' ? parsedSettings.groupLiveTracking : true
+                groupLiveTrackingScope: typeof parsedSettings.groupLiveTrackingScope === 'string'
+                    ? parsedSettings.groupLiveTrackingScope
+                    : ''
             };
         }
     } catch (error) {
@@ -192,52 +194,95 @@ function safetyPersistSettings() {
     safetySaveJson(SAFETY_SETTINGS_KEY, safetySettings);
 }
 
+function safetyCurrentGroupTrackingScope() {
+    if (typeof groupJoined === 'undefined' || !groupJoined
+        || typeof Cloud === 'undefined' || typeof Cloud.loggedIn !== 'function' || !Cloud.loggedIn()
+        || !Cloud.server || !Cloud.uid || !Cloud.groupCode) return '';
+    return `${Cloud.server}|${Cloud.uid}|${Cloud.groupCode}`;
+}
+
 function safetyGroupTrackingEnabled() {
-    return safetySettings.groupLiveTracking !== false;
+    const activeScope = safetyCurrentGroupTrackingScope();
+    return Boolean(activeScope) && safetySettings.groupLiveTrackingScope === activeScope;
 }
 
 async function safetySetGroupTracking(enabled) {
-    let failed = false;
-    safetySettings.groupLiveTracking = enabled === true;
+    const activeScope = safetyCurrentGroupTrackingScope();
+    if (enabled && !activeScope) {
+        const toggle = safetyElement('safety-group-sharing');
+        if (toggle) toggle.checked = false;
+        safetyUpdateGroupStatus();
+        return;
+    }
+
+    const previousScope = safetySettings.groupLiveTrackingScope;
+    safetySettings.groupLiveTrackingScope = enabled ? activeScope : '';
+    let preferenceFailed = false;
+    let removalFailed = false;
     try {
         safetyPersistSettings();
-        if (!safetySettings.groupLiveTracking) {
-            if (typeof removeMyLiveLocation === 'function') await removeMyLiveLocation();
-        } else if (typeof isRecording !== 'undefined' && isRecording
+    } catch (error) {
+        console.error('No se pudo guardar el permiso de ubicación en directo:', error);
+        if (enabled) {
+            preferenceFailed = true;
+            safetySettings.groupLiveTrackingScope = previousScope;
+        } else {
+            try { localStorage.removeItem(SAFETY_SETTINGS_KEY); }
+            catch (clearError) {
+                console.error('No se pudo borrar el permiso de ubicación guardado:', clearError);
+                preferenceFailed = true;
+            }
+        }
+    }
+    if (!enabled) {
+        if (typeof removeMyLiveLocation === 'function') {
+            try {
+                if (await removeMyLiveLocation() === false) removalFailed = true;
+            }
+            catch (error) {
+                console.warn('No se pudo retirar la última ubicación del grupo:', error);
+                removalFailed = true;
+            }
+        } else {
+            removalFailed = true;
+        }
+    } else if (!preferenceFailed && typeof isRecording !== 'undefined' && isRecording
             && typeof isPaused !== 'undefined' && !isPaused
             && typeof publishMyLocation === 'function') {
-            await publishMyLocation(true);
-        }
-        safetyUpdateGroupStatus();
-    } catch (error) {
-        console.error('No se pudo actualizar el seguimiento en directo:', error);
-        safetySettings.groupLiveTracking = !enabled;
-        const toggle = safetyElement('safety-group-sharing');
-        if (toggle) toggle.checked = safetySettings.groupLiveTracking;
-        failed = true;
+        await publishMyLocation(true);
     }
+    safetyUpdateGroupStatus();
     safetyRender();
-    // El aviso de error se muestra después del estado normal para que no quede tapado.
-    if (failed) {
-        const groupStatus = safetyElement('safety-group-status');
-        if (groupStatus) groupStatus.textContent = 'No se pudo cambiar el seguimiento en directo. Inténtalo de nuevo.';
+    const groupStatus = safetyElement('safety-group-status');
+    if (groupStatus && preferenceFailed) {
+        groupStatus.textContent = enabled
+            ? 'No se pudo guardar el permiso. La ubicación no se compartirá.'
+            : 'La ubicación se ha desactivado en esta sesión, pero no se pudo guardar el cambio.';
+    } else if (groupStatus && removalFailed) {
+        groupStatus.textContent = 'El envío se ha detenido, pero no se pudo confirmar la retirada de la última posición; puede seguir visible temporalmente.';
     }
 }
 
 function safetyUpdateGroupStatus() {
     const status = safetyElement('safety-group-status');
+    const toggle = safetyElement('safety-group-sharing');
+    const sharingEnabled = safetyGroupTrackingEnabled();
+    if (toggle) {
+        toggle.checked = sharingEnabled;
+        toggle.disabled = !safetyCurrentGroupTrackingScope();
+    }
     if (!status) return;
     const joined = typeof groupJoined !== 'undefined' && groupJoined
         && typeof Cloud !== 'undefined' && typeof Cloud.loggedIn === 'function' && Cloud.loggedIn();
     if (!joined) {
-        status.textContent = 'Para compartir la ubicación en directo, inicia sesión y únete a un grupo.';
-    } else if (!safetyGroupTrackingEnabled()) {
-        status.textContent = 'Seguimiento desactivado. Tu posición no se publicará en el grupo.';
+        status.textContent = 'La ubicación no se comparte. Puedes usar tus rutas y estadísticas personales sin unirte a un grupo.';
+    } else if (!sharingEnabled) {
+        status.textContent = 'Desactivada. Puedes consultar el grupo sin compartir tu posición.';
     } else if (typeof isRecording !== 'undefined' && isRecording
         && typeof isPaused !== 'undefined' && !isPaused) {
-        status.textContent = 'Activado: se compartirá con tu grupo si el GPS tiene una posición reciente y precisa.';
+        status.textContent = 'Activada para este grupo. Tu posición se comparte solo mientras grabas.';
     } else {
-        status.textContent = 'Activado: se compartirá con tu grupo al grabar una ruta.';
+        status.textContent = 'Activada para este grupo; se compartirá cuando grabes una ruta.';
     }
 }
 

@@ -487,6 +487,61 @@ test('buildSegments splits multi-segment tracks on pause breaks without cross-ga
     assert.deepEqual(twoSegments[1][0], [42.150, -8.650]);
 });
 
+test('GPS route rendering catches up in bounded foreground batches without bridging pause breaks', () => {
+    const gpsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'gps.js'), 'utf8');
+    const points = Array.from({ length: 1001 }, (_, index) => [
+        42 + index * 0.00001, -8, null, index, null, index === 501 ? 1 : null
+    ]);
+    const frames = [];
+    const timeouts = [];
+    const context = vm.createContext({
+        points,
+        routeRenderedPointCount: 0,
+        routePolyline: null,
+        routePolylines: [],
+        routePolylinePointCount: 0,
+        routePolylinePoints: [],
+        routePolylineLastPoint: null,
+        MAX_ROUTE_RENDER_POINTS: 250,
+        document: { visibilityState: 'hidden', addEventListener() {} },
+        map: { layers: [] },
+        L: {
+            polyline(latlngs) {
+                return {
+                    latlngs: latlngs.slice(),
+                    setLatLngs(next) { this.latlngs = next.slice(); },
+                    addTo(target) { target.layers.push(this); return this; }
+                };
+            }
+        },
+        requestAnimationFrame(callback) { frames.push(callback); return frames.length; },
+        cancelAnimationFrame() {},
+        setTimeout(callback) { timeouts.push(callback); return timeouts.length; },
+        clearTimeout() {}
+    });
+    vm.runInContext(gpsSource, context);
+
+    context.scheduleGpsVisualUpdate({ ll: [42, -8], speedKmh: 0 });
+    assert.equal(timeouts.length, 0, 'hidden pages should not schedule visual timers');
+    context.renderPendingRoutePoints();
+    assert.equal(context.routeRenderedPointCount, 0);
+    assert.equal(context.map.layers.length, 0);
+
+    context.document.visibilityState = 'visible';
+    context.renderPendingRoutePoints();
+    assert.equal(context.routeRenderedPointCount, 1000);
+    assert.equal(frames.length, 1, 'remaining points should continue in another frame');
+    while (frames.length) frames.shift()();
+    assert.equal(context.routeRenderedPointCount, points.length);
+
+    const beforeBreak = [points[500][0], points[500][1]];
+    const afterBreak = [points[501][0], points[501][1]];
+    assert.equal(context.routePolylines.some(layer =>
+        layer.latlngs.some(point => point[0] === beforeBreak[0] && point[1] === beforeBreak[1])
+        && layer.latlngs.some(point => point[0] === afterBreak[0] && point[1] === afterBreak[1])
+    ), false);
+});
+
 test('gpsSpeedFromFix calculates realistic speeds and discards poor fixes', () => {
     resetGpsSpeedFix();
 
@@ -580,5 +635,7 @@ test('recording requires a signed-in account with a nickname', () => {
     assert.equal(rideAccountRequirement(cloud(false, 'Emilio')), 'login');
     assert.equal(rideAccountRequirement(cloud(true, '')), 'nickname');
     assert.equal(rideAccountRequirement(cloud(true, '   ')), 'nickname');
-    assert.equal(rideAccountRequirement(cloud(true, 'Emilio')), null);
+    const privateAccount = cloud(true, 'Emilio');
+    assert.equal(privateAccount.groupCode, undefined);
+    assert.equal(rideAccountRequirement(privateAccount), null);
 });

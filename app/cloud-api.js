@@ -17,7 +17,15 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
     if (body instanceof FormData) payload = body;
     else if (body) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
     const server = typeof options === 'object' && options?.server ? options.server : Cloud.server;
-    const url = new URL(server + path);
+    if (!server) {
+        throw new Error('No hay ningún servidor configurado.');
+    }
+    let url;
+    try {
+        url = new URL(server + path);
+    } catch (e) {
+        throw new Error('El servidor debe usar una dirección HTTPS válida.');
+    }
     const isLocalHttp = APP_CONFIG.allowLocalHttpServer
         && url.protocol === 'http:'
         && (url.hostname === 'localhost' || url.hostname === '127.0.0.1');
@@ -63,8 +71,14 @@ async function cloudApi(path, method = 'GET', body = null, options = {}) {
         return res.status === 204 ? null : await res.json();
     } catch (e) {
         if (e.name === 'AbortError' || e.name === 'TimeoutError') {
+            if (options?.signal?.aborted) {
+                const abortErr = new Error('Operación cancelada');
+                abortErr.name = 'AbortError';
+                abortErr.retryable = false;
+                throw abortErr;
+            }
             const timeoutErr = new Error('Tiempo de espera agotado al conectar con el servidor');
-            timeoutErr.retryable = !options?.signal?.aborted;
+            timeoutErr.retryable = true;
             throw timeoutErr;
         }
         if (e.status === undefined && e.retryable === undefined) e.retryable = true;

@@ -133,13 +133,18 @@ function findFollowedRouteMatch(lat, lon) {
 
     const lastSegment = pts.length - 2;
     const hint = Number.isInteger(followedRoute.progressIndex) ? followedRoute.progressIndex : 0;
+    const position = [lat, lon];
     const scan = (from, to) => {
-        let best = { index: from, distance: Infinity };
+        let bestIndex = from;
+        let bestDistance = Infinity;
         for (let i = from; i <= to; i++) {
-            const distance = pointSegDistM([lat, lon], pts[i], pts[i + 1]);
-            if (distance < best.distance) best = { index: i, distance };
+            const distance = pointSegDistM(position, pts[i], pts[i + 1]);
+            if (distance < bestDistance) {
+                bestIndex = i;
+                bestDistance = distance;
+            }
         }
-        return best;
+        return { index: bestIndex, distance: bestDistance };
     };
 
     let match = scan(Math.max(0, hint - 30), Math.min(lastSegment, hint + 180));
@@ -148,7 +153,7 @@ function findFollowedRouteMatch(lat, lon) {
         match = scan(0, lastSegment);
         followedRoute.lastGlobalScanAt = Date.now();
     }
-    match.fraction = pointSegFraction([lat, lon], pts[match.index], pts[match.index + 1]);
+    match.fraction = pointSegFraction(position, pts[match.index], pts[match.index + 1]);
     followedRoute.progressIndex = match.index;
     return match;
 }
@@ -214,8 +219,14 @@ function renderMapRouteProfile(r) {
     routeProfilePointCount = points.length;
     $('map-route-name').textContent = r.name || 'Ruta cargada';
 
-    const valid = points.map((p, i) => ({ i, z: p[2] == null ? NaN : Number(p[2]) }))
-        .filter(p => Number.isFinite(p.z));
+    const elevationTracker = MTBStatisticsEngine.createElevationTracker();
+    const valid = [];
+    points.forEach((point, index) => {
+        if (index > 0 && Array.isArray(point) && point[5] === 1) elevationTracker.reset();
+        const altitude = Array.isArray(point) && point[2] != null ? Number(point[2]) : null;
+        const smoothedAltitude = elevationTracker.add(altitude);
+        if (smoothedAltitude !== null) valid.push({ i: index, z: smoothedAltitude });
+    });
     if (valid.length < 2) {
         $('map-route-alt').textContent = 'Sin datos de altitud';
         $('map-route-area').setAttribute('d', '');

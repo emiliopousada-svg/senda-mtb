@@ -162,9 +162,51 @@ test('a rejected ranking share retains its confirmed group as the pending target
     const route = { id: 8, kind: 'recorded' };
 
     assert.equal(await context.shareRouteToGroupRanking(route, null), false);
-    assert.equal(requestBody.groupId, 'group-a');
+    assert.deepEqual(Object.keys(requestBody), ['clientId']);
     assert.equal(route.groupRankingGroupId, 'group-a');
     assert.equal(route.groupRankingPending, true);
+});
+
+test('a successful ranking share sends only the route id and marks it as server-verified', async () => {
+    let requestBody;
+    const cloud = {
+        uid: 'user-a',
+        server: 'https://old.example',
+        groupCode: 'group-a',
+        authGeneration: 1,
+        loggedIn() { return true; }
+    };
+    const context = vm.createContext({
+        Cloud: cloud,
+        navigator: { onLine: true },
+        DB: { async put() {} },
+        cloudApi: async (_path, _method, body) => {
+            requestBody = body;
+            return {};
+        },
+        statsAnalyzeRoute() {
+            return { distanceKm: 10, movingTimeSec: 1800, maxSpeed: 30, elevationGain: 500 };
+        },
+        groupJoined: true,
+        groupInfo: { name: 'Group A' },
+        fmtDur() { return '30 min'; },
+        modal: async () => true,
+        toast() {},
+        console: { warn() {} },
+        currentPage: 0
+    });
+    const start = source.indexOf('async function shareRouteToGroupRanking(');
+    const end = source.indexOf('\nasync function syncPendingGroupRankingDeletes(', start);
+    vm.runInContext(
+        `${source.slice(start, end)}\nglobalThis.shareRouteToGroupRanking = shareRouteToGroupRanking;`,
+        context
+    );
+    const route = { id: 11, kind: 'recorded' };
+
+    assert.equal(await context.shareRouteToGroupRanking(route, null), true);
+    assert.deepEqual(Object.keys(requestBody), ['clientId']);
+    assert.equal(route.groupRankingVerified, true);
+    assert.equal(route.groupRankingPending, false);
 });
 
 test('automatic ranking retries stay bound to the original owner and server', async () => {
@@ -206,4 +248,48 @@ test('automatic ranking retries stay bound to the original owner and server', as
     assert.equal(requestCount, 0);
     assert.equal(route.groupRankingOwnerId, 'user-a');
     assert.equal(route.groupRankingServer, 'https://old.example');
+});
+
+test('automatic sync revalidates previously shared rankings that lack server verification', async () => {
+    let requestCount = 0;
+    const cloud = {
+        uid: 'user-a',
+        server: 'https://old.example',
+        groupCode: 'group-a',
+        authGeneration: 1,
+        loggedIn() { return true; }
+    };
+    const context = vm.createContext({
+        Cloud: cloud,
+        navigator: { onLine: true },
+        DB: { async put() {} },
+        cloudApi: async () => { requestCount++; return {}; },
+        groupJoined: true,
+        groupInfo: { name: 'Group A' },
+        fmtDur() { return '30 min'; },
+        toast() {},
+        console: { warn() {} },
+        currentPage: 0
+    });
+    const start = source.indexOf('async function shareRouteToGroupRanking(');
+    const end = source.indexOf('\nasync function syncPendingGroupRankingDeletes(', start);
+    vm.runInContext(
+        `${source.slice(start, end)}\nglobalThis.shareRouteToGroupRanking = shareRouteToGroupRanking;`,
+        context
+    );
+    const route = {
+        id: 12,
+        kind: 'recorded',
+        groupRankingOwnerId: 'user-a',
+        groupRankingServer: 'https://old.example',
+        groupRankingGroupId: 'group-a',
+        groupRankingPending: false,
+        distanceKm: 10,
+        movingTimeSec: 1800,
+        elevationGain: 300
+    };
+
+    assert.equal(await context.shareRouteToGroupRanking(route, null, { automatic: true }), true);
+    assert.equal(requestCount, 1);
+    assert.equal(route.groupRankingVerified, true);
 });

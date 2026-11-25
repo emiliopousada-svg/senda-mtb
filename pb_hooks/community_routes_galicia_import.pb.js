@@ -1,6 +1,11 @@
+function communityRouteImportTrackIsLocked(record, nextTrackJson) {
+    return Boolean(record.getBool("trackLocked") || record.getBool("published"))
+        && record.getString("trackJson") !== nextTrackJson;
+}
+
 // Importador de rutas oficiales de Galicia.
 // Comprueba metadatos cada cinco minutos e importa solo archivos nuevos o modificados.
-// Los archivos permanecen en su sitio: sourcePath permite actualizar una ruta al modificar el fichero.
+// Los archivos permanecen en su sitio; sourcePath identifica cada publicación importada.
 (function () {
 function run() {
     function decodeXml(value) {
@@ -172,14 +177,6 @@ function run() {
             if (parsed.segments[i].length > 1) { raw.push(parsed.segments[i]); count += parsed.segments[i].length; }
         }
         if (count < 2 || count > maxPoints) throw new Error("el track debe contener entre 2 y " + maxPoints + " puntos");
-        let distanceM = 0, gain = 0;
-        for (let lineIndex = 0; lineIndex < raw.length; lineIndex++) {
-            const line = raw[lineIndex];
-            for (let i = 1; i < line.length; i++) {
-                distanceM += distance(line[i - 1], line[i]);
-                if (line[i][2] != null && line[i - 1][2] != null && line[i][2] > line[i - 1][2]) gain += line[i][2] - line[i - 1][2];
-            }
-        }
         let lines = trimStart(raw, 150);
         const reversed = [];
         for (let i = lines.length - 1; i >= 0; i--) {
@@ -199,23 +196,45 @@ function run() {
         if (points.length < 2) throw new Error("ruta demasiado corta después del recorte de privacidad");
         const fittedTrack = fitTrackJson(lines, 250000);
         lines = fittedTrack.lines;
+        let distanceM = 0, gain = 0;
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
+            for (let i = 1; i < line.length; i++) {
+                distanceM += distance(line[i - 1], line[i]);
+                if (line[i][2] != null && line[i - 1][2] != null && line[i][2] > line[i - 1][2]) {
+                    gain += line[i][2] - line[i - 1][2];
+                }
+            }
+        }
         const sourcePath = sourcePrefix + relativePath;
+        function saveImportState() {
+            let state;
+            try { state = $app.findFirstRecordByData("community_route_import_state", "sourcePath", sourcePath); }
+            catch (_) { state = new Record($app.findCollectionByNameOrId("community_route_import_state")); }
+            state.set("sourcePath", sourcePath);
+            state.set("signature", signature);
+            $app.save(state);
+        }
         let record;
+        let existingRoute = true;
         try { record = $app.findFirstRecordByData("community_routes", "sourcePath", sourcePath); }
-        catch (_) { record = new Record($app.findCollectionByNameOrId("community_routes")); }
+        catch (_) {
+            existingRoute = false;
+            record = new Record($app.findCollectionByNameOrId("community_routes"));
+        }
+        if (existingRoute && communityRouteImportTrackIsLocked(record, fittedTrack.json)) {
+            console.log("[rutas Galicia] " + relativePath + ": la geometría publicada es inmutable; cambio omitido.");
+            saveImportState();
+            return;
+        }
         let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
         for (let i = 0; i < points.length; i++) {
             minLat = Math.min(minLat, points[i][0]); maxLat = Math.max(maxLat, points[i][0]);
             minLng = Math.min(minLng, points[i][1]); maxLng = Math.max(maxLng, points[i][1]);
         }
-        record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: fittedTrack.json, poisJson: "[]", published: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
+        record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: fittedTrack.json, trackLocked: true, poisJson: "[]", published: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
         $app.save(record);
-        let state;
-        try { state = $app.findFirstRecordByData("community_route_import_state", "sourcePath", sourcePath); }
-        catch (_) { state = new Record($app.findCollectionByNameOrId("community_route_import_state")); }
-        state.set("sourcePath", sourcePath);
-        state.set("signature", signature);
-        $app.save(state);
+        saveImportState();
     }
     function scanAndImport() {
         const root = $os.getenv("COMMUNITY_IMPORT_DIR") || $filepath.join($os.getwd(), "pb_public", "rutas", "galicia");

@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const statisticsEngine = require('../app/statistics-engine.js');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'app', 'route-following.js'), 'utf8');
 
@@ -41,6 +42,9 @@ function routeContext({ maxMathArguments = Infinity } = {}) {
         Math: math,
         Number,
         Array,
+        MTBStatisticsEngine: statisticsEngine,
+        routeProfileCoords: [],
+        routeProfilePointCount: 0,
         OFFROUTE_M: 60,
         BACKONROUTE_M: 30,
         offRouteState: false,
@@ -120,7 +124,16 @@ test('route profile renders 100,000 elevation points without expanding math argu
 
     context.renderMapRouteProfile({ name: 'Long route', points, elevationGain: 0 });
 
-    assert.equal(elements.get('map-route-alt').textContent, '100–119 m · +0 m');
+    assert.equal(elements.get('map-route-alt').textContent, '100–117 m · +0 m');
+});
+
+test('route profile smooths altitude spikes using the statistics elevation tracker', () => {
+    const { context, elements } = routeContext();
+    const points = [100, 100, 1000, 100, 100].map(altitude => [42, -8, altitude]);
+
+    context.renderMapRouteProfile({ name: 'Elevation spike', points, elevationGain: 0 });
+
+    assert.equal(elements.get('map-route-alt').textContent, '100–100 m · +0 m');
 });
 
 test('voice guidance announces a turn once when it is within 50 metres and ignores off-route fixes', () => {

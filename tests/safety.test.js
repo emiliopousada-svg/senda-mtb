@@ -60,7 +60,7 @@ function loadSafetyUi(initialContacts = []) {
     };
     const source = fs.readFileSync(path.join(__dirname, '../app/safety.js'), 'utf8');
     vm.runInNewContext(source, context);
-    return { getElement, openedUrls, handleBack: context.safetyHandleBackButton };
+    return { getElement, openedUrls, handleBack: context.safetyHandleBackButton, context, storage };
 }
 
 test('emergency phone numbers are normalized to international format', () => {
@@ -147,18 +147,85 @@ test('hardware back preserves the required form when no emergency contacts exist
     assert.equal(getElement('safety-contact-form').hidden, false);
 });
 
-test('group live-location setting appears in miscellaneous settings, not during-ride safety', () => {
+test('group live-location opt-in appears with the active group, not in general settings', () => {
     const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
     const settingsStart = html.indexOf('id="misc-settings-workspace"');
     const settingsEnd = html.indexOf('id="calendar-workspace"', settingsStart);
+    const groupPrivacyHint = html.indexOf('Los grupos son opcionales:');
+    const connectedStart = html.indexOf('id="group-connected"');
+    const sharingStart = html.indexOf('id="group-sharing-controls"', connectedStart);
+    const adminStart = html.indexOf('id="group-admin-panel"', connectedStart);
     const safetyStart = html.indexOf('<h3 id="safety-active-title">Emergencias</h3>');
     const safetyEnd = html.indexOf('</section>', safetyStart);
 
     assert.ok(settingsStart >= 0 && settingsEnd > settingsStart);
-    assert.ok(html.slice(settingsStart, settingsEnd).includes('id="safety-group-sharing"'));
+    assert.doesNotMatch(html.slice(settingsStart, settingsEnd), /id="safety-group-sharing"/);
+    assert.ok(connectedStart >= 0 && sharingStart > connectedStart && adminStart > sharingStart);
+    assert.match(html.slice(sharingStart, adminStart), /id="safety-group-sharing"/);
+    assert.ok(groupPrivacyHint >= 0);
+    assert.match(html.slice(groupPrivacyHint, groupPrivacyHint + 250), /estadísticas personales sin unirte a uno/);
     assert.ok(safetyStart >= 0 && safetyEnd > safetyStart);
     assert.doesNotMatch(html.slice(safetyStart, safetyEnd), /id="safety-group-sharing"/);
     assert.doesNotMatch(html.slice(safetyStart, safetyEnd), /safety-group-status|safety-last-location|safety-location-link/);
+});
+
+test('live location sharing is off by default and legacy default-on settings do not grant permission', () => {
+    const { getElement, context, storage } = loadSafetyUi();
+    assert.equal(getElement('safety-group-sharing').checked, false);
+
+    storage.set('mtb_pro_safety_settings', JSON.stringify({ groupLiveTracking: true }));
+    context.safetyLoadState();
+
+    assert.equal(context.safetyGroupTrackingEnabled(), false);
+    assert.equal(getElement('safety-group-sharing').checked, false);
+});
+
+test('live-location permission is explicit and scoped to the current account and group', async () => {
+    const { getElement, context, storage } = loadSafetyUi();
+    const publishCalls = [];
+    context.Cloud = {
+        server: 'https://example.test',
+        uid: 'user-1',
+        groupCode: 'group-1',
+        loggedIn() { return true; }
+    };
+    context.groupJoined = true;
+    context.isRecording = true;
+    context.isPaused = false;
+    context.publishMyLocation = async force => publishCalls.push(force);
+
+    await context.safetySetGroupTracking(true);
+
+    assert.equal(context.safetyGroupTrackingEnabled(), true);
+    assert.equal(getElement('safety-group-sharing').checked, true);
+    assert.deepEqual(publishCalls, [true]);
+    assert.equal(JSON.parse(storage.get('mtb_pro_safety_settings')).groupLiveTrackingScope,
+        'https://example.test|user-1|group-1');
+
+    context.Cloud.groupCode = 'group-2';
+    context.safetyRender();
+    assert.equal(context.safetyGroupTrackingEnabled(), false);
+    assert.equal(getElement('safety-group-sharing').checked, false);
+});
+
+test('stopping live-location sharing revokes its scope and removes the current location', async () => {
+    const { context, getElement } = loadSafetyUi();
+    let removed = 0;
+    context.Cloud = {
+        server: 'https://example.test',
+        uid: 'user-1',
+        groupCode: 'group-1',
+        loggedIn() { return true; }
+    };
+    context.groupJoined = true;
+    context.removeMyLiveLocation = async () => { removed++; };
+
+    await context.safetySetGroupTracking(true);
+    await context.safetySetGroupTracking(false);
+
+    assert.equal(context.safetyGroupTrackingEnabled(), false);
+    assert.equal(getElement('safety-group-sharing').checked, false);
+    assert.equal(removed, 1);
 });
 
 test('emergency form preselects the first saved contact for WhatsApp SOS', () => {

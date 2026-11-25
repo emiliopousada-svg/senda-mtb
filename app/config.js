@@ -150,17 +150,19 @@ function toast(msg, ms = 3500) {
 }
 
 // Diálogo propio (sustituye a confirm/prompt). Con `input` devuelve texto o null.
-function modal({
-    message,
-    title = null,
-    eyebrow = null,
-    input = null,
-    ok = 'Aceptar',
-    cancel = 'Cancelar',
-    variant = null,
-    state = null
-}) {
-    return new Promise(resolve => {
+let modalQueue = Promise.resolve();
+function modal(options) {
+    const run = () => new Promise(resolve => {
+        const {
+            message,
+            title = null,
+            eyebrow = null,
+            input = null,
+            ok = 'Aceptar',
+            cancel = 'Cancelar',
+            variant = null,
+            state = null
+        } = options || {};
         const m = $('modal'), inp = $('modal-input'), bOk = $('modal-ok'), bCancel = $('modal-cancel');
         const eyebrowElement = $('modal-eyebrow');
         const titleElement = $('modal-title');
@@ -191,6 +193,9 @@ function modal({
         bCancel.onclick = () => done(input !== null ? null : false);
         inp.onkeydown = e => { if (e.key === 'Enter') bOk.click(); };
     });
+    const next = modalQueue.then(run, run);
+    modalQueue = next.then(() => undefined, () => undefined);
+    return next;
 }
 
 async function download(name, text, mime) {

@@ -12,7 +12,13 @@ function initMap() {
     let center = [13.4125, 103.867];
     try {
         const lp = JSON.parse(localStorage.getItem('mtb_pro_last_pos'));
-        if (Array.isArray(lp) && lp.length === 2) center = lp;
+        if (Array.isArray(lp) && lp.length === 2) {
+            const lat = Number(lp[0]), lon = Number(lp[1]);
+            if (Number.isFinite(lat) && Number.isFinite(lon)
+                && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                center = [lat, lon];
+            }
+        }
     } catch (e) {}
 
     const supportsRotation = typeof L.Map.prototype.setBearing === 'function';

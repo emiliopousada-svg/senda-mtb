@@ -81,7 +81,23 @@ function openOfflineDb() {
                 store.createIndex('savedAt', 'savedAt');
             }
         };
-        req.onsuccess = () => resolve(req.result);
+        req.onblocked = () => {
+            console.warn('La actualización de la base de mapas está bloqueada por otra pestaña.');
+            if (typeof toast === 'function') {
+                toast('Cierra las otras pestañas de senda-mtb para actualizar los mapas sin conexión.', 7000);
+            }
+        };
+        req.onsuccess = () => {
+            const db = req.result;
+            db.onversionchange = () => {
+                db.close();
+                offlineDbPromise = null;
+            };
+            db.onclose = () => {
+                offlineDbPromise = null;
+            };
+            resolve(db);
+        };
         req.onerror = () => reject(req.error || new Error('No se pudo abrir el almacenamiento de mapas'));
     });
     offlineDbPromise = offlineDbPromise.catch(error => {

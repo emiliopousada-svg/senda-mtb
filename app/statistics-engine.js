@@ -355,14 +355,21 @@
         const elapsedTimeSec = Math.max(trackElapsedTimeSec, movingTimeSec);
         const stoppedTimeSec = Math.max(0, elapsedTimeSec - movingTimeSec);
         const calculatedDistanceKm = distanceM / 1000;
-        const distanceKm = calculatedDistanceKm > 0
-            ? calculatedDistanceKm
-            : Math.max(0, storedDistanceKm || 0);
+        const distanceKm = route.kind === 'imported' && storedDistanceKm > 0
+            ? storedDistanceKm
+            : calculatedDistanceKm > 0
+                ? calculatedDistanceKm
+                : Math.max(0, storedDistanceKm || 0);
         const averageSpeed = movingTimeSec > 0 ? distanceKm / (movingTimeSec / 3600) : null;
         const climbSpeed = climbTimeSec > 0 ? climbDistanceKm / (climbTimeSec / 3600) : null;
         const downhillSpeed = downhillTimeSec > 0 ? downhillDistanceKm / (downhillTimeSec / 3600) : null;
         const vam = climbTimeSec > 0 ? vamAscentM / (climbTimeSec / 3600) : null;
         const recordedAscent = finiteNumber(route.elevationGain);
+        const ascentM = route.kind === 'imported' && recordedAscent !== null
+            ? Math.max(0, recordedAscent)
+            : validAltitudeCount >= 2
+                ? elevationTracker.gain
+                : Math.max(0, recordedAscent || 0);
         const hrMax = sourcePoints.reduce((max, point) => {
             const value = Array.isArray(point) ? finiteNumber(point[4]) : null;
             return value !== null && value > 0 && value <= 250 ? Math.max(max, value) : max;
@@ -379,7 +386,7 @@
             movingTimeEstimated,
             elapsedTimeSec,
             stoppedTimeSec,
-            ascentM: validAltitudeCount >= 2 ? elevationTracker.gain : Math.max(0, recordedAscent || 0),
+            ascentM,
             descentM: elevationTracker.loss,
             ascentAvailable: validAltitudeCount >= 2 || recordedAscent !== null,
             descentAvailable: validAltitudeCount >= 2,

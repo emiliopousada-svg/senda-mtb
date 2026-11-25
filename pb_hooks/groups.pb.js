@@ -292,27 +292,55 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
     }
 }, $apis.requireAuth("users"));
 
-routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
-    const { requireSafeValue, safeMembership, findAllRecordsByFilter, groupRankingSummaryFromEntries } = require(`${__hooks}/groups_utils.js`);
+function readSynchronizedRouteTrack(route) {
+    const filename = route.getString("track");
+    if (!filename) throw new Error("La ruta sincronizada no tiene un trazado disponible.");
+
+    const filesystem = $app.newFilesystem();
+    let reader = null;
     try {
-        const body = new DynamicModel({ clientId: 0, distanceKm: 0.1, movingTimeSec: 0.1, maxSpeedKmh: 0.1, elevationGain: 0.1 });
+        reader = filesystem.getReader($filepath.join(route.baseFilesPath(), filename));
+        if (reader.size() > 26214400) throw new Error("El trazado sincronizado supera el límite permitido.");
+
+        const parts = [];
+        const buffer = Array(16384).fill(0);
+        while (true) {
+            const count = reader.read(buffer);
+            if (!count) break;
+            parts.push(String.fromCharCode.apply(null, buffer.slice(0, count)));
+        }
+        return JSON.parse(parts.join(""));
+    } finally {
+        try {
+            if (reader) reader.close();
+        } finally {
+            filesystem.close();
+        }
+    }
+}
+
+routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
+    const {
+        requireSafeValue,
+        safeMembership,
+        findAllRecordsByFilter,
+        groupRankingSummaryFromEntries,
+        calculateGroupActivityMetrics
+    } = require(`${__hooks}/groups_utils.js`);
+    try {
+        // Older app versions still send these fields; the server deliberately ignores their values.
+        const body = new DynamicModel({
+            clientId: 0,
+            groupId: "",
+            distanceKm: 0.1,
+            movingTimeSec: 0.1,
+            maxSpeedKmh: 0.1,
+            elevationGain: 0.1
+        });
         e.bindBody(body);
         const clientId = Number(body.clientId);
-        const distanceKm = Number(body.distanceKm);
-        const movingTimeSec = Number(body.movingTimeSec);
-        const maxSpeedKmh = Number(body.maxSpeedKmh);
-        const elevationGain = Number(body.elevationGain) || 0;
-        if (!Number.isFinite(clientId) || clientId <= 0 || Math.floor(clientId) !== clientId || clientId > 9007199254740991
-            || !Number.isFinite(distanceKm) || distanceKm < 0 || distanceKm > 1000
-            || !Number.isFinite(movingTimeSec) || movingTimeSec < 0 || movingTimeSec > 604800
-            || !Number.isFinite(maxSpeedKmh) || maxSpeedKmh < 0 || maxSpeedKmh > 150
-            || !Number.isFinite(elevationGain) || elevationGain < 0 || elevationGain > 10000
-            || (distanceKm === 0 && maxSpeedKmh === 0)) {
+        if (!Number.isFinite(clientId) || clientId <= 0 || Math.floor(clientId) !== clientId || clientId > 9007199254740991) {
             return e.json(400, { message: "Las marcas de la actividad no son válidas." });
-        }
-        const minimumMovingTimeSec = distanceKm > 0 ? Math.ceil(distanceKm * 1000 / 25) : 0;
-        if (distanceKm > 0 && movingTimeSec < minimumMovingTimeSec) {
-            return e.json(400, { message: "La velocidad media no puede superar los 25 m/s." });
         }
 
         const user = $app.findRecordById("users", e.auth.id);
@@ -322,6 +350,27 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         if (!safeMembership(safeGroupId, user.id).length) {
             return e.json(403, { message: "Ya no tienes autorización para compartir marcas en este grupo." });
         }
+
+        const routes = $app.findRecordsByFilter(
+            "routes",
+            "owner = {:owner} && clientId = {:clientId}",
+            "",
+            1,
+            0,
+            { owner: user.id, clientId }
+        );
+        const route = routes[0];
+        if (!route) return e.json(404, { message: "Sincroniza primero esta actividad para poder verificar sus marcas." });
+        if (route.getString("kind") !== "recorded") {
+            return e.json(400, { message: "Solo se pueden compartir actividades grabadas." });
+        }
+
+        const routeSyncedAt = route.getString("created");
+        if (!Number.isFinite(Date.parse(String(routeSyncedAt).replace(" ", "T")))) {
+            return e.json(400, { message: "No se pudo verificar la fecha de sincronización de la actividad." });
+        }
+        const metrics = calculateGroupActivityMetrics(readSynchronizedRouteTrack(route));
+        const { distanceKm, movingTimeSec, maxSpeedKmh, elevationGain } = metrics;
 
         const filter = 'group = "' + safeGroupId + '" && owner = "' + user.id + '"';
         const existingEntries = findAllRecordsByFilter("mtb_group_ranking_entries", filter, "");
@@ -344,7 +393,9 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         const entry = existing.length ? existing[0] : new Record($app.findCollectionByNameOrId("mtb_group_ranking_entries"));
         entry.set("group", safeGroupId);
         entry.set("owner", user.id);
+        entry.set("routeSyncedAt", routeSyncedAt);
         entry.set("clientId", clientId);
+        entry.set("route", route.id);
         entry.set("distanceKm", distanceKm);
         entry.set("movingTimeSec", movingTimeSec);
         entry.set("maxSpeedKmh", maxSpeedKmh);

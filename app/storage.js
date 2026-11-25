@@ -2,6 +2,8 @@
 
 //  ALMACENAMIENTO (IndexedDB)
 // ============================================================
+const ROUTE_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 const DB = {
     db: null,
     open() {
@@ -72,7 +74,113 @@ const DB = {
             } catch (e) { rej(e); }
         });
     },
-    all()       { return this.run('routes', 'readonly',  s => s.getAll()); },
+    all()       {
+        return this.run('routes', 'readonly', s => s.getAll())
+            .then(routes => routes.filter(route => !route.trashedAt));
+    },
+    allTrashedRoutes() {
+        return this.run('routes', 'readonly', s => s.getAll())
+            .then(routes => routes.filter(route => route.trashedAt));
+    },
+    moveRouteToTrash(id, deletion, rankingDelete) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('no-db'));
+            try {
+                const tx = this.db.transaction(['routes', 'kv'], 'readwrite');
+                const routes = tx.objectStore('routes');
+                const request = routes.get(id);
+                let moved = false;
+                request.onsuccess = () => {
+                    const route = request.result;
+                    if (!route) return;
+                    route.trashedAt = Date.now();
+                    route.trashReason = 'remote-deletion';
+                    route.trashRemoteId = deletion.remoteId;
+                    route.trashRemoteServer = deletion.server;
+                    delete route.remoteDeletionPending;
+                    routes.put(route);
+                    moved = true;
+                };
+                request.onerror = () => { try { tx.abort(); } catch (error) {} };
+                if (rankingDelete && rankingDelete.ownerId && rankingDelete.server
+                    && Number.isSafeInteger(rankingDelete.clientId) && rankingDelete.clientId > 0) {
+                    const kv = tx.objectStore('kv');
+                    const pendingRequest = kv.get('pendingGroupRankingDeletes');
+                    pendingRequest.onsuccess = () => {
+                        const pending = Array.isArray(pendingRequest.result) ? pendingRequest.result : [];
+                        const exists = pending.some(item => item
+                            && item.ownerId === rankingDelete.ownerId
+                            && item.server === rankingDelete.server
+                            && item.clientId === rankingDelete.clientId);
+                        if (!exists) pending.push(rankingDelete);
+                        kv.put(pending, 'pendingGroupRankingDeletes');
+                    };
+                    pendingRequest.onerror = () => { try { tx.abort(); } catch (error) {} };
+                }
+                tx.oncomplete = () => resolve(moved);
+                tx.onerror = () => reject(tx.error || new Error('trash-failed'));
+                tx.onabort = () => reject(tx.error || new Error('trash-aborted'));
+            } catch (error) { reject(error); }
+        });
+    },
+    restoreTrashedRoute(id) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('no-db'));
+            try {
+                const tx = this.db.transaction('routes', 'readwrite');
+                const store = tx.objectStore('routes');
+                const request = store.get(id);
+                let restored = null;
+                request.onsuccess = () => {
+                    const route = request.result;
+                    if (!route || !route.trashedAt) return;
+                    delete route.trashedAt;
+                    delete route.trashReason;
+                    delete route.trashRemoteId;
+                    delete route.trashRemoteServer;
+                    delete route.remoteDeletionPending;
+                    route.remoteId = null;
+                    delete route.remoteServer;
+                    delete route.remoteUpdated;
+                    route.dirty = false;
+                    store.put(route);
+                    restored = route;
+                };
+                request.onerror = () => { try { tx.abort(); } catch (error) {} };
+                tx.oncomplete = () => resolve(restored);
+                tx.onerror = () => reject(tx.error || new Error('restore-failed'));
+                tx.onabort = () => reject(tx.error || new Error('restore-aborted'));
+            } catch (error) { reject(error); }
+        });
+    },
+    purgeExpiredTrashedRoutes(now = Date.now()) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('no-db'));
+            try {
+                const tx = this.db.transaction(['routes', 'routePhotos'], 'readwrite');
+                const routes = tx.objectStore('routes');
+                const photos = tx.objectStore('routePhotos');
+                const request = routes.openCursor();
+                const cutoff = now - ROUTE_TRASH_RETENTION_MS;
+                let purged = 0;
+                request.onsuccess = () => {
+                    const cursor = request.result;
+                    if (!cursor) return;
+                    const trashedAt = Number(cursor.value.trashedAt);
+                    if (Number.isFinite(trashedAt) && trashedAt > 0 && trashedAt <= cutoff) {
+                        photos.delete(cursor.value.id);
+                        cursor.delete();
+                        purged++;
+                    }
+                    cursor.continue();
+                };
+                request.onerror = () => { try { tx.abort(); } catch (error) {} };
+                tx.oncomplete = () => resolve(purged);
+                tx.onerror = () => reject(tx.error || new Error('trash-purge-failed'));
+                tx.onabort = () => reject(tx.error || new Error('trash-purge-aborted'));
+            } catch (error) { reject(error); }
+        });
+    },
     put(route, options = {})  {
         return new Promise((resolve, reject) => {
             if (!this.db) return reject(new Error('no-db'));
@@ -251,7 +359,8 @@ function gainCumulative(points) {
     points.forEach((p, i) => {
         if (i > 0 && p[5] === 1) tracker.reset();
         tracker.add(p[2] == null ? null : Number(p[2]));
-        out[i] = tracker.gain;
+        const storedGain = p[9] == null ? NaN : Number(p[9]);
+        out[i] = Number.isFinite(storedGain) && storedGain >= 0 ? storedGain : tracker.gain;
     });
     return out;
 }

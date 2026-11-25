@@ -362,7 +362,7 @@
                         </div>
                         <div class="card">
                             <h3>Zonas de potencia Coggan</h3>
-                            <p class="hint">Z1 recuperación, Z2 resistencia, Z3 tempo, Z4 umbral, Z5 VO₂ máx., Z6 anaeróbica y Z7 neuromuscular. Se requiere potencia registrada y FTP configurado.</p>
+                            <p class="hint">Z1 recuperación, Z2 resistencia, Z3 tempo, Z4 umbral, Z5 VO₂ máx., Z6 anaeróbica y Z7 neuromuscular. El FTP se configura manualmente; la app no lo estima automáticamente. Las zonas requieren potencia registrada y FTP configurado.</p>
                             <div id="stats-power-zones" class="stats-zones"></div>
                             <p id="stats-power-zone-time" class="hint">Tiempo en zonas de potencia: --</p>
                         </div>
@@ -476,7 +476,7 @@
             </div>
             <div class="card">
                 <h2>👥 Grupos y amigos (Live)</h2>
-                <p class="hint">Crea un grupo para administrarlo o únete con una invitación. La ubicación solo se comparte mientras grabas y formas parte del grupo.</p>
+                <p class="hint">Los grupos son opcionales: puedes grabar rutas y consultar tus estadísticas personales sin unirte a uno. Al unirte, compartir ubicación seguirá desactivado hasta que lo actives.</p>
                 <p class="hint">En el grupo se mostrará el apodo de tu cuenta.</p>
                 <div id="group-setup">
                     <input type="text" id="group-name" placeholder="Nombre del grupo" maxlength="40">
@@ -491,7 +491,14 @@
                 <div id="group-connected" style="display:none;margin-top:12px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                         <span style="display:flex;align-items:center;gap:9px;font-weight:700;"><span class="group-led" aria-hidden="true"></span><span id="group-connected-label">Grupo activo</span></span>
-                        <button class="btn-small secondary" id="btn-leave" type="button">Salir y conservar acceso</button>
+                        <button class="btn-small secondary" id="btn-leave" type="button">Salir del grupo</button>
+                    </div>
+                    <div id="group-sharing-controls" class="group-sharing-controls">
+                        <label class="setting-toggle" for="safety-group-sharing">
+                            <input type="checkbox" id="safety-group-sharing">
+                            <span><strong>Compartir mi ubicación en directo con este grupo</strong><span class="hint">Desactivado por defecto. Si lo activas, los miembros del grupo podrán ver tu posición mientras grabas. Puedes dejar de compartir sin salir del grupo.</span></span>
+                        </label>
+                        <p id="safety-group-status" class="hint" role="status" aria-live="polite"></p>
                     </div>
                     <details id="group-admin-panel" class="group-admin-panel" style="display:none;">
                         <summary class="group-admin-summary">Administrar grupo</summary>
@@ -563,6 +570,9 @@
                     </button>
                     <button class="seg-tab route-summary-card" type="button" id="routes-tab-pending" data-routes-tab="pending" aria-pressed="false">
                         <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4V4.5Z"></path></svg></span><span class="route-summary-label">Guardadas</span><strong id="routes-count-pending">0</strong>
+                    </button>
+                    <button class="seg-tab route-summary-card" type="button" id="routes-tab-trash" data-routes-tab="trash" aria-pressed="false">
+                        <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m3 3v7m6-7v7"></path></svg></span><span class="route-summary-label">Papelera</span><strong id="routes-count-trash">0</strong>
                     </button>
                 </div>
                 <section id="community-tab" class="community-panel community-tab-panel" hidden aria-labelledby="community-tab-title">
@@ -757,6 +767,21 @@
                                                         <button class="btn secondary" id="acc-logout" type="button">Cerrar sesión</button>
                                                     </div>
                                                 </div>
+                                                <section class="account-delete-section" aria-labelledby="acc-delete-title">
+                                                    <button class="btn danger" id="acc-delete-toggle" type="button" aria-expanded="false" aria-controls="acc-delete-form">Eliminar cuenta</button>
+                                                    <form id="acc-delete-form" class="account-delete-form" hidden>
+                                                        <h3 id="acc-delete-title">Borrar cuenta permanentemente</h3>
+                                                        <p class="hint">Se eliminarán la cuenta y los datos sincronizados asociados, incluidas las rutas publicadas y la actividad comunitaria. Si administras un grupo, transfiere la administración o elimínalo antes.</p>
+                                                        <p class="hint">Los datos guardados solo en este dispositivo —como rutas, estadísticas y preferencias— se conservarán para que puedas seguir usando la app de forma privada.</p>
+                                                        <label for="acc-delete-password">Contraseña actual</label>
+                                                        <input id="acc-delete-password" type="password" autocomplete="current-password" required>
+                                                        <p class="hint" id="acc-delete-status" role="status" aria-live="polite"></p>
+                                                        <div class="account-delete-actions">
+                                                            <button class="btn danger" id="acc-delete-submit" type="submit">Eliminar permanentemente</button>
+                                                            <button class="btn secondary" id="acc-delete-cancel" type="button">Cancelar</button>
+                                                        </div>
+                                                    </form>
+                                                </section>
                                             </div>
                                             <form class="profile-editor" id="profile-editor" hidden>
                                                 <input type="text" id="profile-location-input" aria-label="Localidad habitual" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">
@@ -836,34 +861,6 @@
                                         </div>
                                     </section>
                 </div>
-
-                <section class="profile-panel" aria-labelledby="profile-social-title">
-                                    <div class="profile-section-heading">
-                                        <div>
-                                            <span class="profile-kicker">REDES SOCIALES</span>
-                                            <h2 id="profile-social-title">Social</h2>
-                                        </div>
-                                    </div>
-                                    <ul class="profile-social-icons" aria-label="Redes sociales">
-                                        <li>
-                                            <svg class="profile-social-icon facebook" viewBox="0 0 24 24" role="img" aria-label="Facebook">
-                                                <path d="M13.5 21v-8h2.7l.4-3.1h-3.1v-2c0-.9.3-1.5 1.6-1.5h1.7V3.6c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.1H7.3V13h2.8v8h3.4Z"/>
-                                            </svg>
-                                        </li>
-                                        <li>
-                                            <svg class="profile-social-icon instagram" viewBox="0 0 24 24" role="img" aria-label="Instagram">
-                                                <rect x="3.5" y="3.5" width="17" height="17" rx="5"/>
-                                                <circle cx="12" cy="12" r="4"/>
-                                                <circle class="profile-social-icon-dot" cx="17.6" cy="6.8" r="1"/>
-                                            </svg>
-                                        </li>
-                                        <li>
-                                            <svg class="profile-social-icon tiktok" viewBox="0 0 24 24" role="img" aria-label="TikTok">
-                                                <path d="M15.2 3h-3.1v11.2a3.1 3.1 0 1 1-2.2-3v-3.2a6.2 6.2 0 1 0 5.3 6.2V8.6a8.3 8.3 0 0 0 4 1.1V6.6A5.2 5.2 0 0 1 15.2 3Z"/>
-                                            </svg>
-                                        </li>
-                                    </ul>
-                </section>
 
             </main>
         </div>
@@ -1062,7 +1059,6 @@
                         <button class="tool-card" type="button" data-tool="recording"><span aria-hidden="true">🎛</span><strong>Panel de grabación</strong></button>
                         <button class="tool-card" type="button" data-tool="sensors"><span aria-hidden="true">📡</span><strong>Sensores Bluetooth</strong></button>
                         <button class="tool-card" type="button" data-tool="maps"><span aria-hidden="true">🗺</span><strong>Mapas</strong></button>
-                        <button class="tool-card" type="button" data-tool="social"><span aria-hidden="true">🔗</span><strong>Social</strong></button>
                         <button class="tool-card" type="button" data-tool="misc-settings"><span aria-hidden="true">⚙</span><strong>Ajustes varios</strong></button>
                     </div>
                     <section class="tools-app-version" aria-labelledby="tools-app-version-title">
@@ -1166,32 +1162,6 @@
                         <button class="btn danger" id="btn-clear-offline" type="button">Borrar mapas guardados</button>
                     </section>
                 </section>
-                <section id="social-workspace" class="tools-control-workspace" aria-labelledby="social-title" hidden>
-                    <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
-                    <section class="card">
-                        <h2 id="social-title">🔗 Social</h2>
-                        <div class="social-platform-grid" role="list" aria-label="Redes sociales">
-                            <div class="social-platform-card" role="listitem" data-social-platform="facebook">
-                                <span class="social-platform-icon social-platform-facebook" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M13.5 21v-8h2.8l.4-3h-3.2V8.1c0-.9.3-1.6 1.7-1.6h1.7V3.8c-.3 0-1.3-.1-2.5-.1-2.4 0-4 1.5-4 4.2V10H7.8v3h2.6v8h3.1Z"></path></svg>
-                                </span>
-                                <span>Facebook</span>
-                            </div>
-                            <div class="social-platform-card" role="listitem" data-social-platform="instagram">
-                                <span class="social-platform-icon social-platform-instagram" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle class="social-platform-camera-dot" cx="17.5" cy="6.8" r="1"></circle></svg>
-                                </span>
-                                <span>Instagram</span>
-                            </div>
-                            <div class="social-platform-card" role="listitem" data-social-platform="tiktok">
-                                <span class="social-platform-icon social-platform-tiktok" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24"><path d="M14 3h3c.2 1.8 1.3 3.2 3 3.8v3.1c-1.1 0-2.2-.3-3.2-.8v5.5c0 3.4-2.8 6.1-6.2 6.1s-6.2-2.7-6.2-6.1 2.8-6.1 6.2-6.1c.5 0 1 .1 1.4.2v3.4c-.4-.2-.9-.3-1.4-.3-1.5 0-2.8 1.3-2.8 2.8s1.3 2.8 2.8 2.8 2.8-1.3 2.8-2.8V3Z"></path></svg>
-                                </span>
-                                <span>TikTok</span>
-                            </div>
-                        </div>
-                    </section>
-                </section>
                 <section id="misc-settings-workspace" class="tools-control-workspace" aria-labelledby="misc-settings-title" hidden>
                     <button class="safety-back" type="button" data-tools-back>← Centro de control</button>
                     <section class="card">
@@ -1219,10 +1189,6 @@
                         <label class="setting-toggle" for="setting-large-controls">
                             <input type="checkbox" id="setting-large-controls">
                             <span><strong>Controles grandes y alto contraste</strong><span class="hint">Aumenta el tamaño y el contraste de los controles del mapa y de la navegación inferior.</span></span>
-                        </label>
-                        <label class="setting-toggle" for="safety-group-sharing">
-                            <input type="checkbox" id="safety-group-sharing">
-                            <span><strong>Compartir ubicación en directo con mi grupo mientras grabo</strong><span class="hint">Comparte tu posición con el grupo cuando estés grabando una ruta.</span></span>
                         </label>
                     </section>
                 </section>

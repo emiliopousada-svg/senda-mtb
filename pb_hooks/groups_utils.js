@@ -110,6 +110,123 @@ function calculateActivityPoints(distanceKm, movingTimeSec, elevationGain) {
     return Math.round(distancePoints + elevationPoints + timePoints + consistencyBonus);
 }
 
+function calculateGroupActivityMetrics(track) {
+    const points = Array.isArray(track) ? track : track && track.points;
+    if (!Array.isArray(points) || points.length < 2) {
+        throw new Error("El trazado sincronizado no contiene suficientes puntos.");
+    }
+
+    const radians = Math.PI / 180;
+    const elevationWindow = [];
+    let previous = null;
+    let elevationReference = null;
+    let distanceMeters = 0;
+    let movingTimeSec = 0;
+    let maxSpeedKmh = 0;
+    let elevationGain = 0;
+
+    const resetElevation = () => {
+        elevationWindow.length = 0;
+        elevationReference = null;
+    };
+    const addElevation = value => {
+        if (value == null || value === "") {
+            resetElevation();
+            return;
+        }
+        const altitude = Number(value);
+        if (!Number.isFinite(altitude) || altitude < -500 || altitude > 9000) {
+            resetElevation();
+            return;
+        }
+        elevationWindow.push(altitude);
+        if (elevationWindow.length > 5) elevationWindow.shift();
+        const sorted = elevationWindow.slice().sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+        const smoothed = sorted.length % 2
+            ? sorted[middle]
+            : (sorted[middle - 1] + sorted[middle]) / 2;
+        if (elevationReference === null) {
+            elevationReference = smoothed;
+        } else if (smoothed - elevationReference >= 3) {
+            elevationGain += smoothed - elevationReference;
+            elevationReference = smoothed;
+        } else if (elevationReference - smoothed >= 3) {
+            elevationReference = smoothed;
+        }
+    };
+    const pointTimeMs = value => {
+        if (value == null || value === "") return NaN;
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) return numeric;
+        const parsed = Date.parse(value);
+        return Number.isFinite(parsed) ? parsed : NaN;
+    };
+
+    for (const point of points) {
+        if (!Array.isArray(point) || point.length < 2) {
+            throw new Error("El trazado sincronizado contiene un punto no válido.");
+        }
+        const lat = Number(point[0]);
+        const lon = Number(point[1]);
+        if (!Number.isFinite(lat) || lat < -90 || lat > 90
+            || !Number.isFinite(lon) || lon < -180 || lon > 180) {
+            throw new Error("El trazado sincronizado contiene coordenadas no válidas.");
+        }
+
+        if (point[5] === 1) {
+            previous = null;
+            resetElevation();
+        }
+        addElevation(point[2]);
+
+        if (previous) {
+            const lat1 = previous.lat * radians;
+            const lat2 = lat * radians;
+            const deltaLat = (lat - previous.lat) * radians;
+            const deltaLon = (lon - previous.lon) * radians;
+            const haversine = Math.sin(deltaLat / 2) ** 2
+                + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+            const legMeters = 6371000 * 2 * Math.atan2(
+                Math.sqrt(Math.min(1, haversine)),
+                Math.sqrt(Math.max(0, 1 - haversine))
+            );
+            const timeMs = pointTimeMs(point[3]);
+            const elapsedSec = (timeMs - previous.timeMs) / 1000;
+            const hasValidDelta = Number.isFinite(elapsedSec) && elapsedSec > 0;
+
+            if ((hasValidDelta && legMeters / elapsedSec > 25)
+                || (!hasValidDelta && legMeters > 1000)) {
+                previous = null;
+                resetElevation();
+            } else {
+                distanceMeters += legMeters;
+                if (hasValidDelta) {
+                    const speedKmh = legMeters / elapsedSec * 3.6;
+                    maxSpeedKmh = Math.max(maxSpeedKmh, speedKmh);
+                    if (speedKmh >= 1.8) movingTimeSec += elapsedSec;
+                }
+                previous = { lat, lon, timeMs };
+            }
+        } else {
+            previous = { lat, lon, timeMs: pointTimeMs(point[3]) };
+        }
+    }
+
+    const distanceKm = distanceMeters / 1000;
+    if (!Number.isFinite(distanceKm) || distanceKm <= 0 || !Number.isFinite(movingTimeSec) || movingTimeSec <= 0) {
+        throw new Error("El trazado sincronizado no permite calcular una actividad válida.");
+    }
+    if (distanceKm > 1000 || movingTimeSec > 604800 || maxSpeedKmh > 150 || elevationGain > 10000) {
+        throw new Error("Las métricas calculadas superan los límites permitidos.");
+    }
+    if (distanceKm * 1000 / movingTimeSec > 25) {
+        throw new Error("La velocidad media calculada no es plausible.");
+    }
+
+    return { distanceKm, movingTimeSec, maxSpeedKmh, elevationGain };
+}
+
 function getEntryValue(entry, field, isNumeric = false) {
     if (entry && typeof entry.getFloat === "function" && isNumeric) return entry.getFloat(field);
     if (entry && typeof entry.getString === "function" && !isNumeric) return entry.getString(field);
@@ -117,10 +234,15 @@ function getEntryValue(entry, field, isNumeric = false) {
     return String((entry && entry[field]) || "");
 }
 
-// Fecha de la actividad compartida. El clientId de las salidas grabadas es Date.now()
-// al guardarlas, así que es la mejor referencia; si no es plausible se usa "created".
+// Los registros nuevos usan la fecha de sincronización del servidor; clientId solo
+// se conserva como fecha para entradas antiguas que todavía no tienen ese valor.
 const MIN_ACTIVITY_MS = Date.UTC(2020, 0, 1);
 function entryTimeMs(entry, nowMs = Date.now()) {
+    const routeSyncedAt = getEntryValue(entry, "routeSyncedAt", false);
+    if (routeSyncedAt) {
+        const timestamp = Date.parse(String(routeSyncedAt).replace(" ", "T"));
+        return Number.isFinite(timestamp) ? timestamp : NaN;
+    }
     const clientId = getEntryValue(entry, "clientId", true);
     if (Number.isFinite(clientId) && clientId >= MIN_ACTIVITY_MS && clientId <= nowMs + 24 * 60 * 60 * 1000) {
         return clientId;
@@ -446,6 +568,7 @@ module.exports = {
     deleteAllRecordsByFilter,
     getSeasonInfo,
     calculateActivityPoints,
+    calculateGroupActivityMetrics,
     groupRankingSummaryFromEntries,
     entryTimeMs,
     CHALLENGE_METRICS,

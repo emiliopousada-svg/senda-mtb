@@ -4,6 +4,12 @@ function indexCommunityRouteBounds(e) {
     if (!internalWrite && e.record.getString("owner") !== e.auth.id) {
         throw new BadRequestError("El propietario de la ruta no coincide con la sesión.");
     }
+    if (!internalWrite) {
+        const originalSourcePath = e.record.isNew() ? "" : e.record.original().getString("sourcePath");
+        if (e.record.getString("sourcePath") !== originalSourcePath) {
+            throw new BadRequestError("El origen de la ruta no se puede modificar.");
+        }
+    }
     const ownerId = internalWrite ? e.record.getString("owner") : e.auth.id;
     if (!ownerId) throw new BadRequestError("La ruta debe tener un propietario.");
     const user = $app.findRecordById("users", ownerId);
@@ -11,8 +17,15 @@ function indexCommunityRouteBounds(e) {
     if (!nickname) throw new BadRequestError("Configura un apodo antes de publicar rutas.");
     if (!internalWrite) e.record.set("createdBy", nickname);
 
-    const shouldTrimTrack = e.record.isNew()
-        || e.record.getString("trackJson") !== e.record.original().getString("trackJson");
+    const originalRecord = e.record.isNew() ? null : e.record.original();
+    const shouldTrimTrack = !originalRecord
+        || e.record.getString("trackJson") !== originalRecord.getString("trackJson");
+    const trackLocked = Boolean(originalRecord
+        && (originalRecord.getBool("trackLocked") || originalRecord.getBool("published")));
+    if (originalRecord && shouldTrimTrack && trackLocked) {
+        throw new BadRequestError("El trazado no se puede modificar después de publicar la ruta.");
+    }
+    e.record.set("trackLocked", trackLocked || e.record.getBool("published"));
     const communityRouteTrimMeters = 150;
     const communityRouteMaxPhotoBytes = 614400;
 
@@ -24,6 +37,16 @@ function indexCommunityRouteBounds(e) {
         const sinLng = Math.sin(dLng / 2);
         const h = sinLat * sinLat + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * sinLng * sinLng;
         return 12742000 * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    function communityRouteDistanceMeters(lines) {
+        let distanceMeters = 0;
+        for (const line of lines) {
+            for (let i = 1; i < line.length; i++) {
+                distanceMeters += communityRouteDistance(line[i - 1], line[i]);
+            }
+        }
+        return distanceMeters;
     }
 
     function communityRouteTrimStart(lines, meters) {
@@ -214,6 +237,23 @@ function indexCommunityRouteBounds(e) {
         e.record.set("trackJson", JSON.stringify(lines));
     }
 
+    const distanceMeters = communityRouteDistanceMeters(lines);
+    if (!Number.isFinite(distanceMeters) || distanceMeters <= 0 || distanceMeters > 100000000) {
+        throw new BadRequestError("El trazado no permite calcular una distancia válida.");
+    }
+    e.record.set("distanceKm", Math.round(distanceMeters) / 1000);
+    e.record.set("movingTimeSec", 0);
+
+    const sourcePath = e.record.getString("sourcePath");
+    const originalSourcePath = shouldTrimTrack ? "" : e.record.original().getString("sourcePath");
+    let elevationGain = 0;
+    if (sourcePath && sourcePath === originalSourcePath
+        && sourcePath.indexOf("galicia/") === 0 && nickname === "SENDA-MTB") {
+        elevationGain = Number(e.record.original().get("elevationGain"));
+        if (!Number.isFinite(elevationGain) || elevationGain < 0) elevationGain = 0;
+    }
+    e.record.set("elevationGain", elevationGain);
+
     let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
     let count = 0;
     for (const line of lines) {
@@ -238,23 +278,14 @@ function indexCommunityRouteBounds(e) {
     e.record.set("minLng", minLng);
     e.record.set("maxLng", maxLng);
 
-    // No se admite publicar dos veces la misma ruta: mismo trazado, o misma distancia y tiempo en movimiento.
+    // Las métricas declaradas por el cliente no son una clave fiable para detectar duplicados.
     const owner = e.record.getString("owner");
-    const movingTimeSec = Math.round(Number(e.record.get("movingTimeSec")) || 0);
-    const distanceKm = Number(e.record.get("distanceKm")) || 0;
     const params = {
         owner: owner,
         id: e.record.id || "",
-        track: e.record.getString("trackJson"),
-        moving: movingTimeSec,
-        dmin: distanceKm - 0.05,
-        dmax: distanceKm + 0.05
+        track: e.record.getString("trackJson")
     };
-    let filter = "owner = {:owner} && id != {:id} && (trackJson = {:track}";
-    if (movingTimeSec > 0 && distanceKm > 0) {
-        filter += " || (movingTimeSec = {:moving} && distanceKm >= {:dmin} && distanceKm <= {:dmax})";
-    }
-    filter += ")";
+    const filter = "owner = {:owner} && id != {:id} && trackJson = {:track}";
     // Si la consulta falla, la publicación se aborta: no se acepta sin comprobar duplicados.
     const duplicates = $app.findRecordsByFilter("community_routes", filter, "", 1, 0, params) || [];
     if (duplicates.length) throw new BadRequestError("Esta ruta ya está publicada en la comunidad.");

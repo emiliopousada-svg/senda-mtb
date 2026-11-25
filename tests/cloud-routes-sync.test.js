@@ -56,6 +56,21 @@ test('private route sync carries description, photo POIs, activity type, and poi
     assert.deepEqual(Array.from(track.points[0]), [1, 2, 100]);
 });
 
+test('remote track normalization preserves imported cumulative elevation values', () => {
+    const context = vm.createContext({});
+    vm.runInContext(
+        `${functionSource('function normalizeRemoteTrack(', '\nfunction getRouteNickname')}\nglobalThis.testNormalizeRemoteTrack = normalizeRemoteTrack;`,
+        context
+    );
+
+    const normalized = context.testNormalizeRemoteTrack([
+        [42, -8, 100, null, null, null, null, null, null, 235],
+        [42.001, -8, 105, null, null, null, null, null, null, 240]
+    ]);
+
+    assert.equal(normalized[0][9], 235);
+});
+
 test('private route sync rejects tracks larger than the server file limit', async () => {
     const context = routeFormContext(16);
     vm.runInContext(

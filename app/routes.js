@@ -5,6 +5,7 @@
 let routesTab = 'done';
 let routesShowAll = false;
 const routeSortByTab = { done: 'recent', pending: 'recent' };
+let trashedRoutes = [];
 let routeCardImageUrls = [];
 let routeCardMaps = [];
 let routeCardMapObserver = null;
@@ -14,6 +15,13 @@ let routesAccessState = null;
 function updateRouteSummaryCounts() {
     $('routes-count-done').textContent = String(savedRoutes.filter(route => route.kind === 'recorded' || !route.kind).length);
     $('routes-count-pending').textContent = String(savedRoutes.filter(route => routeBelongsInRoutesTab(route, 'pending')).length);
+    $('routes-count-trash').textContent = String(trashedRoutes.length);
+}
+
+async function refreshRouteTrash() {
+    trashedRoutes = await DB.allTrashedRoutes();
+    updateRouteSummaryCounts();
+    if (routesTab === 'trash') renderSavedRoutes();
 }
 
 function routeBelongsInRoutesTab(route, tab) {
@@ -253,6 +261,13 @@ function routeMovingTime(route) {
         : Number(route.movingTimeSec) || 0;
 }
 
+function routeMovingTimeLabel(route, label) {
+    const analysis = typeof statsAnalyzeRoute === 'function' ? statsAnalyzeRoute(route) : null;
+    return analysis && analysis.movingTimeEstimated && routeMovingTime(route) > 0
+        ? `${label} (estimado)`
+        : label;
+}
+
 function routeDistanceKm(route) {
     const stored = route.distanceKm == null ? null : Number(route.distanceKm);
     if (Number.isFinite(stored) && (stored > 0 || route.kind !== 'imported')) return stored;
@@ -397,6 +412,14 @@ async function shareSavedRoute(route) {
 function setRoutesTab(tab) {
     if (tab === 'community' && !requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
     routesTab = tab;
+    if (tab === 'trash') {
+        DB.purgeExpiredTrashedRoutes()
+            .then(refreshRouteTrash)
+            .catch(error => {
+                console.warn('No se pudieron purgar las rutas caducadas de la papelera:', error);
+                toast('No se pudieron actualizar las rutas caducadas de la papelera.', 6000);
+            });
+    }
     routesShowAll = tab === 'pending';
     if (tab === 'done' || tab === 'pending') $('route-sort-filter').value = routeSortByTab[tab];
     const communityTab = tab === 'community';
@@ -409,7 +432,9 @@ function setRoutesTab(tab) {
         ? 'Tus rutas, ordenadas por fecha de realización (más reciente primero). También puedes ordenarlas por distancia, tiempo o desnivel.'
         : tab === 'pending'
             ? 'Tracks importados y rutas de la comunidad guardadas en el móvil. Se ordenan por importación o por distancia, tiempo y desnivel.'
-            : 'Explora rutas publicadas por la comunidad.';
+            : tab === 'trash'
+                ? 'Rutas ausentes del servidor conservadas localmente durante 30 días. Puedes exportarlas, restaurarlas o eliminarlas definitivamente.'
+                : 'Explora rutas publicadas por la comunidad.';
     renderSavedRoutes();
     if (communityTab && typeof loadCommunityRoutes === 'function') loadCommunityRoutes();
 }
@@ -427,9 +452,10 @@ function renderSavedRoutes() {
     routeCardImageUrls = [];
     const pendingTab = routesTab === 'pending';
     const communityTab = routesTab === 'community';
-    const tabRoutes = savedRoutes.filter(route => routeBelongsInRoutesTab(route, routesTab));
+    const trashTab = routesTab === 'trash';
+    const tabRoutes = trashTab ? trashedRoutes : savedRoutes.filter(route => routeBelongsInRoutesTab(route, routesTab));
     updateRouteSummaryCounts();
-    $('route-list-controls').hidden = communityTab || (!routesShowAll && !pendingTab);
+    $('route-list-controls').hidden = communityTab || trashTab || (!routesShowAll && !pendingTab);
     c.hidden = communityTab;
     $('routes-show-all').innerHTML = routesShowAll ? 'Ver menos <span aria-hidden="true">↑</span>' : 'Ver todas <span aria-hidden="true">→</span>';
     const userFilter = $('route-user-filter');
@@ -443,7 +469,9 @@ function renderSavedRoutes() {
         e.className = 'routes-empty';
         e.textContent = pendingTab
             ? 'No hay rutas guardadas. Importa un GPX, KML o GeoJSON, o descarga una ruta de la comunidad.'
-            : 'No hay rutas realizadas todavía. Graba una salida para verla aquí.';
+            : trashTab
+                ? 'La papelera está vacía.'
+                : 'No hay rutas realizadas todavía. Graba una salida para verla aquí.';
         c.appendChild(e);
         return;
     }
@@ -463,8 +491,14 @@ function renderSavedRoutes() {
         c.appendChild(empty);
         return;
     }
-    const sortedRoutes = sortRoutesForList(visibleRoutes, $('route-sort-filter').value || 'recent', routesTab);
+    const sortedRoutes = trashTab
+        ? visibleRoutes.slice().sort((a, b) => Number(b.trashedAt) - Number(a.trashedAt))
+        : sortRoutesForList(visibleRoutes, $('route-sort-filter').value || 'recent', routesTab);
     const routesToRender = !routesShowAll && !pendingTab ? sortedRoutes.slice(0, 3) : sortedRoutes;
+    if (trashTab) {
+        sortedRoutes.forEach(route => c.appendChild(createRouteCard(route, { trashed: true })));
+        return;
+    }
     if (!routesShowAll && !pendingTab) {
         routesToRender.forEach(route => c.appendChild(createRouteCard(route)));
         return;
@@ -472,7 +506,8 @@ function renderSavedRoutes() {
     routesToRender.forEach(route => c.appendChild(createRouteCard(route)));
 }
 
-function createRouteCard(route) {
+function createRouteCard(route, options = {}) {
+    const trashed = Boolean(options.trashed);
     const card = document.createElement('article');
     card.className = 'route-item route-activity-card';
     card.dataset.id = route.id;
@@ -514,6 +549,12 @@ function createRouteCard(route) {
     subtitle.className = 'route-card-subtitle';
     const performedAt = routePerformedAt(route);
     subtitle.textContent = [activity?.label || 'Ruta', performedAt ? fmtDate(performedAt) : ''].filter(Boolean).join(' · ');
+    if (trashed) {
+        const expiry = new Date(Number(route.trashedAt) + ROUTE_TRASH_RETENTION_MS).toLocaleDateString('es-ES');
+        subtitle.textContent += ` · En papelera hasta ${expiry}`;
+    } else if (route.remoteDeletionPending) {
+        subtitle.textContent += ' · Pendiente de revisar en la sincronización';
+    }
     const description = document.createElement('p');
     description.className = 'route-card-description';
     description.textContent = String(route.description || '');
@@ -526,7 +567,8 @@ function createRouteCard(route) {
             ? new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(distanceKm)
             : '—', 'km'],
         [routeHasElevationData(route) ? String(Math.round(Number(route.elevationGain) || 0)) : '—', 'Desnivel (m)'],
-        [routeMovingTime(route) > 0 ? routeTimeSummary(routeMovingTime(route)) : '—', 'Tiempo'],
+        [routeMovingTime(route) > 0 ? routeTimeSummary(routeMovingTime(route)) : '—',
+            routeMovingTimeLabel(route, 'Tiempo')],
         [Number.isFinite(routeAverageSpeed(route)) ? `${routeAverageSpeed(route).toFixed(1)}` : '—', 'km/h media']
     ].forEach(([value, label]) => {
         const metric = document.createElement('div');
@@ -549,10 +591,14 @@ function createRouteCard(route) {
     const showFullActions = routesShowAll || routesTab === 'pending';
     const canPublishCommunity = routeCanPublishCommunity(route);
     const canShareGroupRanking = route.kind === 'recorded';
-    if (showFullActions || (routesTab === 'done' && (canPublishCommunity || canShareGroupRanking))) {
+    if (trashed || showFullActions || (routesTab === 'done' && (canPublishCommunity || canShareGroupRanking))) {
         const actions = document.createElement('div');
         actions.className = 'route-actions';
-        const routeActions = showFullActions ? [
+        const routeActions = trashed ? [
+            ['trash-export', '⬇️ GPX', 'secondary'],
+            ['trash-restore', '↩️ Restaurar', ''],
+            ['trash-delete', 'Eliminar definitivamente', 'danger']
+        ] : showFullActions ? [
             ['follow', 'Seguir', ''],
             ['edit-details', 'Descripción', 'secondary'],
             ['share', 'Compartir', 'secondary'],
@@ -560,8 +606,8 @@ function createRouteCard(route) {
             ['gpx', '⬇️ GPX', 'secondary'],
             ['del', '🗑️', 'danger']
         ] : [];
-        if (canPublishCommunity) routeActions.splice(showFullActions ? 1 : 0, 0, ['community', '🌍 Publicar', 'secondary']);
-        if (canShareGroupRanking) routeActions.push(['group-ranking', '🏆 Grupo', 'secondary']);
+        if (!trashed && canPublishCommunity) routeActions.splice(showFullActions ? 1 : 0, 0, ['community', '🌍 Publicar', 'secondary']);
+        if (!trashed && canShareGroupRanking) routeActions.push(['group-ranking', '🏆 Grupo', 'secondary']);
         routeActions.forEach(([action, label, className]) => {
             const button = document.createElement('button');
             button.className = `btn-small ${className}`;
@@ -620,7 +666,8 @@ async function openSavedRouteDetail(route, options = {}) {
         ] : autonomousCommunity ? [['Comunidad autónoma', autonomousCommunity]] : []),
         ['Distancia', distanceKm != null ? `${distanceKm.toFixed(1)} km` : 'No disponible'],
         ['Desnivel', routeHasElevationData(route) ? `+${Math.round(Number(route.elevationGain) || 0)} m` : 'No disponible'],
-        ['Tiempo en movimiento', routeMovingTime(route) > 0 ? fmtDur(routeMovingTime(route)) : 'No disponible'],
+        [routeMovingTimeLabel(route, 'Tiempo en movimiento'),
+            routeMovingTime(route) > 0 ? fmtDur(routeMovingTime(route)) : 'No disponible'],
         ['Velocidad media', Number.isFinite(routeAverageSpeed(route)) ? `${routeAverageSpeed(route).toFixed(1)} km/h` : 'No disponible'],
         ['Velocidad máxima', typeof statsAnalyzeRoute === 'function' && Number.isFinite(statsAnalyzeRoute(route).maxSpeed)
             ? `${statsAnalyzeRoute(route).maxSpeed.toFixed(1)} km/h` : 'No disponible'],
@@ -699,8 +746,44 @@ $('saved-routes-list').addEventListener('click', async e => {
     const btn = e.target.closest('button[data-act]');
     if (!btn) return;
     const id = Number(btn.closest('.route-item').dataset.id);
-    const r = savedRoutes.find(x => x.id === id);
+    const inTrash = routesTab === 'trash';
+    const r = (inTrash ? trashedRoutes : savedRoutes).find(x => x.id === id);
     if (!r) return;
+    if (inTrash) {
+        if (btn.dataset.act === 'trash-export') {
+            const safe = String(r.name || 'ruta').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_').trim() || 'ruta';
+            download(`${safe}.gpx`, routeToGpx(r), 'application/gpx+xml');
+        } else if (btn.dataset.act === 'trash-restore') {
+            try {
+                const restored = await DB.restoreTrashedRoute(id);
+                if (!restored) return;
+                trashedRoutes = trashedRoutes.filter(route => route.id !== id);
+                savedRoutes.push(restored);
+                savedRoutes.sort((a, b) => b.id - a.id);
+                if (typeof garageRoutesChanged === 'function' && !garageRoutesChanged(savedRoutes)) {
+                    toast('La ruta se restauró, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
+                }
+                renderSavedRoutes();
+                refreshStats();
+                syncRoutes();
+            } catch (error) {
+                console.warn('No se pudo restaurar la ruta:', error);
+                toast(`No se pudo restaurar la ruta: ${error.message}`);
+            }
+        } else if (btn.dataset.act === 'trash-delete') {
+            const ok = await modal({ message: `¿Eliminar definitivamente «${r.name}» y sus fotos? Esta acción no se puede deshacer.`, ok: 'Eliminar definitivamente' });
+            if (!ok) return;
+            try {
+                await DB.deleteRoute(id, null, null);
+                trashedRoutes = trashedRoutes.filter(route => route.id !== id);
+                renderSavedRoutes();
+            } catch (error) {
+                console.warn('No se pudo eliminar definitivamente la ruta:', error);
+                toast(`No se pudo eliminar la ruta: ${error.message}`);
+            }
+        }
+        return;
+    }
     if (r.communityRouteId
         && !requireSignedIn('Inicia sesión o crea una cuenta para acceder a rutas comunitarias.')) return;
 

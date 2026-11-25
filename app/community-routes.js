@@ -263,7 +263,7 @@ function openCommunityDetail(record, lines, options = {}) {
     const values = [...(options.values || [
         ['Autor', record.createdBy || 'Ciclista'],
         ['Distancia', `${(Number(record.distanceKm) || 0).toFixed(1)} km`],
-        ['Desnivel', `+${Math.round(Number(record.elevationGain) || 0)} m`],
+        ['Desnivel', Number(record.elevationGain) > 0 ? `+${Math.round(Number(record.elevationGain))} m` : 'No disponible'],
         ['Tiempo en movimiento', movingTimeSec > 0 ? fmtDur(movingTimeSec) : 'No disponible'],
         ['Actividad', activity],
         ['Fecha de realización', communityPerformedDateLabel(record.performedAt)],
@@ -523,29 +523,15 @@ function communityUploadTrack(route) {
 
 function communityTrackBounds(lines) {
     const points = lines.flat();
-    return {
-        minLat: Math.min(...points.map(point => point[0])),
-        maxLat: Math.max(...points.map(point => point[0])),
-        minLng: Math.min(...points.map(point => point[1])),
-        maxLng: Math.max(...points.map(point => point[1]))
-    };
-}
-
-// Busca una publicación propia de la misma salida (misma distancia y tiempo en movimiento).
-async function communityFindPublishedDuplicate(route) {
-    const movingTimeSec = Math.round(Number(route.movingTimeSec) || 0);
-    const distanceKm = Number(route.distanceKm) || 0;
-    if (!(movingTimeSec > 0) || !(distanceKm > 0)) return null;
-    const filter = [
-        `owner = "${String(Cloud.uid).replace(/["\\]/g, '')}"`,
-        `movingTimeSec = ${movingTimeSec}`,
-        `distanceKm >= ${(distanceKm - 0.05).toFixed(3)}`,
-        `distanceKm <= ${(distanceKm + 0.05).toFixed(3)}`
-    ].join(' && ');
-    const result = await cloudApi('/api/collections/community_routes/records?page=1&perPage=1&fields=id&filter='
-        + encodeURIComponent(filter));
-    const record = result && Array.isArray(result.items) ? result.items[0] : null;
-    return record && typeof record.id === 'string' && record.id ? record : null;
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (let i = 0; i < points.length; i++) {
+        const lat = points[i][0], lng = points[i][1];
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+    }
+    return { minLat, maxLat, minLng, maxLng };
 }
 
 function communityIsDuplicateError(error) {
@@ -574,9 +560,6 @@ async function submitCommunityRoute() {
         formData.append('description', String($('community-share-description').value || '').trim().slice(0, 500));
         formData.append('difficulty', $('community-share-difficulty').value);
         formData.append('activityType', activityTypeForRoute(route) || 'mtb');
-        formData.append('distanceKm', String(Number(route.distanceKm) || 0));
-        formData.append('elevationGain', String(Number(route.elevationGain) || 0));
-        formData.append('movingTimeSec', String(Number(route.movingTimeSec) || 0));
         const performedAt = communityPerformedDate(route);
         if (performedAt) formData.append('performedAt', performedAt);
         const trackJson = JSON.stringify(communityUploadTrack(route));
@@ -593,15 +576,6 @@ async function submitCommunityRoute() {
         }
         const collectionPath = '/api/collections/community_routes/records';
         let record = null;
-        let updatedExisting = false;
-        if (!route.communityRouteId) {
-            // Si ya estaba publicada (otro dispositivo o una copia), se actualiza en lugar de duplicarla.
-            const existing = await communityFindPublishedDuplicate(route);
-            if (existing) {
-                route.communityRouteId = existing.id;
-                updatedExisting = true;
-            }
-        }
         if (route.communityRouteId) {
             try {
                 record = await cloudApi(`${collectionPath}/${encodeURIComponent(route.communityRouteId)}`, 'PATCH', formData, { timeoutMs: 60000 });
@@ -640,12 +614,8 @@ async function submitCommunityRoute() {
         const searchRefreshed = refreshCommunitySearch ? await loadCommunityRoutes() : true;
         communitySetStatus(refreshCommunitySearch && !searchRefreshed
             ? 'Ruta publicada. No se pudo actualizar la búsqueda; vuelve a buscar para refrescar el contador.'
-            : updatedExisting
-                ? 'Esta ruta ya estaba publicada; se ha actualizado sin crear otra copia.'
-                : 'Ruta publicada. Ya aparece en el mapa comunitario.');
-        toast(updatedExisting
-            ? 'La ruta ya estaba en la comunidad; se ha actualizado.'
-            : `Ruta publicada${poiData.count ? ` con ${poiData.count} foto(s)` : ''} en la comunidad.`);
+            : 'Ruta publicada. Ya aparece en el mapa comunitario.');
+        toast(`Ruta publicada${poiData.count ? ` con ${poiData.count} foto(s)` : ''} en la comunidad.`);
         button.textContent = 'Publicada';
         setTimeout(closeCommunityDialog, 1400);
         return record;
@@ -947,8 +917,8 @@ function renderCommunityRoutes(records) {
         facts.textContent = (record.createdBy ? `Por ${record.createdBy} · ` : '') +
             (record.proximityKm != null ? `A ${record.proximityKm.toFixed(1)} km · ` : '') +
             [record.locality, communityAutonomousCommunity(record.province)].filter(Boolean).join(', ') + ' · ' +
-            ((Number(record.distanceKm) || 0).toFixed(1)) + ' km · +' +
-            (Number(record.elevationGain) || 0) + ' m' +
+            ((Number(record.distanceKm) || 0).toFixed(1)) + ' km · ' +
+            (Number(record.elevationGain) > 0 ? `+${Math.round(Number(record.elevationGain))} m` : 'desnivel no disponible') +
             (difficulty ? ` · ${difficulty}` : '') +
             (poiCount ? ` · 📷 ${poiCount} POI` : '');
         const actions = document.createElement('div');

@@ -120,13 +120,6 @@
 .profile-performance-grid > div { display:grid; gap:4px; padding:10px; border:1px solid rgba(255,255,255,.065); border-radius:11px; background:rgba(9,13,19,.35); }
 .profile-performance-grid span { color:#909eaf; font-size:.65rem; }
 .profile-performance-grid strong { color:#edf2f7; font-size:.82rem; font-variant-numeric:tabular-nums; }
-.profile-social-icons { display:flex; align-items:center; gap:8px; margin:12px 0 0; padding:0; list-style:none; }
-.profile-social-icons li { display:grid; width:32px; height:32px; place-items:center; border:1px solid rgba(255,255,255,.06); border-radius:9px; background:rgba(9,13,19,.24); opacity:.72; }
-.profile-social-icon { width:18px; height:18px; fill:currentColor; }
-.profile-social-icon.facebook { color:#1877f2; }
-.profile-social-icon.instagram { fill:none; color:#e4405f; stroke:currentColor; stroke-width:2; }
-.profile-social-icon.instagram .profile-social-icon-dot { fill:currentColor; stroke:none; }
-.profile-social-icon.tiktok { color:#25f4ee; }
 .profile-account-details { overflow:hidden; margin-top:12px; border:0; border-top:1px solid rgba(255,255,255,.075); border-radius:0; background:transparent; box-shadow:none; }
 .profile-account-details > summary { display:flex; min-height:52px; align-items:center; gap:9px; color:#e8f2fb; cursor:pointer; list-style:none; }
 .profile-account-details > summary::-webkit-details-marker { display:none; }
@@ -135,6 +128,15 @@
 .profile-account-summary-copy small { overflow:hidden; color:#91a2b5; font-size:.58rem; text-overflow:ellipsis; white-space:nowrap; }
 .profile-account-button-chevron { color:#83a5c2; font-size:1rem; transition:transform .18s ease; }
 .profile-account-details[open] .profile-account-button-chevron { transform:rotate(90deg); }
+.account-delete-section { margin-top:12px; }
+.account-delete-section > .btn { min-height:40px; }
+.account-delete-form { display:grid; gap:8px; margin-top:10px; padding:12px; border:1px solid rgba(240,108,120,.2); border-radius:12px; background:rgba(72,39,52,.16); }
+.account-delete-form[hidden] { display:none !important; }
+.account-delete-form h3 { color:#ffdce0; font-size:.82rem; }
+.account-delete-form label { color:#d3dce7; font-size:.75rem; font-weight:700; }
+.account-delete-form .hint { margin:0; line-height:1.45; }
+.account-delete-actions { display:grid; gap:8px; }
+.account-delete-actions .btn { min-height:40px; margin:0; }
 .profile-account-details > summary:focus-visible { outline:2px solid #42aaff; outline-offset:2px; }
 .profile-account-details > .card { width:100%; margin:0 0 4px; padding:13px; border:1px solid rgba(255,255,255,.07); border-radius:13px; background:rgba(9,13,19,.38); box-shadow:none; }
 .profile-account-details > .card h2 { display:none; }
@@ -260,15 +262,6 @@ body::before {
 .safety-workspace[hidden] { display:none; }
 .tools-control-workspace { display:grid; gap:12px; margin-top:12px; }
 .tools-control-workspace[hidden] { display:none !important; }
-.social-platform-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-top:14px; }
-.social-platform-card { display:grid; min-width:0; justify-items:center; gap:8px; padding:13px 8px; border:1px solid rgba(255,255,255,.075); border-radius:13px; background:rgba(9,13,19,.4); color:#dce4ed; font-size:.72rem; font-weight:700; }
-.social-platform-icon { display:grid; width:42px; height:42px; place-items:center; border-radius:13px; color:#fff; }
-.social-platform-icon svg { width:24px; height:24px; fill:currentColor; }
-.social-platform-facebook { background:#1877f2; }
-.social-platform-instagram { background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045); }
-.social-platform-instagram svg { fill:none; stroke:currentColor; stroke-width:1.8; }
-.social-platform-instagram .social-platform-camera-dot { fill:currentColor; stroke:none; }
-.social-platform-tiktok { background:#111; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
 .tools-sidebar-link .sidebar-icon { color:#39b7ff; }
 @media (min-width:720px) { .tools-content { padding:30px 25px; } .tools-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; } .tool-card { min-height:82px; } }
 @media (min-width:900px) { .tools-content { max-width:1000px; } }

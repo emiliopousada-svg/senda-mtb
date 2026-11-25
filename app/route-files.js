@@ -30,6 +30,21 @@ function routeToGpx(r) {
     return out.join('\n');
 }
 
+function routesToGpx(routes) {
+    const tracks = (Array.isArray(routes) ? routes : []).map(route => {
+        const gpx = routeToGpx(route);
+        const start = gpx.indexOf('<trk>');
+        const end = gpx.lastIndexOf('</trk>') + '</trk>'.length;
+        return start >= 0 && end > start ? gpx.slice(start, end) : '';
+    }).filter(Boolean);
+    return [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<gpx version="1.1" creator="senda-mtb" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">',
+        ...tracks,
+        '</gpx>'
+    ].join('\n');
+}
+
 function xmlLocalName(element) {
     return String(element.localName || element.nodeName || '').split(':').pop().toLowerCase();
 }
@@ -59,24 +74,44 @@ function parseTrack(text, fname) {
     if (isGeoJson) { // GeoJSON
         if (!trimmed.startsWith('{')) throw new Error('El archivo GeoJSON no contiene un objeto válido.');
         const geoms = [];
-        (function walk(o) {
-            if (!o) return;
-            if (o.type === 'FeatureCollection') o.features.forEach(walk);
-            else if (o.type === 'Feature') {
+        (function walk(o, depth = 0) {
+            if (depth > 32) throw new Error('El archivo GeoJSON supera la profundidad máxima permitida.');
+            if (!o || typeof o !== 'object') return;
+            if (o.type === 'FeatureCollection' && Array.isArray(o.features)) {
+                o.features.forEach(f => walk(f, depth + 1));
+            } else if (o.type === 'Feature') {
                 if (o.properties && o.properties.name && !geoms.length) name = String(o.properties.name);
-                walk(o.geometry);
-            } else if (o.type === 'GeometryCollection') o.geometries.forEach(walk);
-            else geoms.push(o);
+                walk(o.geometry, depth + 1);
+            } else if (o.type === 'GeometryCollection' && Array.isArray(o.geometries)) {
+                o.geometries.forEach(g => walk(g, depth + 1));
+            } else {
+                geoms.push(o);
+            }
         })(JSON.parse(trimmed));
         const conv = line => {
+            if (!Array.isArray(line)) return [];
             if (pointCount + line.length > MAX_IMPORTED_TRACK_POINTS) {
                 throw new Error(`el track supera el límite de ${MAX_IMPORTED_TRACK_POINTS.toLocaleString('es-ES')} puntos`);
             }
-            return line.map(c => [c[1], c[0], c.length > 2 ? c[2] : null, null]);
+            return line.map(c => {
+                if (!Array.isArray(c) || c.length < 2
+                    || typeof c[0] !== 'number' || typeof c[1] !== 'number') {
+                    throw new Error('El archivo GeoJSON contiene una coordenada geográfica no válida.');
+                }
+                const lon = c[0], lat = c[1];
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)
+                    || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                    throw new Error('El archivo GeoJSON contiene una coordenada geográfica no válida.');
+                }
+                const alt = c.length > 2 && c[2] != null ? Number(c[2]) : null;
+                return [lat, lon, Number.isFinite(alt) ? alt : null, null];
+            });
         };
         geoms.forEach(g => {
-            if (g.type === 'LineString') addSegment(conv(g.coordinates));
-            else if (g.type === 'MultiLineString') g.coordinates.forEach(l => addSegment(conv(l)));
+            if (g.type === 'LineString' && Array.isArray(g.coordinates)) addSegment(conv(g.coordinates));
+            else if (g.type === 'MultiLineString' && Array.isArray(g.coordinates)) {
+                g.coordinates.forEach(l => addSegment(conv(l)));
+            }
         });
     } else {
         const doc = new DOMParser().parseFromString(trimmed, 'application/xml');
@@ -184,6 +219,8 @@ function buildImportedRoute(parsed, routeName) {
             }
             if (p[2] !== null) segmentAltitudeCount++;
             el.add(p[2]);
+            // Keep ascent aligned with retained points when large tracks are reduced.
+            p[9] = el.gain;
             full.push(p);
             prev = p;
             first = false;

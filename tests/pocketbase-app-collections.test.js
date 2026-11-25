@@ -29,6 +29,7 @@ function runMigration(existingNames = []) {
         constructor(definition) {
             Object.assign(this, definition);
             const fields = definition.fields || [];
+            this.fieldList = fields;
             this.fields = {
                 getByName(name) { return fields.find(field => field.name === name) || null; },
                 add(field) { fields.push(field); }
@@ -79,6 +80,13 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     const byName = new Map(collections.map(collection => [collection.name, collection]));
 
     COLLECTION_NAMES.forEach(name => assert.ok(byName.has(name), `missing ${name}`));
+    byName.forEach(collection => {
+        (collection.fieldList || []).forEach(field => {
+            if (field.type === 'relation' && field.collectionId === users.id) {
+                assert.equal(field.cascadeDelete, true, `${collection.name}.${field.name} must cascade on account deletion`);
+            }
+        });
+    });
     const routes = byName.get('routes');
     assert.equal(routes.listRule, '@request.auth.id != "" && owner = @request.auth.id');
     assert.equal(routes.viewRule, routes.listRule);
@@ -86,6 +94,7 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     assert.match(routes.updateRule, /@request\.body\.owner = @request\.auth\.id/);
     assert.equal(routes.fields.getByName('owner').collectionId, users.id);
     assert.equal(routes.fields.getByName('track').required, true);
+    assert.equal(routes.fields.getByName('track').protected, true);
     assert.ok(users.fields.getByName('groupCode'));
 
     const communityRoutes = byName.get('community_routes');
@@ -102,6 +111,11 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     const segmentEfforts = byName.get('community_segment_efforts');
     assert.equal(segmentEfforts.listRule, '@request.auth.id != "" && segment.route.published = true');
     assert.equal(segmentEfforts.viewRule, segmentEfforts.listRule);
+
+    const ranking = byName.get('mtb_group_ranking_entries');
+    assert.equal(ranking.fields.getByName('route').collectionId, routes.id);
+    assert.equal(ranking.fields.getByName('route').required, false);
+    assert.equal(ranking.fields.getByName('routeSyncedAt').type, 'date');
 
     const liveLocations = byName.get('live_locations');
     assert.equal(liveLocations.fields.getByName('groupCode').type, 'relation');

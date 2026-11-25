@@ -32,7 +32,8 @@ test('community route create hook trims the track and calculates its bounds', ()
     const values = {
         owner: 'user123',
         trackJson: JSON.stringify([[[0, 0], [0.001, 0.001], [0.5, 0.5]]]),
-        poisJson: '[]'
+        poisJson: '[]',
+        published: true
     };
     let nextCalled = false;
     createHandler({
@@ -42,6 +43,7 @@ test('community route create hook trims the track and calculates its bounds', ()
             isNew: () => true,
             getString(name) { return values[name] || ''; },
             get(name) { return values[name]; },
+            getBool(name) { return values[name] === true; },
             getUnsavedFiles() { return []; },
             set(name, value) { values[name] = value; }
         },
@@ -50,6 +52,7 @@ test('community route create hook trims the track and calculates its bounds', ()
 
     assert.equal(nextCalled, true);
     assert.equal(values.createdBy, 'Rider');
+    assert.equal(values.trackLocked, true);
     const trimmed = JSON.parse(values.trackJson);
     assert.ok(trimmed[0].length >= 2);
     assert.ok(trimmed[0][0][0] > 0);
@@ -59,13 +62,13 @@ test('community route create hook trims the track and calculates its bounds', ()
     assert.equal(Number.isFinite(values.maxLng), true);
 });
 
-function communityRouteHookWith(findRecordsByFilter, uploadedFiles = []) {
+function communityRouteHookWith(findRecordsByFilter, uploadedFiles = [], nickname = 'Rider') {
     let createHandler;
     let updateHandler;
     const context = vm.createContext({
         BadRequestError: class BadRequestError extends Error {},
         $app: {
-            findRecordById() { return { getString: name => name === 'nickname' ? 'Rider' : '' }; },
+            findRecordById() { return { getString: name => name === 'nickname' ? nickname : '' }; },
             findRecordsByFilter
         },
         onRecordCreateRequest(handler, name) {
@@ -88,11 +91,14 @@ function communityRouteHookWith(findRecordsByFilter, uploadedFiles = []) {
                     return {
                         getString(name) {
                             return originalValues[name] === undefined ? '' : String(originalValues[name]);
-                        }
+                        },
+                        get(name) { return originalValues[name]; },
+                        getBool(name) { return originalValues[name] === true; }
                     };
                 },
                 getString(name) { return values[name] === undefined ? '' : String(values[name]); },
                 get(name) { return values[name]; },
+                getBool(name) { return values[name] === true; },
                 getUnsavedFiles(name) {
                     assert.equal(name, 'poiPhotos');
                     return uploadedFiles;
@@ -113,7 +119,8 @@ const duplicateRouteValues = () => ({
     trackJson: JSON.stringify([[[0, 0], [0.001, 0.001], [0.5, 0.5]]]),
     poisJson: '[]',
     distanceKm: 42.3,
-    movingTimeSec: 7200
+    movingTimeSec: 7200,
+    published: true
 });
 
 test('community route hook rejects publishing the same route twice', () => {
@@ -122,22 +129,109 @@ test('community route hook rejects publishing the same route twice', () => {
         queries.push({ collection, filter, params });
         return [{ id: 'existing' }];
     });
-    assert.throws(() => create(duplicateRouteValues()), /ya está publicada/);
+    const values = duplicateRouteValues();
+    values.distanceKm = 99999;
+    values.elevationGain = 99999;
+    values.movingTimeSec = 604800;
+    assert.throws(() => create(values), /ya está publicada/);
     assert.equal(queries[0].collection, 'community_routes');
     assert.match(queries[0].filter, /owner = \{:owner\}/);
-    assert.match(queries[0].filter, /movingTimeSec = \{:moving\}/);
+    assert.match(queries[0].filter, /trackJson = \{:track\}/);
+    assert.doesNotMatch(queries[0].filter, /movingTimeSec|distanceKm/);
     assert.equal(queries[0].params.owner, 'user123');
-    assert.equal(queries[0].params.moving, 7200);
+    assert.equal(queries[0].params.track, values.trackJson);
+    assert.ok(values.distanceKm > 78 && values.distanceKm < 79);
+    assert.equal(values.elevationGain, 0);
+    assert.equal(values.movingTimeSec, 0);
 });
 
 test('community route hook accepts a route that is not yet published', () => {
     const create = communityRouteHookWith(() => []);
-    assert.equal(create(duplicateRouteValues()), true);
+    const values = duplicateRouteValues();
+    assert.equal(create(values), true);
+    assert.ok(values.distanceKm > 78 && values.distanceKm < 79);
+    assert.equal(values.elevationGain, 0);
+    assert.equal(values.movingTimeSec, 0);
+});
+
+test('community route hook rejects client changes to the server-owned source path', () => {
+    const create = communityRouteHookWith(() => []);
+    const values = duplicateRouteValues();
+    values.sourcePath = 'galicia/routes/forged.gpx';
+
+    assert.throws(() => create(values), /origen de la ruta no se puede modificar/);
+});
+
+test('community route hook preserves official elevation but ignores client edits', () => {
+    const save = communityRouteHookWith(() => [], [], 'SENDA-MTB');
+    const values = duplicateRouteValues();
+    values.sourcePath = 'galicia/routes/official.gpx';
+    values.elevationGain = 99999;
+    const originalValues = { ...values, elevationGain: 120 };
+
+    assert.equal(save.update(values, originalValues), true);
+    assert.equal(values.elevationGain, 120);
+});
+
+test('community route hook freezes a published track, including after unpublishing', () => {
+    const save = communityRouteHookWith(() => []);
+    const values = duplicateRouteValues();
+    assert.equal(save(values), true);
+    assert.equal(values.trackLocked, true);
+
+    const publishedValues = { ...values };
+    values.published = false;
+    assert.equal(save.update(values, publishedValues), true);
+    assert.equal(values.trackLocked, true);
+
+    const unpublishedValues = { ...values };
+    values.trackJson = JSON.stringify([[[0, 0], [0.002, 0.002], [0.5, 0.5]]]);
+    assert.throws(() => save.update(values, unpublishedValues), /no se puede modificar después de publicar/);
+});
+
+test('community route hook allows changing a draft track before publishing it', () => {
+    const save = communityRouteHookWith(() => []);
+    const values = duplicateRouteValues();
+    values.published = false;
+    assert.equal(save(values), true);
+    assert.equal(values.trackLocked, false);
+
+    const draftValues = { ...values };
+    values.trackJson = JSON.stringify([[[0, 0], [0.002, 0.002], [0.5, 0.5]]]);
+    assert.equal(save.update(values, draftValues), true);
+    assert.equal(values.trackLocked, false);
+
+    const editedDraft = { ...values };
+    values.published = true;
+    assert.equal(save.update(values, editedDraft), true);
+    assert.equal(values.trackLocked, true);
+});
+
+test('community route import refuses changing a locked published geometry', () => {
+    const source = fs.readFileSync(
+        path.join(__dirname, '..', 'pb_hooks', 'community_routes_galicia_import.pb.js'),
+        'utf8'
+    );
+    const helperEnd = source.indexOf('(function ()');
+    const context = vm.createContext({});
+    vm.runInContext(source.slice(0, helperEnd), context);
+    const record = {
+        getBool(name) { return name === 'trackLocked'; },
+        getString(name) { return name === 'trackJson' ? 'old-track' : ''; }
+    };
+
+    assert.equal(context.communityRouteImportTrackIsLocked(record, 'new-track'), true);
+    assert.equal(context.communityRouteImportTrackIsLocked(record, 'old-track'), false);
+    assert.equal(context.communityRouteImportTrackIsLocked({
+        getBool() { return false; },
+        getString() { return 'old-track'; }
+    }, 'new-track'), false);
 });
 
 test('community route update keeps its trimmed track and existing POIs intact', () => {
     const save = communityRouteHookWith(() => []);
     const values = duplicateRouteValues();
+    values.published = false;
     values.poisJson = JSON.stringify([{ lat: 0.0012, lng: 0.0012 }]);
     assert.equal(save(values), true);
 
@@ -149,6 +243,7 @@ test('community route update keeps its trimmed track and existing POIs intact', 
 test('community route update trims only when the track changes', () => {
     const save = communityRouteHookWith(() => []);
     const values = duplicateRouteValues();
+    values.published = false;
     assert.equal(save(values), true);
 
     const originalValues = { ...values };

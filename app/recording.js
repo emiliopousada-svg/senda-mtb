@@ -19,13 +19,13 @@ let draftSavedRevision = 0;
 let draftSavedPointCount = 0;
 
 function clearRoutePolylines() {
+    if (typeof resetGpsRouteRenderer === 'function') resetGpsRouteRenderer();
     routePolylines.forEach(polyline => { if (map) map.removeLayer(polyline); });
     routePolylines = [];
     routePolyline = null;
     routePolylinePointCount = 0;
     routePolylinePoints = [];
     routePolylineLastPoint = null;
-    pendingRouteRenderPoints.length = 0;
 }
 
 function renderRecordingSegments(routeSegments) {
@@ -46,6 +46,7 @@ function renderRecordingSegments(routeSegments) {
             start = end - 1;
         }
     });
+    routeRenderedPointCount = points.length;
 }
 
 async function acquireWake() {
@@ -253,7 +254,7 @@ function handleBgWatcherError(my, bg, error) {
             console.warn('No se pudo detener el watcher GPS en segundo plano:', removeError);
         });
     }
-    if (error.code === 'NOT_AUTHORIZED') onBgDenied(bg);
+    if (error && error.code === 'NOT_AUTHORIZED') onBgDenied(bg);
     else if (id != null) toast('No se pudo mantener el GPS en segundo plano. Mantén la app abierta para seguir grabando.', 7000);
     if (document.visibilityState === 'visible' && isRecording && !isPaused) startGps();
 }
@@ -472,7 +473,6 @@ function resetRecordingState() {
     resetAutoPauseState();
     points = [];
     draftSavedPointCount = 0;
-    segments = [];
     totalDistance = 0;
     elev = makeElevTracker();
     lastAccepted = null;
@@ -584,11 +584,14 @@ function startRecording(activityType) {
 }
 
 function pauseRecording(automatic = false) {
+    if (!isRecording || isPaused) return;
     const pauseAt = automatic && autoPauseLastMovementAt !== null
         ? autoPauseLastMovementAt
         : Date.now();
-    movingMs += pauseAt - segStart;
-    segStart = null;
+    if (segStart !== null) {
+        movingMs += Math.max(0, pauseAt - segStart);
+        segStart = null;
+    }
     isPaused = true;
     autoPaused = automatic;
     refreshGpsMode();
@@ -740,23 +743,36 @@ function bindMapRecordingHold(button) {
     }, true);
 }
 
+let recordingActionPending = false;
 if (typeof btnStart !== 'undefined' && btnStart) {
     bindMapRecordingHold(btnStart);
     btnStart.addEventListener('click', async () => {
-        if (!isRecording) {
-            if (!(await ensureRideAccount())) return;
-            startRecording('mtb');
+        if (recordingActionPending) return;
+        recordingActionPending = true;
+        try {
+            if (!isRecording) {
+                if (!(await ensureRideAccount())) return;
+                startRecording('mtb');
+            }
+            else if (!isPaused) pauseRecording();
+            else resumeRecording();
+        } finally {
+            recordingActionPending = false;
         }
-        else if (!isPaused) pauseRecording();
-        else resumeRecording();
     });
 }
 
 if (typeof btnStop !== 'undefined' && btnStop) {
     bindMapRecordingHold(btnStop);
     btnStop.addEventListener('click', async () => {
-        const ok = await modal({ message: '¿Finalizar y guardar esta ruta?', ok: 'Guardar', cancel: 'Seguir grabando' });
-        if (ok) await finishRecording();
+        if (recordingActionPending) return;
+        recordingActionPending = true;
+        try {
+            const ok = await modal({ message: '¿Finalizar y guardar esta ruta?', ok: 'Guardar', cancel: 'Seguir grabando' });
+            if (ok) await finishRecording();
+        } finally {
+            recordingActionPending = false;
+        }
     });
 }
 
@@ -1040,7 +1056,6 @@ function restoreDraft(d) {
         if (index > 0 && p[5] === 1) elev.reset();
         elev.add(p[2]);
     });
-    segments = buildSegments(points);
     isRecording = true;
     isPaused = true;
     resumeBreak = true;
@@ -1050,7 +1065,7 @@ function restoreDraft(d) {
     $('m-moving').textContent = fmtClock(Math.floor(movingMs / 1000));
     $('m-time').textContent = fmtClock(totalSec());
     if (map) {
-        renderRecordingSegments(segments);
+        renderRecordingSegments(buildSegments(points));
         const b = L.latLngBounds([]);
         routePolylines.forEach(polyline => b.extend(polyline.getBounds()));
         if (b.isValid()) map.fitBounds(b, { padding: [30, 30] });

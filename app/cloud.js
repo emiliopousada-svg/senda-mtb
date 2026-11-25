@@ -302,6 +302,7 @@ try {
 const ROUTE_NICKNAME_LIMIT = 32;
 
 let manualAccountSyncInFlight = false;
+let accountDeleteInFlight = false;
 
 function renderProfileManualSyncButton() {
     const button = $('profile-manual-sync');
@@ -576,6 +577,106 @@ async function logoutCloudAccount() {
     }
 }
 
+function toggleAccountDeleteForm(show) {
+    const form = $('acc-delete-form');
+    const toggle = $('acc-delete-toggle');
+    form.hidden = !show;
+    toggle.setAttribute('aria-expanded', String(show));
+    $('acc-delete-password').value = '';
+    if (show) {
+        $('acc-delete-status').textContent = '';
+        $('acc-delete-password').focus();
+    }
+}
+
+async function deleteCloudAccount(event) {
+    event.preventDefault();
+    if (accountDeleteInFlight || logoutInFlight || Cloud.serverSwitchInFlight) return;
+    if (!Cloud.loggedIn()) {
+        toast('Inicia sesión para eliminar tu cuenta.');
+        return;
+    }
+    if (!navigator.onLine) {
+        toast('Conéctate a internet para eliminar tu cuenta.');
+        return;
+    }
+    if (manualAccountSyncInFlight || accAuthInFlight) {
+        toast('Espera a que termine la operación de cuenta actual.');
+        return;
+    }
+
+    const passwordInput = $('acc-delete-password');
+    const status = $('acc-delete-status');
+    const password = passwordInput.value;
+    if (!password) {
+        passwordInput.focus();
+        status.textContent = 'Escribe tu contraseña actual.';
+        return;
+    }
+    if (!confirm('¿Eliminar permanentemente la cuenta y sus datos sincronizados? Los datos guardados solo en este dispositivo, incluidas rutas y estadísticas, se conservarán.')) {
+        return;
+    }
+
+    accountDeleteInFlight = true;
+    logoutInFlight = true;
+    Cloud.logoutInProgress = true;
+    const server = Cloud.server;
+    const uid = Cloud.uid;
+    const generation = Cloud.authGeneration;
+    const isCurrent = () => Cloud.server === server && Cloud.uid === uid
+        && Cloud.authGeneration === generation;
+    const submit = $('acc-delete-submit');
+    submit.disabled = true;
+    status.textContent = 'Eliminando la cuenta…';
+
+    try {
+        await cloudApi('/api/mtb/account/delete', 'POST', { password }, { server });
+        if (!isCurrent()) return;
+
+        const cleanupErrors = [];
+        try {
+            if (typeof clearDeletedAccountAvatar === 'function') clearDeletedAccountAvatar(uid);
+        } catch (error) {
+            cleanupErrors.push(error);
+            console.error('La cuenta se eliminó, pero no se pudo borrar el avatar local:', error);
+        }
+        try {
+            const clearing = Cloud.clearSession();
+            if (clearing && typeof clearing.then === 'function') await clearing;
+        } catch (error) {
+            cleanupErrors.push(error);
+            console.error('La cuenta se eliminó, pero no se pudo borrar el token local:', error);
+        }
+        try {
+            await stopGroup();
+        } catch (error) {
+            cleanupErrors.push(error);
+            console.warn('La cuenta se eliminó, pero no se pudo limpiar el estado local del grupo:', error);
+        }
+
+        passwordInput.value = '';
+        toggleAccountDeleteForm(false);
+        renderFriends();
+        renderAccount();
+        if (cleanupErrors.length) {
+            toast('La cuenta se eliminó, pero hubo un problema al limpiar datos locales: ' + cleanupErrors.map(error => error.message).join('; '), 7000);
+        } else {
+            toast('Cuenta eliminada. Tus rutas y estadísticas locales siguen en este dispositivo.');
+        }
+    } catch (error) {
+        if (isCurrent()) {
+            passwordInput.value = '';
+            status.textContent = error.message || 'No se pudo eliminar la cuenta.';
+            toast('No se pudo eliminar la cuenta: ' + status.textContent, 7000);
+        }
+    } finally {
+        accountDeleteInFlight = false;
+        logoutInFlight = false;
+        Cloud.logoutInProgress = false;
+        if (isCurrent()) submit.disabled = false;
+    }
+}
+
 
 function initSettings() {
     const sound = $('setting-route-sound');
@@ -700,6 +801,12 @@ function initAccount() {
     $('profile-manual-sync').addEventListener('click', syncAccountManually);
     $('acc-logout').addEventListener('click', logoutCloudAccount);
     $('acc-logout-incomplete').addEventListener('click', logoutCloudAccount);
+    $('acc-delete-toggle').addEventListener('click', () => {
+        const form = $('acc-delete-form');
+        toggleAccountDeleteForm(form.hidden);
+    });
+    $('acc-delete-form').addEventListener('submit', deleteCloudAccount);
+    $('acc-delete-cancel').addEventListener('click', () => toggleAccountDeleteForm(false));
     window.addEventListener('online', syncWhenOnline);
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && navigator.onLine) syncWhenOnline();
@@ -733,6 +840,16 @@ async function init() {
         savedRoutes = (await DB.all()).sort((a, b) => b.id - a.id);
         if (typeof communityScheduleAutomaticSegmentEffortScan === 'function') {
             communityScheduleAutomaticSegmentEffortScan();
+        }
+        try { await DB.purgeExpiredTrashedRoutes(); }
+        catch (error) {
+            console.warn('No se pudieron purgar las rutas caducadas de la papelera:', error);
+            toast('No se pudieron eliminar las rutas caducadas de la papelera.', 6000);
+        }
+        try { await refreshRouteTrash(); }
+        catch (error) {
+            console.warn('No se pudo cargar la papelera de rutas:', error);
+            toast('No se pudo cargar la papelera de rutas.', 6000);
         }
     } catch (e) {
         console.warn('Sin IndexedDB:', e);

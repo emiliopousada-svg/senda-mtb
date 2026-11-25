@@ -157,7 +157,8 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
         return false;
     }
     if (automatic && route.groupRankingGroupId === activeGroupId
-        && route.groupRankingServer === server && !route.groupRankingPending) {
+        && route.groupRankingServer === server && !route.groupRankingPending
+        && route.groupRankingVerified === true) {
         return true;
     }
     const analysis = typeof statsAnalyzeRoute === 'function' ? statsAnalyzeRoute(route) : null;
@@ -186,7 +187,7 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
     try {
         if (!automatic) {
             const confirmed = await modal({
-                message: `Compartir con «${groupInfo && groupInfo.name ? groupInfo.name : 'el grupo'}» estas marcas de la actividad:\n\n${details.join('\n')}\n\nNo se enviarán el trazado GPS, el nombre, la fecha ni la ubicación.`,
+                message: `Compartir con «${groupInfo && groupInfo.name ? groupInfo.name : 'el grupo'}» estas marcas de la actividad:\n\n${details.join('\n')}\n\nEl servidor verificará las marcas con el trazado de la ruta sincronizada. El grupo solo verá las métricas; no se publicarán el trazado GPS, el nombre ni la ubicación.`,
                 ok: 'Compartir marcas'
             });
             if (!confirmed) return false;
@@ -218,16 +219,10 @@ async function shareRouteToGroupRanking(route, button, options = {}) {
             throw error;
         }
         if (!isCurrent()) return false;
-        const result = await api('/api/mtb/groups/rankings/share', 'POST', {
-            clientId,
-            groupId: activeGroupId,
-            distanceKm,
-            movingTimeSec,
-            maxSpeedKmh,
-            elevationGain
-        });
+        const result = await api('/api/mtb/groups/rankings/share', 'POST', { clientId });
         if (!isCurrent()) return false;
         route.groupRankingGroupId = activeGroupId;
+        route.groupRankingVerified = true;
         route.groupRankingPending = false;
         try {
             await DB.put(route);

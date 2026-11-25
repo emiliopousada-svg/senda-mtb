@@ -12,7 +12,7 @@ senda-mtb es una aplicación multiplataforma (Web/PWA y Android nativo vía Capa
 
 El producto se estructura en tres pilares esenciales:
 1. **PEDALEAR:** Planificación, cartografía global, seguimiento de rutas, registro GPS resiliente y seguridad mediante Guardian Mode.
-2. **MEJORAR:** Análisis fisiológico y de rendimiento, telemetría de sensores Bluetooth LE (pulso, cadencia, velocidad, potencia), gestión integral de bicicletas y componentes (Garaje) y análisis contextual con SENDA AI.
+2. **MEJORAR:** Análisis fisiológico y de rendimiento, telemetría de sensores Bluetooth LE (pulso, cadencia, velocidad, potencia) y gestión integral de bicicletas y componentes (Garaje).
 3. **COMPETIR Y COMPARTIR:** Comunidad de montaña, ligas por temporadas, segmentos locales, retos individuales y por equipos, eventos y seguimiento grupal en tiempo real.
 
 ---
@@ -47,7 +47,7 @@ La aplicación se articula sobre una barra de navegación inferior de 5 accesos 
    * Tarjeta de última actividad realizada con mini-mapa y métricas clave.
    * Acceso rápido destacado a "Grabar Salida" o "Seguir Ruta".
    * Estado de sincronización en la nube y conectividad.
-   * Acceso directo a estado de Guardian Mode y resumen de SENDA AI.
+   * Acceso directo a estado de Guardian Mode.
 
 2. **Rutas (Biblioteca y Exploración):**
    * Pestaña "Mis Rutas": Rutas locales guardadas, historial de actividades y favoritos.
@@ -80,7 +80,6 @@ La aplicación se articula sobre una barra de navegación inferior de 5 accesos 
 
 * **Guardian Mode (Seguridad):** Configuración de contactos SOS, temporizador de seguridad de salida y compartición de enlace de ubicación en vivo.
 * **Garaje & Mantenimiento:** Registro de bicicletas, componentes (cadena, cubiertas, pastillas, suspensión) y alertas de desgaste por horas/km.
-* **SENDA AI:** Panel conversacional y explicativo con recomendaciones de entrenamiento, análisis de salidas y resúmenes automáticos.
 * **Sensores & Conexiones:** Escaneo y emparejamiento BLE de pulsómetro, sensores de cadencia/velocidad (CSC) y potenciómetro.
 
 ---
@@ -108,11 +107,6 @@ La aplicación se articula sobre una barra de navegación inferior de 5 accesos 
   * Suspensión (Horquilla: revisión de 50h y 200h; Amortiguador trasero).
   * Neumáticos (Cubierta delantera/trasera, líquido tubeless).
 * **Asignación automática:** La actividad grabada imputa sus kilómetros y horas a la bicicleta seleccionada.
-
-### 4.4. SENDA AI (Asistente Desacoplado)
-* **Principio de honestidad:** La IA nunca inventa datos ni métricas que no hayan sido capturados por sensores válidos o GPS.
-* **Explicabilidad:** Toda recomendación cita explícitamente la fuente de datos (ej.: *"Basado en tus últimas 4 salidas y tus zonas de frecuencia cardíaca..."*).
-* **Límites éticos:** No emite diagnósticos médicos ni planes de esfuerzo lesivos; sugiere consultar profesionales ante fatiga crónica o anomalías cardíacas.
 
 ---
 

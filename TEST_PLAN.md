@@ -1,8 +1,6 @@
 ﻿# senda-mtb — Plan de Pruebas y Criterios de Aceptación (TEST_PLAN.md)
 
-**Versión:** 1.0  
-**Fecha:** 16 de noviembre de 2026  
-**Referencia:** Documento Maestro del Proyecto senda-mtb  
+**Versión:** 1.0 · **Fecha:** 24 de noviembre de 2026 · **Referencia:** Documento Maestro del Proyecto senda-mtb
 
 ---
 
@@ -19,7 +17,7 @@ Para asegurar la máxima robustez en una aplicación orientada a actividades al 
 
 ## 2. Cobertura de Pruebas Unitarias (`npm test`)
 
-Actualmente el proyecto cuenta con **50 pruebas unitarias automatizadas** que deben pasar limpiamente antes de cada commit o versión:
+Las pruebas se descubren automáticamente desde `tests/` mediante `node --test`. La suite debe completarse con éxito (`npm test`) antes de cada commit o versión; el número de casos no es un criterio fijo.
 
 ### 2.1. Motor Estadístico y Telemetría (`tests/statistics-engine.test.js`)
 * Cálculo de distancia geodésica mediante la fórmula de Haversine.
@@ -86,16 +84,15 @@ Actualmente el proyecto cuenta con **50 pruebas unitarias automatizadas** que de
 | **7** | **Guardian Mode** | Disparo de botón SOS con generación de enlace universal de coordenadas; aviso por superación de tiempo previsto de salida. | Validación funcional con contactos de prueba. |
 | **8** | **Garaje** | Imputación automática de km de salida a bicicleta seleccionada; salto de notificación al alcanzar el límite de uso de cadena (ej. 2000 km). | Pruebas de integración de datos. |
 | **9** | **Comunidad & Eventos**| Creación de evento de salida; inscripción de participantes; visualización de punto de encuentro en el mapa con navegación. | Interfaz web y Android. |
-| **10** | **SENDA AI** | Solicitud de análisis de última actividad: respuesta fundamentada estrictamente en los datos de la salida, sin alucinación de métricas. | Casos de prueba de prompts contextuales. |
-| **11** | **QA & Publicación** | Generación de APK Release firmado, análisis de seguridad estático, consumo de batería en grabación continua <8% por hora. | Profiler Android Studio. |
-| **12** | **Adaptación iOS** | Compilación y arranque en simulador y dispositivo iPhone con permisos de ubicación en uso / background y Bluetooth validados. | Xcode en macOS. |
+| **10** | **QA & Publicación** | Generación de APK Release firmado, análisis de seguridad estático, consumo de batería en grabación continua <8% por hora. | Profiler Android Studio. |
+| **11** | **Adaptación iOS** | Compilación y arranque en simulador y dispositivo iPhone con permisos de ubicación en uso / background y Bluetooth validados. | Xcode en macOS. |
 
 ---
 
 ## 4. Criterio de Salida de Fase
 
 Ninguna fase del desarrollo se considerará completada si:
-1. Alguno de los 29 tests unitarios falla o se desactiva.
+1. `npm test` falla o se desactivan pruebas sin justificación.
 2. Existen llamadas directas no autorizadas entre la capa de presentación y el almacenamiento o backend.
 3. Se detecta cualquier fuga de datos, clave o reutilización de caché respecto a la aplicación original.
 

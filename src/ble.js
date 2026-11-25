@@ -44,15 +44,18 @@ function parseHr(value) {
 }
 
 function parseCsc(value) {
+  if (!value || value.byteLength < 1) return {};
   const flags = value.getUint8(0);
   let offset = 1;
   const reading = {};
   if (flags & 0x01) {
+    if (value.byteLength < offset + 6) return reading;
     reading.wheelRevolutions = value.getUint32(offset, true);
     reading.wheelEventTime = value.getUint16(offset + 4, true);
     offset += 6;
   }
   if (flags & 0x02) {
+    if (value.byteLength < offset + 4) return reading;
     reading.crankRevolutions = value.getUint16(offset, true);
     reading.crankEventTime = value.getUint16(offset + 2, true);
   }
@@ -60,6 +63,7 @@ function parseCsc(value) {
 }
 
 function parsePower(value) {
+  if (!value || value.byteLength < 4) return null;
   return value.getInt16(2, true);
 }
 

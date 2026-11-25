@@ -26,6 +26,72 @@ function storageContext() {
     return { context, state };
 }
 
+function memoryDatabase(seed = {}) {
+    const stores = new Map(Object.entries(seed).map(([name, records]) => [
+        name,
+        new Map(records.map(record => [record.routeId ?? record.id, record]))
+    ]));
+    const finishTransaction = tx => {
+        if (tx.pending !== 0 || tx.completed) return;
+        queueMicrotask(() => {
+            if (tx.pending !== 0 || tx.completed) return;
+            tx.completed = true;
+            if (tx.oncomplete) tx.oncomplete();
+        });
+    };
+    return {
+        transaction() {
+            const tx = { pending: 0, completed: false };
+            const schedule = (request, operation) => {
+                tx.pending++;
+                queueMicrotask(() => {
+                    request.result = operation();
+                    if (request.onsuccess) request.onsuccess({ target: request });
+                    tx.pending--;
+                    finishTransaction(tx);
+                });
+                return request;
+            };
+            tx.objectStore = name => {
+                if (!stores.has(name)) stores.set(name, new Map());
+                const records = stores.get(name);
+                return {
+                    get(key) { return schedule({}, () => records.get(key)); },
+                    getAll() { return schedule({}, () => Array.from(records.values())); },
+                    put(value) {
+                        records.set(value.routeId ?? value.id, value);
+                        return {};
+                    },
+                    delete(key) {
+                        records.delete(key);
+                        return {};
+                    },
+                    openCursor() {
+                        const request = {};
+                        const entries = Array.from(records.entries());
+                        let index = 0;
+                        const dispatch = () => schedule(request, () => {
+                            if (index >= entries.length) return null;
+                            const [key, value] = entries[index];
+                            return {
+                                value,
+                                delete() { records.delete(key); },
+                                continue() {
+                                    index++;
+                                    dispatch();
+                                }
+                            };
+                        });
+                        return dispatch();
+                    }
+                };
+            };
+            return tx;
+        },
+        records: stores
+    };
+}
+
 test('IndexedDB closes its connection when another tab requests a version upgrade', async () => {
     const { context, state } = storageContext();
     let closed = false;
@@ -76,4 +142,50 @@ test('route photo replacements clear stale blobs without affecting legacy writes
         ['delete', 'routePhotos', 41],
         ['put', 'routes', 42]
     ]);
+});
+
+test('remote-deleted routes remain recoverable with photos until restored or retention expires', async () => {
+    const { context } = storageContext();
+    const db = memoryDatabase({
+        routes: [{ id: 51, name: 'Ridge', remoteId: 'remote-51', remoteServer: 'https://server.example', points: [] }],
+        routePhotos: [{ routeId: 51, photos: [{ index: 0, photo: 'photo-data' }] }]
+    });
+    context.testDB.db = db;
+
+    assert.equal(await context.testDB.moveRouteToTrash(51, {
+        remoteId: 'remote-51',
+        server: 'https://server.example'
+    }), true);
+    assert.deepEqual(await context.testDB.all(), []);
+    assert.equal((await context.testDB.allTrashedRoutes())[0].name, 'Ridge');
+    assert.ok(db.records.get('routePhotos').has(51));
+
+    const restored = await context.testDB.restoreTrashedRoute(51);
+    assert.equal(restored.name, 'Ridge');
+    assert.equal(restored.remoteId, null);
+    assert.deepEqual(await context.testDB.all(), [restored]);
+    assert.ok(db.records.get('routePhotos').has(51));
+});
+
+test('expired trash purging removes route photos but preserves newer and active routes', async () => {
+    const { context } = storageContext();
+    const now = Date.now();
+    const db = memoryDatabase({
+        routes: [
+            { id: 61, name: 'Expired', trashedAt: now - 30 * 24 * 60 * 60 * 1000 - 1 },
+            { id: 62, name: 'Recent', trashedAt: now - 1000 },
+            { id: 63, name: 'Active' }
+        ],
+        routePhotos: [
+            { routeId: 61, photos: ['expired-photo'] },
+            { routeId: 62, photos: ['recent-photo'] }
+        ]
+    });
+    context.testDB.db = db;
+
+    assert.equal(await context.testDB.purgeExpiredTrashedRoutes(now), 1);
+    assert.equal(db.records.get('routes').has(61), false);
+    assert.equal(db.records.get('routePhotos').has(61), false);
+    assert.equal(db.records.get('routes').has(62), true);
+    assert.equal(db.records.get('routes').has(63), true);
 });

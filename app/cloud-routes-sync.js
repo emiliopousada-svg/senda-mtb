@@ -138,14 +138,6 @@ function routeDataFromSync(trackData) {
 }
 async function putLocal(r, options) { await DB.put(r, options); }
 
-async function queueRemoteDelete(remoteId) {
-    try {
-        const p = (await DB.kvGet('pendingDeletes')) || [];
-        p.push(remoteId);
-        await DB.kvSet('pendingDeletes', p);
-    } catch (e) {}
-}
-
 async function routeForm(r) {
     const route = r && typeof r === 'object' ? r : {};
     if (typeof DB !== 'undefined' && typeof DB.loadRoutePhotos === 'function') {
@@ -300,7 +292,7 @@ async function syncRoutes(manual = false) {
         route.groupRankingPending
         || (route.groupRankingOwnerId === retryUid
             && route.groupRankingServer === retryServer
-            && !route.groupRankingGroupId)
+            && (!route.groupRankingGroupId || route.groupRankingVerified !== true))
     );
     const cursorKey = cloudSyncStorageKey('routes_sync_cursor', retryServer, retryUid);
     const auditKey = cloudSyncStorageKey('routes_full_audit_at', retryServer, retryUid);
@@ -380,6 +372,14 @@ async function syncRoutes(manual = false) {
         const byClient = new Map(remote.map(x => [Number(x.clientId), x]));
         const byRemoteId = new Map(remote.map(x => [x.id, x]));
         const blockedIds = new Set();
+        const rankingDeletionFor = route => {
+            const ownerId = route.kind === 'recorded' ? (route.groupRankingOwnerId || retryUid) : '';
+            const rankingServer = route.groupRankingServer || retryServer;
+            const clientId = Number(route.id);
+            return ownerId && rankingServer && Number.isSafeInteger(clientId) && clientId > 0
+                ? { ownerId, server: rankingServer, clientId }
+                : null;
+        };
         const FILE_TOKEN_REFRESH_INTERVAL_MS = 60_000;
         let fileToken = '';
         let fileTokenIssuedAt = 0;
@@ -439,10 +439,112 @@ async function syncRoutes(manual = false) {
             }
             return routeData;
         };
+
+        const remoteDeletionCandidates = savedRoutes.filter(route => {
+            if (!route.remoteId || skip.has(route.remoteId)) return false;
+            const remoteRecord = (!route.remoteServer || route.remoteServer === retryServer)
+                ? byRemoteId.get(route.remoteId)
+                : null;
+            const found = byClient.get(Number(route.id));
+            const matched = remoteRecord || (found && !skip.has(found.id) ? found : null)
+                || (!fullAudit ? pendingRemoteByClient.get(Number(route.id)) : null);
+            const belongsToCurrentServer = route.remoteServer === retryServer
+                || (!route.remoteServer && remoteRecord);
+            const pending = route.remoteDeletionPending;
+            const pendingForCurrentRemote = pending
+                && pending.server === retryServer
+                && pending.remoteId === route.remoteId;
+            return Boolean(belongsToCurrentServer && !matched && (fullAudit || pendingForCurrentRemote));
+        });
+        if (remoteDeletionCandidates.length) {
+            const names = remoteDeletionCandidates.slice(0, 3)
+                .map(route => `«${route.name || 'ruta'}»`).join(', ');
+            const more = remoteDeletionCandidates.length > 3
+                ? ` y ${remoteDeletionCandidates.length - 3} más`
+                : '';
+            const shouldPrompt = typeof document === 'undefined' || document.visibilityState !== 'hidden';
+            const confirmed = shouldPrompt && typeof modal === 'function'
+                ? await modal({
+                    title: 'Rutas ausentes del servidor',
+                    message: `${names}${more} ya no aparecen en este servidor. ¿Exportarlas juntas en un GPX y moverlas a la papelera local durante 30 días? Si lo pospones, se conservarán en este móvil y no se volverán a subir automáticamente.`,
+                    ok: 'Exportar y mover a papelera',
+                    cancel: 'Conservar por ahora'
+                })
+                : false;
+            if (!isCurrentSync()) return;
+            let canMoveToTrash = Boolean(confirmed);
+            if (canMoveToTrash) {
+                try {
+                    if (typeof routesToGpx !== 'function' || typeof download !== 'function') {
+                        throw new Error('No está disponible la exportación GPX.');
+                    }
+                    const date = new Date().toISOString().slice(0, 10);
+                    await download(`rutas-papelera-${date}.gpx`, routesToGpx(remoteDeletionCandidates), 'application/gpx+xml');
+                } catch (error) {
+                    canMoveToTrash = false;
+                    noteSyncFailure(`No se pudieron exportar las rutas ausentes; se conservarán en este móvil: ${error.message}`, error);
+                    console.warn('No se pudieron exportar las rutas remotas ausentes:', error);
+                }
+            }
+            let movedToTrash = 0;
+            for (const route of remoteDeletionCandidates) {
+                if (!isCurrentSync()) return;
+                blockedIds.add(route.id);
+                if (!canMoveToTrash) {
+                    route.remoteDeletionPending = {
+                        server: retryServer,
+                        remoteId: route.remoteId,
+                        detectedAt: Date.now()
+                    };
+                    try { await putLocal(route); }
+                    catch (error) {
+                        noteSyncFailure(`No se pudo guardar la revisión pendiente de «${route.name || 'ruta'}»: ${error.message}`, error);
+                        console.warn(`No se pudo proteger localmente la ruta ${route.id}:`, error);
+                    }
+                    continue;
+                }
+                try {
+                    const rankingDelete = rankingDeletionFor(route);
+                    const moved = await DB.moveRouteToTrash(route.id, {
+                        remoteId: route.remoteId,
+                        server: retryServer
+                    }, rankingDelete);
+                    if (moved === false) throw new Error('La ruta ya no está disponible en el almacenamiento local.');
+                    savedRoutes = savedRoutes.filter(item => item.id !== route.id);
+                    garageUsageChanged = true;
+                    movedToTrash++;
+                    if (rankingDelete) {
+                        await syncPendingGroupRankingDeletes({
+                            server: retryServer,
+                            uid: retryUid,
+                            api: syncCloudApi,
+                            isCurrent: isCurrentSync
+                        });
+                        if (!isCurrentSync()) return;
+                    }
+                } catch (error) {
+                    noteSyncFailure(`No se pudo mover «${route.name || 'ruta'}» a la papelera: ${error.message}`, error);
+                    console.warn(`No se pudo archivar la ruta ${route.id}:`, error);
+                }
+            }
+            if (movedToTrash && typeof refreshRouteTrash === 'function') {
+                try { await refreshRouteTrash(); }
+                catch (error) {
+                    noteSyncFailure(`Las rutas se movieron a la papelera, pero no se pudo actualizar su lista: ${error.message}`, error);
+                    console.warn('No se pudo actualizar la lista de rutas en papelera:', error);
+                }
+            }
+            if (remoteDeletionCandidates.length && !canMoveToTrash && manual) {
+                toast('Las rutas ausentes se conservaron en este móvil. Puedes revisarlo en la próxima sincronización.');
+            }
+        }
+
         for (const r of [...savedRoutes]) {
             if (!isCurrentSync()) return;
+            if (blockedIds.has(r.id)) continue;
             const previousCreator = r.createdBy || '';
             const previousRemoteServer = r.remoteServer || '';
+            let pendingDeletionCleared = false;
             r.createdBy = nickname;
             const found = byClient.get(r.id);
             const remoteRecord = r.remoteId && (!r.remoteServer || r.remoteServer === retryServer)
@@ -460,15 +562,14 @@ async function syncRoutes(manual = false) {
                 blockedIds.add(r.id);
                 continue;
             }
-            if (remoteIdOnCurrentServer
-                && (skip.has(r.remoteId) || (fullAudit && !matched))) {
+            if (r.remoteDeletionPending
+                && (r.remoteDeletionPending.server !== retryServer || matched)) {
+                delete r.remoteDeletionPending;
+                pendingDeletionCleared = true;
+            }
+            if (remoteIdOnCurrentServer && skip.has(r.remoteId)) {
                 try {
-                    const ownerId = r.kind === 'recorded' ? (r.groupRankingOwnerId || Cloud.uid) : '';
-                    const rankingServer = r.groupRankingServer || retryServer;
-                    const clientId = Number(r.id);
-                    const rankingDelete = ownerId && rankingServer && Number.isSafeInteger(clientId) && clientId > 0
-                        ? { ownerId, server: rankingServer, clientId }
-                        : null;
+                    const rankingDelete = rankingDeletionFor(r);
                     if (!isCurrentSync()) return;
                     await DB.deleteRoute(r.id, null, rankingDelete);
                     savedRoutes = savedRoutes.filter(x => x.id !== r.id);
@@ -547,7 +648,7 @@ async function syncRoutes(manual = false) {
                 }
                 const changed = remoteIdChanged || previousRemoteServer !== retryServer
                     || r.name !== remoteName || r.activityType !== remoteActivity
-                    || previousCreator !== remoteCreator || remoteTrackChanged;
+                    || previousCreator !== remoteCreator || remoteTrackChanged || pendingDeletionCleared;
                 r.name = remoteName;
                 r.activityType = remoteActivity;
                 if (remoteCreator) r.createdBy = remoteCreator;
@@ -576,6 +677,15 @@ async function syncRoutes(manual = false) {
                 remoteIdOnCurrentServer = true;
             }
             if (remoteIdOnCurrentServer && !r.dirty) {
+                if (pendingDeletionCleared) {
+                    try { await putLocal(r); }
+                    catch (error) {
+                        noteSyncFailure(`No se pudo actualizar «${r.name || 'ruta'}» en este móvil: ${error.message}`, error);
+                        console.warn(`No se pudo actualizar la ruta local ${r.id}:`, error);
+                        blockedIds.add(r.id);
+                        continue;
+                    }
+                }
                 if (Cloud.groupCode && hasPendingGroupRanking(r)) {
                     await syncRouteRanking(r);
                     if (!isCurrentSync()) return;
@@ -605,8 +715,11 @@ async function syncRoutes(manual = false) {
                 noteSyncFailure(`No se pudo sincronizar «${r.name || 'ruta'}»: ${e.message}`, e);
                 console.warn(`No se pudo sincronizar la ruta ${r.id}:`, e);
                 if (e.status === 404 && remoteIdOnCurrentServer) {
-                    r.remoteId = null;
-                    delete r.remoteServer;
+                    r.remoteDeletionPending = {
+                        server: retryServer,
+                        remoteId: r.remoteId,
+                        detectedAt: Date.now()
+                    };
                     try {
                         if (!isCurrentSync()) return;
                         await putLocal(r);
