@@ -767,6 +767,21 @@
                                                         <button class="btn secondary" id="acc-logout" type="button">Cerrar sesión</button>
                                                     </div>
                                                 </div>
+                                                <section class="account-delete-section" aria-labelledby="acc-delete-title">
+                                                    <button class="btn danger" id="acc-delete-toggle" type="button" aria-expanded="false" aria-controls="acc-delete-form">Eliminar cuenta</button>
+                                                    <form id="acc-delete-form" class="account-delete-form" hidden>
+                                                        <h3 id="acc-delete-title">Borrar cuenta permanentemente</h3>
+                                                        <p class="hint">Se eliminarán la cuenta y los datos sincronizados asociados, incluidas las rutas publicadas y la actividad comunitaria. Si administras un grupo, transfiere la administración o elimínalo antes.</p>
+                                                        <p class="hint">Los datos guardados solo en este dispositivo —como rutas, estadísticas y preferencias— se conservarán para que puedas seguir usando la app de forma privada.</p>
+                                                        <label for="acc-delete-password">Contraseña actual</label>
+                                                        <input id="acc-delete-password" type="password" autocomplete="current-password" required>
+                                                        <p class="hint" id="acc-delete-status" role="status" aria-live="polite"></p>
+                                                        <div class="account-delete-actions">
+                                                            <button class="btn danger" id="acc-delete-submit" type="submit">Eliminar permanentemente</button>
+                                                            <button class="btn secondary" id="acc-delete-cancel" type="button">Cancelar</button>
+                                                        </div>
+                                                    </form>
+                                                </section>
                                             </div>
                                             <form class="profile-editor" id="profile-editor" hidden>
                                                 <input type="text" id="profile-location-input" aria-label="Localidad habitual" maxlength="80" autocomplete="address-level2" placeholder="Ej. Ponte Caldelas, Galicia">

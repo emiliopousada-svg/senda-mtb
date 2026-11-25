@@ -29,6 +29,7 @@ function runMigration(existingNames = []) {
         constructor(definition) {
             Object.assign(this, definition);
             const fields = definition.fields || [];
+            this.fieldList = fields;
             this.fields = {
                 getByName(name) { return fields.find(field => field.name === name) || null; },
                 add(field) { fields.push(field); }
@@ -79,6 +80,13 @@ test('PocketBase setup migration creates the active app collections and keeps ro
     const byName = new Map(collections.map(collection => [collection.name, collection]));
 
     COLLECTION_NAMES.forEach(name => assert.ok(byName.has(name), `missing ${name}`));
+    byName.forEach(collection => {
+        (collection.fieldList || []).forEach(field => {
+            if (field.type === 'relation' && field.collectionId === users.id) {
+                assert.equal(field.cascadeDelete, true, `${collection.name}.${field.name} must cascade on account deletion`);
+            }
+        });
+    });
     const routes = byName.get('routes');
     assert.equal(routes.listRule, '@request.auth.id != "" && owner = @request.auth.id');
     assert.equal(routes.viewRule, routes.listRule);

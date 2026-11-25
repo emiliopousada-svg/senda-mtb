@@ -128,6 +128,15 @@
 .profile-account-summary-copy small { overflow:hidden; color:#91a2b5; font-size:.58rem; text-overflow:ellipsis; white-space:nowrap; }
 .profile-account-button-chevron { color:#83a5c2; font-size:1rem; transition:transform .18s ease; }
 .profile-account-details[open] .profile-account-button-chevron { transform:rotate(90deg); }
+.account-delete-section { margin-top:12px; }
+.account-delete-section > .btn { min-height:40px; }
+.account-delete-form { display:grid; gap:8px; margin-top:10px; padding:12px; border:1px solid rgba(240,108,120,.2); border-radius:12px; background:rgba(72,39,52,.16); }
+.account-delete-form[hidden] { display:none !important; }
+.account-delete-form h3 { color:#ffdce0; font-size:.82rem; }
+.account-delete-form label { color:#d3dce7; font-size:.75rem; font-weight:700; }
+.account-delete-form .hint { margin:0; line-height:1.45; }
+.account-delete-actions { display:grid; gap:8px; }
+.account-delete-actions .btn { min-height:40px; margin:0; }
 .profile-account-details > summary:focus-visible { outline:2px solid #42aaff; outline-offset:2px; }
 .profile-account-details > .card { width:100%; margin:0 0 4px; padding:13px; border:1px solid rgba(255,255,255,.07); border-radius:13px; background:rgba(9,13,19,.38); box-shadow:none; }
 .profile-account-details > .card h2 { display:none; }

@@ -17,6 +17,20 @@ function accountAvatarPendingKey(uid) { return `${ACCOUNT_AVATAR_PENDING_PREFIX}
 function accountAvatarDefaultUrl() { return ACCOUNT_AVATAR_DEFAULT_URL; }
 function resetAccountProfileCache() { accountProfileSnapshot = { uid: '', weightKg: undefined, heightCm: undefined, age: undefined }; }
 
+function clearDeletedAccountAvatar(uid) {
+    if (!uid) return;
+    [
+        accountAvatarKey(uid),
+        accountAvatarPendingKey(uid),
+        `${ACCOUNT_AVATAR_REMOTE_PREFIX}${uid}`
+    ].forEach(key => localStorage.removeItem(key));
+    if (localStorage.getItem('mtb_pro_avatar_last_uid') === uid) {
+        localStorage.removeItem('mtb_pro_avatar_last_uid');
+    }
+    resetAccountProfileCache();
+    renderAccountAvatar();
+}
+
 function hasPendingLocalAccountAvatar(uid) {
     const pendingValue = localStorage.getItem(accountAvatarPendingKey(uid));
     if (!pendingValue) return false;

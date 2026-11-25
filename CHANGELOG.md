@@ -7,6 +7,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### Documentación
+* **Seguridad de sesiones web:** se documentan el almacenamiento del token en `localStorage`, los límites de las mitigaciones cliente y los requisitos de backend para cookies HttpOnly o revocación global.
+
+### Seguridad
+* **Cuenta:** se añade el borrado autenticado con contraseña de la cuenta y los datos sincronizados asociados. Las rutas y estadísticas locales se conservan; las cuentas que administran grupos deben transferir o eliminar esos grupos primero.
+
 ### Corregido
 * **Sincronización de rutas:** una ruta que falta en una auditoría remota ya no se borra sin confirmación. Se puede exportar el lote a GPX y conservarlo 30 días en una papelera local, con opción de restaurar o eliminar definitivamente.
 

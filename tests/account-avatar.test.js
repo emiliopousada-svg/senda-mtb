@@ -92,6 +92,41 @@ test('account avatar uses the app icon when no uploaded avatar exists', () => {
     assert.equal(context.getAccountAvatarUrl(), 'icon-512.png');
 });
 
+test('deleting an account clears its local avatar cache without touching other accounts', () => {
+    const storage = new Map([
+        ['mtb_pro_avatar_last_uid', 'user-1'],
+        ['mtb_pro_avatar_user-1', 'data:image/jpeg;base64,deleted'],
+        ['mtb_pro_avatar_remote_user-1', 'avatar.jpg'],
+        ['mtb_pro_avatar_pending_user-1', '{"avatar":"pending"}'],
+        ['mtb_pro_avatar_user-2', 'data:image/jpeg;base64,other']
+    ]);
+    const image = { src: '', hidden: false };
+    const placeholder = { hidden: true };
+    const context = vm.createContext({
+        Cloud: { uid: 'user-1' },
+        document: { activeElement: null },
+        $: id => id === 'acc-avatar-image' ? image : id === 'acc-avatar-placeholder' ? placeholder : null,
+        localStorage: {
+            getItem(key) { return storage.get(key) || null; },
+            setItem(key, value) { storage.set(key, String(value)); },
+            removeItem(key) { storage.delete(key); }
+        }
+    });
+    vm.runInContext(
+        fs.readFileSync(path.join(__dirname, '..', 'app', 'account-avatar.js'), 'utf8'),
+        context
+    );
+
+    context.clearDeletedAccountAvatar('user-1');
+
+    assert.equal(storage.has('mtb_pro_avatar_last_uid'), false);
+    assert.equal(storage.has('mtb_pro_avatar_user-1'), false);
+    assert.equal(storage.has('mtb_pro_avatar_remote_user-1'), false);
+    assert.equal(storage.has('mtb_pro_avatar_pending_user-1'), false);
+    assert.equal(storage.has('mtb_pro_avatar_user-2'), true);
+    assert.equal(context.getAccountAvatarUrl(), 'icon-512.png');
+});
+
 test('physical profile can still be saved when the avatar editor is absent', async () => {
     const storage = new Map();
     const save = {
