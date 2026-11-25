@@ -23,17 +23,22 @@ if (appVersionCodeLong < 1 || appVersionCodeLong > 2100000000L) {
 }
 def appVersionCode = appVersionCodeLong.intValue()
 
+def signingValue = { name ->
+    providers.gradleProperty(name).orNull ?: System.getenv(name)
+}
 def signingEnv = [
-    storeFile: System.getenv('MTB_SIGNING_STORE_FILE'),
-    storePassword: System.getenv('MTB_SIGNING_STORE_PASSWORD'),
-    keyAlias: System.getenv('MTB_SIGNING_KEY_ALIAS'),
-    keyPassword: System.getenv('MTB_SIGNING_KEY_PASSWORD')
+    storeFile: signingValue('MTB_SIGNING_STORE_FILE'),
+    storePassword: signingValue('MTB_SIGNING_STORE_PASSWORD'),
+    keyAlias: signingValue('MTB_SIGNING_KEY_ALIAS'),
+    keyPassword: signingValue('MTB_SIGNING_KEY_PASSWORD')
 ]
+
 def configuredSigningValues = signingEnv.values().count { it }
 if (configuredSigningValues != 0 && configuredSigningValues != signingEnv.size()) {
-    throw new GradleException("Incomplete MTB signing configuration; provide all MTB_SIGNING_* environment variables")
+    throw new GradleException("Incomplete MTB signing configuration")
 }
-def useCiSigning = configuredSigningValues == signingEnv.size()
+
+def useReleaseSigning = configuredSigningValues == signingEnv.size()
 
 android {
     namespace = "com.emiliopousada.sendamtb"
@@ -51,9 +56,9 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    if (useCiSigning) {
+    if (useReleaseSigning) {
         signingConfigs {
-            ci {
+            release {
                 storeFile file(signingEnv.storeFile)
                 storePassword signingEnv.storePassword
                 keyAlias signingEnv.keyAlias
@@ -63,14 +68,13 @@ android {
     }
     buildTypes {
         debug {
-            if (useCiSigning) {
-                signingConfig signingConfigs.ci
-            }
+            // Firma automática de desarrollo Android.
         }
+
         release {
             minifyEnabled false
-            if (useCiSigning) {
-                signingConfig signingConfigs.ci
+            if (useReleaseSigning) {
+                signingConfig signingConfigs.release
             }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

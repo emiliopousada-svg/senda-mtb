@@ -3,7 +3,7 @@
 // ============================================================
 //  CONFIGURACIÓN
 // ============================================================
-const APP_VERSION = '0.2.47'; // prepare-web.js la reemplaza por la versión de package.json en el bundle.
+const APP_VERSION = '0.2.48'; // prepare-web.js la reemplaza por la versión de package.json en el bundle.
 const APP_BUILD = 'local'; // prepare-web.js la reemplaza por el número de ejecución de GitHub Actions.
 
 // ------------------------------------------------------------
