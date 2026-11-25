@@ -2,15 +2,10 @@ package com.emiliopousada.sendamtb;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.Process;
 import android.view.Gravity;
 import android.view.ViewGroup;
-import android.webkit.CookieManager;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -19,7 +14,6 @@ import androidx.core.splashscreen.SplashScreen;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
-    private static final long SPLASH_DURATION_MS = 4000;
     private boolean backCheckPending = false;
 
     @Override
@@ -28,13 +22,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BatteryInfoPlugin.class);
         registerPlugin(ScreenControlPlugin.class);
         super.onCreate(savedInstanceState);
-        if (getBridge() != null && getBridge().getWebView() != null) {
-            // PocketBase is cross-site from the app's https://localhost WebView origin.
-            CookieManager.getInstance().setAcceptThirdPartyCookies(getBridge().getWebView(), true);
-        }
-        showFullScreenSplash();
     }
-
     @Override
     public void onBackPressed() {
         if (backCheckPending) return;
@@ -105,34 +93,4 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    private void showFullScreenSplash() {
-        ViewGroup content = findViewById(android.R.id.content);
-        FrameLayout splash = new FrameLayout(this);
-        splash.setBackgroundColor(0xFF000000);
-
-        ImageView artwork = new ImageView(this);
-        artwork.setImageResource(R.drawable.splash);
-        artwork.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        FrameLayout.LayoutParams artworkParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.CENTER);
-        int horizontalInset = (int) (24 * getResources().getDisplayMetrics().density);
-        int verticalInset = (int) (48 * getResources().getDisplayMetrics().density);
-        artworkParams.setMargins(horizontalInset, verticalInset, horizontalInset, verticalInset);
-        splash.addView(artwork, artworkParams);
-        content.addView(splash, new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (splash.getParent() == content) {
-                splash.animate()
-                        .alpha(0f)
-                        .setDuration(250)
-                        .withEndAction(() -> content.removeView(splash))
-                        .start();
-            }
-        }, SPLASH_DURATION_MS);
-    }
 }

@@ -1,7 +1,7 @@
 // Grupos globales para MTBPro. Los helpers viven en groups_utils.js (cada handler se ejecuta aislado).
 
 routerAdd("POST", "/api/mtb/groups/create", (e) => {
-    const { requireSafeValue, requireNickname } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, requireNickname, requireVerifiedCommunityUser } = require(`${__hooks}/groups_utils.js`);
     const { enforceCommunityWriteQuota } = require(`${__hooks}/community_quota_utils.js`);
     try {
         const body = new DynamicModel({ name: "" });
@@ -15,6 +15,7 @@ routerAdd("POST", "/api/mtb/groups/create", (e) => {
         let response;
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
+            requireVerifiedCommunityUser(user);
             const nickname = requireNickname(user.getString("nickname"));
             enforceCommunityWriteQuota(txApp, user.id, "group");
             const group = new Record(txApp.findCollectionByNameOrId("mtb_groups"));
@@ -44,12 +45,12 @@ routerAdd("POST", "/api/mtb/groups/create", (e) => {
 
         return e.json(200, response);
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo crear el grupo." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo crear el grupo." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/join", (e) => {
-    const { SAFE_INVITE_RE, requireSafeValue, requireNickname, safeMembership } = require(`${__hooks}/groups_utils.js`);
+    const { SAFE_INVITE_RE, requireSafeValue, requireNickname, requireVerifiedCommunityUser, safeMembership } = require(`${__hooks}/groups_utils.js`);
     try {
         const body = new DynamicModel({ code: "" });
         e.bindBody(body);
@@ -58,6 +59,7 @@ routerAdd("POST", "/api/mtb/groups/join", (e) => {
         let response;
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
+            requireVerifiedCommunityUser(user);
             const nickname = requireNickname(user.getString("nickname"));
             const group = txApp.findFirstRecordByFilter("mtb_groups", "inviteCode = {:code}", { code });
             const memberships = safeMembership(group.id, user.id, txApp);
@@ -74,12 +76,12 @@ routerAdd("POST", "/api/mtb/groups/join", (e) => {
         });
         return e.json(200, { group: response });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo encontrar el grupo." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo encontrar el grupo." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/select", (e) => {
-    const { SAFE_INVITE_RE, requireSafeValue, requireNickname, safeMembership } = require(`${__hooks}/groups_utils.js`);
+    const { SAFE_INVITE_RE, requireSafeValue, requireNickname, requireVerifiedCommunityUser, safeMembership } = require(`${__hooks}/groups_utils.js`);
     try {
         const body = new DynamicModel({ groupId: "" });
         e.bindBody(body);
@@ -87,6 +89,7 @@ routerAdd("POST", "/api/mtb/groups/select", (e) => {
         let result;
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
+            requireVerifiedCommunityUser(user);
             const nickname = requireNickname(user.getString("nickname"));
             const memberships = safeMembership(groupId, user.id, txApp);
             if (!memberships.length) {
@@ -105,7 +108,7 @@ routerAdd("POST", "/api/mtb/groups/select", (e) => {
         });
         return e.json(result.status, result.body);
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo activar el grupo." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo activar el grupo." });
     }
 }, $apis.requireAuth("users"));
 
@@ -114,7 +117,7 @@ routerAdd("GET", "/api/mtb/groups/my", (e) => {
     try {
         const user = $app.findRecordById("users", e.auth.id);
         const safeUserId = requireSafeValue(user.id, "userId");
-        const memberships = findAllRecordsByFilter("mtb_group_members", 'user = "' + safeUserId + '"', "");
+        const memberships = findAllRecordsByFilter("mtb_group_members", "user = {:user}", "", $app, { user: safeUserId });
         const groupById = new Map(findRecordsByIds($app, "mtb_groups", memberships.map(membership => membership.getString("group")))
             .map(group => [group.id, group]));
         const groups = [];
@@ -128,7 +131,7 @@ routerAdd("GET", "/api/mtb/groups/my", (e) => {
         }
         return e.json(200, { groups, activeGroupId: user.getString("groupCode") });
     } catch (err) {
-        return e.json(401, { message: err.message || "Inicia sesión." });
+        return e.json(401, { message: err.clientMessage || "Inicia sesión." });
     }
 }, $apis.requireAuth("users"));
 
@@ -141,7 +144,7 @@ routerAdd("GET", "/api/mtb/groups/members", (e) => {
         const safeGroupId = requireSafeValue(groupId, "groupId");
         const group = $app.findRecordById("mtb_groups", safeGroupId);
         if (group.getString("owner") !== user.id) return e.json(403, { message: "Solo el administrador puede ver y gestionar los miembros." });
-        const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "");
+        const memberships = findAllRecordsByFilter("mtb_group_members", "group = {:group}", "", $app, { group: safeGroupId });
         const memberById = new Map(findRecordsByIds($app, "users", memberships.map(membership => membership.getString("user")))
             .map(member => [member.id, member]));
         const members = memberships.map((membership) => {
@@ -155,16 +158,17 @@ routerAdd("GET", "/api/mtb/groups/members", (e) => {
         });
         return e.json(200, { members });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudieron cargar los miembros." });
+        return e.json(400, { message: err.clientMessage || "No se pudieron cargar los miembros." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/transfer", (e) => {
-    const { requireSafeValue } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, requireVerifiedCommunityUser, clientError } = require(`${__hooks}/groups_utils.js`);
     try {
         const body = new DynamicModel({ userId: "" });
         e.bindBody(body);
         const user = $app.findRecordById("users", e.auth.id);
+        requireVerifiedCommunityUser(user);
         const groupId = user.getString("groupCode");
         if (!groupId) return e.json(404, { message: "No hay un grupo activo." });
         const safeGroupId = requireSafeValue(groupId, "groupId");
@@ -178,7 +182,7 @@ routerAdd("POST", "/api/mtb/groups/transfer", (e) => {
         $app.runInTransaction((txApp) => {
             const group = txApp.findRecordById("mtb_groups", safeGroupId);
             if (group.getString("owner") !== user.id) {
-                throw new Error("Solo el administrador actual puede transferir la administración.");
+                throw clientError("Solo el administrador actual puede transferir la administración.");
             }
             try {
                 txApp.findFirstRecordByFilter(
@@ -187,7 +191,7 @@ routerAdd("POST", "/api/mtb/groups/transfer", (e) => {
                     { group: safeGroupId, user: targetId }
                 );
             } catch (error) {
-                throw new Error("La nueva persona administradora debe pertenecer al grupo.");
+                throw clientError("La nueva persona administradora debe pertenecer al grupo.");
             }
             const target = txApp.findRecordById("users", targetId);
             group.set("owner", target.id);
@@ -198,7 +202,7 @@ routerAdd("POST", "/api/mtb/groups/transfer", (e) => {
 
         return e.json(200, { ok: true, groupId: safeGroupId, ownerId: targetId });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo transferir la administración." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo transferir la administración." });
     }
 }, $apis.requireAuth("users"));
 
@@ -212,7 +216,7 @@ routerAdd("GET", "/api/mtb/groups/live", (e) => {
         if (!safeMembership(safeGroupId, user.id).length) {
             return e.json(403, { message: "Ya no tienes autorización para consultar este grupo." });
         }
-        const locations = findAllRecordsByFilter("live_locations", 'groupCode = "' + safeGroupId + '"', "-updated");
+        const locations = findAllRecordsByFilter("live_locations", "groupCode = {:group}", "-updated", $app, { group: safeGroupId });
         const profileById = new Map(findRecordsByIds($app, "users", locations.map(location => location.getString("owner")))
             .map(profile => [profile.id, profile]));
         const items = locations.map((location) => {
@@ -238,7 +242,7 @@ routerAdd("GET", "/api/mtb/groups/live", (e) => {
         });
         return e.json(200, { items });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudieron cargar las posiciones del grupo." });
+        return e.json(400, { message: err.clientMessage || "No se pudieron cargar las posiciones del grupo." });
     }
 }, $apis.requireAuth("users"));
 
@@ -254,15 +258,20 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
         }
 
         const season = getSeasonInfo(Date.now());
-        const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "");
-        const entries = findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + safeGroupId + '"', "");
+        const memberships = findAllRecordsByFilter("mtb_group_members", "group = {:group}", "", $app, { group: safeGroupId });
+        const entries = findAllRecordsByFilter("mtb_group_ranking_entries", "group = {:group}", "", $app, { group: safeGroupId });
         const rankingsByUser = groupRankingSummaryFromEntries(entries, { season });
         // Lideratos de segmentos: mejor tiempo del grupo en cada segmento comunitario.
         const memberIds = memberships.map(membership => requireSafeValue(membership.getString("user"), "userId"));
         const segmentEfforts = [];
         for (let index = 0; index < memberIds.length; index += 25) {
-            const ownerFilter = memberIds.slice(index, index + 25).map(id => 'owner = "' + id + '"').join(" || ");
-            if (ownerFilter) segmentEfforts.push(...findAllRecordsByFilter("community_segment_efforts", ownerFilter, ""));
+            const ownerParams = {};
+            const ownerFilter = memberIds.slice(index, index + 25).map((id, offset) => {
+                const key = `owner${offset}`;
+                ownerParams[key] = id;
+                return `owner = {:${key}}`;
+            }).join(" || ");
+            if (ownerFilter) segmentEfforts.push(...findAllRecordsByFilter("community_segment_efforts", ownerFilter, "", $app, ownerParams));
         }
         const segmentLeads = segmentLeadsByUser(segmentEfforts);
         const memberById = new Map(findRecordsByIds($app, "users", memberIds).map(member => [member.id, member]));
@@ -290,19 +299,19 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
             members
         });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo cargar el ranking del grupo." });
+        return e.json(400, { message: err.clientMessage || "No se pudo cargar el ranking del grupo." });
     }
 }, $apis.requireAuth("users"));
 
-function readSynchronizedRouteTrack(route) {
+function readSynchronizedRouteTrack(route, clientError) {
     const filename = route.getString("track");
-    if (!filename) throw new Error("La ruta sincronizada no tiene un trazado disponible.");
+    if (!filename) throw clientError("La ruta sincronizada no tiene un trazado disponible.");
 
     const filesystem = $app.newFilesystem();
     let reader = null;
     try {
         reader = filesystem.getReader($filepath.join(route.baseFilesPath(), filename));
-        if (reader.size() > 26214400) throw new Error("El trazado sincronizado supera el límite permitido.");
+        if (reader.size() > 26214400) throw clientError("El trazado sincronizado supera el límite permitido.");
 
         const parts = [];
         const buffer = Array(16384).fill(0);
@@ -327,7 +336,9 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         safeMembership,
         findAllRecordsByFilter,
         groupRankingSummaryFromEntries,
-        calculateGroupActivityMetrics
+        calculateGroupActivityMetrics,
+        requireVerifiedCommunityUser,
+        clientError
     } = require(`${__hooks}/groups_utils.js`);
     try {
         // Older app versions still send these fields; the server deliberately ignores their values.
@@ -346,6 +357,7 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         }
 
         const user = $app.findRecordById("users", e.auth.id);
+        requireVerifiedCommunityUser(user);
         const groupId = user.getString("groupCode");
         if (!groupId) return e.json(404, { message: "No hay un grupo activo." });
         const safeGroupId = requireSafeValue(groupId, "groupId");
@@ -371,11 +383,12 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         if (!Number.isFinite(Date.parse(String(routeSyncedAt).replace(" ", "T")))) {
             return e.json(400, { message: "No se pudo verificar la fecha de sincronización de la actividad." });
         }
-        const metrics = calculateGroupActivityMetrics(readSynchronizedRouteTrack(route));
+        const metrics = calculateGroupActivityMetrics(readSynchronizedRouteTrack(route, clientError));
         const { distanceKm, movingTimeSec, maxSpeedKmh, elevationGain } = metrics;
 
-        const filter = 'group = "' + safeGroupId + '" && owner = "' + user.id + '"';
-        const existingEntries = findAllRecordsByFilter("mtb_group_ranking_entries", filter, "");
+        const filter = "group = {:group} && owner = {:owner}";
+        const filterParams = { group: safeGroupId, owner: user.id };
+        const existingEntries = findAllRecordsByFilter("mtb_group_ranking_entries", filter, "", $app, filterParams);
         const previousRanking = groupRankingSummaryFromEntries(existingEntries)[user.id] || {
             maxDistanceKm: 0,
             maxElevationGainM: 0,
@@ -421,13 +434,15 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
             newSpeedRecord: maxSpeedKmh > previousRanking.maxSpeedKmh
         });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudieron compartir las marcas de la actividad." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudieron compartir las marcas de la actividad." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/rankings/delete", (e) => {
-    const { requireSafeValue, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, requireVerifiedCommunityUser, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
     try {
+        const user = $app.findRecordById("users", e.auth.id);
+        requireVerifiedCommunityUser(user);
         const body = new DynamicModel({ clientId: 0 });
         e.bindBody(body);
         const clientId = Number(body.clientId);
@@ -439,20 +454,22 @@ routerAdd("POST", "/api/mtb/groups/rankings/delete", (e) => {
         $app.runInTransaction((txApp) => {
             deleted = deleteAllRecordsByFilter(
                 "mtb_group_ranking_entries",
-                'owner = "' + userId + '" && clientId = ' + clientId,
-                txApp
+                "owner = {:owner} && clientId = {:clientId}",
+                txApp,
+                { owner: userId, clientId }
             );
         });
         return e.json(200, { deleted });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo retirar la marca de la actividad." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo retirar la marca de la actividad." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/rotate-invite", (e) => {
-    const { SAFE_INVITE_RE, requireSafeValue, requireNickname, safeMembership } = require(`${__hooks}/groups_utils.js`);
+    const { SAFE_INVITE_RE, requireSafeValue, requireNickname, requireVerifiedCommunityUser, safeMembership } = require(`${__hooks}/groups_utils.js`);
     try {
         const user = $app.findRecordById("users", e.auth.id);
+        requireVerifiedCommunityUser(user);
         const groupId = user.getString("groupCode");
         if (!groupId) return e.json(404, { message: "No hay un grupo activo." });
         const safeGroupId = requireSafeValue(groupId, "groupId");
@@ -462,14 +479,15 @@ routerAdd("POST", "/api/mtb/groups/rotate-invite", (e) => {
         $app.save(group);
         return e.json(200, { group: { id: group.id, name: group.getString("name"), icon: group.getString("icon"), isAdmin: true, inviteCode: group.getString("inviteCode") } });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo renovar la invitación." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo renovar la invitación." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/icon", (e) => {
-    const { requireSafeValue } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, requireVerifiedCommunityUser } = require(`${__hooks}/groups_utils.js`);
     try {
         const user = $app.findRecordById("users", e.auth.id);
+        requireVerifiedCommunityUser(user);
         const groupId = user.getString("groupCode");
         if (!groupId) return e.json(404, { message: "No hay un grupo activo." });
         const safeGroupId = requireSafeValue(groupId, "groupId");
@@ -484,12 +502,12 @@ routerAdd("POST", "/api/mtb/groups/icon", (e) => {
             group: { id: group.id, name: group.getString("name"), icon: group.getString("icon"), isAdmin: true }
         });
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo actualizar el logo del grupo." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo actualizar el logo del grupo." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/revoke", (e) => {
-    const { requireSafeValue, safeMembership, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, requireVerifiedCommunityUser, safeMembership, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
     try {
         const body = new DynamicModel({ userId: "" });
         e.bindBody(body);
@@ -497,6 +515,7 @@ routerAdd("POST", "/api/mtb/groups/revoke", (e) => {
         let result;
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
+            requireVerifiedCommunityUser(user);
             const groupId = user.getString("groupCode");
             if (!groupId) {
                 result = { status: 404, body: { message: "No hay un grupo activo." } };
@@ -522,7 +541,7 @@ routerAdd("POST", "/api/mtb/groups/revoke", (e) => {
                 target.set("groupCode", "");
                 txApp.save(target);
             }
-            deleteAllRecordsByFilter("live_locations", 'owner = "' + targetId + '" && groupCode = "' + safeGroupId + '"', txApp);
+            deleteAllRecordsByFilter("live_locations", "owner = {:owner} && groupCode = {:group}", txApp, { owner: targetId, group: safeGroupId });
             txApp.delete(memberships[0]);
             const newInviteCode = $security.randomString(12).toUpperCase();
             group.set("inviteCode", newInviteCode);
@@ -531,18 +550,19 @@ routerAdd("POST", "/api/mtb/groups/revoke", (e) => {
         });
         return e.json(result.status, result.body);
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo revocar el acceso." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo revocar el acceso." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/leave", (e) => {
-    const { requireSafeValue, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, requireVerifiedCommunityUser, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
     try {
         const body = new DynamicModel({ groupId: "" });
         e.bindBody(body);
         let result;
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
+            requireVerifiedCommunityUser(user);
             const groupId = user.getString("groupCode");
             if (!groupId) {
                 result = { status: 200, body: { ok: true } };
@@ -561,23 +581,24 @@ routerAdd("POST", "/api/mtb/groups/leave", (e) => {
                 result = { status: 400, body: { message: "Transfiere la administración o elimina el grupo antes de salir." } };
                 return;
             }
-            deleteAllRecordsByFilter("live_locations", 'owner = "' + user.id + '" && groupCode = "' + safeGroupId + '"', txApp);
+            deleteAllRecordsByFilter("live_locations", "owner = {:owner} && groupCode = {:group}", txApp, { owner: user.id, group: safeGroupId });
             user.set("groupCode", "");
             txApp.save(user);
             result = { status: 200, body: { ok: true, retained: true } };
         });
         return e.json(result.status, result.body);
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo salir del grupo." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo salir del grupo." });
     }
 }, $apis.requireAuth("users"));
 
 routerAdd("POST", "/api/mtb/groups/delete", (e) => {
-    const { requireSafeValue, findRecordsByIds, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
+    const { requireSafeValue, requireVerifiedCommunityUser, findRecordsByIds, deleteAllRecordsByFilter } = require(`${__hooks}/groups_utils.js`);
     try {
         let result;
         $app.runInTransaction((txApp) => {
             const user = txApp.findRecordById("users", e.auth.id);
+            requireVerifiedCommunityUser(user);
             const groupId = user.getString("groupCode");
             if (!groupId) {
                 result = { status: 404, body: { message: "No hay un grupo activo." } };
@@ -603,12 +624,12 @@ routerAdd("POST", "/api/mtb/groups/delete", (e) => {
                     txApp.delete(membership);
                 }
             }
-            deleteAllRecordsByFilter("live_locations", 'groupCode = "' + safeGroupId + '"', txApp);
+            deleteAllRecordsByFilter("live_locations", "groupCode = {:group}", txApp, { group: safeGroupId });
             txApp.delete(group);
             result = { status: 200, body: { ok: true } };
         });
         return e.json(result.status, result.body);
     } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo eliminar el grupo." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo eliminar el grupo." });
     }
 }, $apis.requireAuth("users"));

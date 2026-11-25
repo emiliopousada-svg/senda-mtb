@@ -4,4 +4,7 @@
     <string name="title_activity_main">senda-mtb</string>
     <string name="package_name">com.emiliopousada.sendamtb</string>
     <string name="custom_url_scheme">com.emiliopousada.sendamtb</string>
+    <string name="capacitor_background_geolocation_notification_channel_name">Grabación de ruta</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_tracking</string>
+    <string name="capacitor_background_geolocation_notification_color">#2e7d32</string>
 </resources>

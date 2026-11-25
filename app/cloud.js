@@ -40,6 +40,7 @@ const Cloud = {
     secureTokenQueue: Promise.resolve(),
     authGeneration: 0,
     profileGeneration: 0,
+    emailVerified: false,
     serverSwitchInFlight: false,
     logoutInProgress: false,
     usesSecureTokenStorage() {
@@ -151,8 +152,11 @@ const Cloud = {
     setSession(rec, token, expectedGeneration) {
         const applySession = () => {
             if (expectedGeneration !== undefined && expectedGeneration !== this.authGeneration) return false;
+            const isNewSession = !this.sessionActive || this.uid !== rec.id;
             if (!this.sessionActive || this.uid !== rec.id) this.authGeneration++;
             if (this.groupCode !== (rec.groupCode || '')) this.profileGeneration++;
+            if (typeof rec.verified === 'boolean') this.emailVerified = rec.verified;
+            else if (isNewSession) this.emailVerified = false;
             this.sessionActive = true;
             this.sessionState = 'active';
             localStorage.setItem('mtb_pro_uid', rec.id);
@@ -246,6 +250,7 @@ const Cloud = {
         this.authGeneration++;
         this.sessionActive = false;
         this.sessionState = 'none';
+        this.emailVerified = false;
         this.secureTokenCache = null;
         this.secureTokenLoaded = true;
         cancelCloudSyncRetry();
@@ -367,6 +372,8 @@ function renderAccount() {
     const hasNickname = Boolean(Cloud.nickname);
     $('acc-nickname-setup').hidden = !on || hasNickname;
     $('acc-ready').hidden = !on || !hasNickname;
+    const verificationStatus = $('acc-verification-status');
+    if (verificationStatus) verificationStatus.hidden = !on || Cloud.emailVerified;
     if (hasNickname) {
         $('acc-account-nickname').value = Cloud.nickname;
         $('acc-nickname-summary').textContent = `Apodo: ${Cloud.nickname}`;
@@ -445,6 +452,7 @@ async function accAuth(register) {
     if (heightCm && (!Number.isInteger(Number(heightCm)) || Number(heightCm) < 120 || Number(heightCm) > 230)) { toast('La altura debe estar entre 120 y 230 cm.'); return; }
     if (age && (!Number.isInteger(Number(age)) || Number(age) < 10 || Number(age) > 100)) { toast('La edad debe estar entre 10 y 100 años.'); return; }
     localStorage.setItem('mtb_pro_server', server);
+    let verificationRequestError = null;
     try {
         const clearing = Cloud.clearSession();
         if (clearing && typeof clearing.then === 'function') await clearing;
@@ -464,6 +472,13 @@ async function accAuth(register) {
                 await cloudApi('/api/collections/users/records', 'POST', form);
             } else {
                 await cloudApi('/api/collections/users/records', 'POST', profile);
+            }
+            try {
+                await cloudApi('/api/collections/users/request-verification', 'POST', { email }, { server });
+            } catch (error) {
+                ensureAuthServer(server, authGeneration);
+                verificationRequestError = error;
+                console.warn('No se pudo enviar el correo de verificación:', error);
             }
             ensureAuthServer(server, authGeneration);
         }
@@ -496,7 +511,15 @@ async function accAuth(register) {
         renderAccount();
         if (!Cloud.nickname && nickname) $('acc-account-nickname').value = nickname;
         await restoreGroup();
-        toast(register ? '✅ Cuenta creada' : '✅ Sesión iniciada');
+        toast(register
+            ? auth.record.verified
+                ? '✅ Cuenta creada'
+                : verificationRequestError
+                    ? 'Cuenta creada, pero no se pudo enviar el correo de verificación. Usa «Reenviar correo» o inténtalo más tarde.'
+                    : 'Cuenta creada. Confirma tu correo para escribir en la comunidad.'
+            : auth.record.verified
+                ? '✅ Sesión iniciada'
+                : 'Sesión iniciada. Verifica tu correo para participar en la comunidad.');
         if (Cloud.nickname) syncRoutes(true);
         const poisSynced = await syncSharedPois(true);
         if (!poisSynced && pendingSharedPoiCount()) {
@@ -509,6 +532,55 @@ async function accAuth(register) {
             : e.status === undefined
                 ? 'No se pudo conectar; comprueba tu conexión.'
                 : (register ? 'No se pudo crear la cuenta: ' : 'No se pudo entrar: ') + e.message, 6000);
+    }
+}
+
+async function resendAccountVerification() {
+    const button = $('acc-resend-verification');
+    const status = $('acc-verification-message');
+    if (!Cloud.loggedIn() || Cloud.emailVerified || !button || !status) return;
+    const server = Cloud.server;
+    const uid = Cloud.uid;
+    const generation = Cloud.authGeneration;
+    const isCurrent = () => Cloud.server === server && Cloud.uid === uid
+        && Cloud.authGeneration === generation && Cloud.loggedIn();
+    button.disabled = true;
+    status.textContent = 'Enviando el correo de verificación…';
+    try {
+        await cloudApi('/api/collections/users/request-verification', 'POST', { email: Cloud.email }, { server });
+        if (!isCurrent()) return;
+        status.textContent = 'Correo enviado. Revisa también la carpeta de spam.';
+    } catch (error) {
+        if (!isCurrent()) return;
+        console.warn('No se pudo reenviar el correo de verificación:', error);
+        status.textContent = 'No se pudo enviar el correo: ' + (error.message || 'error del servidor.');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function refreshAccountVerification() {
+    const status = $('acc-verification-message');
+    const button = $('acc-check-verification');
+    if (!Cloud.loggedIn() || !status || !button) return;
+    const uid = Cloud.uid;
+    const generation = Cloud.authGeneration;
+    button.disabled = true;
+    try {
+        const record = await Cloud.refreshSession();
+        if (!record || Cloud.uid !== uid || Cloud.authGeneration !== generation) return;
+        renderAccount();
+        if (Cloud.emailVerified) {
+            toast('Correo verificado. Ya puedes participar en la comunidad.');
+        } else {
+            status.textContent = 'Aún no consta la verificación. Abre el enlace del correo y vuelve a comprobarlo.';
+        }
+    } catch (error) {
+        if (Cloud.uid !== uid || Cloud.authGeneration !== generation) return;
+        console.warn('No se pudo comprobar la verificación del correo:', error);
+        status.textContent = 'No se pudo comprobar el estado: ' + (error.message || 'error del servidor.');
+    } finally {
+        button.disabled = false;
     }
 }
 
@@ -796,6 +868,8 @@ function initAccount() {
         accAuthOnce(false);
     });
     $('acc-register').addEventListener('click', () => accAuthOnce(true));
+    $('acc-resend-verification').addEventListener('click', resendAccountVerification);
+    $('acc-check-verification').addEventListener('click', refreshAccountVerification);
     $('acc-nickname-save').addEventListener('click', saveAccountNickname);
     $('acc-sync').addEventListener('click', syncAccountManually);
     $('profile-manual-sync').addEventListener('click', syncAccountManually);

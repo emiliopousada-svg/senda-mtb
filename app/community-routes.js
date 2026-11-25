@@ -836,9 +836,12 @@ function communityPopup(record, lines) {
     const title = document.createElement('strong');
     title.textContent = record.title || 'Ruta de la comunidad';
     const info = document.createElement('p');
+    const elevationGain = Number(record.elevationGain);
+    const elevationLabel = elevationGain > 0
+        ? `+${Math.round(elevationGain)} m`
+        : 'desnivel no disponible';
     info.textContent = communityAutonomousCommunity(record.province) + ' · ' +
-        ((Number(record.distanceKm) || 0).toFixed(1)) + ' km · +' +
-        (Number(record.elevationGain) || 0) + ' m';
+        ((Number(record.distanceKm) || 0).toFixed(1)) + ' km · ' + elevationLabel;
     const follow = document.createElement('button');
     follow.type = 'button';
     follow.textContent = 'Seguir ruta';

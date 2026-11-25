@@ -46,13 +46,37 @@ El APK firmado requiere estos secretos del repositorio en **Settings > Secrets a
 - `MTB_SIGNING_KEY_ALIAS`
 - `MTB_SIGNING_KEY_PASSWORD`
 
-Usa siempre el mismo almacén de claves para que Android permita instalar actualizaciones sobre la app y conservar sus datos. Para reutilizar el almacén debug local en Windows, puedes copiar su Base64 al portapapeles con:
+Para la nueva firma de release, crea un keystore PKCS12 dedicado; no reutilices ningún keystore debug. En PowerShell:
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\debug.keystore")) | Set-Clipboard
+keytool -genkeypair -v `
+  -keystore "$env:USERPROFILE\.android\senda-mtb-release-v2.p12" `
+  -storetype PKCS12 `
+  -alias senda-mtb-release `
+  -keyalg RSA `
+  -keysize 4096 `
+  -validity 10000 `
+  -dname "CN=senda-mtb release"
 ```
 
-El almacén debug predeterminado usa la contraseña `android` y el alias `androiddebugkey`; guarda esos valores como secretos también. No subas el almacén de claves al repositorio. Si la app instalada tiene otra firma, Android no permitirá actualizarla con esta clave.
+Cuando `keytool` lo solicite, usa contraseñas fuertes, únicas y de al menos 16 caracteres; no las incluyas en los argumentos del comando. Comprueba la huella del certificado:
+
+```powershell
+keytool -list -v `
+  -keystore "$env:USERPROFILE\.android\senda-mtb-release-v2.p12" `
+  -storetype PKCS12 `
+  -alias senda-mtb-release
+```
+
+En **Settings > Secrets and variables > Actions**, actualiza los cuatro secretos anteriores con el keystore nuevo, su Base64, el alias `senda-mtb-release` y las contraseñas. Si tienes GitHub CLI autenticada, puedes enviar el Base64 directamente como secreto sin imprimirlo:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\senda-mtb-release-v2.p12")) | gh secret set MTB_SIGNING_KEYSTORE_BASE64
+```
+
+Configura además la variable de Actions `MTB_SIGNING_CERT_SHA256` con el SHA-256 del certificado, en 64 caracteres hexadecimales sin dos puntos. La workflow compara esa huella con el keystore antes de firmar.
+
+Guarda una copia de recuperación cifrada y con acceso restringido fuera de Actions. No subas el keystore ni sus contraseñas al repositorio. La clave actual de release solo está disponible en los secretos existentes de Actions; no se puede recuperar desde la interfaz de GitHub. Al cambiar a la nueva firma, Android no permitirá actualizar las instalaciones firmadas con la anterior: habrá que desinstalar y reinstalar la app. Esto borra sus datos locales; exporta o sincroniza lo que quieras conservar antes de desinstalar. Después de la transición, conserva siempre el nuevo keystore para futuras actualizaciones.
 
 La aplicación apunta al PocketBase independiente `https://mtbpro.ddns.net`. Consulta [POCKETBASE.md](POCKETBASE.md) para las colecciones y reglas requeridas. No se incluyen credenciales ni datos del proyecto de origen.
 
@@ -81,15 +105,16 @@ La compilación falla si el entorno no existe, si `staging` no tiene servidor o 
 
 ## iOS
 
-El proyecto iOS está generado para `com.emiliopousada.sendamtb`, nombre `senda-mtb` y despliegue mínimo iOS 15. El acceso a ubicación en uso y en segundo plano y Bluetooth declara sus textos de permiso en `ios/App/App/Info.plist`. Revisa los mensajes y valida el comportamiento en un dispositivo antes de publicar.
+La plataforma iOS no está incluida en este repositorio. Para generarla se necesita macOS con Xcode 26 o posterior. Ejecuta `npx cap add ios` solo si todavía no existe la carpeta `ios/`.
 
-Para compilarlo se necesita macOS con Xcode 26 o posterior:
+Después, compila y abre el proyecto generado:
 
 ```sh
 npm ci
+npx cap add ios # solo la primera vez
 npm run build
 npx cap open ios
 ```
 
-Abre el proyecto `ios/App/App.xcodeproj`, selecciona un simulador o iPhone, firma la app en Xcode y compila. La configuración aún no se ha validado con Xcode en macOS.
+Antes de publicar, configura y revisa en `ios/App/App/Info.plist` los textos de permiso para ubicación y Bluetooth, además de la firma y el destino de despliegue. Esta configuración aún no se ha validado con Xcode en macOS.
 

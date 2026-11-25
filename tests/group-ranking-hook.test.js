@@ -41,7 +41,11 @@ function rankingHookContext({ route = true } = {}) {
         findRecordById(collection, id) {
             assert.equal(collection, 'users');
             assert.equal(id, 'user-1');
-            return { id, getString: name => name === 'groupCode' ? 'group-1' : '' };
+            return {
+                id,
+                getString: name => name === 'groupCode' ? 'group-1' : '',
+                getBool: name => name === 'verified'
+            };
         },
         findRecordsByFilter(collection, filter, _sort, _limit, _offset, params = {}) {
             queries.push({ collection, filter, params });
@@ -79,8 +83,8 @@ function rankingHookContext({ route = true } = {}) {
         safeMembership(_groupId, userId) {
             return userId === 'user-1' ? [{ id: 'membership-1' }] : [];
         },
-        findAllRecordsByFilter(collection, filter, sort) {
-            return app.findRecordsByFilter(collection, filter, sort, 200, 0);
+        findAllRecordsByFilter(collection, filter, sort, transactionApp = app, params = {}) {
+            return groupUtils.findAllRecordsByFilter(collection, filter, sort, transactionApp, params);
         }
     };
     const routes = new Map();

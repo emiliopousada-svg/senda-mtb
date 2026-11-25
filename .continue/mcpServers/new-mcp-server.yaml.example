@@ -1,3 +1,4 @@
+# Plantilla: copia este archivo a .yaml y sustituye los valores antes de usarlo.
 name: New MCP server
 version: 0.0.1
 schema: v1

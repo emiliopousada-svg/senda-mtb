@@ -1050,6 +1050,7 @@ test('registration uploads an optional compressed avatar with the account record
     const { context } = cloudContext(async (requestPath, method, body) => {
         calls.push({ requestPath, method, body });
         if (requestPath === '/api/collections/users/records') return { id: 'user-1' };
+        if (requestPath === '/api/collections/users/request-verification') return {};
         if (requestPath === '/api/collections/users/auth-with-password') {
             return { token: 'bearer-token', record: { id: 'user-1', email: 'rider@example.com', nickname: 'Rider' } };
         }
@@ -1095,14 +1096,112 @@ test('registration uploads an optional compressed avatar with the account record
 
     await context.accAuth(true);
 
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
     assert.equal(calls[0].method, 'POST');
     assert.ok(calls[0].body instanceof FormData);
     assert.equal(calls[0].body.get('nickname'), 'Rider');
     assert.equal(calls[0].body.get('homeLocation'), 'Ribeira');
     assert.equal(calls[0].body.get('avatar').name, 'avatar.jpg');
     assert.equal(await calls[0].body.get('avatar').text(), 'compressed avatar');
+    assert.equal(calls[1].requestPath, '/api/collections/users/request-verification');
+    assert.equal(calls[1].body.email, 'rider@example.com');
     assert.equal(avatarInput.value, '');
+});
+
+test('registration remains usable when verification email delivery fails and reports the failure', async () => {
+    const calls = [];
+    const toasts = [];
+    const { context } = cloudContext(async (requestPath, method, body) => {
+        calls.push({ requestPath, method, body });
+        if (requestPath === '/api/collections/users/records') return { id: 'user-1' };
+        if (requestPath === '/api/collections/users/request-verification') {
+            throw Object.assign(new Error('SMTP unavailable'), { status: 500 });
+        }
+        if (requestPath === '/api/collections/users/auth-with-password') {
+            return { token: 'bearer-token', record: { id: 'user-1', email: 'rider@example.com', nickname: 'Rider', verified: false } };
+        }
+        throw new Error(`Unexpected request: ${requestPath}`);
+    });
+    const fields = new Map([
+        ['acc-nickname', { value: 'Rider' }],
+        ['acc-email', { value: 'rider@example.com' }],
+        ['acc-pass', { value: 'secure-password' }],
+        ['acc-weight', { value: '' }],
+        ['acc-height', { value: '' }],
+        ['acc-age', { value: '' }],
+        ['acc-home-location', { value: '' }],
+        ['acc-register-avatar-file', { files: [], value: '' }]
+    ]);
+    context.$ = id => fields.get(id) || null;
+    context.renderAccountProfile = () => {};
+    context.syncPendingAccountAvatar = async () => {};
+    context.syncCloudPreferences = async () => {};
+    context.renderAccount = () => {};
+    context.restoreGroup = async () => {};
+    context.syncRoutes = () => {};
+    context.syncSharedPois = async () => true;
+    context.pendingSharedPoiCount = () => 0;
+    context.poiSyncPendingMessage = () => '';
+    context.toast = message => toasts.push(message);
+    context.console = { warn() {} };
+    vm.runInContext(
+        sourceBetween('function ensureAuthServer(server, generation)', '\nasync function saveAccountNickname()'),
+        context
+    );
+
+    await context.accAuth(true);
+
+    assert.deepEqual(calls.map(call => call.requestPath), [
+        '/api/collections/users/records',
+        '/api/collections/users/request-verification',
+        '/api/collections/users/auth-with-password'
+    ]);
+    assert.equal(context.Cloud.loggedIn(), true);
+    assert.equal(context.Cloud.emailVerified, false);
+    assert.match(toasts[0], /no se pudo enviar el correo de verificación/i);
+});
+
+test('session refresh picks up a completed email verification', async () => {
+    const { context } = cloudContext(async requestPath => {
+        assert.equal(requestPath, '/api/collections/users/auth-refresh');
+        return {
+            token: 'refreshed-token',
+            record: { id: 'user-1', email: 'rider@example.com', verified: true }
+        };
+    });
+    context.Cloud.setSession({ id: 'user-1', email: 'rider@example.com', verified: false }, 'token');
+
+    await context.Cloud.refreshSession();
+
+    assert.equal(context.Cloud.emailVerified, true);
+    await context.Cloud.clearSession();
+    assert.equal(context.Cloud.emailVerified, false);
+});
+
+test('unverified account can request another verification email', async () => {
+    const calls = [];
+    const { context } = cloudContext(async (requestPath, method, body, options) => {
+        calls.push({ requestPath, method, body, options });
+        return {};
+    });
+    const fields = new Map([
+        ['acc-resend-verification', { disabled: false }],
+        ['acc-verification-message', { textContent: '' }]
+    ]);
+    context.$ = id => fields.get(id) || null;
+    context.Cloud.setSession({ id: 'user-1', email: 'rider@example.com', verified: false }, 'token');
+    vm.runInContext(
+        sourceBetween('async function resendAccountVerification()', '\nasync function refreshAccountVerification()'),
+        context
+    );
+
+    await context.resendAccountVerification();
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].requestPath, '/api/collections/users/request-verification');
+    assert.equal(calls[0].body.email, 'rider@example.com');
+    assert.equal(calls[0].options.server, 'https://server.example');
+    assert.match(fields.get('acc-verification-message').textContent, /Correo enviado/);
 });
 
 test('manual account sync shows progress and returns to the ready state when complete', async () => {

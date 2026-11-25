@@ -20,7 +20,7 @@ senda-mtb proporciona **cobertura cartográfica global**, adaptada a las necesid
 | **Topográfico Global** | OpenTopoMap | `https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png` | Mundial | Raster | CC-BY-SA. El proveedor permite integración en aplicaciones si no se sobrecarga con descargas masivas; no ofrece garantía de disponibilidad. Solo visualización online en la app. |
 | **Ciclismo / MTB** | CyclOSM | `https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png` | Mundial | Raster | © OpenStreetMap contributors, CyclOSM. El proveedor indica caché de unas horas para el estilo por defecto; no se asume permiso para almacenamiento offline permanente. |
 | **Estándar OSM** | OpenStreetMap Foundation | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` | Mundial | Raster | ODbL © OpenStreetMap contributors. La política del servidor estándar prohíbe descarga masiva y uso offline. |
-| **Satélite Ortofoto** | ESRI World Imagery | `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` | Mundial | Satélite | Términos de servicio de ArcGIS Online para visualización de mapas base. |
+| **Satélite Ortofoto** | Esri World Imagery | `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` | Mundial | Satélite | Servicio público consultado online. El item oficial indica que no está destinado a exportar teselas para uso offline; la app no ofrece descarga offline de esta capa. |
 
 ---
 
@@ -41,6 +41,7 @@ senda-mtb proporciona **cobertura cartográfica global**, adaptada a las necesid
    * Cada descarga se limita a **25.000 teselas**, el total almacenado a **30.000**, y la implementación usa **tres solicitudes concurrentes sin intervalo fijo**. Si IGN responde HTTP 429, la descarga se detiene y se debe reintentar más tarde. No se debe describir esta estrategia como una tasa aprobada por IGN hasta confirmar sus condiciones.
 3. **Otros estilos online (OpenTopoMap, CyclOSM, Esri):**
    * Se usan para visualizar las teselas necesarias para la vista actual; no se ofrece descarga offline desde estos proveedores.
+   * El item oficial de Esri World Imagery está marcado como público y atribuye las imágenes a Esri, Vantor, Earthstar Geographics y GIS User Community. Su licencia indica que la capa no está destinada a exportar teselas offline. La disponibilidad pública no implica uso ilimitado ni sustituye los términos del servicio; no se ha encontrado un requisito de clave para la visualización online de esta URL.
    * La caché persistente propia de teselas online en IndexedDB está desactivada. El almacenamiento HTTP normal del navegador/WebView es independiente y debe respetar las cabeceras del servidor.
    * La base de datos puede conservar teselas online heredadas de versiones anteriores. No se usan sin conexión, se muestran como inactivas y se eliminan mediante «Borrar mapas».
 4. **Estrategia a Medio/Largo Plazo (Cartografía Vectorial Offline):**
@@ -54,7 +55,7 @@ Toda pantalla que muestre mapas renderizados con Leaflet en senda-mtb incluye la
 
 * **IGN:** `© Instituto Geográfico Nacional de España`
 * **OSM / CyclOSM / OpenTopoMap:** `© Colaboradores de OpenStreetMap, SRTM | Estilo CyclOSM / OpenTopoMap`
-* **ESRI:** `Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community`
+* **Esri World Imagery:** `Tiles © Esri, Vantor, Earthstar Geographics, and the GIS User Community`
 
 ## 5. Fuentes y revisión de condiciones
 
@@ -64,4 +65,5 @@ Fuentes oficiales consultadas el **25 de noviembre de 2026**; las condiciones pu
 * [Información y condiciones de OpenTopoMap](https://opentopomap.org/about) (uso en aplicaciones condicionado a no sobrecargar el servidor con descargas masivas).
 * [Información de CyclOSM](https://www.cyclosm.org/) (describe caché temporal para el estilo por defecto; no confirma permiso general de descarga offline permanente).
 * [Política de datos IGN](https://www.ign.es/web/ign/portal/politica-datos) y [licencia IGN](https://www.ign.es/resources/licencia/Condiciones_licenciaUso_IGN.pdf). No se encontró en estas referencias un límite de tasa específico para el endpoint TMS utilizado por la app.
+* [Item oficial Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9), que publica la atribución y las restricciones de exportación offline del servicio.
 

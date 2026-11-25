@@ -47,7 +47,7 @@ routerAdd("POST", "/api/mtb/account/delete", (e) => {
         });
 
         return e.json(result.status, result.body);
-    } catch (err) {
-        return e.json(400, { message: err.message || "No se pudo eliminar la cuenta." });
+    } catch (_err) {
+        return e.json(400, { message: "No se pudo eliminar la cuenta." });
     }
 }, $apis.requireAuth("users"));

@@ -7,6 +7,8 @@ const {
     calculateGroupActivityMetrics,
     entryTimeMs,
     findRecordsByIds,
+    findAllRecordsByFilter,
+    deleteAllRecordsByFilter,
     loadActiveGroupContext
 } = require('../pb_hooks/groups_utils.js');
 
@@ -108,6 +110,45 @@ test('findRecordsByIds rejects unsafe ids before querying', () => {
 
     assert.throws(() => findRecordsByIds(app, 'users', ['valid-id', 'bad" || id != ""']), /id inválido/);
     assert.equal(queries, 0);
+});
+
+test('findAllRecordsByFilter binds parameters on every paginated query', () => {
+    const calls = [];
+    const app = {
+        findRecordsByFilter(collection, filter, sort, limit, offset, params) {
+            calls.push({ collection, filter, sort, limit, offset, params });
+            return offset === 0 ? Array.from({ length: 200 }, (_, index) => index) : ['last'];
+        }
+    };
+    const params = { group: 'group-1' };
+
+    const records = findAllRecordsByFilter('mtb_group_members', 'group = {:group}', '', app, params);
+
+    assert.equal(records.length, 201);
+    assert.equal(calls.length, 2);
+    assert.ok(calls.every(call => call.filter === 'group = {:group}' && call.params === params));
+    assert.deepEqual(calls.map(call => call.offset), [0, 200]);
+});
+
+test('deleteAllRecordsByFilter binds parameters for each delete batch', () => {
+    const records = [{ id: 'one' }, { id: 'two' }];
+    const calls = [];
+    const params = { group: 'group-1' };
+    const app = {
+        findRecordsByFilter(_collection, filter, _sort, _limit, _offset, queryParams) {
+            calls.push({ filter, queryParams });
+            return records.slice();
+        },
+        delete(record) {
+            records.splice(records.indexOf(record), 1);
+        }
+    };
+
+    const deleted = deleteAllRecordsByFilter('live_locations', 'groupCode = {:group}', app, params);
+
+    assert.equal(deleted, 2);
+    assert.equal(calls.length, 2);
+    assert.ok(calls.every(call => call.filter === 'groupCode = {:group}' && call.queryParams === params));
 });
 
 test('loadActiveGroupContext batches member profiles into one query', () => {

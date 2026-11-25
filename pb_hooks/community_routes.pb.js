@@ -96,15 +96,17 @@ function indexCommunityRouteBounds(e) {
         }
 
         const reader = file.reader.open();
-        const bytes = [];
+        const bytes = new Uint8Array(size);
+        let offset = 0;
         try {
-            while (bytes.length < size) {
-                const chunk = new Uint8Array(Math.min(8192, size - bytes.length));
+            while (offset < size) {
+                const chunk = new Uint8Array(Math.min(8192, size - offset));
                 const count = reader.read(chunk);
                 if (!Number.isInteger(count) || count <= 0 || count > chunk.length) {
                     throw new BadRequestError("No se pudo verificar la foto.");
                 }
-                for (let i = 0; i < count; i++) bytes.push(Number(chunk[i]) & 255);
+                bytes.set(chunk.subarray(0, count), offset);
+                offset += count;
             }
         } finally {
             reader.close();
@@ -279,19 +281,22 @@ function indexCommunityRouteBounds(e) {
     e.record.set("minLng", minLng);
     e.record.set("maxLng", maxLng);
 
-    // Las métricas declaradas por el cliente no son una clave fiable para detectar duplicados.
-    const owner = e.record.getString("owner");
-    const params = {
-        owner: owner,
-        id: e.record.id || "",
-        track: e.record.getString("trackJson")
-    };
-    const filter = "owner = {:owner} && id != {:id} && trackJson = {:track}";
-    // Si la consulta falla, la publicación se aborta: no se acepta sin comprobar duplicados.
-    const duplicates = $app.findRecordsByFilter("community_routes", filter, "", 1, 0, params) || [];
-    if (duplicates.length) throw new BadRequestError("Esta ruta ya está publicada en la comunidad.");
     const isNewPublication = e.record.getBool("published")
         && (!originalRecord || !originalRecord.getBool("published"));
+    const owner = e.record.getString("owner");
+    const ownerChanged = originalRecord && owner !== originalRecord.getString("owner");
+    if (!originalRecord || shouldTrimTrack || isNewPublication || ownerChanged) {
+        // Las métricas declaradas por el cliente no son una clave fiable para detectar duplicados.
+        const params = {
+            owner: owner,
+            id: e.record.id || "",
+            track: e.record.getString("trackJson")
+        };
+        const filter = "owner = {:owner} && id != {:id} && trackJson = {:track}";
+        // Si la consulta falla, la publicación se aborta: no se acepta sin comprobar duplicados.
+        const duplicates = $app.findRecordsByFilter("community_routes", filter, "", 1, 0, params) || [];
+        if (duplicates.length) throw new BadRequestError("Esta ruta ya está publicada en la comunidad.");
+    }
     if (!internalWrite && isNewPublication) {
         const { enforceCommunityWriteQuota } = require(`${__hooks}/community_quota_utils.js`);
         enforceCommunityWriteQuota($app, owner, "route");

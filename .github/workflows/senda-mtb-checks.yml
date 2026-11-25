@@ -32,6 +32,8 @@ jobs:
           cache-provider: basic
       - name: Install dependencies
         run: npm ci
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
       - name: Run test suite
         run: npm test
       - name: Prepare Capacitor Android project

@@ -32,7 +32,11 @@ function enforceCommunityWriteQuota(app, ownerId, quotaName) {
         .bind({ owner: ownerId, quota: quotaName, windowSeconds: quota.windowSeconds })
         .one(result);
 
-    if (Number(result.total) >= quota.max) throw new BadRequestError(quota.message);
+    if (Number(result.total) >= quota.max) {
+        const error = new BadRequestError(quota.message);
+        error.clientMessage = quota.message;
+        throw error;
+    }
 }
 
 if (typeof module !== "undefined" && module.exports) {

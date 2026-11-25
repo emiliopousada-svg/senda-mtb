@@ -6,8 +6,8 @@ routerAdd("GET", "/api/mtb/groups/challenges", (e) => {
     try {
         const ctx = utils.loadActiveGroupContext(e.auth.id);
         const now = Date.now();
-        const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + ctx.groupId + '"', "");
-        const records = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "-endsAt");
+        const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", "group = {:group}", "", $app, { group: ctx.groupId });
+        const records = utils.findAllRecordsByFilter("mtb_group_challenges", "group = {:group}", "-endsAt", $app, { group: ctx.groupId });
         const challenges = records.map((record) => utils.challengeFromRecord(record))
             .filter(challenge => utils.challengeStatus(challenge, now) !== "finished")
             .map((challenge) => {
@@ -44,7 +44,7 @@ routerAdd("GET", "/api/mtb/groups/challenges", (e) => {
             challenges
         });
     } catch (err) {
-        return e.json(err.status || 400, { message: err.message || "No se pudieron cargar los desafíos." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudieron cargar los desafíos." });
     }
 }, $apis.requireAuth("users"));
 
@@ -57,8 +57,9 @@ routerAdd("POST", "/api/mtb/groups/challenges", (e) => {
         let result;
         $app.runInTransaction((txApp) => {
             const ctx = utils.loadActiveGroupContext(e.auth.id, txApp);
+            utils.requireVerifiedCommunityUser(ctx.user);
             const now = Date.now();
-            const open = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "", txApp)
+            const open = utils.findAllRecordsByFilter("mtb_group_challenges", "group = {:group}", "", txApp, { group: ctx.groupId })
                 .map(utils.challengeFromRecord)
                 .filter(challenge => utils.challengeStatus(challenge, now) !== "finished");
             if (open.length >= utils.CHALLENGE_MAX_ACTIVE) {
@@ -81,7 +82,7 @@ routerAdd("POST", "/api/mtb/groups/challenges", (e) => {
         });
         return e.json(result.status, result.body);
     } catch (err) {
-        return e.json(err.status || 400, { message: err.message || "No se pudo crear el desafío." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo crear el desafío." });
     }
 }, $apis.requireAuth("users"));
 
@@ -89,6 +90,7 @@ routerAdd("POST", "/api/mtb/groups/challenges/delete", (e) => {
     const utils = require(`${__hooks}/groups_utils.js`);
     try {
         const ctx = utils.loadActiveGroupContext(e.auth.id);
+        utils.requireVerifiedCommunityUser(ctx.user);
         const body = new DynamicModel({ id: "" });
         e.bindBody(body);
         const id = utils.requireSafeValue(body.id, "id");
@@ -100,7 +102,7 @@ routerAdd("POST", "/api/mtb/groups/challenges/delete", (e) => {
         $app.delete(record);
         return e.json(200, { ok: true });
     } catch (err) {
-        return e.json(err.status || 400, { message: err.message || "No se pudo eliminar el desafío." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo eliminar el desafío." });
     }
 }, $apis.requireAuth("users"));
 
@@ -109,9 +111,9 @@ routerAdd("GET", "/api/mtb/groups/awards", (e) => {
     try {
         const ctx = utils.loadActiveGroupContext(e.auth.id);
         const now = Date.now();
-        const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + ctx.groupId + '"', "");
+        const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", "group = {:group}", "", $app, { group: ctx.groupId });
         const current = utils.getSeasonInfo(now);
-        const challengeRecords = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "", $app);
+        const challengeRecords = utils.findAllRecordsByFilter("mtb_group_challenges", "group = {:group}", "", $app, { group: ctx.groupId });
         const historicalMembers = new Map(ctx.members.map(member => [member.userId, member]));
         const historicalProfiles = utils.findRecordsByIds($app, "users", entries.map(entry => entry.getString("owner")).filter(Boolean));
         historicalProfiles.forEach(profile => {
@@ -147,7 +149,7 @@ routerAdd("GET", "/api/mtb/groups/awards", (e) => {
             challengeMedals
         });
     } catch (err) {
-        return e.json(err.status || 400, { message: err.message || "No se pudieron cargar los títulos." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudieron cargar los títulos." });
     }
 }, $apis.requireAuth("users"));
 
@@ -156,8 +158,8 @@ routerAdd("GET", "/api/mtb/groups/activity", (e) => {
     try {
         const ctx = utils.loadActiveGroupContext(e.auth.id);
         const now = Date.now();
-        const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", 'group = "' + ctx.groupId + '"', "");
-        const challenges = utils.findAllRecordsByFilter("mtb_group_challenges", 'group = "' + ctx.groupId + '"', "")
+        const entries = utils.findAllRecordsByFilter("mtb_group_ranking_entries", "group = {:group}", "", $app, { group: ctx.groupId });
+        const challenges = utils.findAllRecordsByFilter("mtb_group_challenges", "group = {:group}", "", $app, { group: ctx.groupId })
             .map((record) => {
                 const challenge = utils.challengeFromRecord(record);
                 challenge.progress = utils.challengeProgress(challenge, entries, ctx.members);
@@ -167,6 +169,6 @@ routerAdd("GET", "/api/mtb/groups/activity", (e) => {
             .map(item => ({ ...item, isMe: item.userId === ctx.user.id, time: new Date(item.timeMs).toISOString() }));
         return e.json(200, { group: { id: ctx.groupId, name: ctx.group.getString("name") }, items });
     } catch (err) {
-        return e.json(err.status || 400, { message: err.message || "No se pudo cargar la actividad del grupo." });
+        return e.json(err.status || 400, { message: err.clientMessage || "No se pudo cargar la actividad del grupo." });
     }
 }, $apis.requireAuth("users"));

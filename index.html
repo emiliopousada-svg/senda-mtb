@@ -734,6 +734,12 @@
                                                 <button class="btn secondary" id="acc-register" type="button">Crear cuenta</button>
                                             </form>
                                             <div id="acc-logged" style="display:none;">
+                                                <section id="acc-verification-status" class="account-verification" hidden>
+                                                    <p class="hint">Verifica tu correo para publicar rutas, comentar o participar en grupos comunitarios.</p>
+                                                    <p class="hint" id="acc-verification-message" role="status" aria-live="polite"></p>
+                                                    <button class="btn secondary" id="acc-resend-verification" type="button">Reenviar correo</button>
+                                                    <button class="btn secondary" id="acc-check-verification" type="button">Ya verifiqué mi correo</button>
+                                                </section>
                                                 <div id="acc-nickname-setup" hidden>
                                                     <p class="hint">Elige un apodo para completar tu cuenta y sincronizar tus rutas.</p>
                                                     <label for="acc-account-nickname">Apodo</label>

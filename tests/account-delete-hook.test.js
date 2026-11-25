@@ -136,6 +136,10 @@ test('account deletion rolls back cleanup when deleting the user fails', () => {
     const response = routes.get('/api/mtb/account/delete').handler(request('correct horse'));
 
     assert.equal(response.status, 400);
+    assert.equal(response.body.message, 'No se pudo eliminar la cuenta.');
+    assert.doesNotMatch(response.body.message, /injected user delete failure/);
+    assert.equal(response.body.message, 'No se pudo eliminar la cuenta.');
+    assert.doesNotMatch(response.body.message, /injected user delete failure/);
     assert.equal(records('users').length, 1);
     assert.equal(records('mtb_group_members').length, 1);
     assert.equal(records('live_locations').length, 1);

@@ -83,17 +83,11 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(SHELL)
       .then(cache => Promise.all(SHELL_URLS.map(async url => {
-        try {
-          const response = await fetch(url);
-          if (!isCacheableResponse(response)) {
-            throw new Error(`No se pudo almacenar el recurso esencial ${url}`);
-          }
-          await cache.put(url, response);
-        } catch (error) {
-          // CDN assets are required by the web shell. Keep the previous worker/cache
-          // active if any required dependency cannot be downloaded for this update.
-          throw error;
+        const response = await fetch(url);
+        if (!isCacheableResponse(response)) {
+          throw new Error(`No se pudo almacenar el recurso esencial ${url}`);
         }
+        await cache.put(url, response);
       })))
       .catch(async error => {
         await caches.delete(SHELL);

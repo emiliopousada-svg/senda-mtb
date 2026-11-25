@@ -2,18 +2,32 @@
 const SAFE_ID_RE = /^[A-Za-z0-9_-]+$/;
 const SAFE_INVITE_RE = /^[A-Z0-9]{12}$/;
 
+function clientError(message, status = 400) {
+    const error = new Error(message);
+    error.status = status;
+    error.clientMessage = message;
+    return error;
+}
+
 function requireSafeValue(value, label, pattern = SAFE_ID_RE) {
     const str = String(value ?? "").trim();
     if (!str || !pattern.test(str)) {
-        throw new Error(`${label} inválido`);
+        throw clientError(`${label} inválido`);
     }
     return str;
 }
 
 function requireNickname(value) {
     const nickname = String(value || "").trim().slice(0, 32);
-    if (!nickname) throw new Error("Añade un apodo a tu cuenta para que los miembros del grupo puedan identificarte.");
+    if (!nickname) throw clientError("Añade un apodo a tu cuenta para que los miembros del grupo puedan identificarte.");
     return nickname;
+}
+
+function requireVerifiedCommunityUser(user) {
+    if (!user || !user.getBool("verified")) {
+        throw clientError("Verifica tu correo electrónico para participar en la comunidad.", 403);
+    }
+    return user;
 }
 
 function safeMembership(groupId, userId, app = $app) {
@@ -39,23 +53,23 @@ function findRecordsByIds(app, collection, ids) {
     return records;
 }
 
-function findAllRecordsByFilter(collection, filter, sort, app = $app) {
+function findAllRecordsByFilter(collection, filter, sort, app = $app, params = {}) {
     const records = [];
     const pageSize = 200;
     let offset = 0;
     while (true) {
-        const page = app.findRecordsByFilter(collection, filter, sort, pageSize, offset);
+        const page = app.findRecordsByFilter(collection, filter, sort, pageSize, offset, params);
         records.push(...page);
         if (page.length < pageSize) return records;
         offset += page.length;
     }
 }
 
-function deleteAllRecordsByFilter(collection, filter, app = $app) {
+function deleteAllRecordsByFilter(collection, filter, app = $app, params = {}) {
     const batchSize = 200;
     let deleted = 0;
     while (true) {
-        const batch = app.findRecordsByFilter(collection, filter, "", batchSize, 0);
+        const batch = app.findRecordsByFilter(collection, filter, "", batchSize, 0, params);
         if (!batch.length) return deleted;
         for (const record of batch) {
             app.delete(record);
@@ -113,7 +127,7 @@ function calculateActivityPoints(distanceKm, movingTimeSec, elevationGain) {
 function calculateGroupActivityMetrics(track) {
     const points = Array.isArray(track) ? track : track && track.points;
     if (!Array.isArray(points) || points.length < 2) {
-        throw new Error("El trazado sincronizado no contiene suficientes puntos.");
+        throw clientError("El trazado sincronizado no contiene suficientes puntos.");
     }
 
     const radians = Math.PI / 180;
@@ -165,13 +179,13 @@ function calculateGroupActivityMetrics(track) {
 
     for (const point of points) {
         if (!Array.isArray(point) || point.length < 2) {
-            throw new Error("El trazado sincronizado contiene un punto no válido.");
+            throw clientError("El trazado sincronizado contiene un punto no válido.");
         }
         const lat = Number(point[0]);
         const lon = Number(point[1]);
         if (!Number.isFinite(lat) || lat < -90 || lat > 90
             || !Number.isFinite(lon) || lon < -180 || lon > 180) {
-            throw new Error("El trazado sincronizado contiene coordenadas no válidas.");
+            throw clientError("El trazado sincronizado contiene coordenadas no válidas.");
         }
 
         if (point[5] === 1) {
@@ -215,13 +229,13 @@ function calculateGroupActivityMetrics(track) {
 
     const distanceKm = distanceMeters / 1000;
     if (!Number.isFinite(distanceKm) || distanceKm <= 0 || !Number.isFinite(movingTimeSec) || movingTimeSec <= 0) {
-        throw new Error("El trazado sincronizado no permite calcular una actividad válida.");
+        throw clientError("El trazado sincronizado no permite calcular una actividad válida.");
     }
     if (distanceKm > 1000 || movingTimeSec > 604800 || maxSpeedKmh > 150 || elevationGain > 10000) {
-        throw new Error("Las métricas calculadas superan los límites permitidos.");
+        throw clientError("Las métricas calculadas superan los límites permitidos.");
     }
     if (distanceKm * 1000 / movingTimeSec > 25) {
-        throw new Error("La velocidad media calculada no es plausible.");
+        throw clientError("La velocidad media calculada no es plausible.");
     }
 
     return { distanceKm, movingTimeSec, maxSpeedKmh, elevationGain };
@@ -344,24 +358,24 @@ function sortEntriesByTime(entries) {
 
 function validateChallengeInput(input, nowMs = Date.now()) {
     const name = String(input && input.name || "").trim().replace(/\s+/g, " ").slice(0, 60);
-    if (name.length < 3) throw new Error("El desafío necesita un nombre de al menos 3 caracteres.");
+    if (name.length < 3) throw clientError("El desafío necesita un nombre de al menos 3 caracteres.");
     const metric = String(input && input.metric || "");
     const definition = CHALLENGE_METRICS[metric];
-    if (!definition) throw new Error("Elige un tipo de desafío válido.");
+    if (!definition) throw clientError("Elige un tipo de desafío válido.");
     const target = Number(input && input.target);
     if (!Number.isFinite(target) || target < CHALLENGE_MIN_TARGET || target > definition.maxTarget) {
-        throw new Error("La meta del desafío debe estar entre 10 y 20000.");
+        throw clientError("La meta del desafío debe estar entre 10 y 20000.");
     }
     const dayMs = 24 * 60 * 60 * 1000;
     const startsAtMs = input && input.startsAt ? Date.parse(String(input.startsAt)) : nowMs;
     const endsAtRaw = input && input.endsAt ? Date.parse(String(input.endsAt)) : NaN;
-    if (!Number.isFinite(startsAtMs) || !Number.isFinite(endsAtRaw)) throw new Error("Las fechas del desafío no son válidas.");
+    if (!Number.isFinite(startsAtMs) || !Number.isFinite(endsAtRaw)) throw clientError("Las fechas del desafío no son válidas.");
     // La fecha de fin es inclusiva: termina al final de ese día (UTC).
     const endsAtMs = /^\d{4}-\d{2}-\d{2}$/.test(String(input.endsAt)) ? endsAtRaw + dayMs - 1 : endsAtRaw;
-    if (endsAtMs <= startsAtMs) throw new Error("La fecha de fin debe ser posterior al inicio.");
-    if (endsAtMs < nowMs) throw new Error("La fecha de fin ya ha pasado.");
-    if (startsAtMs < nowMs - 31 * dayMs) throw new Error("El inicio no puede ser anterior a hace 31 días.");
-    if (endsAtMs - startsAtMs > CHALLENGE_MAX_DAYS * dayMs) throw new Error(`Un desafío puede durar como máximo ${CHALLENGE_MAX_DAYS} días.`);
+    if (endsAtMs <= startsAtMs) throw clientError("La fecha de fin debe ser posterior al inicio.");
+    if (endsAtMs < nowMs) throw clientError("La fecha de fin ya ha pasado.");
+    if (startsAtMs < nowMs - 31 * dayMs) throw clientError("El inicio no puede ser anterior a hace 31 días.");
+    if (endsAtMs - startsAtMs > CHALLENGE_MAX_DAYS * dayMs) throw clientError(`Un desafío puede durar como máximo ${CHALLENGE_MAX_DAYS} días.`);
     const roundedTarget = metric === "activities" ? Math.ceil(target) : Math.round(target * 10) / 10;
     return { name, metric, target: roundedTarget, startsAtMs, endsAtMs };
 }
@@ -503,14 +517,14 @@ function recordTimeMs(record, field) {
 
 // Contexto del grupo activo del usuario autenticado. Lanza un error con .status si no es válido.
 function loadActiveGroupContext(authId, app = $app) {
-    const fail = (status, message) => { const error = new Error(message); error.status = status; throw error; };
+    const fail = (status, message) => { throw clientError(message, status); };
     const user = app.findRecordById("users", authId);
     const groupId = user.getString("groupCode");
     if (!groupId) fail(404, "No hay un grupo activo.");
     const safeGroupId = requireSafeValue(groupId, "groupId");
     if (!safeMembership(safeGroupId, user.id, app).length) fail(403, "Ya no tienes autorización para consultar este grupo.");
     const group = app.findRecordById("mtb_groups", safeGroupId);
-    const memberships = findAllRecordsByFilter("mtb_group_members", 'group = "' + safeGroupId + '"', "", app);
+    const memberships = findAllRecordsByFilter("mtb_group_members", "group = {:group}", "", app, { group: safeGroupId });
     const profiles = new Map(findRecordsByIds(app, "users", memberships.map(membership => membership.getString("user")))
         .map(profile => [profile.id, profile]));
     const nicknames = {};
@@ -562,6 +576,8 @@ module.exports = {
     LEAGUE_EPOCH_MS,
     requireSafeValue,
     requireNickname,
+    requireVerifiedCommunityUser,
+    clientError,
     safeMembership,
     findRecordsByIds,
     findAllRecordsByFilter,

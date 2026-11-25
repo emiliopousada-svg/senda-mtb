@@ -17,12 +17,13 @@ class MockRecord {
     set(field, value) { this.values[field] = value; }
     getString(field) { return String(this.values[field] ?? ''); }
     getFloat(field) { return Number(this.values[field]) || 0; }
+    getBool(field) { return this.values[field] === true; }
 }
 
-function groupHookEnvironment({ failUserSave = false, enforceQuota = () => {} } = {}) {
+function groupHookEnvironment({ failUserSave = false, enforceQuota = () => {}, verified = true } = {}) {
     let nextId = 1;
     let state = new Map([
-        ['users', new Map([['user-1', new MockRecord({ name: 'users' }, 'user-1', { nickname: 'Rider', groupCode: '' })]])],
+        ['users', new Map([['user-1', new MockRecord({ name: 'users' }, 'user-1', { nickname: 'Rider', groupCode: '', verified })]])],
         ['mtb_groups', new Map()],
         ['mtb_group_members', new Map()]
     ]);
@@ -116,6 +117,7 @@ test('group creation rolls back group and membership if updating the user fails'
     const response = routes.get('/api/mtb/groups/create')(createGroupRequest());
 
     assert.equal(response.status, 400);
+    assert.equal(response.body.message, 'No se pudo crear el grupo.');
     assert.deepEqual(getRecords('mtb_groups'), []);
     assert.deepEqual(getRecords('mtb_group_members'), []);
     assert.equal(getRecords('users')[0].getString('groupCode'), '');
@@ -134,13 +136,39 @@ test('group creation commits the group, membership, and active group together', 
 
 test('group creation rejects an exhausted quota without persisting partial records', () => {
     const { routes, getRecords } = groupHookEnvironment({
-        enforceQuota() { throw new Error('group quota reached'); }
+        enforceQuota() {
+            const error = new Error('group quota reached');
+            error.clientMessage = error.message;
+            throw error;
+        }
     });
 
     const response = routes.get('/api/mtb/groups/create')(createGroupRequest());
 
     assert.equal(response.status, 400);
     assert.match(response.body.message, /group quota reached/);
+    assert.deepEqual(getRecords('mtb_groups'), []);
+    assert.deepEqual(getRecords('mtb_group_members'), []);
+    assert.equal(getRecords('users')[0].getString('groupCode'), '');
+});
+
+test('group creation returns a safe message for internal errors', () => {
+    const { routes } = groupHookEnvironment({ failUserSave: true });
+
+    const response = routes.get('/api/mtb/groups/create')(createGroupRequest());
+
+    assert.equal(response.status, 400);
+    assert.equal(response.body.message, 'No se pudo crear el grupo.');
+    assert.doesNotMatch(response.body.message, /injected save failure/);
+});
+
+test('group creation rejects unverified accounts without persisting records', () => {
+    const { routes, getRecords } = groupHookEnvironment({ verified: false });
+
+    const response = routes.get('/api/mtb/groups/create')(createGroupRequest());
+
+    assert.equal(response.status, 403);
+    assert.match(response.body.message, /Verifica tu correo electrónico/);
     assert.deepEqual(getRecords('mtb_groups'), []);
     assert.deepEqual(getRecords('mtb_group_members'), []);
     assert.equal(getRecords('users')[0].getString('groupCode'), '');
@@ -168,7 +196,14 @@ test('challenge count and insert both run inside the same transaction', () => {
         CHALLENGE_MAX_ACTIVE: 20,
         loadActiveGroupContext(_id, transactionApp) {
             assert.equal(transactionApp, txApp);
-            return { groupId: 'group-1', user: { id: 'user-1' } };
+            return { groupId: 'group-1', user: { id: 'user-1', verified: true } };
+        },
+        requireVerifiedCommunityUser(user) {
+            if (!user.verified) {
+                const error = new Error('Verification required');
+                error.status = 403;
+                throw error;
+            }
         },
         validateChallengeInput() {
             return { name: 'Distance', metric: 'distance', target: 100, startsAtMs: 1, endsAtMs: 2 };
@@ -206,4 +241,47 @@ test('challenge count and insert both run inside the same transaction', () => {
     assert.equal(response.status, 200);
     assert.equal(response.body.id, 'challenge-1');
     assert.deepEqual(transactions, ['started']);
+});
+
+test('group challenge creation rejects an unverified account before writing', () => {
+    let saves = 0;
+    const user = {
+        id: 'user-1',
+        getBool() { return false; }
+    };
+    const app = {
+        runInTransaction(callback) { return callback(this); },
+        save() { saves++; }
+    };
+    const utils = {
+        requireVerifiedCommunityUser: groupsUtils.requireVerifiedCommunityUser,
+        loadActiveGroupContext() { return { user, groupId: 'group-1' }; },
+        validateChallengeInput() {
+            return { name: 'Distance', metric: 'distance', target: 100, startsAtMs: 1, endsAtMs: 2 };
+        }
+    };
+    const routes = new Map();
+    const context = vm.createContext({
+        $app: app,
+        $apis: { requireAuth() { return () => {}; } },
+        __hooks: 'hooks',
+        routerAdd(method, route, handler) { routes.set(`${method} ${route}`, handler); },
+        require() { return utils; },
+        DynamicModel: class {
+            constructor(defaults) { Object.assign(this, defaults); }
+        },
+        Date
+    });
+    const file = path.join(__dirname, '..', 'pb_hooks', 'group_league.pb.js');
+    vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+
+    const response = routes.get('POST /api/mtb/groups/challenges')({
+        auth: { id: 'user-1' },
+        bindBody() {},
+        json(status, body) { return { status, body }; }
+    });
+
+    assert.equal(response.status, 403);
+    assert.match(response.body.message, /Verifica tu correo electrónico/);
+    assert.equal(saves, 0);
 });

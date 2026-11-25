@@ -142,6 +142,72 @@ test('group ranking migration adds route binding and trusted activity date idemp
     assert.equal(saves, 1);
 });
 
+test('verified-community migration gates every open community write rule and rolls back only its own guard', () => {
+    const migration = loadMigration('1794837000_require_verified_community_writes.js');
+    const names = [
+        'live_locations',
+        'community_routes',
+        'community_segments',
+        'community_route_efforts',
+        'community_segment_efforts',
+        'community_route_favorites',
+        'community_route_ratings',
+        'community_route_comments'
+    ];
+    const collections = names.map(name => ({
+        name,
+        createRule: '@request.auth.id != "" && @request.body.owner = @request.auth.id',
+        updateRule: name === 'community_route_favorites' ? null : 'owner = @request.auth.id',
+        deleteRule: '@request.auth.id != "" && owner = @request.auth.id'
+    }));
+    const existingGuard = '@request.auth.verified = true && @request.auth.id != ""';
+    collections[0].createRule = existingGuard;
+    collections[1].updateRule = null;
+    const app = {
+        findCollectionByNameOrId(name) {
+            const collection = collections.find(item => item.name === name);
+            if (!collection) throw new Error(`Missing collection: ${name}`);
+            return collection;
+        },
+        save() {}
+    };
+
+    migration.up(app);
+
+    collections.forEach((collection, index) => {
+        assert.match(collection.createRule, /^\(@request\.auth\.verified = true\) && \(/);
+        assert.match(collection.deleteRule, /^\(@request\.auth\.verified = true\) && \(/);
+    });
+    assert.match(collections[0].createRule, /^\(@request\.auth\.verified = true\) && \(/);
+    assert.equal(collections[1].updateRule, null);
+
+    migration.down(app);
+
+    collections.forEach((collection, index) => {
+        if (index !== 0) assert.equal(collection.createRule, '@request.auth.id != "" && @request.body.owner = @request.auth.id');
+        assert.equal(collection.deleteRule, '@request.auth.id != "" && owner = @request.auth.id');
+    });
+    assert.equal(collections[0].createRule, existingGuard);
+    assert.equal(collections[1].updateRule, null);
+});
+
+test('verified-community migration refuses an empty public write rule instead of leaving it open', () => {
+    const migration = loadMigration('1794837000_require_verified_community_writes.js');
+    const app = {
+        findCollectionByNameOrId(name) {
+            return {
+                name,
+                createRule: name === 'live_locations' ? '' : null,
+                updateRule: null,
+                deleteRule: null
+            };
+        },
+        save() {}
+    };
+
+    assert.throws(() => migration.up(app), /empty write rule must be reviewed/);
+});
+
 test('community route metrics migration recalculates distance and clears unverified fields', () => {
     const migration = loadMigration('1794836013_recalculate_community_route_metrics.js');
     const records = [

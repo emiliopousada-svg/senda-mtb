@@ -203,7 +203,13 @@ async function download(name, text, mime) {
     const cap = window.Capacitor;
     if (cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Filesystem && cap.Plugins.Share) {
         try {
-            const res = await cap.Plugins.Filesystem.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8' });
+            await cap.Plugins.Filesystem.mkdir({ path: 'share', directory: 'CACHE', recursive: true });
+            const res = await cap.Plugins.Filesystem.writeFile({
+                path: `share/${name}`,
+                data: text,
+                directory: 'CACHE',
+                encoding: 'utf8'
+            });
             await cap.Plugins.Share.share({ title: name, url: res.uri, dialogTitle: 'Guardar o compartir' });
             return;
         } catch (e) {

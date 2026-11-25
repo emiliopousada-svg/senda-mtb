@@ -30,7 +30,11 @@ for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'estre
   const source = path.join(root, f);
   if (fs.existsSync(source)) fs.copyFileSync(source, path.join(www, f));
 }
-fs.cpSync(path.join(root, 'app'), path.join(www, 'app'), { recursive: true });
+const appReadme = path.join(root, 'app', 'README.md');
+fs.cpSync(path.join(root, 'app'), path.join(www, 'app'), {
+  recursive: true,
+  filter: source => path.resolve(source) !== appReadme
+});
 const appConfig = path.join(www, 'app', 'config.js');
 const configText = fs.readFileSync(appConfig, 'utf8');
 if (!/const APP_VERSION = '[^']*';/.test(configText)) {

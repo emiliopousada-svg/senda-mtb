@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
@@ -35,6 +36,16 @@ jobs:
           cache-provider: basic
       - name: Install dependencies
         run: npm ci
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
+      - name: Verify release tag belongs to main
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Release tag $GITHUB_REF_NAME must point to a commit on main."
+            exit 1
+          fi
       - name: Verify release tag matches app version
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -55,15 +66,38 @@ jobs:
           MTB_SIGNING_STORE_PASSWORD: ${{ secrets.MTB_SIGNING_STORE_PASSWORD }}
           MTB_SIGNING_KEY_ALIAS: ${{ secrets.MTB_SIGNING_KEY_ALIAS }}
           MTB_SIGNING_KEY_PASSWORD: ${{ secrets.MTB_SIGNING_KEY_PASSWORD }}
+          MTB_SIGNING_CERT_SHA256: ${{ vars.MTB_SIGNING_CERT_SHA256 }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ] || [ -z "$MTB_SIGNING_STORE_PASSWORD" ] || [ -z "$MTB_SIGNING_KEY_ALIAS" ] || [ -z "$MTB_SIGNING_KEY_PASSWORD" ]; then
             echo "::error::Configure all MTB_SIGNING_* repository secrets before building a signed APK."
             exit 1
           fi
+          if [ "$MTB_SIGNING_STORE_PASSWORD" = "android" ] || [ "$MTB_SIGNING_KEY_PASSWORD" = "android" ] || [ "$MTB_SIGNING_KEY_ALIAS" = "androiddebugkey" ]; then
+            echo "::error::Release signing must use a dedicated keystore, alias, and non-default passwords."
+            exit 1
+          fi
+          if [ "${#MTB_SIGNING_STORE_PASSWORD}" -lt 16 ] || [ "${#MTB_SIGNING_KEY_PASSWORD}" -lt 16 ]; then
+            echo "::error::Release signing passwords must contain at least 16 characters."
+            exit 1
+          fi
+          if [ -z "$MTB_SIGNING_CERT_SHA256" ]; then
+            echo "::error::Set the MTB_SIGNING_CERT_SHA256 Actions variable to the new release certificate fingerprint."
+            exit 1
+          fi
+          EXPECTED_CERT_SHA256="$(printf '%s' "$MTB_SIGNING_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
+          if ! [[ "$EXPECTED_CERT_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::MTB_SIGNING_CERT_SHA256 must contain exactly 64 hexadecimal characters."
+            exit 1
+          fi
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/senda-mtb-signing.keystore"
           chmod 600 "$RUNNER_TEMP/senda-mtb-signing.keystore"
           echo "MTB_SIGNING_STORE_FILE=$RUNNER_TEMP/senda-mtb-signing.keystore" >> "$GITHUB_ENV"
-          keytool -list -keystore "$RUNNER_TEMP/senda-mtb-signing.keystore" -storepass "$MTB_SIGNING_STORE_PASSWORD" -alias "$MTB_SIGNING_KEY_ALIAS"
+          CERT_SHA256="$(keytool -exportcert -keystore "$RUNNER_TEMP/senda-mtb-signing.keystore" -storepass "$MTB_SIGNING_STORE_PASSWORD" -alias "$MTB_SIGNING_KEY_ALIAS" | sha256sum | cut -d ' ' -f 1)"
+          if [ "$CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::Release certificate fingerprint does not match MTB_SIGNING_CERT_SHA256."
+            exit 1
+          fi
+          echo "Verified release signing certificate fingerprint."
       - name: Assemble signed release APK
         env:
           MTB_SIGNING_STORE_PASSWORD: ${{ secrets.MTB_SIGNING_STORE_PASSWORD }}
@@ -117,12 +151,18 @@ jobs:
             const fs = require("node:fs");
             const previous = process.env.RELEASE_VERSION;
             const next = require("./package.json").version;
-            for (const file of ["README.md", "app/config.js"]) {
+            const quote = String.fromCharCode(39);
+            const replacements = [
+              ["README.md", `Versión indicada en el proyecto: **${previous}**`, `Versión indicada en el proyecto: **${next}**`],
+              ["app/config.js", `const APP_VERSION = ${quote}${previous}${quote};`, `const APP_VERSION = ${quote}${next}${quote};`]
+            ];
+            for (const [file, before, after] of replacements) {
               const content = fs.readFileSync(file, "utf8");
-              if (!content.includes(previous)) {
-                throw new Error(`Could not find ${previous} in ${file}`);
+              const occurrences = content.split(before).length - 1;
+              if (occurrences !== 1) {
+                throw new Error(`Expected exactly one version marker in ${file}, found ${occurrences}`);
               }
-              fs.writeFileSync(file, content.split(previous).join(next));
+              fs.writeFileSync(file, content.replace(before, after));
             }
           '
           npm test

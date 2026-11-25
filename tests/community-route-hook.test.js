@@ -263,6 +263,27 @@ test('community route update keeps its trimmed track and existing POIs intact', 
     assert.equal(values.trackJson, storedTrack);
 });
 
+test('community route metadata updates skip duplicate scans but publication still checks', () => {
+    let duplicateChecks = 0;
+    const save = communityRouteHookWith(() => {
+        duplicateChecks++;
+        return [];
+    });
+    const values = duplicateRouteValues();
+    values.published = false;
+    assert.equal(save(values), true);
+    assert.equal(duplicateChecks, 1);
+
+    const originalValues = { ...values };
+    values.title = 'Updated title';
+    assert.equal(save.update(values, originalValues), true);
+    assert.equal(duplicateChecks, 1);
+
+    values.published = true;
+    assert.equal(save.update(values, originalValues), true);
+    assert.equal(duplicateChecks, 2);
+});
+
 test('community route update trims only when the track changes', () => {
     const save = communityRouteHookWith(() => []);
     const values = duplicateRouteValues();
