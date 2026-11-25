@@ -12,7 +12,7 @@ const hookSource = fs.readFileSync(
     'utf8'
 );
 
-function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000Z', trackPoints } = {}) {
+function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000Z', trackPoints, saveError, throwOnEof = false } = {}) {
     const trackStartMs = Date.parse('2026-11-15T08:30:00.000Z');
     const track = {
         format: 2,
@@ -36,6 +36,7 @@ function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000
     } : null;
     const savedEntries = [];
     const queries = [];
+    const loggedErrors = [];
     let response;
     const bytes = Buffer.from(JSON.stringify(track), 'utf8');
     let offset = 0;
@@ -58,6 +59,7 @@ function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000
         },
         findCollectionByNameOrId(name) { return name; },
         save(record) {
+            if (saveError) throw saveError;
             record.id = 'ranking-entry';
             savedEntries.push(record);
         },
@@ -70,6 +72,9 @@ function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000
                         read(buffer) {
                             assert.equal(Object.prototype.toString.call(buffer), '[object Uint8Array]');
                             const count = Math.min(buffer.length, bytes.length - offset);
+                            if (count <= 0 && throwOnEof) {
+                                throw new Error('GoError: EOF');
+                            }
                             for (let index = 0; index < count; index++) buffer[index] = bytes[offset + index];
                             offset += count;
                             return count;
@@ -105,6 +110,7 @@ function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000
             getString(name) { return String(this.values[name] ?? ''); }
             getFloat(name) { return Number(this.values[name]) || 0; }
         },
+        console: { log(...args) { loggedErrors.push(args); } },
         require() { return utils; },
         routerAdd(_method, routePath, handler) { routes.set(routePath, handler); }
     });
@@ -114,6 +120,7 @@ function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000
         handler: routes.get('/api/mtb/groups/rankings/share'),
         queries,
         savedEntries,
+        loggedErrors,
         get response() { return response; },
         async invoke(payload) {
             response = null;
@@ -163,6 +170,22 @@ test('group ranking share refuses client ids without an owned synchronized route
     assert.equal(result.status, 404);
     assert.match(result.body.message, /Sincroniza primero/);
     assert.equal(context.savedEntries.length, 0);
+    assert.equal(context.loggedErrors.length, 1);
+    assert.equal(context.loggedErrors[0][0], '[groups/rankings/share] Request rejected:');
+    assert.equal(context.loggedErrors[0][1], 404);
+});
+
+test('group ranking share logs invalid client ids without changing the response', async () => {
+    const context = rankingHookContext();
+
+    const result = await context.invoke({ clientId: 0 });
+
+    assert.equal(result.status, 400);
+    assert.match(result.body.message, /marcas de la actividad no son válidas/);
+    assert.equal(context.loggedErrors.length, 1);
+    assert.equal(context.loggedErrors[0][0], '[groups/rankings/share] Request rejected:');
+    assert.equal(context.loggedErrors[0][1], 400);
+    assert.match(String(context.loggedErrors[0][2]), /marcas de la actividad no son válidas/);
 });
 
 test('group ranking share derives the activity date from the synchronized track', async () => {
@@ -188,4 +211,30 @@ test('group ranking share rejects tracks without a valid activity timestamp', as
     assert.equal(result.status, 400);
     assert.match(result.body.message, /fecha de actividad válida/);
     assert.equal(context.savedEntries.length, 0);
+    assert.equal(context.loggedErrors.length, 1);
+    assert.equal(context.loggedErrors[0][0], '[groups/rankings/share] Request rejected:');
+    assert.equal(context.loggedErrors[0][1], 400);
+    assert.match(String(context.loggedErrors[0][2]), /fecha de actividad válida/);
+});
+
+test('group ranking share logs unexpected server errors without exposing them to the client', async () => {
+    const context = rankingHookContext({ saveError: new Error('database unavailable') });
+
+    const result = await context.invoke({ clientId: 456 });
+
+    assert.equal(result.status, 400);
+    assert.equal(result.body.message, 'No se pudieron compartir las marcas de la actividad.');
+    assert.equal(context.loggedErrors.length, 1);
+    assert.equal(context.loggedErrors[0][0], '[groups/rankings/share] Unexpected failure:');
+    assert.match(String(context.loggedErrors[0][1]), /database unavailable/);
+});
+
+test('group ranking share handles GoError: EOF when reading track file from PocketBase filesystem', async () => {
+    const context = rankingHookContext({ throwOnEof: true });
+
+    const result = await context.invoke({ clientId: 123 });
+
+    assert.equal(result.status, 200);
+    assert.equal(context.savedEntries.length, 1);
+    assert.equal(context.loggedErrors.length, 0);
 });
