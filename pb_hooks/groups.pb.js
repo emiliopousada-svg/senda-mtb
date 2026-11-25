@@ -303,36 +303,6 @@ routerAdd("GET", "/api/mtb/groups/rankings", (e) => {
     }
 }, $apis.requireAuth("users"));
 
-function readSynchronizedRouteTrack(route, clientError) {
-    const filename = route.getString("track");
-    if (!filename) throw clientError("La ruta sincronizada no tiene un trazado disponible.");
-
-    const filesystem = $app.newFilesystem();
-    let reader = null;
-    try {
-        reader = filesystem.getReader($filepath.join(route.baseFilesPath(), filename));
-        if (reader.size() > 26214400) throw clientError("El trazado sincronizado supera el límite permitido.");
-
-        const parts = [];
-        const buffer = new Uint8Array(16384);
-        while (true) {
-            const count = reader.read(buffer);
-            if (!Number.isInteger(count) || count < 0 || count > buffer.length) {
-                throw clientError("No se pudo leer el trazado sincronizado.");
-            }
-            if (count === 0) break;
-            parts.push(String.fromCharCode.apply(null, buffer.subarray(0, count)));
-        }
-        return JSON.parse(parts.join(""));
-    } finally {
-        try {
-            if (reader) reader.close();
-        } finally {
-            filesystem.close();
-        }
-    }
-}
-
 routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
     const {
         requireSafeValue,
@@ -344,6 +314,46 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         requireVerifiedCommunityUser,
         clientError
     } = require(`${__hooks}/groups_utils.js`);
+    const readSynchronizedRouteTrack = (route) => {
+        const filename = route.getString("track");
+        if (!filename) throw clientError("La ruta sincronizada no tiene un trazado disponible.");
+
+        const filesystem = $app.newFilesystem();
+        let reader = null;
+        try {
+            reader = filesystem.getReader($filepath.join(route.baseFilesPath(), filename));
+            if (reader.size() > 26214400) throw clientError("El trazado sincronizado supera el límite permitido.");
+
+            const parts = [];
+            const buffer = new Uint8Array(16384);
+            while (true) {
+                let count = 0;
+                try {
+                    count = reader.read(buffer);
+                } catch (readErr) {
+                    const message = String(readErr && (readErr.message || readErr) || "");
+                    if (message.indexOf("EOF") !== -1) break;
+                    throw clientError("No se pudo leer el trazado sincronizado.");
+                }
+                if (!Number.isInteger(count) || count < 0 || count > buffer.length) {
+                    throw clientError("No se pudo leer el trazado sincronizado.");
+                }
+                if (count === 0) break;
+                parts.push(String.fromCharCode.apply(null, buffer.subarray(0, count)));
+            }
+            try {
+                return JSON.parse(parts.join(""));
+            } catch (_) {
+                throw clientError("El trazado sincronizado no tiene un formato válido.");
+            }
+        } finally {
+            try {
+                if (reader) reader.close();
+            } finally {
+                filesystem.close();
+            }
+        }
+    };
     try {
         // Older app versions still send these fields; the server deliberately ignores their values.
         const body = new DynamicModel({
@@ -357,16 +367,16 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         e.bindBody(body);
         const clientId = Number(body.clientId);
         if (!Number.isFinite(clientId) || clientId <= 0 || Math.floor(clientId) !== clientId || clientId > 9007199254740991) {
-            return e.json(400, { message: "Las marcas de la actividad no son válidas." });
+            throw clientError("Las marcas de la actividad no son válidas.");
         }
 
         const user = $app.findRecordById("users", e.auth.id);
         requireVerifiedCommunityUser(user);
         const groupId = user.getString("groupCode");
-        if (!groupId) return e.json(404, { message: "No hay un grupo activo." });
+        if (!groupId) throw clientError("No hay un grupo activo.", 404);
         const safeGroupId = requireSafeValue(groupId, "groupId");
         if (!safeMembership(safeGroupId, user.id).length) {
-            return e.json(403, { message: "Ya no tienes autorización para compartir marcas en este grupo." });
+            throw clientError("Ya no tienes autorización para compartir marcas en este grupo.", 403);
         }
 
         const routes = $app.findRecordsByFilter(
@@ -378,13 +388,13 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
             { owner: user.id, clientId }
         );
         const route = routes[0];
-        if (!route) return e.json(404, { message: "Sincroniza primero esta actividad para poder verificar sus marcas." });
+        if (!route) throw clientError("Sincroniza primero esta actividad para poder verificar sus marcas.", 404);
         if (route.getString("kind") !== "recorded") {
-            return e.json(400, { message: "Solo se pueden compartir actividades grabadas." });
+            throw clientError("Solo se pueden compartir actividades grabadas.");
         }
 
         const routeSyncedAt = route.getString("created");
-        const track = readSynchronizedRouteTrack(route, clientError);
+        const track = readSynchronizedRouteTrack(route);
         const activityAtMs = firstTrackTimestampMs(track);
         if (!Number.isFinite(activityAtMs)) {
             throw clientError("El trazado sincronizado no contiene una fecha de actividad válida.");
@@ -420,7 +430,7 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         entry.set("clientId", clientId);
         entry.set("route", route.id);
         entry.set("distanceKm", distanceKm);
-        entry.set("movingTimeSec", movingTimeSec);
+        entry.set("movingTimeSec", Math.round(movingTimeSec));
         entry.set("maxSpeedKmh", maxSpeedKmh);
         entry.set("elevationGain", elevationGain);
         $app.save(entry);
@@ -442,6 +452,11 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
             newSpeedRecord: maxSpeedKmh > previousRanking.maxSpeedKmh
         });
     } catch (err) {
+        if (err && err.clientMessage) {
+            console.log("[groups/rankings/share] Request rejected:", err.status || 400, err.clientMessage);
+        } else {
+            console.log("[groups/rankings/share] Unexpected failure:", err);
+        }
         return e.json(err.status || 400, { message: err.clientMessage || "No se pudieron compartir las marcas de la actividad." });
     }
 }, $apis.requireAuth("users"));

@@ -254,7 +254,7 @@ function calculateGroupActivityMetrics(track) {
         throw clientError("La velocidad media calculada no es plausible.");
     }
 
-    return { distanceKm, movingTimeSec, maxSpeedKmh, elevationGain };
+    return { distanceKm, movingTimeSec: Math.round(movingTimeSec), maxSpeedKmh, elevationGain };
 }
 
 function getEntryValue(entry, field, isNumeric = false) {
