@@ -12,13 +12,14 @@ const hookSource = fs.readFileSync(
     'utf8'
 );
 
-function rankingHookContext({ route = true } = {}) {
+function rankingHookContext({ route = true, startedAt = '2026-11-18T08:30:00.000Z', trackPoints } = {}) {
+    const trackStartMs = Date.parse('2026-11-15T08:30:00.000Z');
     const track = {
         format: 2,
-        points: [
-            [0, 0, 100, 1_800_000_000_000],
-            [0, 0.001, 110, 1_800_000_100_000],
-            [0, 0.002, 120, 1_800_000_200_000]
+        points: trackPoints || [
+            [0, 0, 100, trackStartMs],
+            [0, 0.001, 110, trackStartMs + 100_000],
+            [0, 0.002, 120, trackStartMs + 200_000]
         ]
     };
     const routeRecord = route ? {
@@ -27,6 +28,7 @@ function rankingHookContext({ route = true } = {}) {
             return ({
                 track: 'track.json',
                 kind: 'recorded',
+                startedAt,
                 created: '2026-11-16T12:00:00.000Z'
             })[name] || '';
         },
@@ -66,6 +68,7 @@ function rankingHookContext({ route = true } = {}) {
                     return {
                         size() { return bytes.length; },
                         read(buffer) {
+                            assert.equal(Object.prototype.toString.call(buffer), '[object Uint8Array]');
                             const count = Math.min(buffer.length, bytes.length - offset);
                             for (let index = 0; index < count; index++) buffer[index] = bytes[offset + index];
                             offset += count;
@@ -149,6 +152,7 @@ test('group ranking share ignores client metrics and stores values recalculated 
     assert.equal(entry.values.elevationGain, 10);
     assert.equal(entry.values.route, 'synced-route');
     assert.equal(entry.values.routeSyncedAt, '2026-11-16T12:00:00.000Z');
+    assert.equal(entry.values.activityAt, '2026-11-15T08:30:00.000Z');
 });
 
 test('group ranking share refuses client ids without an owned synchronized route', async () => {
@@ -158,5 +162,30 @@ test('group ranking share refuses client ids without an owned synchronized route
 
     assert.equal(result.status, 404);
     assert.match(result.body.message, /Sincroniza primero/);
+    assert.equal(context.savedEntries.length, 0);
+});
+
+test('group ranking share derives the activity date from the synchronized track', async () => {
+    const context = rankingHookContext();
+
+    const result = await context.invoke({ clientId: 456 });
+
+    assert.equal(result.status, 200);
+    assert.equal(context.savedEntries[0].values.activityAt, '2026-11-15T08:30:00.000Z');
+});
+
+test('group ranking share rejects tracks without a valid activity timestamp', async () => {
+    const context = rankingHookContext({
+        trackPoints: [
+            [0, 0, 100, null],
+            [0, 0.001, 110, 'invalid'],
+            [0, 0.002, 120, 0]
+        ]
+    });
+
+    const result = await context.invoke({ clientId: 456 });
+
+    assert.equal(result.status, 400);
+    assert.match(result.body.message, /fecha de actividad válida/);
     assert.equal(context.savedEntries.length, 0);
 });

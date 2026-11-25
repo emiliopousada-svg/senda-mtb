@@ -314,11 +314,14 @@ function readSynchronizedRouteTrack(route, clientError) {
         if (reader.size() > 26214400) throw clientError("El trazado sincronizado supera el límite permitido.");
 
         const parts = [];
-        const buffer = Array(16384).fill(0);
+        const buffer = new Uint8Array(16384);
         while (true) {
             const count = reader.read(buffer);
-            if (!count) break;
-            parts.push(String.fromCharCode.apply(null, buffer.slice(0, count)));
+            if (!Number.isInteger(count) || count < 0 || count > buffer.length) {
+                throw clientError("No se pudo leer el trazado sincronizado.");
+            }
+            if (count === 0) break;
+            parts.push(String.fromCharCode.apply(null, buffer.subarray(0, count)));
         }
         return JSON.parse(parts.join(""));
     } finally {
@@ -335,6 +338,7 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         requireSafeValue,
         safeMembership,
         findAllRecordsByFilter,
+        firstTrackTimestampMs,
         groupRankingSummaryFromEntries,
         calculateGroupActivityMetrics,
         requireVerifiedCommunityUser,
@@ -380,10 +384,13 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         }
 
         const routeSyncedAt = route.getString("created");
-        if (!Number.isFinite(Date.parse(String(routeSyncedAt).replace(" ", "T")))) {
-            return e.json(400, { message: "No se pudo verificar la fecha de sincronización de la actividad." });
+        const track = readSynchronizedRouteTrack(route, clientError);
+        const activityAtMs = firstTrackTimestampMs(track);
+        if (!Number.isFinite(activityAtMs)) {
+            throw clientError("El trazado sincronizado no contiene una fecha de actividad válida.");
         }
-        const metrics = calculateGroupActivityMetrics(readSynchronizedRouteTrack(route, clientError));
+        const activityAt = new Date(activityAtMs).toISOString();
+        const metrics = calculateGroupActivityMetrics(track);
         const { distanceKm, movingTimeSec, maxSpeedKmh, elevationGain } = metrics;
 
         const filter = "group = {:group} && owner = {:owner}";
@@ -409,6 +416,7 @@ routerAdd("POST", "/api/mtb/groups/rankings/share", (e) => {
         entry.set("group", safeGroupId);
         entry.set("owner", user.id);
         entry.set("routeSyncedAt", routeSyncedAt);
+        entry.set("activityAt", activityAt);
         entry.set("clientId", clientId);
         entry.set("route", route.id);
         entry.set("distanceKm", distanceKm);

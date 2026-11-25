@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
     groupRankingSummaryFromEntries,
+    firstTrackTimestampMs,
     calculateGroupActivityMetrics,
     entryTimeMs,
     findRecordsByIds,
@@ -75,6 +76,22 @@ test('group ranking activity metrics are recalculated from synchronized track po
     assert.equal(metrics.elevationGain, 10);
 });
 
+test('ranking activity date uses the first valid timestamp in track point order', () => {
+    const timestamp = Date.parse('2026-11-15T08:30:00.000Z');
+    const track = {
+        points: [
+            [0, 0, 100, true],
+            [0, 0, 100, { timestamp }],
+            [0, 0.001, 110, '2026-11-15T08:30:00.000Z'],
+            [0, 0.002, 120, timestamp - 1000]
+        ]
+    };
+
+    assert.equal(firstTrackTimestampMs(track), timestamp);
+    assert.ok(Number.isNaN(firstTrackTimestampMs({ points: [[0, 0, 100, null]] })));
+    assert.ok(Number.isNaN(firstTrackTimestampMs(null)));
+});
+
 test('verified ranking entries use the server-supplied activity date, not the client id', () => {
     const entry = rankingEntry('rider-1', '2026-11-16T12:00:00.000Z', {
         clientId: Date.parse('2026-01-05T00:00:00.000Z'),
@@ -82,6 +99,15 @@ test('verified ranking entries use the server-supplied activity date, not the cl
     });
 
     assert.equal(entryTimeMs(entry), Date.parse('2026-11-16T12:00:00.000Z'));
+});
+
+test('verified ranking entries prefer the activity start date over synchronization time', () => {
+    const entry = rankingEntry('rider-1', '2026-11-18T12:00:00.000Z', {
+        activityAt: '2026-11-16T08:30:00.000Z',
+        routeSyncedAt: '2026-11-18T12:00:00.000Z'
+    });
+
+    assert.equal(entryTimeMs(entry), Date.parse('2026-11-16T08:30:00.000Z'));
 });
 
 test('findRecordsByIds deduplicates ids and splits lookups into bounded batches', () => {

@@ -142,6 +142,33 @@ test('group ranking migration adds route binding and trusted activity date idemp
     assert.equal(saves, 1);
 });
 
+test('group ranking activity date migration adds an idempotent date field', () => {
+    const migration = loadMigration('1794837001_add_group_ranking_activity_date.js');
+    const fields = [];
+    const ranking = {
+        fields: {
+            getByName(name) { return fields.find(field => field.name === name) || null; },
+            add(field) { fields.push(field); }
+        }
+    };
+    let saves = 0;
+    const app = {
+        findCollectionByNameOrId(name) {
+            assert.equal(name, 'mtb_group_ranking_entries');
+            return ranking;
+        },
+        save() { saves++; }
+    };
+
+    migration.up(app);
+    migration.up(app);
+
+    assert.equal(fields.length, 1);
+    assert.equal(fields[0].name, 'activityAt');
+    assert.equal(fields[0].type(), 'date');
+    assert.equal(saves, 1);
+});
+
 test('verified-community migration gates every open community write rule and rolls back only its own guard', () => {
     const migration = loadMigration('1794837000_require_verified_community_writes.js');
     const names = [

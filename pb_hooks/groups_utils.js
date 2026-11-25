@@ -124,6 +124,30 @@ function calculateActivityPoints(distanceKm, movingTimeSec, elevationGain) {
     return Math.round(distancePoints + elevationPoints + timePoints + consistencyBonus);
 }
 
+function trackPointTimeMs(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+    if (typeof value !== "string" || !value.trim()) return NaN;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function firstTrackTimestampMs(track) {
+    const points = Array.isArray(track) ? track : track && track.points;
+    if (!Array.isArray(points)) return NaN;
+
+    for (const point of points) {
+        if (!Array.isArray(point) || point.length < 4) continue;
+        const timestamp = trackPointTimeMs(point[3]);
+        if (Number.isFinite(timestamp) && timestamp > 0
+            && Number.isFinite(new Date(timestamp).getTime())) {
+            return timestamp;
+        }
+    }
+    return NaN;
+}
+
 function calculateGroupActivityMetrics(track) {
     const points = Array.isArray(track) ? track : track && track.points;
     if (!Array.isArray(points) || points.length < 2) {
@@ -169,14 +193,6 @@ function calculateGroupActivityMetrics(track) {
             elevationReference = smoothed;
         }
     };
-    const pointTimeMs = value => {
-        if (value == null || value === "") return NaN;
-        const numeric = Number(value);
-        if (Number.isFinite(numeric)) return numeric;
-        const parsed = Date.parse(value);
-        return Number.isFinite(parsed) ? parsed : NaN;
-    };
-
     for (const point of points) {
         if (!Array.isArray(point) || point.length < 2) {
             throw clientError("El trazado sincronizado contiene un punto no válido.");
@@ -205,7 +221,7 @@ function calculateGroupActivityMetrics(track) {
                 Math.sqrt(Math.min(1, haversine)),
                 Math.sqrt(Math.max(0, 1 - haversine))
             );
-            const timeMs = pointTimeMs(point[3]);
+            const timeMs = trackPointTimeMs(point[3]);
             const elapsedSec = (timeMs - previous.timeMs) / 1000;
             const hasValidDelta = Number.isFinite(elapsedSec) && elapsedSec > 0;
 
@@ -223,7 +239,7 @@ function calculateGroupActivityMetrics(track) {
                 previous = { lat, lon, timeMs };
             }
         } else {
-            previous = { lat, lon, timeMs: pointTimeMs(point[3]) };
+            previous = { lat, lon, timeMs: trackPointTimeMs(point[3]) };
         }
     }
 
@@ -248,10 +264,15 @@ function getEntryValue(entry, field, isNumeric = false) {
     return String((entry && entry[field]) || "");
 }
 
-// Los registros nuevos usan la fecha de sincronización del servidor; clientId solo
-// se conserva como fecha para entradas antiguas que todavía no tienen ese valor.
+// activityAt contiene la primera marca temporal del track; los registros históricos
+// recurren a la fecha de sincronización y, finalmente, al clientId.
 const MIN_ACTIVITY_MS = Date.UTC(2020, 0, 1);
 function entryTimeMs(entry, nowMs = Date.now()) {
+    const activityAt = getEntryValue(entry, "activityAt", false);
+    if (activityAt) {
+        const timestamp = Date.parse(String(activityAt).replace(" ", "T"));
+        return Number.isFinite(timestamp) ? timestamp : NaN;
+    }
     const routeSyncedAt = getEntryValue(entry, "routeSyncedAt", false);
     if (routeSyncedAt) {
         const timestamp = Date.parse(String(routeSyncedAt).replace(" ", "T"));
@@ -584,6 +605,7 @@ module.exports = {
     deleteAllRecordsByFilter,
     getSeasonInfo,
     calculateActivityPoints,
+    firstTrackTimestampMs,
     calculateGroupActivityMetrics,
     groupRankingSummaryFromEntries,
     entryTimeMs,
