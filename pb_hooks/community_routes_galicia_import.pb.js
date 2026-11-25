@@ -232,7 +232,7 @@ function run() {
             minLat = Math.min(minLat, points[i][0]); maxLat = Math.max(maxLat, points[i][0]);
             minLng = Math.min(minLng, points[i][1]); maxLng = Math.max(maxLng, points[i][1]);
         }
-        record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: fittedTrack.json, trackLocked: true, poisJson: "[]", published: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
+        record.load({ owner: owner.id, createdBy: ownerNickname, title: parsed.name, province: "Galicia", activityType: "mtb", distanceKm: +(distanceM / 1000).toFixed(3), elevationGain: Math.round(gain), movingTimeSec: 0, trackJson: fittedTrack.json, trackLocked: true, poisJson: "[]", published: true, quotaExemptForLimit: true, sourcePath: sourcePath, minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng });
         $app.save(record);
         saveImportState();
     }

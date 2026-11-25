@@ -8,6 +8,10 @@ const normalizeCommunityAlias = (e) => {
     if (e.record.getString("owner") !== e.auth.id) {
         throw new BadRequestError("El propietario del registro no coincide con la sesión.");
     }
+    if (e.record.isNew()) {
+        const { enforceCommunityWriteQuota } = require(`${__hooks}/community_quota_utils.js`);
+        enforceCommunityWriteQuota($app, e.auth.id, "social");
+    }
     let user;
     try { user = $app.findRecordById("users", e.auth.id); }
     catch (error) { throw new BadRequestError("No se pudo encontrar la cuenta del propietario."); }

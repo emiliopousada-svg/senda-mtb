@@ -665,7 +665,7 @@ async function ensureRideAccount() {
     return false;
 }
 
-const MAP_RECORDING_HOLD_MS = 3000;
+const MAP_RECORDING_HOLD_MS = 2000;
 const MAP_RECORDING_HOLD_MOVE_THRESHOLD_PX = 12;
 
 function bindMapRecordingHold(button) {

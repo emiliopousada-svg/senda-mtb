@@ -10,6 +10,8 @@ const {
     MAX_DOWNLOADED_IGN_TILES,
     MAX_TILES_PER_DOWNLOAD,
     ONLINE_TILE_OFFLINE_CACHE_ENABLED,
+    formatOnlineTileCacheStatus,
+    isTileProviderRateLimit,
     ignTileUrl,
     tileKey,
     onlineTileKey
@@ -88,13 +90,27 @@ test('ignTileUrl converts to TMS reversed Y coordinates', () => {
     assert.equal(url, `https://tms-mapa-raster.ign.es/1.0.0/mapa-raster/10/500/${expectedTmsY}.jpeg`);
 });
 
-test('strict tile provider offline policy is enforced', () => {
-    // La política de OpenStreetMap Foundation prohíbe descargas masivas offline
+test('online tile styles do not persist offline by default', () => {
+    // Los estilos online no se persisten offline sin permiso explícito del proveedor.
     assert.equal(
         ONLINE_TILE_OFFLINE_CACHE_ENABLED,
         false,
-        'La persistencia offline masiva para proveedores estándar online debe permanecer desactivada'
+        'La caché persistente offline de estilos online debe seguir desactivada'
     );
+});
+
+test('disabled online tile cache identifies legacy records as inactive', () => {
+    assert.equal(formatOnlineTileCacheStatus(0), 'caché persistente online desactivada');
+    assert.equal(
+        formatOnlineTileCacheStatus(12),
+        '12 teselas online heredadas (inactivas; no se usan sin conexión)'
+    );
+});
+
+test('HTTP 429 is identified as a provider rate limit', () => {
+    assert.equal(isTileProviderRateLimit({ status: 429 }), true);
+    assert.equal(isTileProviderRateLimit({ status: 503 }), false);
+    assert.equal(isTileProviderRateLimit(new Error('Network error')), false);
 });
 
 test('quota constants and reserve match specification', () => {

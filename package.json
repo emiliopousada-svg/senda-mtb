@@ -9,7 +9,8 @@
     "sync": "node scripts/prepare-web.js && npx cap sync",
     "test": "node --test",
     "test:statistics": "node --test tests/statistics-engine.test.js",
-    "test:community": "node --test tests/community-performance.test.js"
+    "test:community": "node --test tests/community-performance.test.js",
+    "test:pocketbase:staging": "node scripts/pocketbase-staging-smoke.js"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "8.0.1",

@@ -3,6 +3,7 @@
 // - Los mapas offline (teselas del IGN) se guardan en IndexedDB desde la propia aplicación.
 // prepare-web.js sustituye la versión y el hash del service worker en cada build.
 const SHELL = 'mtbpro-shell-v__APP_VERSION__-v17-__SW_HASH__';
+const SHELL_PREFIX = 'mtbpro-shell-';
 
 const SHELL_URLS = [
   './',
@@ -105,7 +106,9 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== SHELL).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys
+        .filter(k => k.startsWith(SHELL_PREFIX) && k !== SHELL)
+        .map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
