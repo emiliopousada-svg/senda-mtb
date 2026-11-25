@@ -173,15 +173,15 @@ function draftSaveContext(initialPoints) {
     return { context, writes };
 }
 
-function recordingWakeContext() {
+function recordingWakeContext(nativeKeepAwakeResult = true) {
     const calls = [];
     const context = vm.createContext({
         async screenSetRecordingKeepAwake(enabled) {
             calls.push(['native', enabled]);
-            return true;
+            return nativeKeepAwakeResult;
         },
         screenReleaseWakeLock() { calls.push(['releaseWebWakeLock']); },
-        async screenEnsureAwake() { calls.push(['ensureAwake']); },
+        async screenEnsureAwake(allowNativeFallback) { calls.push(['ensureAwake', allowNativeFallback]); },
         navigator: {}
     });
     const start = recordingSource.indexOf('async function acquireWake() {');
@@ -403,6 +403,17 @@ test('recording acquires native screen-on state and releases it on pause or fini
         ['native', true],
         ['native', false],
         ['releaseWebWakeLock']
+    ]);
+});
+
+test('recording falls back to the web wake lock when native screen-on fails', async () => {
+    const { context, calls } = recordingWakeContext(false);
+
+    await context.acquireWake();
+
+    assert.deepEqual(calls, [
+        ['native', true],
+        ['ensureAwake', true]
     ]);
 });
 

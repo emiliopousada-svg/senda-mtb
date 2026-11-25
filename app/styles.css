@@ -376,7 +376,7 @@ html, body {
 }
 
 .btn-danger-stop {
-    background: var(--danger) !important;
+    background: #d32f2f !important;
     border: none !important;
     display: none;
 }

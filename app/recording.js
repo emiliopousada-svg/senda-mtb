@@ -53,7 +53,7 @@ async function acquireWake() {
     if (typeof screenSetRecordingKeepAwake === 'function'
         && await screenSetRecordingKeepAwake(true)) return;
     if (typeof screenEnsureAwake === 'function') {
-        await screenEnsureAwake();
+        await screenEnsureAwake(true);
         return;
     }
     try {

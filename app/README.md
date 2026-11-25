@@ -34,7 +34,7 @@ FIT import uses the MIT-licensed `fit-file-parser` package, bundled into the off
 
 ## Screen and GPS power use
 
-The Android activity keeps the display awake while the app is in the foreground. After five minutes without touch or keyboard input, it lowers the actual window brightness and shows a touch-to-wake layer; returning the app to the background restores the system brightness. Browsers use the Screen Wake Lock API and a dark overlay where native brightness control is unavailable.
+Outside an active recording, Android follows the device's normal screen timeout. During a foreground recording, the Android activity prevents the display from turning off; after five minutes without touch or keyboard input, it lowers the actual window brightness and shows a touch-to-wake layer. When the app goes to the background, the system may turn off the display while native location tracking continues. Browsers use the Screen Wake Lock API and a dark overlay where native brightness control is unavailable.
 
 The web GPS watch uses low-power mode while the app is idle, switches to fresh high-accuracy fixes while recording or following a route, and stops when the app is hidden outside a recording. During native background recording, the background watcher replaces the web watch and uses the same four-metre movement threshold as track sampling. Poor-accuracy fixes and impossible jumps remain excluded from recorded tracks.
 

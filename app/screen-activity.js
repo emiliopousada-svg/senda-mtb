@@ -59,8 +59,8 @@ function screenSetDimmed(dimmed) {
     }
 }
 
-async function screenEnsureAwake() {
-    if (document.visibilityState === 'hidden' || screenControlPlugin()) return;
+async function screenEnsureAwake(allowNativeFallback = false) {
+    if (document.visibilityState === 'hidden' || (screenControlPlugin() && !allowNativeFallback)) return;
     if (!('wakeLock' in navigator) || screenWakeLock || screenWakeRequest) {
         if (!('wakeLock' in navigator) && !screenWakeWarningShown) {
             screenWakeWarningShown = true;

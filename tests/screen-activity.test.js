@@ -97,3 +97,21 @@ test('recording toggles the native keep-screen-on flag without changing dimming 
         ['keepScreenOn', false]
     ]);
 });
+
+test('forced wake-lock fallback can run when native screen control is present', async () => {
+    const { context } = screenContext(false);
+    const actions = [];
+    const lock = { addEventListener() {} };
+    context.navigator.wakeLock = {
+        async request(type) {
+            actions.push(type);
+            return lock;
+        }
+    };
+
+    await context.screenEnsureAwake();
+    assert.deepEqual(actions, []);
+
+    await context.screenEnsureAwake(true);
+    assert.deepEqual(actions, ['screen']);
+});
