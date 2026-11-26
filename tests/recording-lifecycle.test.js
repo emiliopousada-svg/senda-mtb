@@ -654,7 +654,7 @@ function recordingHoldContext() {
             clearTimeout(id) { timers.delete(id); }
         }
     });
-    const start = recordingSource.indexOf('const MAP_RECORDING_HOLD_MS = 2000;');
+    const start = recordingSource.indexOf('const MAP_RECORDING_HOLD_MS = 1000;');
     const end = recordingSource.indexOf('\nif (typeof btnStart', start);
     assert.notEqual(start, -1);
     assert.notEqual(end, -1);
@@ -821,11 +821,11 @@ test('recording falls back to the web wake lock when native screen-on fails', as
     ]);
 });
 
-test('map recording tap is canceled before the two-second hold completes', () => {
+test('map recording tap is canceled before the one-second hold completes', () => {
     const { button, timers, activations } = recordingHoldContext();
     button.dispatch('pointerdown', { pointerId: 7 });
 
-    assert.deepEqual([...timers.values()].map(timer => timer.delay), [2000]);
+    assert.deepEqual([...timers.values()].map(timer => timer.delay), [1000]);
     button.dispatch('pointerup', { pointerId: 7 });
     const click = button.dispatch('click', { detail: 1 });
 
@@ -847,7 +847,7 @@ test('map recording action activates once after a full hold and ignores pointer 
     const { button, timers, activations } = recordingHoldContext();
     button.dispatch('pointerdown', { pointerId: 3 });
     const [timerId, timer] = [...timers.entries()][0];
-    assert.equal(timer.delay, 2000);
+    assert.equal(timer.delay, 1000);
 
     timers.delete(timerId);
     timer.callback();
@@ -865,7 +865,7 @@ test('map recording hold supports keyboard input and leaves programmatic clicks 
 
     const keydown = button.dispatch('keydown', { key: 'Enter' });
     assert.equal(keydown.defaultPrevented, true);
-    const [timerId, timer] = [...timers.entries()].find(([, value]) => value.delay === 2000);
+    const [timerId, timer] = [...timers.entries()].find(([, value]) => value.delay === 1000);
     timers.delete(timerId);
     timer.callback();
     button.dispatch('keyup', { key: 'Enter' });

@@ -1,3 +1,17 @@
+routerAdd("POST", "/api/mtb/account/logout", (e) => {
+    try {
+        e.auth.refreshTokenKey();
+        $app.save(e.auth);
+        return e.json(200, { ok: true });
+    } catch (err) {
+        const summary = String(err && err.message || "unknown error")
+            .replace(/[\r\n]+/g, " ")
+            .slice(0, 200);
+        console.error("[account/logout] Unexpected failure:", summary);
+        return e.json(500, { message: "No se pudo cerrar sesión en todos los dispositivos." });
+    }
+}, $apis.requireAuth("users"));
+
 routerAdd("POST", "/api/mtb/account/delete", (e) => {
     try {
         const body = new DynamicModel({ password: "" });
@@ -47,7 +61,17 @@ routerAdd("POST", "/api/mtb/account/delete", (e) => {
         });
 
         return e.json(result.status, result.body);
-    } catch (_err) {
-        return e.json(400, { message: "No se pudo eliminar la cuenta." });
+    } catch (err) {
+        const status = Number.isInteger(err && err.status)
+            && err.status >= 400 && err.status < 500
+            ? err.status
+            : 500;
+        if (status === 500) {
+            const summary = String(err && err.message || "unknown error")
+                .replace(/[\r\n]+/g, " ")
+                .slice(0, 200);
+            console.error("[account/delete] Unexpected failure:", summary);
+        }
+        return e.json(status, { message: "No se pudo eliminar la cuenta." });
     }
 }, $apis.requireAuth("users"));

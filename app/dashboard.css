@@ -1366,7 +1366,7 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 .map-recording-actions #btn-start { border:2px solid #ff9d22; color:#fff; background:linear-gradient(100deg,rgba(83,45,9,.88),rgba(20,15,10,.96)); box-shadow:inset 0 0 20px rgba(255,151,27,.15); }
 .map-recording-actions #btn-start,.map-recording-actions #btn-stop { position:relative; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 .map-recording-hold-progress { position:absolute; z-index:1; right:10px; bottom:4px; left:10px; height:3px; border-radius:99px; background:currentColor; opacity:0; pointer-events:none; transform:scaleX(0); transform-origin:left center; }
-.map-recording-actions #btn-start.is-holding .map-recording-hold-progress,.map-recording-actions #btn-stop.is-holding .map-recording-hold-progress { opacity:.9; animation:map-recording-hold-fill 3s linear forwards; }
+.map-recording-actions #btn-start.is-holding .map-recording-hold-progress,.map-recording-actions #btn-stop.is-holding .map-recording-hold-progress { opacity:.9; animation:map-recording-hold-fill 1s linear forwards; }
 @keyframes map-recording-hold-fill { to { transform:scaleX(1); } }
 .map-recording-hold-hint { grid-column:1/-1; margin:-3px 0 0; color:#aab5c3; font-size:.62rem; line-height:1.25; text-align:center; }
 .map-recording-actions #btn-start.recording { border-color:#ff9d22; color:#fff; background:linear-gradient(100deg,rgba(83,45,9,.88),rgba(20,15,10,.96)); }

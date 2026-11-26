@@ -16,9 +16,16 @@ class MockRecord {
 
     getString(field) { return String(this.values[field] ?? ''); }
     validatePassword(password) { return password === this.password; }
+    refreshTokenKey() { this.values.tokenKey = 'rotated'; }
 }
 
-function accountHookEnvironment({ ownedGroup = false, failUserDelete = false } = {}) {
+function accountHookEnvironment({
+    ownedGroup = false,
+    failUserDelete = false,
+    failUserSave = false
+} = {}) {
+    const errorLogs = [];
+    const savedRecords = [];
     let state = new Map([
         ['users', new Map([['user-1', new MockRecord('users', 'user-1', { groupCode: 'group-1' })]])],
         ['mtb_groups', new Map(ownedGroup
@@ -56,6 +63,12 @@ function accountHookEnvironment({ ownedGroup = false, failUserDelete = false } =
                     throw new Error('injected user delete failure');
                 }
                 getState().get(record.collection.name).delete(record.id);
+            },
+            save(record) {
+                if (failUserSave && record.collection.name === 'users') {
+                    throw new Error('injected user save failure');
+                }
+                savedRecords.push(record);
             }
         };
     }
@@ -72,6 +85,7 @@ function accountHookEnvironment({ ownedGroup = false, failUserDelete = false } =
     const context = vm.createContext({
         $app: app,
         $apis: { requireAuth(collection) { return { collection }; } },
+        console: { error(...args) { errorLogs.push(args); } },
         DynamicModel: class {
             constructor(defaults) { Object.assign(this, defaults); }
         },
@@ -82,17 +96,47 @@ function accountHookEnvironment({ ownedGroup = false, failUserDelete = false } =
 
     return {
         routes,
+        errorLogs,
+        savedRecords,
         records(collection) { return Array.from(state.get(collection).values()); }
     };
 }
 
-function request(password) {
+function request(password, auth = { id: 'user-1' }) {
     return {
-        auth: { id: 'user-1' },
+        auth,
         bindBody(model) { if (password !== undefined) model.password = password; },
         json(status, body) { return { status, body }; }
     };
 }
+
+test('account logout rotates the auth token key and saves the user record', () => {
+    const { routes, records, savedRecords } = accountHookEnvironment();
+    const user = records('users')[0];
+    const route = routes.get('/api/mtb/account/logout');
+
+    const response = route.handler(request(undefined, user));
+
+    assert.equal(route.method, 'POST');
+    assert.equal(route.auth.collection, 'users');
+    assert.equal(response.status, 200);
+    assert.equal(response.body.ok, true);
+    assert.equal(user.values.tokenKey, 'rotated');
+    assert.deepEqual(savedRecords, [user]);
+});
+
+test('account logout reports token rotation failures without claiming success', () => {
+    const { routes, records, errorLogs } = accountHookEnvironment({ failUserSave: true });
+    const user = records('users')[0];
+
+    const response = routes.get('/api/mtb/account/logout').handler(request(undefined, user));
+
+    assert.equal(response.status, 500);
+    assert.equal(response.body.message, 'No se pudo cerrar sesión en todos los dispositivos.');
+    assert.doesNotMatch(response.body.message, /injected user save failure/);
+    assert.equal(errorLogs.length, 1);
+    assert.match(errorLogs[0][1], /injected user save failure/);
+});
 
 test('account deletion requires an authenticated user route and a correct password', () => {
     const { routes, records } = accountHookEnvironment();
@@ -130,16 +174,16 @@ test('account deletion removes live location and membership in the same transact
     assert.equal(records('live_locations').length, 0);
 });
 
-test('account deletion rolls back cleanup when deleting the user fails', () => {
-    const { routes, records } = accountHookEnvironment({ failUserDelete: true });
+test('account deletion rolls back cleanup and reports internal failures as server errors', () => {
+    const { routes, records, errorLogs } = accountHookEnvironment({ failUserDelete: true });
 
     const response = routes.get('/api/mtb/account/delete').handler(request('correct horse'));
 
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 500);
     assert.equal(response.body.message, 'No se pudo eliminar la cuenta.');
     assert.doesNotMatch(response.body.message, /injected user delete failure/);
-    assert.equal(response.body.message, 'No se pudo eliminar la cuenta.');
-    assert.doesNotMatch(response.body.message, /injected user delete failure/);
+    assert.equal(errorLogs.length, 1);
+    assert.match(errorLogs[0][1], /injected user delete failure/);
     assert.equal(records('users').length, 1);
     assert.equal(records('mtb_group_members').length, 1);
     assert.equal(records('live_locations').length, 1);

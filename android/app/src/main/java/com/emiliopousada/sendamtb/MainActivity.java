@@ -1,6 +1,7 @@
 package com.emiliopousada.sendamtb;
 
 import android.app.AlertDialog;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -74,7 +75,8 @@ public class MainActivity extends BridgeActivity {
 
         ImageView image = new ImageView(this);
         image.setImageResource(R.drawable.splash);
-        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        image.setBackgroundColor(Color.BLACK);
+        image.setScaleType(ImageView.ScaleType.FIT_CENTER);
         image.setContentDescription(getString(R.string.app_name));
         ((ViewGroup) content).addView(image, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
