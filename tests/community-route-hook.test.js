@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const communityRouteUtils = require('../pb_hooks/community_routes_utils.js');
 
 test('community route create hook trims the track and calculates its bounds', () => {
     let createHandler;
@@ -27,6 +28,7 @@ test('community route create hook trims the track and calculates its bounds', ()
         onRecordUpdateRequest() {},
         __hooks: 'hooks',
         require(name) {
+            if (name === 'hooks/community_routes_utils.js') return communityRouteUtils;
             assert.equal(name, 'hooks/community_quota_utils.js');
             return { enforceCommunityWriteQuota() {} };
         }
@@ -123,6 +125,7 @@ function communityRouteHookWith(
         },
         __hooks: 'hooks',
         require(name) {
+            if (name === 'hooks/community_routes_utils.js') return communityRouteUtils;
             assert.equal(name, 'hooks/community_quota_utils.js');
             return { enforceCommunityWriteQuota: enforceQuota };
         }
