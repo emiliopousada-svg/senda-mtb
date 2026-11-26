@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.55] - 2026-11-26
+
+### Mejorado
+* **Splash Android:** se muestra la ilustración de inicio mientras carga la primera página de la app.
+
 ## [0.2.54] - 2026-11-26
 
 ### Mejorado
