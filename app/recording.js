@@ -420,18 +420,27 @@ function cancelAppExitPreparation() {
     if (typeof resumeGpsAfterAppExitFailure === 'function') resumeGpsAfterAppExitFailure();
 }
 
+function appendRecordingBreak() {
+    if (points.length && Array.isArray(points[points.length - 1])) {
+        points.push(null);
+        draftStateVersion++;
+    }
+}
+
 async function prepareAppExit() {
     if (appExitInProgress) throw new Error('El cierre seguro ya está en curso.');
     appExitInProgress = true;
     try {
         if (typeof stopGpsForAppExit === 'function') stopGpsForAppExit();
         if (isRecording) {
+            if (!isPaused) appendRecordingBreak();
             if (!isPaused && segStart !== null) {
                 movingMs += Math.max(0, Date.now() - segStart);
                 segStart = null;
             }
             isPaused = true;
             autoPaused = false;
+            resetCadenceDisplay();
             resetAutoPauseState();
             stopTimers();
             stopRideAdvisories();
@@ -495,6 +504,7 @@ function updateTimerDisplay() {
     const movingHours = elapsedSec() / 3600;
     $('m-avg-speed').textContent = movingHours > 0 ? (totalDistance / movingHours).toFixed(1) : '0.0';
 }
+
 function startTimers() {
     clearInterval(timerInterval);
     clearInterval(draftInterval);
@@ -598,6 +608,7 @@ function resetAutoPauseState() {
 
 function resetRecordingState() {
     resetAutoPauseState();
+    if (typeof resetSensorRecordingBaselines === 'function') resetSensorRecordingBaselines();
     points = [];
     draftSavedPointCount = 0;
     totalDistance = 0;
@@ -609,6 +620,11 @@ function resetRecordingState() {
     startedAt = null;
     recordingPois = [];
     showRoutePoisOnMap(followedRoute ? followedRoute.pois : []);
+}
+
+function resetCadenceDisplay() {
+    if (typeof sensorStates !== 'undefined' && sensorStates.cadence.connected
+        && typeof updateCadence === 'function') updateCadence(0);
 }
 
 function addRoutePhoto() {
@@ -723,6 +739,8 @@ function pauseRecording(automatic = false) {
     }
     isPaused = true;
     autoPaused = automatic;
+    resetCadenceDisplay();
+    if (typeof resetSensorRecordingBaselines === 'function') resetSensorRecordingBaselines();
     refreshGpsMode();
     stopAutoPauseMonitor();
     pauseTimers();
@@ -1020,6 +1038,8 @@ async function finishRecording() {
     try {
         if (hasRoute) {
             isPaused = true;
+            resetCadenceDisplay();
+            if (typeof resetSensorRecordingBaselines === 'function') resetSensorRecordingBaselines();
             resetAutoPauseState();
             stopTimers();
             stopRideAdvisories();
@@ -1028,7 +1048,12 @@ async function finishRecording() {
             removeMyLiveLocation();
             setBtnState('paused');
             $('m-speed').textContent = '0.0';
-            const hrs = points.map(p => p[4]).filter(h => Number.isFinite(h) && h > 0);
+            const hrs = points.filter(Array.isArray)
+                .map(p => p[4]).filter(h => Number.isFinite(h) && h > 0);
+            const routePoints = points.slice();
+            while (routePoints.length && !Array.isArray(routePoints[routePoints.length - 1])) {
+                routePoints.pop();
+            }
             const route = {
                 id: Date.now(),
                 kind: 'recorded',
@@ -1042,7 +1067,7 @@ async function finishRecording() {
                 hrAvg: hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : null,
                 followedImportedRoute: followedRoute && followedRoute.kind === 'imported' ? followedRoute.name : null,
                 pois: recordingPois.slice(),
-                points
+                points: routePoints
             };
             if (!await saveRoute(route)) {
                 saveDraft();
@@ -1260,9 +1285,17 @@ async function clearDraft() {
 
 function buildSegments(pts) {
     const segs = [];
-    pts.forEach((p, i) => {
-        if (i === 0 || p[5] === 1) segs.push([]);
-        segs[segs.length - 1].push([p[0], p[1]]);
+    let segment = null;
+    pts.forEach(point => {
+        if (point === null) {
+            segment = null;
+            return;
+        }
+        if (!segment || point[5] === 1) {
+            segment = [];
+            segs.push(segment);
+        }
+        segment.push([point[0], point[1]]);
     });
     return segs;
 }
@@ -1272,20 +1305,25 @@ function restoreDraft(d) {
     points = d.points;
     draftSavedPointCount = d.format === 2 ? points.length : 0;
     recordingPois = Array.isArray(d.pois) ? d.pois.filter(routePoiCoordinatesValid) : [];
-    showRoutePoisOnMap([...(followedRoute ? followedRoute.pois : []), ...recordingPois]);
     startedAt = d.startedAt || new Date().toISOString();
     recordingActivityType = Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, d.activityType)
         ? d.activityType
         : activityTypeFromName(d.name) || 'mtb';
+    showRoutePoisOnMap([...(followedRoute ? followedRoute.pois : []), ...recordingPois]);
     movingMs = d.movingMs || 0;
     totalDistance = d.totalDistance || 0;
     points.forEach((p, index) => {
+        if (!Array.isArray(p)) {
+            elev.reset();
+            return;
+        }
         if (index > 0 && p[5] === 1) elev.reset();
         elev.add(p[2]);
     });
     isRecording = true;
     isPaused = true;
     resumeBreak = true;
+    resetCadenceDisplay();
     setBtnState('paused');
     $('m-dist').textContent = totalDistance.toFixed(2);
     $('m-elevation').textContent = Math.round(elev.gain);
@@ -1305,8 +1343,11 @@ function restoreDraft(d) {
 function isDraftRecoverable(d) {
     const hasValidDistance = d && (d.totalDistance === undefined || d.totalDistance === null
         || (Number.isFinite(d.totalDistance) && d.totalDistance >= 0));
-    return !!(hasValidDistance && Array.isArray(d.points) && d.points.length > 0
-        && d.points.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])));
+    const isGpsPoint = point => Array.isArray(point)
+        && Number.isFinite(point[0]) && Number.isFinite(point[1]);
+    return !!(hasValidDistance && Array.isArray(d.points)
+        && d.points.some(isGpsPoint)
+        && d.points.every(point => point === null || isGpsPoint(point)));
 }
 
 async function hydrateDraft(d) {
@@ -1345,14 +1386,29 @@ async function maybeRestoreDraft() {
         await clearDraft();
         return;
     }
-    if (isDraftRecoverable(d)) {
-        const saved = d.savedAt ? ` · guardada ${new Date(d.savedAt).toLocaleString('es-ES')}` : '';
-        const ok = await modal({
-            message: `Hay una grabación interrumpida (${(d.totalDistance || 0).toFixed(2)} km${saved}). ¿Quieres recuperarla?`,
-            ok: 'Recuperar', cancel: 'Descartar'
-        });
-        if (ok) { restoreDraft(d); return; }
+    if (!isDraftRecoverable(d)) {
+        const hasUnsupportedActivity = typeof d.activityType === 'string'
+            && !(typeof ACTIVITY_TYPES !== 'undefined'
+                && Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, d.activityType));
+        if (hasUnsupportedActivity) {
+            const discard = await modal({
+                title: 'Borrador no compatible',
+                message: 'Este borrador pertenece a una actividad que ya no está disponible y no contiene un trazado GPS recuperable. ¿Eliminarlo?',
+                ok: 'Eliminar borrador',
+                cancel: 'Conservar'
+            });
+            if (discard) await clearDraft();
+            return;
+        }
+        await clearDraft();
+        return;
     }
+    const saved = d.savedAt ? ` · guardada ${new Date(d.savedAt).toLocaleString('es-ES')}` : '';
+    const ok = await modal({
+        message: `Hay una grabación interrumpida (${(d.totalDistance || 0).toFixed(2)} km${saved}). ¿Quieres recuperarla?`,
+        ok: 'Recuperar', cancel: 'Descartar'
+    });
+    if (ok) { restoreDraft(d); return; }
     await clearDraft();
 }
 

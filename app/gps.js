@@ -108,6 +108,13 @@ function renderPendingRoutePoints() {
     const newLayers = [];
     for (let index = routeRenderedPointCount; index < end; index++) {
         const point = points[index];
+        if (!Array.isArray(point)) {
+            routePolyline = null;
+            routePolylinePoints = [];
+            routePolylineLastPoint = null;
+            routePolylinePointCount = 0;
+            continue;
+        }
         const ll = [point[0], point[1]];
         const breakSegment = point[5] === 1;
         if (breakSegment || !routePolyline || routePolylinePointCount >= MAX_ROUTE_RENDER_POINTS) {
@@ -154,7 +161,7 @@ function pauseGpsVisualUpdates() {
 function renderGpsVisualUpdate(state) {
     if (state.followedMatch) updateMapRouteProfilePosition(state.followedMatch);
     if (state.heading !== null && Number.isFinite(state.heading)) applyMapHeading(state.heading);
-    $('m-speed').textContent = (isPaused ? 0 : state.speedKmh).toFixed(1);
+    $('m-speed').textContent = displayedSpeedKmh(state.speedKmh).toFixed(1);
     if (map) {
         if (!userMarker) {
             userMarker = L.marker(state.ll, { icon: gpsPositionIcon(), interactive: false, keyboard: false }).addTo(map);
@@ -192,6 +199,26 @@ function clearGpsWatch() {
     if (gpsWatchId === null || !navigator.geolocation) return;
     try { navigator.geolocation.clearWatch(gpsWatchId); } catch (e) {}
     gpsWatchId = null;
+}
+
+function preferredSpeedKmh(gpsSpeed, now = Date.now()) {
+    const bleSpeed = typeof currentBleSpeed !== 'undefined' ? currentBleSpeed : null;
+    const bleSpeedAt = typeof currentBleSpeedAt !== 'undefined' ? currentBleSpeedAt : 0;
+    const bleSpeedFresh = Number.isFinite(bleSpeed) && bleSpeed >= 0 && bleSpeed <= 90
+        && now >= bleSpeedAt && now - bleSpeedAt <= 5000;
+    return bleSpeedFresh
+        ? bleSpeed
+        : Number.isFinite(gpsSpeed) ? gpsSpeed : 0;
+}
+
+function displayedSpeedKmh(gpsSpeed, now = Date.now()) {
+    const speed = preferredSpeedKmh(gpsSpeed, now);
+    return isPaused || speed < 0.5 ? 0 : speed;
+}
+
+function updateSpeedDisplay() {
+    const gpsSpeed = typeof lastGpsSpeedKmh !== 'undefined' ? lastGpsSpeedKmh : 0;
+    $('m-speed').textContent = displayedSpeedKmh(gpsSpeed).toFixed(1);
 }
 
 function stopGpsForAppExit() {
@@ -346,7 +373,9 @@ function routeHeadingFromFollowedRoute(routeIndex) {
     if (!followedRoute || followedRoute.pts.length < 2 || !Number.isInteger(routeIndex)) return null;
     const prevIndex = Math.max(0, routeIndex);
     const nextIndex = Math.min(followedRoute.pts.length - 1, routeIndex + 1);
-    if (prevIndex === nextIndex) return null;
+    if (prevIndex === nextIndex || !Array.isArray(followedRoute.pts[prevIndex])
+        || !Array.isArray(followedRoute.pts[nextIndex])
+        || (followedRoute.breakBefore && followedRoute.breakBefore[nextIndex])) return null;
     return bearingBetween(followedRoute.pts[prevIndex], followedRoute.pts[nextIndex]);
 }
 
@@ -449,15 +478,14 @@ function onPos(pos) {
 
     // Velocidad (siempre visible; 0 en pausa o casi parado)
     const now = Date.now();
-    const bleSpeedFresh = currentBleSpeed !== null && now - currentBleSpeedAt <= 5000;
-    if (currentCadence !== null && now - sensorStates.cadence.lastReadingAt > 5000) updateCadence(null);
     const gpsTimestamp = Number.isFinite(pos.timestamp) ? pos.timestamp : now;
     const calculatedGpsSpeed = gpsSpeedFromFix(ll, gpsTimestamp, accuracy);
     const gpsSpeed = Number.isFinite(accuracy) && accuracy >= 0 && accuracy <= MAX_ACC_M
         && Number.isFinite(speed) && speed >= 0 && speed <= MAX_SPEED_MS
         ? speed * 3.6
         : calculatedGpsSpeed;
-    let kmh = bleSpeedFresh ? currentBleSpeed : (gpsSpeed ?? 0);
+    lastGpsSpeedKmh = Number.isFinite(gpsSpeed) ? gpsSpeed : 0;
+    let kmh = preferredSpeedKmh(gpsSpeed, now);
     if (isPaused || kmh < 0.5) kmh = 0;
 
     if (isRecording && accuracy <= AUTO_PAUSE_MAX_ACCURACY_M) {
@@ -468,7 +496,7 @@ function onPos(pos) {
         }
     }
 
-    const visualState = { ll, speedKmh: kmh, heading: visualHeading, followedMatch };
+    const visualState = { ll, speedKmh: lastGpsSpeedKmh, heading: visualHeading, followedMatch };
     scheduleGpsVisualUpdate(visualState);
 
     if (!isRecording || isPaused) return;
@@ -506,7 +534,7 @@ function onPos(pos) {
         +lat.toFixed(6), +lon.toFixed(6),
         recordedAltitude !== null ? Math.round(recordedAltitude * 10) / 10 : null,
         t, currentHr, brk ? 1 : null, kmh,
-        currentCadence !== null && now - sensorStates.cadence.lastReadingAt <= 5000 ? currentCadence : null,
+        currentCadence !== null && now - sensorStates.cadence.lastCadenceAt <= 5000 ? currentCadence : null,
         currentPower !== null && now - sensorStates.power.lastReadingAt <= 5000 ? currentPower : null
     ];
     points.push(pt);
@@ -526,6 +554,7 @@ if (typeof module !== 'undefined' && module.exports) {
         bearingBetween,
         isUsableAltitude,
         gpsSpeedFromFix,
+        preferredSpeedKmh,
         resetGpsSpeedFix: () => { lastGpsSpeedFix = null; },
         GPS_ACTIVE_OPTIONS,
         GPS_FOLLOW_OPTIONS,

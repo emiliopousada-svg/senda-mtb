@@ -72,6 +72,28 @@ test('community route create hook trims the track and calculates its bounds', ()
     assert.equal(Number.isFinite(values.maxLng), true);
 });
 
+test('community route trimming interpolates altitude at both synthetic endpoints', () => {
+    const create = communityRouteHookWith(() => []);
+    const values = duplicateRouteValues();
+    values.trackJson = JSON.stringify([[
+        [0, 0, 100],
+        [0.001, 0.001, 200],
+        [0.5, 0.5, 300]
+    ]]);
+
+    assert.equal(create(values), true);
+
+    const [trimmed] = JSON.parse(values.trackJson);
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    const middle = trimmed.slice(1, -1);
+    assert.equal(first.length, 3);
+    assert.equal(last.length, 3);
+    assert.ok(first[2] > 100 && first[2] < 200);
+    assert.ok(last[2] > 200 && last[2] < 300);
+    assert.equal(middle.length, 1);
+});
+
 function communityRouteHookWith(
     findRecordsByFilter,
     uploadedFiles = [],

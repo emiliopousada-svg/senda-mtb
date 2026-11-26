@@ -345,10 +345,10 @@ function dashboardRenderMapPreview(route) {
     const container = $('home-map');
     if (!container) return;
     container.dataset.routeAvailable = route ? 'true' : 'false';
-    container.tabIndex = -1;
+    container.tabIndex = route ? 0 : -1;
     container.setAttribute('role', 'region');
     container.setAttribute('aria-label', route
-        ? `Vista satélite 3D de ${routeNameWithoutActivity(route) || 'la última ruta'}`
+        ? `Vista satélite 3D de ${routeNameWithoutActivity(route) || 'la última ruta'}. Toca o pulsa para ver sus datos`
         : 'Vista satélite 3D de tu última ruta');
     const routeKey = route && typeof routeReliefKey === 'function'
         ? routeReliefKey(route)
@@ -480,8 +480,6 @@ function dashboardRender() {
     const count = $('home-routes-count');
     if (count) count.textContent = `${routeCount} ${routeCount === 1 ? 'ruta guardada' : 'rutas guardadas'}`;
     const mapLabel = $('home-map-label');
-    const openRouteButton = $('home-open-route');
-    if (openRouteButton) openRouteButton.hidden = !latest;
     if (mapLabel) mapLabel.textContent = latest
         ? `Última ruta · ${routeNameWithoutActivity(latest) || 'MTB'}`
         : 'Sin recorridos realizados';
@@ -493,12 +491,10 @@ function dashboardRender() {
 function dashboardOpenLatestRouteDetail() {
     const latest = dashboardLatestRecordedRoute();
     if (latest) openSavedRouteDetail(latest, {
-        backLabel: 'Volver a Inicio',
+        viewOnly: true,
         onBack: () => closeCommunityDialog()
     });
 }
-
-$('home-open-route')?.addEventListener('click', dashboardOpenLatestRouteDetail);
 
 const homeRoutePreview = $('home-map');
 if (homeRoutePreview) {
@@ -519,7 +515,7 @@ if (homeRoutePreview) {
         if (previewDragged) window.setTimeout(() => { previewDragged = false; }, 0);
     }, { passive: true });
     homeRoutePreview.addEventListener('click', event => {
-        if (event.target.closest('.maplibregl-canvas, .maplibregl-control-container')) return;
+        if (event.target.closest('.maplibregl-control-container')) return;
         if (previewDragged || event.target.closest('button,a,input,select')) return;
         const latest = dashboardLatestRecordedRoute();
         if (latest) dashboardOpenLatestRouteDetail();

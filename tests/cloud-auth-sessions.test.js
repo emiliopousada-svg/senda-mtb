@@ -60,6 +60,7 @@ function routeSyncContext({
     fetchRemoteRoutes,
     cloudApi,
     pendingDeleteReadError,
+    pendingDeletes = [],
     remoteDeletionConfirmed = true,
     remoteTrackData = [[0, 0], [1, 1]]
 } = {}) {
@@ -67,6 +68,8 @@ function routeSyncContext({
     const toasts = [];
     const remoteDeletionDialogs = [];
     const downloads = [];
+    const localStorageValues = new Map();
+    const pendingDeleteValues = Array.from(pendingDeletes);
     const cloud = {
         active: true,
         uid: 'user-a',
@@ -83,11 +86,21 @@ function routeSyncContext({
         CLOUD_SYNC_RETRY_INITIAL_MS: 5000,
         Cloud: cloud,
         DB: {
-            async kvGet() {
+            async kvGet(key) {
                 if (pendingDeleteReadError) throw pendingDeleteReadError;
-                return [];
+                return key === 'pendingDeletes' ? pendingDeleteValues.slice() : null;
             },
-            async kvSet() {},
+            async kvSet(key, value) {
+                if (key === 'pendingDeletes') {
+                    pendingDeleteValues.splice(0, pendingDeleteValues.length, ...value);
+                }
+            },
+            async kvUpdate(key, update) {
+                if (key !== 'pendingDeletes') throw new Error(`unexpected key: ${key}`);
+                const value = update(pendingDeleteValues.slice());
+                pendingDeleteValues.splice(0, pendingDeleteValues.length, ...value);
+                return pendingDeleteValues.slice();
+            },
             async deleteRoute(...args) {
                 if (deleteRoute) return deleteRoute(...args);
             },
@@ -101,7 +114,8 @@ function routeSyncContext({
         ROUTE_FULL_AUDIT_INTERVAL_MS: 24 * 60 * 60 * 1000,
         ROUTE_NICKNAME_LIMIT: 32,
         clearCloudSyncRetryTimer() {},
-        cloudSyncStorageKey() { return 'sync-state'; },
+        cloudSyncStorageKey(name) { return `sync-state-${name}`; },
+        newestRemoteUpdate() { return '2026-11-26T19:00:00.000Z'; },
         cloudApi: cloudApi || (async () => ({ token: 'file-token' })),
         fetch: async () => {
             downloadedTrackCount++;
@@ -113,7 +127,11 @@ function routeSyncContext({
         fetchRemoteRoutes: fetchRemoteRoutes || (async () => ({ records: remote, fullAudit: true })),
         garageRoutesChanged() { return true; },
         isRetryableCloudStatus: () => false,
-        localStorage: { getItem() { return null; }, setItem() {} },
+        localStorage: {
+            getItem(key) { return localStorageValues.get(key) || null; },
+            setItem(key, value) { localStorageValues.set(key, String(value)); },
+            removeItem(key) { localStorageValues.delete(key); }
+        },
         navigator: { onLine: true },
         normalizeRemoteTrack: () => [[0, 0], [1, 1]],
         routeDataFromSync(trackData) {
@@ -123,6 +141,9 @@ function routeSyncContext({
             return {
                 points,
                 hasPrivateMetadata,
+                activityType: hasPrivateMetadata && Object.prototype.hasOwnProperty.call(
+                    context.ACTIVITY_TYPES, trackData.activityType
+                ) ? trackData.activityType : null,
                 description: hasPrivateMetadata ? trackData.description : null,
                 pois: hasPrivateMetadata ? trackData.pois : null
             };
@@ -136,6 +157,7 @@ function routeSyncContext({
         clearTimeout,
         syncPendingGroupRankingDeletes: async () => true,
         toast(message) { toasts.push(message); },
+        activityTypeForRoute: route => route.activityType,
         modal: async options => {
             remoteDeletionDialogs.push(options);
             return typeof remoteDeletionConfirmed === 'function'
@@ -171,7 +193,9 @@ function routeSyncContext({
         getDownloadedTrackCount: () => downloadedTrackCount,
         toasts,
         remoteDeletionDialogs,
-        downloads
+        downloads,
+        localStorageValues,
+        pendingDeleteValues
     };
 }
 
@@ -187,6 +211,13 @@ function pendingDeleteContext(initialPendingDeletes) {
             async kvSet(key, value) {
                 writes.push({ key, value: Array.from(value) });
                 pendingDeletes = Array.from(value);
+            },
+            async kvUpdate(key, update) {
+                assert.equal(key, 'pendingDeletes');
+                const value = update(pendingDeletes.slice());
+                writes.push({ key, value: Array.from(value) });
+                pendingDeletes = Array.from(value);
+                return pendingDeletes.slice();
             }
         },
         console: { warn() {} }
@@ -195,7 +226,12 @@ function pendingDeleteContext(initialPendingDeletes) {
         `${sourceBetween('async function flushPendingDeletes(', '\nlet syncing =', routeSyncSource)}\nglobalThis.flushPendingDeletes = flushPendingDeletes;`,
         context
     );
-    return { context, writes, getPendingDeletes: () => pendingDeletes.slice() };
+    return {
+        context,
+        writes,
+        getPendingDeletes: () => pendingDeletes.slice(),
+        setPendingDeletes: value => { pendingDeletes = Array.from(value); }
+    };
 }
 
 test('stale session restoration cannot replace a newer login', async () => {
@@ -559,6 +595,7 @@ test('a missing remote route is exported once and moved to local trash after con
             remoteServer: 'https://server.example',
             kind: 'recorded',
             name: 'Bosque',
+            points: [[40, -3], [40.001, -3]],
             dirty: true
         }],
         moveRouteToTrash: async (...args) => {
@@ -707,12 +744,18 @@ test('route sync does not contact the server without an active session', async (
     assert.deepEqual(requests, []);
 });
 
-test('pending route deletes clear successful and not-found entries', async () => {
-    const { context, writes, getPendingDeletes } = pendingDeleteContext(['deleted-route', 'already-gone']);
+test('pending route deletes clear successful and not-found entries for the active account', async () => {
+    const pending = [
+        { remoteId: 'deleted-route', server: 'https://server.example', ownerId: 'user-1' },
+        { remoteId: 'already-gone', server: 'https://server.example', ownerId: 'user-1' }
+    ];
+    const { context, writes, getPendingDeletes } = pendingDeleteContext(pending);
     const requests = [];
     const failures = [];
 
     const skipped = await context.flushPendingDeletes({
+        server: 'https://server.example',
+        uid: 'user-1',
         isCurrentSync: () => true,
         async syncCloudApi(path, method) {
             requests.push({ path, method });
@@ -726,12 +769,14 @@ test('pending route deletes clear successful and not-found entries', async () =>
     assert.deepEqual(requests.map(request => request.method), ['DELETE', 'DELETE']);
     assert.deepEqual(getPendingDeletes(), []);
     assert.deepEqual(writes, [{ key: 'pendingDeletes', value: [] }]);
-    assert.deepEqual(Array.from(skipped), ['deleted-route', 'already-gone']);
+    assert.deepEqual(Array.from(skipped.skipRemoteIds), ['deleted-route', 'already-gone']);
+    assert.deepEqual(Array.from(skipped.authorizedLocalDeleteIds), ['deleted-route', 'already-gone']);
     assert.deepEqual(failures, []);
 });
 
 test('pending route delete errors remain queued and are reported for retry', async () => {
-    const { context, writes, getPendingDeletes } = pendingDeleteContext(['retry-route']);
+    const pending = [{ remoteId: 'retry-route', server: 'https://server.example', ownerId: 'user-1' }];
+    const { context, writes, getPendingDeletes } = pendingDeleteContext(pending);
     const failures = [];
     const retryableError = Object.assign(new Error('server unavailable'), {
         status: 503,
@@ -739,15 +784,125 @@ test('pending route delete errors remain queued and are reported for retry', asy
     });
 
     await context.flushPendingDeletes({
+        server: 'https://server.example',
+        uid: 'user-1',
         isCurrentSync: () => true,
         async syncCloudApi() { throw retryableError; },
         noteSyncFailure(...failure) { failures.push(failure); }
     });
 
-    assert.deepEqual(getPendingDeletes(), ['retry-route']);
-    assert.deepEqual(writes, [{ key: 'pendingDeletes', value: ['retry-route'] }]);
+    assert.deepEqual(getPendingDeletes(), pending);
+    assert.deepEqual(writes, [{ key: 'pendingDeletes', value: pending }]);
     assert.equal(failures.length, 1);
     assert.equal(failures[0][1], retryableError);
+});
+
+test('pending route deletes are retained for other origins and legacy entries are not sent', async () => {
+    const pending = [
+        { remoteId: 'other-server-route', server: 'https://other.example', ownerId: 'user-1' },
+        { remoteId: 'other-account-route', server: 'https://server.example', ownerId: 'user-2' },
+        'legacy-route'
+    ];
+    const { context, writes, getPendingDeletes } = pendingDeleteContext(pending);
+    const requests = [];
+    const failures = [];
+    const warnings = [];
+
+    const skipped = await context.flushPendingDeletes({
+        server: 'https://server.example',
+        uid: 'user-1',
+        isCurrentSync: () => true,
+        async syncCloudApi(path, method) { requests.push({ path, method }); },
+        noteSyncFailure(...failure) { failures.push(failure); },
+        noteSyncWarning(...warning) { warnings.push(warning); }
+    });
+
+    assert.deepEqual(requests, []);
+    assert.deepEqual(getPendingDeletes(), pending);
+    assert.deepEqual(writes, [{ key: 'pendingDeletes', value: pending }]);
+    assert.deepEqual(failures, []);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0][0], /sin servidor o cuenta de origen/);
+    assert.deepEqual(Array.from(skipped.skipRemoteIds), ['legacy-route']);
+    assert.deepEqual(Array.from(skipped.authorizedLocalDeleteIds), []);
+});
+
+test('pending route delete retries cannot restore an entry concurrently removed from the queue', async () => {
+    const pending = [{
+        remoteId: 'restored-route',
+        server: 'https://server.example',
+        ownerId: 'user-1'
+    }];
+    const { context, writes, getPendingDeletes, setPendingDeletes } = pendingDeleteContext(pending);
+    const retryableError = Object.assign(new Error('server unavailable'), {
+        status: 503,
+        retryable: true
+    });
+
+    await context.flushPendingDeletes({
+        server: 'https://server.example',
+        uid: 'user-1',
+        isCurrentSync: () => true,
+        async syncCloudApi() {
+            setPendingDeletes([]);
+            throw retryableError;
+        },
+        noteSyncFailure() {}
+    });
+
+    assert.deepEqual(getPendingDeletes(), []);
+    assert.deepEqual(writes, [{ key: 'pendingDeletes', value: [] }]);
+});
+
+test('unresolved legacy deletes skip remote downloads without blocking sync progress', async () => {
+    const { context, getDownloadedTrackCount, localStorageValues, toasts } = routeSyncContext({
+        pendingDeletes: ['legacy-route'],
+        remote: [{
+            id: 'legacy-route',
+            clientId: 77,
+            name: 'Deleted route',
+            track: 'track.json'
+        }]
+    });
+
+    await context.syncRoutes(true);
+
+    assert.equal(getDownloadedTrackCount(), 0);
+    assert.ok(localStorageValues.has('sync-state-routes_sync_cursor'),
+        `stored keys: ${Array.from(localStorageValues.keys()).join(', ')}; toasts: ${toasts.join(' | ')}`);
+    assert.ok(localStorageValues.has('sync-state-routes_full_audit_at'));
+    assert.equal(toasts.length, 1);
+    assert.match(toasts[0], /Sincronizado/);
+    assert.match(toasts[0], /Advertencia:/);
+});
+
+test('legacy pending delete IDs cannot authorize deleting local routes', async () => {
+    let deleteCalls = 0;
+    const { context } = routeSyncContext({
+        routes: [{
+            id: 88,
+            name: 'Preserved route',
+            activityType: 'mtb',
+            kind: 'recorded',
+            points: [[0, 0], [1, 1]],
+            remoteId: 'legacy-route',
+            remoteServer: 'https://server.example',
+            remoteOwnerId: 'user-a'
+        }],
+        pendingDeletes: ['legacy-route'],
+        remote: [{
+            id: 'legacy-route',
+            clientId: 88,
+            name: 'Preserved route',
+            track: 'track.json'
+        }],
+        deleteRoute() { deleteCalls++; }
+    });
+
+    await context.syncRoutes(true);
+
+    assert.deepEqual(Array.from(context.getSavedRoutes()).map(route => route.id), [88]);
+    assert.equal(deleteCalls, 0);
 });
 
 test('route sync does not redownload routes when the pending-delete queue cannot be read', async () => {
@@ -770,12 +925,17 @@ test('route sync does not redownload routes when the pending-delete queue cannot
 });
 
 test('pending route deletes stop without persisting when the session changes', async () => {
-    const pending = ['route-one', 'route-two'];
+    const pending = [
+        { remoteId: 'route-one', server: 'https://server.example', ownerId: 'user-1' },
+        { remoteId: 'route-two', server: 'https://server.example', ownerId: 'user-1' }
+    ];
     const { context, writes, getPendingDeletes } = pendingDeleteContext(pending);
     let current = true;
     let requestCount = 0;
 
     const result = await context.flushPendingDeletes({
+        server: 'https://server.example',
+        uid: 'user-1',
         isCurrentSync: () => current,
         async syncCloudApi() {
             requestCount++;
@@ -972,6 +1132,39 @@ test('legacy remote track updates preserve local private metadata', async () => 
     assert.equal(route.pois[0].caption, 'Local photo');
     assert.deepEqual(Array.from(route.points[0]), [3, 4]);
     assert.equal(patchedRoute.description, 'Keep this description');
+});
+
+test('missing routes without GPS points are excluded from GPX export', async () => {
+    const trashedIds = [];
+    const { context, downloads, remoteDeletionDialogs } = routeSyncContext({
+        routes: [
+            {
+                id: 101,
+                remoteId: 'remote-gps',
+                remoteServer: 'https://server.example',
+                name: 'GPS route',
+                activityType: 'mtb',
+                points: [[40, -3]]
+            },
+            {
+                id: 102,
+                remoteId: 'remote-unlocated',
+                remoteServer: 'https://server.example',
+                name: 'Unlocated route',
+                activityType: 'mtb',
+                points: [[null, null, null]]
+            }
+        ],
+        moveRouteToTrash: async id => { trashedIds.push(id); return true; }
+    });
+
+    await context.syncRoutes();
+
+    assert.equal(downloads.length, 1);
+    assert.match(downloads[0][1], /GPS route/);
+    assert.doesNotMatch(downloads[0][1], /Unlocated route/);
+    assert.deepEqual(trashedIds, [101, 102]);
+    assert.deepEqual(Array.from(context.getSavedRoutes()), []);
 });
 
 test('a queued sync does not run for a different account after its delay', async () => {

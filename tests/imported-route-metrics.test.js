@@ -55,3 +55,32 @@ test('imported tracks preserve cumulative ascent at retained points', () => {
     assert.ok(route.points.length <= 20000);
     assert.equal(gainAtStoredPoints[gainAtStoredPoints.length - 1], route.elevationGain);
 });
+
+test('cumulative ascent carries gain across track breaks without adding the prior segment twice', () => {
+    const storageContext = vm.createContext({
+        ELEV_STEP: 3,
+        MTBStatisticsEngine: statisticsEngine
+    });
+    vm.runInContext(
+        `${extract(storageSource, 'function makeElevTracker()', '\n// ============================================================')}; globalThis.testGainCumulative = gainCumulative;`,
+        storageContext
+    );
+    const altitudes = [100, 100, 100, 100, 100, 110, 110, 110, 110, 110];
+    const points = [
+        ...altitudes.map((altitude, index) => [42, -8, altitude, 1000 + index * 1000]),
+        ...altitudes.map((altitude, index) => [
+            42, -8, altitude, 11000 + index * 1000, null, index === 0 ? 1 : null
+        ]),
+        null,
+        ...altitudes.map((altitude, index) => [42, -8, altitude, 21000 + index * 1000])
+    ];
+
+    const gain = storageContext.testGainCumulative(points);
+
+    assert.equal(gain[9], 10);
+    assert.equal(gain[10], 10);
+    assert.equal(gain[19], 20);
+    assert.equal(gain[20], 20);
+    assert.equal(gain[21], 20);
+    assert.equal(gain[gain.length - 1], 30);
+});

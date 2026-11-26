@@ -45,6 +45,12 @@ function routeContext({ maxMathArguments = Infinity } = {}) {
         MTBStatisticsEngine: statisticsEngine,
         routeProfileCoords: [],
         routeProfilePointCount: 0,
+        followedRoute: null,
+        isRecording: false,
+        lastLat: null,
+        lastLon: null,
+        recordingPois: [],
+        map: null,
         OFFROUTE_M: 60,
         BACKONROUTE_M: 30,
         offRouteState: false,
@@ -75,6 +81,14 @@ function routeContext({ maxMathArguments = Infinity } = {}) {
         },
         screenWakeForNavigation: () => navigationWakes.push(true),
         toast: message => messages.push(message),
+        goToPage() {},
+        clearLastRideMapPreview() {},
+        showRoutePoisOnMap() {},
+        gainCumulative: points => new Float64Array(points.length),
+        refreshGpsMode() {},
+        mapPanelSyncActions() {},
+        mapPanelSetExpanded() {},
+        mapSideControlsScheduleAutoCollapse() {},
         $: getElement
     });
     vm.runInContext(source, context);
@@ -84,7 +98,7 @@ function routeContext({ maxMathArguments = Infinity } = {}) {
         messages,
         navigationWakes,
         elements,
-        api: vm.runInContext('({ buildRouteCumulativeDistances, buildRouteManeuvers, findFollowedRouteMatch, updateMapRouteProfilePosition, checkUpcomingRouteTurn, checkOffRoute })', context)
+        api: vm.runInContext('({ buildRouteCumulativeDistances, buildRouteManeuvers, findFollowedRouteMatch, followRoute, updateMapRouteProfilePosition, checkUpcomingRouteTurn, checkOffRoute })', context)
     };
 }
 
@@ -114,6 +128,58 @@ test('route maneuver analysis finds left and right turns but ignores straight tr
 
     const straight = Array.from({ length: 21 }, (_, index) => meterPoint(index * 10, 0));
     assert.equal(api.buildRouteManeuvers(straight, api.buildRouteCumulativeDistances(straight)).length, 0);
+});
+
+test('route following preserves separators and does not measure or match across them', () => {
+    const { api, context } = routeContext();
+    const route = {
+        id: 'separated',
+        name: 'Separated route',
+        kind: 'recorded',
+        points: [
+            [...meterPoint(0, 0), 100],
+            [...meterPoint(10, 0), 101],
+            null,
+            [...meterPoint(0, 100), 102],
+            [...meterPoint(10, 100), 103]
+        ],
+        pois: []
+    };
+
+    api.followRoute(route);
+
+    assert.equal(context.followedRoute.pts.length, route.points.length);
+    assert.equal(context.followedRoute.pts[2], null);
+    assert.equal(context.followedRoute.cumulativeMeters[2], context.followedRoute.cumulativeMeters[1]);
+    assert.equal(context.followedRoute.cumulativeMeters[3], context.followedRoute.cumulativeMeters[2]);
+    assert.ok(context.followedRoute.breakBefore[3]);
+
+    context.followedRoute.progressIndex = 0;
+    context.followedRoute.lastGlobalScanAt = Date.now();
+    const match = api.findFollowedRouteMatch(
+        42 + 5 / 110540,
+        -8 + 50 / (111320 * Math.cos(42 * Math.PI / 180))
+    );
+    assert.ok(match.distance > 40);
+});
+
+test('route guidance waits until the rider reaches the segment containing a maneuver', () => {
+    const { api, context, announcements } = routeContext();
+    context.followedRoute = {
+        cumulativeMeters: [0, 10, 10, 10, 40, 50],
+        segmentIds: [0, 0, null, 3, 3, 3],
+        maneuvers: [{ distanceMeters: 40, segmentId: 3, direction: 'derecha' }],
+        nextManeuverIndex: 0,
+        nextManeuverWakeIndex: 0
+    };
+
+    api.checkUpcomingRouteTurn({ index: 1, fraction: 0, distance: 0, segmentId: 0 });
+    assert.equal(announcements.length, 0);
+    assert.equal(context.followedRoute.nextManeuverIndex, 0);
+
+    api.checkUpcomingRouteTurn({ index: 4, fraction: 0, distance: 0, segmentId: 3 });
+    assert.equal(announcements.length, 1);
+    assert.match(announcements[0], /Gira a la derecha ahora/);
 });
 
 test('route profile renders 100,000 elevation points without expanding math arguments', () => {

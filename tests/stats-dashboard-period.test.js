@@ -7,6 +7,170 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const statsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'stats.js'), 'utf8');
+const indexSource = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+test('statistics evolution omits the route comparison block', () => {
+    assert.doesNotMatch(indexSource, /stats-route-compare|Comparación de rutas/);
+    assert.doesNotMatch(statsSource, /statsRouteComparisonChart|statsRenderRouteComparison/);
+});
+
+test('route analysis cache can be invalidated after activity metadata changes', () => {
+    const start = statsSource.indexOf('let statsAnalysisCache = new WeakMap();');
+    const end = statsSource.indexOf('\nfunction statsAggregate(', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    let analyses = 0;
+    const context = vm.createContext({
+        statsHeartRateMax: 190,
+        statsPowerFtp: 250,
+        STATS_HR_ZONES: [],
+        STATS_POWER_ZONES: [],
+        MTBStatisticsEngine: {
+            analyzeRoute(route) {
+                analyses++;
+                return { activityType: route.activityType };
+            }
+        }
+    });
+    vm.runInContext(statsSource.slice(start, end), context);
+
+    const route = { activityType: 'mtb' };
+    assert.equal(context.statsAnalyzeRoute(route).activityType, 'mtb');
+    route.activityType = 'road';
+    assert.equal(context.statsAnalyzeRoute(route).activityType, 'mtb');
+    context.statsInvalidateRouteAnalysis(route);
+    assert.equal(context.statsAnalyzeRoute(route).activityType, 'road');
+    assert.equal(analyses, 2);
+});
+
+test('sensor statistics are part of MTB performance and the sensor tab is removed', () => {
+    const tabsStart = indexSource.indexOf('<nav class="stats-tabs"');
+    const tabsEnd = indexSource.indexOf('</nav>', tabsStart);
+    const performanceStart = indexSource.indexOf('<section class="stats-slide" aria-label="Rendimiento MTB">');
+    const nextSlide = indexSource.indexOf('<section class="stats-slide"', performanceStart + 1);
+    assert.notEqual(tabsStart, -1);
+    assert.notEqual(tabsEnd, -1);
+    assert.notEqual(performanceStart, -1);
+    assert.notEqual(nextSlide, -1);
+
+    const tabs = indexSource.slice(tabsStart, tabsEnd);
+    const performance = indexSource.slice(performanceStart, nextSlide);
+    assert.doesNotMatch(tabs, /Sensores/);
+    assert.equal((indexSource.match(/class="stats-slide" aria-label=/g) || []).length, 4);
+    assert.match(performance, /id="stats-hr-zones"/);
+    assert.match(performance, /id="stats-power-zones"/);
+    assert.match(performance, /id="stats-profile-route"/);
+});
+
+test('selecting an activity updates the profile, MTB charts and sensor summary to that activity', () => {
+    const start = statsSource.indexOf('function statsRenderMtb(analyses) {');
+    const end = statsSource.indexOf('\nfunction statsProfilePointText(', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+
+    const elements = new Map();
+    const text = new Map();
+    const makeChart = () => ({ data: { labels: [], datasets: [{ data: [] }] }, update() {} });
+    const charts = {
+        statsProfileChart: makeChart(),
+        statsMtbSpeedChart: makeChart(),
+        statsGradeChart: makeChart(),
+        statsClimbTimeChart: makeChart(),
+        statsVamChart: makeChart()
+    };
+    const selector = {
+        value: 'route-b',
+        options: [],
+        replaceChildren(...options) { this.options = options; },
+        add(option) { this.options.push(option); }
+    };
+    elements.set('stats-profile-route', selector);
+    const aggregateInputs = [];
+    const performanceInputs = [];
+    const context = vm.createContext({
+        $: id => elements.get(id) || null,
+        Option: class Option {
+            constructor(text, value) { this.text = text; this.value = value; }
+        },
+        fmtDate: () => 'fecha',
+        fmtDur: seconds => `${seconds}s`,
+        statsAggregate(analyses) {
+            aggregateInputs.push(analyses.map(item => item.route.id));
+            return analyses[0] ? analyses[0].summary : {
+                climbSpeed: null, downhillSpeed: null, vam: null, meanGrade: null, maxGrade: null,
+                climbTimeSec: 0, downhillTimeSec: 0, descentSampleCount: 0, descentM: 0,
+                ascentSampleCount: 0, ascentM: 0, maxAltitude: null, minAltitude: null,
+                gradeDistanceKm: 0, gradeDistributionKm: {
+                    steepDownhill: 0, downhill: 0, flat: 0, climb: 0, steepClimb: 0
+                }
+            };
+        },
+        statsRenderPerformance(summary, analyses) {
+            performanceInputs.push({ summary, routeIds: analyses.map(item => item.route.id) });
+        },
+        statsSetText(id, value) { text.set(id, value); },
+        statsValue(value, decimals, unit) {
+            return Number.isFinite(value) ? `${value.toFixed(decimals)}${unit}` : '--';
+        },
+        statsUpdateChart(chart, labels, values) {
+            if (!chart) return;
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = values;
+        },
+        ...charts
+    });
+    vm.runInContext(
+        `${statsSource.slice(start, end)}
+        globalThis.testStatsRenderMtb = statsRenderMtb;
+        globalThis.testStatsRenderSelectedMtbRoute = statsRenderSelectedMtbRoute;`,
+        context
+    );
+
+    const makeAnalysis = (id, values, profile = [{ x: 0, y: 100 }]) => ({
+        route: { id, name: `Ruta ${id}`, startedAt: '2026-11-20' },
+        profile,
+        ...values.summary,
+        summary: values.summary
+    });
+    const routeA = makeAnalysis('route-a', {
+        summary: {
+            climbSpeed: 5, downhillSpeed: 9, vam: 300, meanGrade: 4, maxGrade: 14,
+            climbTimeSec: 600, downhillTimeSec: 300, descentSampleCount: 1, descentM: 100,
+            ascentSampleCount: 1, ascentM: 150, maxAltitude: 500, minAltitude: 200,
+            gradeDistanceKm: 2,
+            gradeDistributionKm: { steepDownhill: 0, downhill: 0, flat: 1, climb: 1, steepClimb: 0 }
+        }
+    });
+    const routeB = makeAnalysis('route-b', {
+        summary: {
+            climbSpeed: 8, downhillSpeed: 12, vam: 720, meanGrade: 6, maxGrade: 20,
+            climbTimeSec: 1200, downhillTimeSec: 450, descentSampleCount: 1, descentM: 240,
+            ascentSampleCount: 1, ascentM: 320, maxAltitude: 900, minAltitude: 300,
+            gradeDistanceKm: 4,
+            gradeDistributionKm: { steepDownhill: 1, downhill: 1, flat: 0, climb: 1, steepClimb: 1 }
+        }
+    }, [{ x: 0, y: 300 }, { x: 5, y: 900 }]);
+
+    context.testStatsRenderMtb([routeA, routeB]);
+
+    assert.deepEqual(JSON.parse(JSON.stringify(aggregateInputs)), [['route-b']]);
+    assert.deepEqual(JSON.parse(JSON.stringify(performanceInputs.map(item => item.routeIds))), [['route-b']]);
+    assert.equal(text.get('st-climb-speed'), '8.0 km/h');
+    assert.deepEqual(Array.from(charts.statsProfileChart.data.datasets[0].data), routeB.profile);
+    assert.deepEqual(Array.from(charts.statsMtbSpeedChart.data.datasets[0].data), [8, 12]);
+    assert.deepEqual(Array.from(charts.statsGradeChart.data.datasets[0].data), [1, 1, 0, 1, 1]);
+    assert.deepEqual(Array.from(charts.statsClimbTimeChart.data.datasets[0].data), [20, 7.5]);
+    assert.deepEqual(Array.from(charts.statsVamChart.data.labels), ['Ruta route-b']);
+    assert.deepEqual(Array.from(charts.statsVamChart.data.datasets[0].data), [720]);
+
+    context.testStatsRenderSelectedMtbRoute(routeA);
+
+    assert.deepEqual(JSON.parse(JSON.stringify(aggregateInputs[1])), ['route-a']);
+    assert.deepEqual(JSON.parse(JSON.stringify(performanceInputs[1].routeIds)), ['route-a']);
+    assert.equal(text.get('st-climb-speed'), '5.0 km/h');
+    assert.deepEqual(Array.from(charts.statsMtbSpeedChart.data.datasets[0].data), [5, 9]);
+    assert.deepEqual(Array.from(charts.statsVamChart.data.datasets[0].data), [300]);
+});
 
 function periodButton(period) {
     const classes = new Set();

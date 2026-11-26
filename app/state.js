@@ -18,6 +18,7 @@ let points = [], lastAccepted = null, resumeBreak = false, startedAt = null;
 let lastLat = null, lastLon = null, lastAccuracy = null, lastPositionAt = 0, following = true, firstFix = false, lastPosSave = 0;
 let lastHeading = null; // Último rumbo GPS válido; se conserva al detenerse.
 let lastCourseFix = null; // Posición de referencia para calcular el rumbo si el GPS nativo no lo da.
+let lastGpsSpeedKmh = 0;
 let currentHr = null;
 let currentCadence = null, currentPower = null, currentBleSpeed = null, currentBleSpeedAt = 0;
 let lastCscReading = null;

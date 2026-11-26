@@ -23,7 +23,7 @@ function activityTypesContext() {
     return context;
 }
 
-test('activity catalog includes the requested types and preserves name-based route detection', () => {
+test('activity catalog includes the supported types and preserves name-based route detection', () => {
     const context = activityTypesContext();
     const expectedTypes = ['mtb', 'hiking', 'road', 'horse', 'running'];
 
@@ -61,6 +61,7 @@ test('route activity filter includes every catalog type and preserves a valid se
             }
         }
     });
+
     vm.runInContext(
         `${routesSource.slice(start, end)}\nglobalThis.testFillActivityFilter = routesFillActivityFilter;`,
         context
@@ -84,4 +85,19 @@ test('route activity filter includes every catalog type and preserves a valid se
     select.value = 'removed-type';
     context.testFillActivityFilter(select);
     assert.equal(select.value, 'all');
+});
+
+test('recorded activities can be published as community routes', () => {
+    const start = routesSource.indexOf('function routeCanPublishCommunity(');
+    const end = routesSource.indexOf('\nfunction routeCoverPhoto(', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    const context = vm.createContext({});
+    vm.runInContext(
+        `${routesSource.slice(start, end)}\nglobalThis.testRouteCanPublishCommunity = routeCanPublishCommunity;`,
+        context
+    );
+
+    assert.equal(context.testRouteCanPublishCommunity({ kind: 'recorded', activityType: 'mtb' }), true);
+    assert.equal(context.testRouteCanPublishCommunity({ kind: 'community', activityType: 'mtb' }), false);
 });

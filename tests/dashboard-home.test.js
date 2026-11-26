@@ -8,7 +8,7 @@ const vm = require('node:vm');
 
 const dashboardSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard.js'), 'utf8');
 
-function dashboardContext(nickname, avatarUrl = '') {
+function dashboardContext(nickname, avatarUrl = '', homeRoutePreview = null) {
     const greeting = { textContent: '' };
     const avatar = {
         hidden: true,
@@ -95,6 +95,7 @@ function dashboardContext(nickname, avatarUrl = '') {
             if (id === 'map-live-gps') return mapGps;
             if (id === 'dashboard-network-status') return network;
             if (id === 'acc-server-status') return accountIndicator;
+            if (id === 'home-map') return homeRoutePreview;
             return null;
         }
     });
@@ -151,6 +152,8 @@ test('home omits the recording CTA and adventure tagline but keeps its shortcuts
     assert.ok(latestRoutePanel);
     assert.match(latestRoutePanel[0], /id="home-latest-route-metrics"[\s\S]*id="home-latest-route-speed"[\s\S]*id="home-latest-route-ascent"[\s\S]*id="home-latest-route-heart-rate"[\s\S]*id="home-latest-route-time"[\s\S]*id="home-map"/);
     assert.match(latestRoutePanel[0], /id="home-map" role="region" aria-label="Relieve 3D de tu última ruta"/);
+    assert.doesNotMatch(latestRoutePanel[0], /home-open-route|Ver ficha/);
+    assert.doesNotMatch(dashboardSource, /home-open-route/);
     assert.doesNotMatch(home, /latest-ride-panel|dashboard-latest-panel|home-last-route-path|home-last-route-name|ACTIVIDAD RECIENTE|dashboard-explore-panel|explore-panel|home-route-prompt|Explora tus rutas|Ver mis rutas/);
     const performancePanel = html.match(/<article class="dashboard-panel dashboard-performance-panel"[\s\S]*?<\/article>/);
     assert.ok(performancePanel);
@@ -164,6 +167,29 @@ test('home omits the recording CTA and adventure tagline but keeps its shortcuts
     assert.doesNotMatch(html, /class="hero-status"/);
     assert.doesNotMatch(html, /dashboard-arrange-toggle|screen-fullscreen-toggle|fullscreen-exit/);
     assert.doesNotMatch(dashboardSource, /dashboardInitCardArrangement|dashboard-arrange-toggle/);
+});
+
+test('tapping the latest route preview opens its informational detail', () => {
+    const preview = {
+        listeners: {},
+        addEventListener(name, listener) { this.listeners[name] = listener; }
+    };
+    const { context } = dashboardContext('TrailRider', '', preview);
+    const route = { id: 'latest-route' };
+    let opened = null;
+    context.dashboardLatestRecordedRoute = () => route;
+    context.openSavedRouteDetail = (selectedRoute, options) => {
+        opened = { route: selectedRoute, options };
+    };
+
+    preview.listeners.click({
+        target: {
+            closest() { return null; }
+        }
+    });
+
+    assert.equal(opened.route, route);
+    assert.equal(opened.options.viewOnly, true);
 });
 
 test('latest route metrics use route analysis and hide when no route exists', () => {

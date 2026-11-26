@@ -55,6 +55,7 @@ function recordingFinishContext({
         routePhotoProcessing: null,
         movingMs: 1000,
         segStart: null,
+        draftStateVersion: 0,
         startedAt: '2026-11-24T10:00:00Z',
         isRecording: true,
         isPaused: false,
@@ -102,6 +103,7 @@ function recordingFinishContext({
         releaseWake: () => calls.push(['releaseWake']),
         stopBgWatcher: () => calls.push(['stopBgWatcher']),
         removeMyLiveLocation: () => calls.push(['removeLiveLocation']),
+        resetCadenceDisplay() {},
         setBtnState: state => calls.push(['button', state]),
         $: () => ({ textContent: '' }),
         clearDraft: async () => calls.push(['clearDraft']),
@@ -111,9 +113,16 @@ function recordingFinishContext({
     });
     const start = recordingSource.indexOf('async function finishRecording() {');
     const end = recordingSource.indexOf('\n// --- Borrador:', start);
+    const breakStart = recordingSource.indexOf('function appendRecordingBreak() {');
+    const breakEnd = recordingSource.indexOf('\nasync function prepareAppExit()', breakStart);
     assert.notEqual(start, -1);
     assert.notEqual(end, -1);
-    vm.runInContext(recordingSource.slice(start, end), context);
+    assert.notEqual(breakStart, -1);
+    assert.notEqual(breakEnd, -1);
+    vm.runInContext(
+        `${recordingSource.slice(breakStart, breakEnd)}\n${recordingSource.slice(start, end)}`,
+        context
+    );
     return { context, calls, savedRoutes };
 }
 
@@ -125,16 +134,20 @@ function appExitPreparationContext({
     stopError
 } = {}) {
     const calls = [];
+    const points = [[42.1, -8.6, 100, 1000, 120, null]];
     const context = vm.createContext({
         appExitInProgress: false,
         isRecording: recording,
         isPaused: paused,
+        points,
+        draftStateVersion: 0,
         autoPaused: false,
         segStart: 1000,
         movingMs: 2000,
         resetAutoPauseState() { calls.push('resetAutoPauseState'); },
         stopTimers() { calls.push('stopTimers'); },
         stopRideAdvisories() { calls.push('stopRideAdvisories'); },
+        resetCadenceDisplay() { calls.push('resetCadenceDisplay'); },
         setBtnState(state) { calls.push(['setBtnState', state]); },
         $: () => ({ textContent: '' }),
         async releaseWake() { calls.push('releaseWake'); },
@@ -155,10 +168,14 @@ function appExitPreparationContext({
     });
     const start = recordingSource.indexOf('async function prepareAppExit() {');
     const end = recordingSource.indexOf('\n// Empieza a recibir posiciones', start);
+    const breakStart = recordingSource.indexOf('function appendRecordingBreak() {');
+    const breakEnd = recordingSource.indexOf('\nasync function prepareAppExit()', breakStart);
     assert.notEqual(start, -1);
     assert.notEqual(end, -1);
+    assert.notEqual(breakStart, -1);
+    assert.notEqual(breakEnd, -1);
     vm.runInContext(
-        `${recordingSource.slice(start, end)}\nglobalThis.prepareAppExit = prepareAppExit;`,
+        `${recordingSource.slice(breakStart, breakEnd)}\n${recordingSource.slice(start, end)}\nglobalThis.prepareAppExit = prepareAppExit;`,
         context
     );
     context.cancelAppExitPreparation = () => { context.appExitInProgress = false; };
@@ -221,11 +238,14 @@ test('preparing app exit pauses and saves a recording before stopping both GPS w
 
     await context.prepareAppExit();
 
+    assert.equal(context.points.at(-1), null);
+    assert.equal(context.draftStateVersion, 1);
     assert.equal(context.isPaused, true);
     assert.equal(context.segStart, null);
     assert.ok(context.movingMs >= 2000);
     assert.deepEqual(calls.map(call => Array.isArray(call) ? call[0] : call), [
         'stopGpsForAppExit',
+        'resetCadenceDisplay',
         'resetAutoPauseState',
         'stopTimers',
         'stopRideAdvisories',
@@ -235,9 +255,9 @@ test('preparing app exit pauses and saves a recording before stopping both GPS w
         'saveDraft',
         'stopBgWatcher'
     ]);
-    assert.deepEqual(calls[4], ['setBtnState', 'paused']);
-    assert.deepEqual(calls[6], ['removeMyLiveLocation', true]);
-    assert.deepEqual(calls[8], ['stopBgWatcher', false, true]);
+    assert.deepEqual(calls[5], ['setBtnState', 'paused']);
+    assert.deepEqual(calls[7], ['removeMyLiveLocation', true]);
+    assert.deepEqual(calls[9], ['stopBgWatcher', false, true]);
     assert.equal(context.appExitInProgress, true);
 });
 
@@ -520,9 +540,10 @@ test('stopping during watcher startup waits until the newly added watcher is rem
     assert.equal(stopped, true);
 });
 
-function draftRestoreContext(draft, chunks = []) {
+function draftRestoreContext(draft, chunks = [], modalResult = true) {
     const calls = [];
     const context = vm.createContext({
+        ACTIVITY_TYPES: { mtb: {}, hiking: {}, road: {}, horse: {}, running: {} },
         DRAFT_POINTS_CHUNK_SIZE: 500,
         DB: {
             async kvGet(key) {
@@ -534,7 +555,7 @@ function draftRestoreContext(draft, chunks = []) {
         async clearDraft() { calls.push(['delete', 'draft']); },
         async modal() {
             calls.push(['modal']);
-            return true;
+            return modalResult;
         }
     });
     const start = recordingSource.indexOf('function isDraftRecoverable(d) {');
@@ -819,6 +840,27 @@ test('saved routes keep the selected activity type and matching name prefix', as
     }
 });
 
+test('finishing an active recording does not persist an unnecessary trailing separator', async () => {
+    const { context, savedRoutes } = recordingFinishContext();
+
+    await context.finishRecording();
+
+    assert.equal(savedRoutes.length, 1);
+    assert.ok(Array.isArray(savedRoutes[0].points.at(-1)));
+});
+
+test('finishing a recovered GPS draft trims its trailing separator before saving', async () => {
+    const { context, calls } = recordingFinishContext();
+    context.points.push(null);
+    context.isPaused = true;
+
+    await context.finishRecording();
+
+    const persistedRoute = calls.find(([name]) => name === 'put')[1];
+    assert.equal(persistedRoute.points.length, 2);
+    assert.ok(Array.isArray(persistedRoute.points.at(-1)));
+});
+
 test('isDraftRecoverable validates raw draft objects before user recovery prompt', () => {
     assert.equal(isDraftRecoverable(null), false);
     assert.equal(isDraftRecoverable(undefined), false);
@@ -835,7 +877,11 @@ test('isDraftRecoverable validates raw draft objects before user recovery prompt
     }
     assert.equal(isDraftRecoverable({ points: [[42.1, -8.6]] }), true);
     assert.equal(isDraftRecoverable({ totalDistance: null, points: [[42.1, -8.6]] }), true);
-
+    assert.equal(isDraftRecoverable({
+        points: [[42.1, -8.6], null, [42.2, -8.7]]
+    }), true);
+    assert.equal(isDraftRecoverable({ points: [null] }), false);
+    assert.equal(isDraftRecoverable({ points: [[42.1, -8.6], undefined] }), false);
     assert.equal(isDraftRecoverable({
         startedAt: '2026-11-16T10:00:00Z',
         totalDistance: 12.5,
@@ -855,6 +901,78 @@ test('a draft with corrupt distance is discarded before prompting or restoring',
     await assert.doesNotReject(context.maybeRestoreDraft());
 
     assert.deepEqual(calls, [['get', 'draft'], ['delete', 'draft']]);
+});
+
+test('a GPS draft with pause separators remains recoverable', async () => {
+    const { context, calls } = draftRestoreContext({
+        points: [[42.1, -8.6, 100, 1000], null, [42.2, -8.7, 110, 2000]]
+    });
+    context.restoreDraft = draft => calls.push(['restore', draft.points.length]);
+
+    await context.maybeRestoreDraft();
+
+    assert.deepEqual(calls, [['get', 'draft'], ['modal'], ['restore', 3]]);
+});
+
+test('a draft from an unsupported activity is preserved unless deletion is confirmed', async () => {
+    const { context, calls } = draftRestoreContext({
+        activityType: 'retired',
+        points: [[null, null, null, 1700000000000, 140, null, 20, 80, 210]]
+    }, [], false);
+
+    await context.maybeRestoreDraft();
+
+    assert.deepEqual(calls, [['get', 'draft'], ['modal']]);
+});
+
+test('restoring a GPS draft splits the rendered track at null separators', () => {
+    let renderedSegments;
+    const context = vm.createContext({
+        ACTIVITY_TYPES: { mtb: {} },
+        points: [],
+        routePolylines: [],
+        following: false,
+        draftSavedPointCount: 0,
+        recordingPois: [],
+        followedRoute: null,
+        resetRecordingState() {},
+        routePoiCoordinatesValid: () => true,
+        showRoutePoisOnMap() {},
+        activityTypeFromName: () => null,
+        elev: { reset() {}, add() {}, gain: 0 },
+        $: () => ({ textContent: '' }),
+        fmtClock: () => '00:00',
+        totalSec: () => 0,
+        resetCadenceDisplay() {},
+        setBtnState() {},
+        toast() {},
+        map: { fitBounds() {} },
+        L: { latLngBounds: () => ({ extend() {}, isValid: () => false }) },
+        renderRecordingSegments(segments) { renderedSegments = segments; },
+        updateCenterBtn() {}
+    });
+    const start = recordingSource.indexOf('function buildSegments(pts) {');
+    const end = recordingSource.indexOf('\nfunction isDraftRecoverable(d)', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${recordingSource.slice(start, end)}\nglobalThis.testRestoreDraft = restoreDraft;`,
+        context
+    );
+
+    context.testRestoreDraft({
+        activityType: 'mtb',
+        points: [
+            [42.1, -8.6, 100, 1000],
+            null,
+            [42.2, -8.7, 110, 2000]
+        ]
+    });
+
+    assert.deepEqual(JSON.parse(JSON.stringify(renderedSegments)), [
+        [[42.1, -8.6]],
+        [[42.2, -8.7]]
+    ]);
 });
 
 test('draft autosaves persist only new point chunks and small metadata', async () => {
@@ -1096,6 +1214,129 @@ test('starting a route remembers its normalized activity type', () => {
     assert.deepEqual(calls, [['remember', 'horse'], ['tracking']]);
 });
 
+test('adding a recording break updates draft state only when a separator is inserted', () => {
+    const points = [[42.1, -8.6, 100, 1000, 120, null]];
+    const context = vm.createContext({ points, draftStateVersion: 4 });
+    const start = recordingSource.indexOf('function appendRecordingBreak() {');
+    const end = recordingSource.indexOf('\nasync function prepareAppExit()', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(recordingSource.slice(start, end), context);
+
+    context.appendRecordingBreak();
+    assert.equal(context.draftStateVersion, 5);
+    assert.equal(points.length, 2);
+
+    context.appendRecordingBreak();
+    assert.equal(context.draftStateVersion, 5);
+    assert.equal(points.length, 2);
+});
+
+test('recording starts GPS and speed prefers a fresh Bluetooth sensor', async () => {
+    const speedContext = vm.createContext({
+        currentBleSpeed: 18,
+        currentBleSpeedAt: 1000
+    });
+    const speedStart = gpsSource.indexOf('function preferredSpeedKmh(');
+    const speedEnd = gpsSource.indexOf('\nfunction stopGpsForAppExit()', speedStart);
+    assert.notEqual(speedStart, -1);
+    assert.notEqual(speedEnd, -1);
+    vm.runInContext(
+        `${gpsSource.slice(speedStart, speedEnd)}\nglobalThis.testPreferredSpeedKmh = preferredSpeedKmh;`,
+        speedContext
+    );
+    assert.equal(speedContext.testPreferredSpeedKmh(12, 2000), 18);
+    speedContext.currentBleSpeedAt = 0;
+    assert.equal(speedContext.testPreferredSpeedKmh(12, 7000), 12);
+
+    const calls = [];
+    const trackingContext = vm.createContext({
+        appExitInProgress: false,
+        acquireWake: async () => calls.push('wake'),
+        startBgWatcher: async () => { calls.push('gps'); return false; },
+        toast: message => calls.push(message),
+        navigator: {}
+    });
+    const trackingStart = recordingSource.indexOf('async function beginTracking(');
+    const trackingEnd = recordingSource.indexOf('\nfunction elapsedSec(', trackingStart);
+    assert.notEqual(trackingStart, -1);
+    assert.notEqual(trackingEnd, -1);
+    vm.runInContext(
+        `${recordingSource.slice(trackingStart, trackingEnd)}\nglobalThis.testBeginTracking = beginTracking;`,
+        trackingContext
+    );
+    await trackingContext.testBeginTracking(true);
+    assert.equal(calls.includes('gps'), true);
+    assert.equal(calls[0], 'wake');
+});
+
+test('deferred GPS rendering falls back to the raw GPS speed after Bluetooth expires', () => {
+    let displayedSpeed = '';
+    const visualStates = [];
+    const context = vm.createContext({
+        isRecording: false,
+        recordingActivityType: 'mtb',
+        currentBleSpeed: 30,
+        currentBleSpeedAt: Date.now(),
+        isPaused: false,
+        followedRoute: null,
+        map: null,
+        lastCourseFix: null,
+        lastHeading: null,
+        lastGpsSpeedKmh: 0,
+        lastPosSave: Date.now(),
+        MAX_ACC_M: 50,
+        MAX_SPEED_MS: 40,
+        dist: () => 0,
+        gpsSpeedFromFix: () => null,
+        scheduleGpsVisualUpdate: state => visualStates.push(state),
+        renderPendingRoutePoints() {},
+        $: () => ({ set textContent(value) { displayedSpeed = value; } })
+    });
+    const speedStart = gpsSource.indexOf('function preferredSpeedKmh(');
+    const speedEnd = gpsSource.indexOf('\nfunction stopGpsForAppExit()', speedStart);
+    const renderStart = gpsSource.indexOf('function renderGpsVisualUpdate(state) {');
+    const renderEnd = gpsSource.indexOf('\nfunction clearGpsWatch()', renderStart);
+    const positionStart = gpsSource.indexOf('function onPos(pos) {');
+    const positionEnd = gpsSource.indexOf('\n// ============================================================', positionStart);
+    assert.notEqual(speedStart, -1);
+    assert.notEqual(speedEnd, -1);
+    assert.notEqual(renderStart, -1);
+    assert.notEqual(renderEnd, -1);
+    assert.notEqual(positionStart, -1);
+    assert.notEqual(positionEnd, -1);
+    vm.runInContext([
+        gpsSource.slice(speedStart, speedEnd),
+        gpsSource.slice(renderStart, renderEnd),
+        gpsSource.slice(positionStart, positionEnd),
+        'globalThis.testOnPos = onPos; globalThis.testRenderGpsVisualUpdate = renderGpsVisualUpdate; globalThis.testUpdateSpeedDisplay = updateSpeedDisplay;'
+    ].join('\n'), context);
+
+    context.testOnPos({
+        coords: { latitude: 40, longitude: -3, accuracy: 5, speed: 10 / 3.6 },
+        timestamp: Date.now()
+    });
+    assert.equal(visualStates[0].speedKmh, 10);
+
+    context.currentBleSpeedAt = Date.now() - 6000;
+    context.testRenderGpsVisualUpdate(visualStates[0]);
+
+    assert.equal(displayedSpeed, '10.0');
+    context.testUpdateSpeedDisplay();
+    assert.equal(displayedSpeed, '10.0');
+
+    context.testOnPos({
+        coords: { latitude: 40.001, longitude: -3, accuracy: 5, speed: 0.1 },
+        timestamp: Date.now()
+    });
+    assert.ok(Math.abs(visualStates[1].speedKmh - 0.36) < 1e-9);
+    assert.ok(Math.abs(context.lastGpsSpeedKmh - 0.36) < 1e-9);
+    context.testRenderGpsVisualUpdate(visualStates[1]);
+    assert.equal(displayedSpeed, '0.0');
+    context.testUpdateSpeedDisplay();
+    assert.equal(displayedSpeed, '0.0');
+});
+
 test('buildSegments splits multi-segment tracks on pause breaks without cross-gap connection', () => {
     // Un track continuo sin breaks genera un único segmento
     const continuousPoints = [
@@ -1121,6 +1362,15 @@ test('buildSegments splits multi-segment tracks on pause breaks without cross-ga
     assert.equal(twoSegments[1].length, 2);
     assert.deepEqual(twoSegments[0][1], [42.101, -8.601]);
     assert.deepEqual(twoSegments[1][0], [42.150, -8.650]);
+
+    const nullSeparated = buildSegments([
+        [42.1, -8.6, 100, 1000, 120, null],
+        null,
+        [42.2, -8.7, 110, 2000, 122, null]
+    ]);
+    assert.equal(nullSeparated.length, 2);
+    assert.equal(nullSeparated[0].length, 1);
+    assert.equal(nullSeparated[1].length, 1);
 });
 
 test('GPS route rendering catches up in bounded foreground batches without bridging pause breaks', () => {
@@ -1128,6 +1378,7 @@ test('GPS route rendering catches up in bounded foreground batches without bridg
     const points = Array.from({ length: 1001 }, (_, index) => [
         42 + index * 0.00001, -8, null, index, null, index === 501 ? 1 : null
     ]);
+    points[500] = null;
     const frames = [];
     const timeouts = [];
     const context = vm.createContext({
@@ -1170,7 +1421,7 @@ test('GPS route rendering catches up in bounded foreground batches without bridg
     while (frames.length) frames.shift()();
     assert.equal(context.routeRenderedPointCount, points.length);
 
-    const beforeBreak = [points[500][0], points[500][1]];
+    const beforeBreak = [points[499][0], points[499][1]];
     const afterBreak = [points[501][0], points[501][1]];
     assert.equal(context.routePolylines.some(layer =>
         layer.latlngs.some(point => point[0] === beforeBreak[0] && point[1] === beforeBreak[1])

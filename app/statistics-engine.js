@@ -283,7 +283,9 @@
 
             if (previous && deltaSeconds > 0) {
                 const previousHr = finiteNumber(previous.point[4]);
-                if (previousHr !== null && heartRate !== null && previousHr > 0 && heartRate > 0) {
+                if (previousHr !== null && heartRate !== null
+                    && previousHr > 0 && previousHr <= 250
+                    && heartRate > 0 && heartRate <= 250) {
                     const midpoint = (previousHr + heartRate) / 2;
                     zoneMeasuredSeconds += deltaSeconds;
                     if (heartRateMax !== null && heartRateMax > 0) {

@@ -14,6 +14,8 @@ La colección debe incluir:
 
 `poisJson` contiene las ubicaciones y leyendas de las fotos y se envía en cada publicación. `poiPhotos` contiene los JPEG y se envía cuando la ruta incluye fotos. Si falta alguno de los campos en la colección, PocketBase puede rechazar la publicación.
 
+El `trackJson` puede incluir una tercera coordenada opcional con la altitud en metros (`[latitud, longitud, altitud]`). La app usa esos valores para dibujar el perfil de desnivel; las rutas antiguas que solo guardan latitud y longitud no tienen información suficiente para mostrarlo.
+
 ## Reparar la colección del servidor
 
 1. Haz una copia de seguridad de los datos de PocketBase.

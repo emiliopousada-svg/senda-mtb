@@ -313,16 +313,16 @@ body::before {
 .calendar-status { min-height:0; margin:0; color:#80e6a8; font-size:.7rem; }
 .calendar-status:empty { display:none; }
 .calendar-status[data-state="error"] { color:#ff9b91; }
-.calendar-dialog { width:min(440px,calc(100vw - 28px)); max-width:none; max-height:calc(100dvh - 28px); overflow:auto; padding:0; border:1px solid rgba(255,255,255,.12); border-radius:18px; background:#151a23; color:#f2f5f9; box-shadow:0 22px 70px rgba(0,0,0,.55); }
-.calendar-dialog::backdrop { background:rgba(3,6,10,.72); backdrop-filter:blur(4px); }
-.calendar-form { display:grid; gap:9px; padding:18px; }
-.calendar-form > header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:3px; }
-.calendar-form h2 { margin:0; font-size:1.05rem; }
+.calendar-dialog,.route-edit-dialog { width:min(440px,calc(100vw - 28px)); max-width:none; max-height:calc(100dvh - 28px); overflow:auto; padding:0; border:1px solid rgba(255,255,255,.12); border-radius:18px; background:#151a23; color:#f2f5f9; box-shadow:0 22px 70px rgba(0,0,0,.55); }
+.calendar-dialog::backdrop,.route-edit-dialog::backdrop { background:rgba(3,6,10,.72); backdrop-filter:blur(4px); }
+.calendar-form,.route-edit-form { display:grid; gap:9px; padding:18px; }
+.calendar-form > header,.route-edit-form > header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:3px; }
+.calendar-form h2,.route-edit-form h2 { margin:0; font-size:1.05rem; }
 .calendar-dialog-close { width:34px; height:34px; border:0; border-radius:10px; background:#242c38; color:#dce5ef; font-size:1.35rem; line-height:1; }
-.calendar-form > label,.calendar-date-time label { display:grid; gap:6px; color:#c4cedb; font-size:.74rem; font-weight:700; }
-.calendar-form input,.calendar-form select { width:100%; min-height:42px; padding:9px 11px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:#0d1219; color:#f2f5f9; font:inherit; font-size:.8rem; color-scheme:dark; }
+.calendar-form > label,.route-edit-form > label,.calendar-date-time label { display:grid; gap:6px; color:#c4cedb; font-size:.74rem; font-weight:700; }
+.calendar-form input,.calendar-form select,.route-edit-form input,.route-edit-form select { width:100%; min-height:42px; padding:9px 11px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:#0d1219; color:#f2f5f9; font:inherit; font-size:.8rem; color-scheme:dark; }
 .calendar-date-time { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
-.calendar-form footer { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
+.calendar-form footer,.route-edit-form footer { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
 .calendar-cancel-button,.calendar-save-button { min-height:42px; padding:9px 12px; border:1px solid rgba(255,255,255,.1); border-radius:10px; font:inherit; font-size:.77rem; font-weight:760; }
 .calendar-cancel-button { background:#242c36; color:#e3eaf2; }
 .calendar-save-button { border-color:#3b82f6; background:#2563eb; color:#fff; }
@@ -418,7 +418,6 @@ body::before {
 @media (min-width:850px) { .garage-photo { aspect-ratio:auto; height:clamp(220px,32vw,340px); } .garage-history-card { grid-column:1 / -1; } }
 @media (min-width:1100px) { .garage-history-card { grid-column:auto; } }
 .panel-heading { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px 10px; }
-.panel-heading-actions { display:flex; align-items:center; gap:12px; }
 .panel-heading h2 { margin-top:4px; color:#f0f3f7; font-size:1rem; font-weight:720; letter-spacing:-.025em; }
 .text-link { display:inline-flex; align-items:center; gap:8px; padding:7px 0; border:0; background:none; color:#46b4ff; font-size:.72rem; font-weight:720; white-space:nowrap; }
 .text-link span { font-size:1rem; }

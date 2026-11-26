@@ -14,10 +14,17 @@ function routeToGpx(r) {
         `<metadata><name>${xmlEsc(title)}</name></metadata>`,
         `<trk><name>${xmlEsc(title)}</name>`
     ];
-    points.forEach((p, i) => {
-        if (i === 0 || p[5] === 1) {
-            if (i > 0) out.push('</trkseg>');
+    let segmentOpen = false;
+    points.forEach(p => {
+        if (!Array.isArray(p) || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
+            if (segmentOpen) out.push('</trkseg>');
+            segmentOpen = false;
+            return;
+        }
+        if (!segmentOpen || p[5] === 1) {
+            if (segmentOpen) out.push('</trkseg>');
             out.push('<trkseg>');
+            segmentOpen = true;
         }
         let s = `<trkpt lat="${p[0]}" lon="${p[1]}">`;
         if (p[2] != null) s += `<ele>${p[2]}</ele>`;
@@ -25,7 +32,7 @@ function routeToGpx(r) {
         if (p[4] != null) s += `<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${p[4]}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`;
         out.push(s + '</trkpt>');
     });
-    if (points.length) out.push('</trkseg>');
+    if (segmentOpen) out.push('</trkseg>');
     out.push('</trk>', '</gpx>');
     return out.join('\n');
 }

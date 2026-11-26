@@ -4,6 +4,23 @@
 // ============================================================
 const ROUTE_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
+function queuePendingRouteDelete(pending, deletion, origin = {}) {
+    const source = deletion && typeof deletion === 'object'
+        ? deletion
+        : { ...origin, remoteId: deletion };
+    if (typeof source.remoteId !== 'string' || !source.remoteId) return;
+    const entry = {
+        remoteId: source.remoteId,
+        server: typeof source.server === 'string' ? source.server : '',
+        ownerId: typeof source.ownerId === 'string' ? source.ownerId : ''
+    };
+    const exists = pending.some(item => item && typeof item === 'object'
+        && item.remoteId === entry.remoteId
+        && item.server === entry.server
+        && item.ownerId === entry.ownerId);
+    if (!exists) pending.push(entry);
+}
+
 const DB = {
     db: null,
     open() {
@@ -82,8 +99,14 @@ const DB = {
         return this.run('routes', 'readonly', s => s.getAll())
             .then(routes => routes.filter(route => route.trashedAt));
     },
-    moveRouteToTrash(id, deletion, rankingDelete) {
+    moveRouteToTrash(id, deletion, rankingDelete, options = {}) {
         return new Promise((resolve, reject) => {
+            const remoteDeleteRequested = Boolean(options.queueRemoteDelete && deletion && deletion.remoteId);
+            if (remoteDeleteRequested
+                && (!(typeof deletion.server === 'string' && deletion.server.trim())
+                    || !(typeof deletion.ownerId === 'string' && deletion.ownerId.trim()))) {
+                return reject(new Error('remote-delete-metadata-missing'));
+            }
             if (!this.db) return reject(new Error('no-db'));
             try {
                 const tx = this.db.transaction(['routes', 'kv'], 'readwrite');
@@ -94,29 +117,40 @@ const DB = {
                     const route = request.result;
                     if (!route) return;
                     route.trashedAt = Date.now();
-                    route.trashReason = 'remote-deletion';
+                    route.trashReason = options.reason || 'remote-deletion';
                     route.trashRemoteId = deletion.remoteId;
                     route.trashRemoteServer = deletion.server;
+                    route.trashRemoteOwnerId = deletion.ownerId || '';
                     delete route.remoteDeletionPending;
                     routes.put(route);
                     moved = true;
+                    if (options.queueRemoteDelete && deletion.remoteId) {
+                        const kv = tx.objectStore('kv');
+                        const pendingRequest = kv.get('pendingDeletes');
+                        pendingRequest.onsuccess = () => {
+                            const pending = Array.isArray(pendingRequest.result) ? pendingRequest.result : [];
+                            queuePendingRouteDelete(pending, deletion);
+                            kv.put(pending, 'pendingDeletes');
+                        };
+                        pendingRequest.onerror = () => { try { tx.abort(); } catch (error) {} };
+                    }
+                    if (rankingDelete && rankingDelete.ownerId && rankingDelete.server
+                        && Number.isSafeInteger(rankingDelete.clientId) && rankingDelete.clientId > 0) {
+                        const kv = tx.objectStore('kv');
+                        const pendingRequest = kv.get('pendingGroupRankingDeletes');
+                        pendingRequest.onsuccess = () => {
+                            const pending = Array.isArray(pendingRequest.result) ? pendingRequest.result : [];
+                            const exists = pending.some(item => item
+                                && item.ownerId === rankingDelete.ownerId
+                                && item.server === rankingDelete.server
+                                && item.clientId === rankingDelete.clientId);
+                            if (!exists) pending.push(rankingDelete);
+                            kv.put(pending, 'pendingGroupRankingDeletes');
+                        };
+                        pendingRequest.onerror = () => { try { tx.abort(); } catch (error) {} };
+                    }
                 };
                 request.onerror = () => { try { tx.abort(); } catch (error) {} };
-                if (rankingDelete && rankingDelete.ownerId && rankingDelete.server
-                    && Number.isSafeInteger(rankingDelete.clientId) && rankingDelete.clientId > 0) {
-                    const kv = tx.objectStore('kv');
-                    const pendingRequest = kv.get('pendingGroupRankingDeletes');
-                    pendingRequest.onsuccess = () => {
-                        const pending = Array.isArray(pendingRequest.result) ? pendingRequest.result : [];
-                        const exists = pending.some(item => item
-                            && item.ownerId === rankingDelete.ownerId
-                            && item.server === rankingDelete.server
-                            && item.clientId === rankingDelete.clientId);
-                        if (!exists) pending.push(rankingDelete);
-                        kv.put(pending, 'pendingGroupRankingDeletes');
-                    };
-                    pendingRequest.onerror = () => { try { tx.abort(); } catch (error) {} };
-                }
                 tx.oncomplete = () => resolve(moved);
                 tx.onerror = () => reject(tx.error || new Error('trash-failed'));
                 tx.onabort = () => reject(tx.error || new Error('trash-aborted'));
@@ -127,24 +161,49 @@ const DB = {
         return new Promise((resolve, reject) => {
             if (!this.db) return reject(new Error('no-db'));
             try {
-                const tx = this.db.transaction('routes', 'readwrite');
+                const tx = this.db.transaction(['routes', 'kv'], 'readwrite');
                 const store = tx.objectStore('routes');
                 const request = store.get(id);
                 let restored = null;
                 request.onsuccess = () => {
                     const route = request.result;
                     if (!route || !route.trashedAt) return;
+                    const pendingDeleteIdentity = route.trashReason === 'user-deleted'
+                        ? {
+                            remoteId: route.trashRemoteId,
+                            server: route.trashRemoteServer,
+                            ownerId: route.trashRemoteOwnerId
+                        }
+                        : null;
                     delete route.trashedAt;
                     delete route.trashReason;
                     delete route.trashRemoteId;
                     delete route.trashRemoteServer;
+                    delete route.trashRemoteOwnerId;
                     delete route.remoteDeletionPending;
                     route.remoteId = null;
                     delete route.remoteServer;
+                    delete route.remoteOwnerId;
                     delete route.remoteUpdated;
                     route.dirty = false;
                     store.put(route);
                     restored = route;
+                    if (pendingDeleteIdentity
+                        && typeof pendingDeleteIdentity.remoteId === 'string'
+                        && typeof pendingDeleteIdentity.server === 'string'
+                        && typeof pendingDeleteIdentity.ownerId === 'string') {
+                        const kv = tx.objectStore('kv');
+                        const pendingRequest = kv.get('pendingDeletes');
+                        pendingRequest.onsuccess = () => {
+                            const pending = Array.isArray(pendingRequest.result) ? pendingRequest.result : [];
+                            const remaining = pending.filter(deletion => !deletion
+                                || deletion.remoteId !== pendingDeleteIdentity.remoteId
+                                || deletion.server !== pendingDeleteIdentity.server
+                                || deletion.ownerId !== pendingDeleteIdentity.ownerId);
+                            if (remaining.length !== pending.length) kv.put(remaining, 'pendingDeletes');
+                        };
+                        pendingRequest.onerror = () => { try { tx.abort(); } catch (error) {} };
+                    }
                 };
                 request.onerror = () => { try { tx.abort(); } catch (error) {} };
                 tx.oncomplete = () => resolve(restored);
@@ -231,9 +290,14 @@ const DB = {
         route.pois = pois;
         return route;
     },
-    deleteRoute(id, remoteId, rankingDelete) {
+    deleteRoute(id, remoteId, rankingDelete, remoteOrigin = {}) {
         return new Promise((resolve, reject) => {
             if (!this.db) return reject(new Error('no-db'));
+            if (remoteId && (!remoteOrigin
+                || typeof remoteOrigin.server !== 'string' || !remoteOrigin.server.trim()
+                || typeof remoteOrigin.ownerId !== 'string' || !remoteOrigin.ownerId.trim())) {
+                return reject(new Error('remote-delete-origin-required'));
+            }
             try {
                 const tx = this.db.transaction(['routes', 'kv', 'routePhotos'], 'readwrite');
                 tx.objectStore('routes').delete(id);
@@ -243,7 +307,7 @@ const DB = {
                     const req = kv.get('pendingDeletes');
                     req.onsuccess = () => {
                         const pending = Array.isArray(req.result) ? req.result : [];
-                        if (!pending.includes(remoteId)) pending.push(remoteId);
+                        queuePendingRouteDelete(pending, remoteId, remoteOrigin);
                         kv.put(pending, 'pendingDeletes');
                     };
                     req.onerror = () => { try { tx.abort(); } catch (e) {} };
@@ -272,6 +336,32 @@ const DB = {
     kvGet(k)    { return this.run('kv', 'readonly',  s => s.get(k)); },
     kvSet(k, v) { return this.run('kv', 'readwrite', s => s.put(v, k)); },
     kvDel(k)    { return this.run('kv', 'readwrite', s => s.delete(k)); },
+    kvUpdate(k, update) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('no-db'));
+            if (typeof update !== 'function') return reject(new TypeError('kv-update-function-required'));
+            let value;
+            let updateError = null;
+            try {
+                const tx = this.db.transaction('kv', 'readwrite');
+                const store = tx.objectStore('kv');
+                const request = store.get(k);
+                request.onsuccess = () => {
+                    try {
+                        value = update(request.result);
+                        store.put(value, k);
+                    } catch (error) {
+                        updateError = error;
+                        try { tx.abort(); } catch (_) {}
+                    }
+                };
+                request.onerror = () => { try { tx.abort(); } catch (_) {} };
+                tx.oncomplete = () => resolve(value);
+                tx.onerror = () => reject(updateError || tx.error || new Error('kv-update-failed'));
+                tx.onabort = () => reject(updateError || tx.error || new Error('kv-update-aborted'));
+            } catch (error) { reject(error); }
+        });
+    },
     kvKeys()    { return this.run('kv', 'readonly',  s => s.getAllKeys()); },
     kvSaveDraft(draft, chunks) {
         return new Promise((resolve, reject) => {
@@ -356,11 +446,30 @@ function makeElevTracker() {
 function gainCumulative(points) {
     const tracker = makeElevTracker();
     const out = new Float64Array(points.length);
+    let baseGain = 0;
+    let trackerGainAtBase = 0;
     points.forEach((p, i) => {
-        if (i > 0 && p[5] === 1) tracker.reset();
+        if (!Array.isArray(p)) {
+            if (i > 0) baseGain = out[i - 1];
+            trackerGainAtBase = tracker.gain;
+            tracker.reset();
+            out[i] = baseGain;
+            return;
+        }
+        if (i > 0 && p[5] === 1) {
+            baseGain = out[i - 1];
+            trackerGainAtBase = tracker.gain;
+            tracker.reset();
+        }
         tracker.add(p[2] == null ? null : Number(p[2]));
         const storedGain = p[9] == null ? NaN : Number(p[9]);
-        out[i] = Number.isFinite(storedGain) && storedGain >= 0 ? storedGain : tracker.gain;
+        const segmentGain = tracker.gain - trackerGainAtBase;
+        if (Number.isFinite(storedGain) && storedGain >= 0) {
+            out[i] = storedGain;
+            baseGain = storedGain - segmentGain;
+        } else {
+            out[i] = baseGain + segmentGain;
+        }
     });
     return out;
 }

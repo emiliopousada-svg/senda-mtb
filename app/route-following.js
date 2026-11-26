@@ -23,19 +23,22 @@ function pointSegFraction(p, a, b) {
     return Math.max(0, Math.min(1, -(ax * dx + ay * dy) / l2));
 }
 
-function buildRouteCumulativeDistances(points) {
+function buildRouteCumulativeDistances(points, breakBefore = []) {
     const cumulative = [0];
     for (let i = 1; i < points.length; i++) {
-        cumulative.push(cumulative[i - 1] + dist(points[i - 1], points[i]));
+        const startsNewSegment = !Array.isArray(points[i - 1])
+            || !Array.isArray(points[i])
+            || breakBefore[i];
+        cumulative.push(cumulative[i - 1]
+            + (startsNewSegment ? 0 : dist(points[i - 1], points[i])));
     }
     return cumulative;
 }
 
-function routePointAtDistance(points, cumulative, distance) {
-    if (distance <= 0) return points[0];
-    const last = cumulative.length - 1;
+function routePointAtDistance(points, cumulative, distance, first = 0, last = cumulative.length - 1) {
+    if (distance <= cumulative[first]) return points[first];
     if (distance >= cumulative[last]) return points[last];
-    let low = 0, high = last;
+    let low = first, high = last;
     while (low + 1 < high) {
         const middle = Math.floor((low + high) / 2);
         if (cumulative[middle] < distance) low = middle;
@@ -49,31 +52,56 @@ function routePointAtDistance(points, cumulative, distance) {
     ];
 }
 
-function buildRouteManeuvers(points, cumulative) {
+function buildRouteManeuvers(points, cumulative, breakBefore = []) {
     const sampleDistance = 18;
     const minAngle = 45;
     const minSeparation = 20;
     const candidates = [];
-    for (let i = 1; i < points.length - 1; i++) {
-        const distance = cumulative[i];
-        if (distance < sampleDistance || cumulative[cumulative.length - 1] - distance < sampleDistance) continue;
-        const before = routePointAtDistance(points, cumulative, distance - sampleDistance);
-        const after = routePointAtDistance(points, cumulative, distance + sampleDistance);
-        const incoming = bearingBetween(before, points[i]);
-        const outgoing = bearingBetween(points[i], after);
-        const angle = ((outgoing - incoming + 540) % 360) - 180;
-        if (Math.abs(angle) < minAngle || Math.abs(angle) >= 160) continue;
-        const candidate = {
-            distanceMeters: distance,
-            direction: angle > 0 ? 'derecha' : 'izquierda',
-            angle: Math.abs(angle)
-        };
-        const previous = candidates[candidates.length - 1];
-        if (previous && candidate.distanceMeters - previous.distanceMeters < minSeparation) {
-            if (candidate.angle > previous.angle) candidates[candidates.length - 1] = candidate;
-        } else {
-            candidates.push(candidate);
+    let segmentStart = 0;
+    for (let boundary = 0; boundary <= points.length; boundary++) {
+        const startsNewSegment = boundary < points.length
+            && boundary > segmentStart
+            && breakBefore[boundary];
+        if (boundary < points.length
+            && Array.isArray(points[boundary])
+            && !startsNewSegment) continue;
+
+        const segmentEnd = boundary - 1;
+        if (segmentEnd - segmentStart >= 2) {
+            const segmentStartDistance = cumulative[segmentStart];
+            const segmentEndDistance = cumulative[segmentEnd];
+            for (let i = segmentStart + 1; i < segmentEnd; i++) {
+                const distance = cumulative[i];
+                if (distance - segmentStartDistance < sampleDistance
+                    || segmentEndDistance - distance < sampleDistance) continue;
+                const before = routePointAtDistance(
+                    points, cumulative, distance - sampleDistance, segmentStart, segmentEnd
+                );
+                const after = routePointAtDistance(
+                    points, cumulative, distance + sampleDistance, segmentStart, segmentEnd
+                );
+                const incoming = bearingBetween(before, points[i]);
+                const outgoing = bearingBetween(points[i], after);
+                const angle = ((outgoing - incoming + 540) % 360) - 180;
+                if (Math.abs(angle) < minAngle || Math.abs(angle) >= 160) continue;
+                const candidate = {
+                    distanceMeters: distance,
+                    segmentId: segmentStart,
+                    direction: angle > 0 ? 'derecha' : 'izquierda',
+                    angle: Math.abs(angle)
+                };
+                const previous = candidates[candidates.length - 1];
+                if (previous && previous.segmentId === candidate.segmentId
+                    && candidate.distanceMeters - previous.distanceMeters < minSeparation) {
+                    if (candidate.angle > previous.angle) candidates[candidates.length - 1] = candidate;
+                } else {
+                    candidates.push(candidate);
+                }
+            }
         }
+        segmentStart = boundary < points.length && Array.isArray(points[boundary])
+            ? boundary
+            : boundary + 1;
     }
     return candidates;
 }
@@ -135,24 +163,32 @@ function findFollowedRouteMatch(lat, lon) {
     const hint = Number.isInteger(followedRoute.progressIndex) ? followedRoute.progressIndex : 0;
     const position = [lat, lon];
     const scan = (from, to) => {
-        let bestIndex = from;
+        let bestIndex = null;
         let bestDistance = Infinity;
         for (let i = from; i <= to; i++) {
+            if (!Array.isArray(pts[i]) || !Array.isArray(pts[i + 1])
+                || (followedRoute.breakBefore && followedRoute.breakBefore[i + 1])) continue;
             const distance = pointSegDistM(position, pts[i], pts[i + 1]);
             if (distance < bestDistance) {
                 bestIndex = i;
                 bestDistance = distance;
             }
         }
-        return { index: bestIndex, distance: bestDistance };
+        return bestIndex === null ? null : {
+            index: bestIndex,
+            distance: bestDistance,
+            segmentId: followedRoute.segmentIds ? followedRoute.segmentIds[bestIndex] : null
+        };
     };
 
     let match = scan(Math.max(0, hint - 30), Math.min(lastSegment, hint + 180));
-    if (match.distance > 250
+    if ((!match || match.distance > 250)
         && Date.now() - (followedRoute.lastGlobalScanAt || 0) >= ROUTE_GLOBAL_RESCAN_INTERVAL_MS) {
-        match = scan(0, lastSegment);
+        const globalMatch = scan(0, lastSegment);
         followedRoute.lastGlobalScanAt = Date.now();
+        if (globalMatch) match = globalMatch;
     }
+    if (!match) return null;
     match.fraction = pointSegFraction(position, pts[match.index], pts[match.index + 1]);
     followedRoute.progressIndex = match.index;
     return match;
@@ -163,9 +199,20 @@ function checkUpcomingRouteTurn(match) {
     const cumulative = followedRoute.cumulativeMeters;
     const segmentLength = cumulative[match.index + 1] - cumulative[match.index];
     const progress = cumulative[match.index] + segmentLength * match.fraction;
+    const segmentId = match.segmentId ?? (followedRoute.segmentIds
+        ? followedRoute.segmentIds[match.index]
+        : null);
     const maneuvers = followedRoute.maneuvers;
     while (followedRoute.nextManeuverWakeIndex < maneuvers.length) {
         const maneuver = maneuvers[followedRoute.nextManeuverWakeIndex];
+        if (segmentId !== null && Number.isInteger(maneuver.segmentId)
+            && maneuver.segmentId !== segmentId) {
+            if (maneuver.segmentId < segmentId) {
+                followedRoute.nextManeuverWakeIndex++;
+                continue;
+            }
+            break;
+        }
         const remaining = maneuver.distanceMeters - progress;
         if (remaining < -15) {
             followedRoute.nextManeuverWakeIndex++;
@@ -178,6 +225,14 @@ function checkUpcomingRouteTurn(match) {
     }
     while (followedRoute.nextManeuverIndex < maneuvers.length) {
         const maneuver = maneuvers[followedRoute.nextManeuverIndex];
+        if (segmentId !== null && Number.isInteger(maneuver.segmentId)
+            && maneuver.segmentId !== segmentId) {
+            if (maneuver.segmentId < segmentId) {
+                followedRoute.nextManeuverIndex++;
+                continue;
+            }
+            return;
+        }
         const remaining = maneuver.distanceMeters - progress;
         if (remaining < -15) {
             followedRoute.nextManeuverIndex++;
@@ -286,15 +341,28 @@ function followRoute(r) {
     goToPage(0);
     unlockOffRouteSound();
     clearLastRideMapPreview();
-    const points = r.points.map(p => [p[0], p[1]]);
-    const cumulativeMeters = buildRouteCumulativeDistances(points);
+    const points = r.points.map(p => Array.isArray(p) ? [p[0], p[1]] : null);
+    const breakBefore = r.points.map((p, index) => index > 0
+        && (!Array.isArray(p) || p[5] === 1 || !Array.isArray(r.points[index - 1])));
+    let segmentId = null;
+    const segmentIds = points.map((point, index) => {
+        if (!Array.isArray(point)) {
+            segmentId = null;
+            return null;
+        }
+        if (segmentId === null || breakBefore[index]) segmentId = index;
+        return segmentId;
+    });
+    const cumulativeMeters = buildRouteCumulativeDistances(points, breakBefore);
     followedRoute = {
         id: r.id,
         name: r.name,
         kind: r.kind,
         pts: points,
+        breakBefore,
+        segmentIds,
         cumulativeMeters,
-        maneuvers: buildRouteManeuvers(points, cumulativeMeters),
+        maneuvers: buildRouteManeuvers(points, cumulativeMeters, breakBefore),
         nextManeuverIndex: 0,
         nextManeuverWakeIndex: 0,
         pois: Array.isArray(r.pois) ? r.pois : [],

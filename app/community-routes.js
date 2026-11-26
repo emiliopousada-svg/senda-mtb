@@ -62,14 +62,17 @@ const COMMUNITY_PROVINCE_TO_AUTONOMY = {
 };
 
 const COMMUNITY_TRIM_METERS = 150;
+const COMMUNITY_ELEVATION_SIMPLIFY_TOLERANCE_M = 5;
 const COMMUNITY_PAGE_SIZE = 100;
-const COMMUNITY_MAX_RESULTS = 100;
+const COMMUNITY_MAX_RESULTS = 20;
 const COMMUNITY_TRACK_BATCH_SIZE = 5;
 const COMMUNITY_MAX_TRACKS_TO_CHECK = 40;
 const COMMUNITY_MAX_METADATA_CANDIDATES = 2000;
 const COMMUNITY_MAX_TRACK_JSON_CHARS = 262144;
-const COMMUNITY_SEARCH_CACHE_KEY = 'community-nearby-search-v2';
+const COMMUNITY_SEARCH_CACHE_KEY = 'community-nearby-search-v4';
 const COMMUNITY_SEARCH_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const COMMUNITY_MAX_PUBLISHED_TRACK_POINTS = 3000;
+const COMMUNITY_TOTAL_COUNT_CACHE_KEY = 'community-published-total-v1';
 const COMMUNITY_DIFFICULTIES = {
     easy: 'Fácil',
     moderate: 'Moderada',
@@ -79,7 +82,11 @@ const COMMUNITY_DIFFICULTIES = {
 let communityShareRoute = null;
 let communityPublishing = false;
 let communityCatalogRoutes = [];
+let communityPublishedTotal = 0;
+let communityPublishedCountServer = '';
+let communityPublishedCountRequest = 0;
 let communitySearchActive = false;
+let communitySearchRequest = 0;
 let communityVisibleLayers = new Map();
 let communityLayerGroup = null;
 let communityPreviewMap = null;
@@ -91,6 +98,7 @@ let communitySegmentPreviewBaseLayer = null;
 let communitySegmentPreviewLayer = null;
 let communityDetailBackAction = openCommunityCatalog;
 let communityDetailFollowAction = null;
+let communityDetailTapReturnMode = 'none';
 let communityDetailRecord = null;
 let communityDetailLines = null;
 let communitySegmentSelecting = false;
@@ -107,8 +115,8 @@ function communitySetStatus(message, isError = false) {
     });
 }
 
-function updateCommunityRoutesCount(communityCount = communityCatalogRoutes.length) {
-    $('routes-count-community').textContent = String(Math.max(0, communityCount));
+function updateCommunityRoutesCount() {
+    $('routes-count-community').textContent = String(Math.max(0, communityPublishedTotal));
 }
 
 function communityFillActivities(select) {
@@ -124,9 +132,76 @@ function communityAutonomousCommunity(value) {
     return COMMUNITY_PROVINCE_TO_AUTONOMY[place] || place;
 }
 
-function communityFillAutonomousCommunities(select) {
-    select.replaceChildren(new Option('Elige una comunidad autónoma', ''));
-    COMMUNITY_AUTONOMOUS_COMMUNITIES.forEach(community => select.add(new Option(community, community)));
+function communityFillAutonomousCommunities(select, placeholder = 'Elige una comunidad autónoma') {
+    const options = COMMUNITY_AUTONOMOUS_COMMUNITIES.map(community => new Option(community, community));
+    if (placeholder) options.unshift(new Option(placeholder, ''));
+    select.replaceChildren(...options);
+}
+
+function communityAutonomousCommunityFilter(community) {
+    const provinces = Object.entries(COMMUNITY_PROVINCE_TO_AUTONOMY)
+        .filter(([, autonomousCommunity]) => autonomousCommunity === community)
+        .map(([province]) => province);
+    const values = [community, ...provinces];
+    return `(${values.map(value => `province = "${escapeCommunityFilterValue(value)}"`).join(' || ')})`;
+}
+
+function communityNicknameKey(value) {
+    return String(value || '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .normalize('NFKC')
+        .toLowerCase()
+        .normalize('NFKC');
+}
+
+async function refreshCommunityPublishedCount() {
+    if (!Cloud.loggedIn()) return;
+    const requestId = ++communityPublishedCountRequest;
+    const server = Cloud.server;
+    const cacheServer = String(server || '').replace(/\/+$/, '');
+    const uid = Cloud.uid;
+    const authGeneration = Cloud.authGeneration;
+    const cacheKey = `${COMMUNITY_TOTAL_COUNT_CACHE_KEY}:${cacheServer}`;
+    const isCurrentSession = () => requestId === communityPublishedCountRequest
+        && Cloud.loggedIn()
+        && Cloud.server === server
+        && Cloud.uid === uid
+        && Cloud.authGeneration === authGeneration;
+
+    if (communityPublishedCountServer !== cacheServer) {
+        communityPublishedCountServer = cacheServer;
+        communityPublishedTotal = 0;
+        updateCommunityRoutesCount();
+    }
+    try {
+        const cached = await DB.kvGet(cacheKey);
+        if (!isCurrentSession()) return;
+        const total = Number(cached && cached.total);
+        if (cached && Number.isSafeInteger(total) && total >= 0) {
+            communityPublishedTotal = total;
+            updateCommunityRoutesCount();
+        }
+    } catch (error) {
+        console.warn('No se pudo leer el total guardado de rutas comunitarias:', error);
+    }
+    if (navigator.onLine === false) return;
+
+    try {
+        const result = await cloudApi('/api/collections/community_routes/records?page=1&perPage=1&fields=id&filter='
+            + encodeURIComponent('published = true'));
+        if (!isCurrentSession()) return;
+        const total = Number(result && result.totalItems);
+        if (!Number.isSafeInteger(total) || total < 0) {
+            throw new Error('El servidor devolvió un total de rutas no válido.');
+        }
+        communityPublishedTotal = total;
+        updateCommunityRoutesCount();
+        DB.kvSet(cacheKey, { total, savedAt: Date.now() })
+            .catch(error => console.warn('No se pudo guardar el total de rutas comunitarias:', error));
+    } catch (error) {
+        if (isCurrentSession()) console.warn('No se pudo actualizar el total de rutas comunitarias:', error);
+    }
 }
 
 function openCommunityCatalog() {
@@ -147,9 +222,17 @@ function closeCommunityDialog() {
     communityShareRoute = null;
     communityDetailRecord = null;
     communityDetailLines = null;
+    communityDetailTapReturnMode = 'none';
     if (communityPreviewPoiLayer) communityPreviewPoiLayer.dispose();
     communityPreviewPoiLayer = null;
     if (typeof routesResetCommunityRouteDetail === 'function') routesResetCommunityRouteDetail();
+}
+
+function communityHandleDetailTap(event) {
+    if (communityDetailTapReturnMode === 'none') return;
+    if (communityDetailTapReturnMode === 'content'
+        && event.target.closest('#community-detail-map, #community-detail-custom-actions, #community-detail-follow, #community-close')) return;
+    communityDetailBackAction();
 }
 
 function communityHandleAccountStateChange() {
@@ -238,17 +321,25 @@ function openCommunityDetail(record, lines, options = {}) {
     $('community-segment-map-view').hidden = true;
     communityDetailRecord = record && record.id ? record : null;
     communityDetailLines = lines;
+    const viewOnly = options.viewOnly === true;
+    const returnOnTap = options.returnOnTap === true;
+    communityDetailTapReturnMode = viewOnly || returnOnTap ? 'content' : 'none';
     const pois = Array.isArray(options.pois) ? options.pois : communityPoisFromRecord(record);
     $('community-publish').hidden = true;
     $('community-detail').hidden = false;
     $('community-title').textContent = record.title || 'Ruta de la comunidad';
     $('community-detail-back').textContent = options.backLabel || 'Volver a las rutas';
+    $('community-detail-back').hidden = viewOnly || returnOnTap;
+    const navigationActions = $('community-detail-navigation-actions');
+    if (navigationActions) navigationActions.hidden = viewOnly;
     communityDetailBackAction = options.onBack || openCommunityCatalog;
     communityDetailFollowAction = options.onFollow || null;
-    $('community-detail-follow').hidden = !communityDetailFollowAction;
+    $('community-detail-follow').hidden = viewOnly || !communityDetailFollowAction;
     const customActions = $('community-detail-custom-actions');
     customActions.replaceChildren();
-    (options.actions || []).forEach(([label, callback]) => {
+    const actions = options.actions || [];
+    customActions.hidden = actions.length === 0;
+    actions.forEach(([label, callback]) => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'btn secondary';
@@ -257,6 +348,22 @@ function openCommunityDetail(record, lines, options = {}) {
         customActions.appendChild(button);
     });
     communitySetStatus('');
+
+    const mapContainer = $('community-detail-map');
+    const mapEmpty = $('community-detail-map-empty');
+    const hasTrack = Array.isArray(lines) && lines.length > 0;
+    mapContainer.hidden = !hasTrack;
+    if (mapEmpty) mapEmpty.hidden = hasTrack;
+    if (!hasTrack) {
+        if (communityPreviewRouteLayer) {
+            communityPreviewMap.removeLayer(communityPreviewRouteLayer);
+            communityPreviewRouteLayer = null;
+        }
+        if (communityPreviewPoiLayer) {
+            communityPreviewPoiLayer.dispose();
+            communityPreviewPoiLayer = null;
+        }
+    }
 
     const movingTimeSec = Number(record.movingTimeSec);
     const activity = ACTIVITY_TYPES[record.activityType]?.label || record.activityType || 'No disponible';
@@ -285,6 +392,7 @@ function openCommunityDetail(record, lines, options = {}) {
         item.append(caption, detail);
         stats.append(item);
     });
+    renderCommunityElevationProfile(communityElevationLines(record, lines), record);
     const showCommunityTools = Boolean(communityDetailRecord);
     $('community-social').hidden = !showCommunityTools;
     $('community-segments-section').hidden = !showCommunityTools;
@@ -297,6 +405,7 @@ function openCommunityDetail(record, lines, options = {}) {
 
     $('community-dialog').hidden = false;
     setTimeout(() => {
+        if (!hasTrack) return;
         try {
             if (!communityPreviewMap) {
                 communityPreviewMap = L.map('community-detail-map', { scrollWheelZoom: false });
@@ -437,19 +546,129 @@ function communityDistanceToBounds(position, record) {
     return communityDistance(position, nearest) / 1000;
 }
 
-function communityRawSegments(points) {
+function communityRawSegments(points, includeElevation = false) {
     const lines = [];
     let current = [];
     for (const point of points || []) {
+        if (point === null) {
+            if (current.length) lines.push(current);
+            current = [];
+            continue;
+        }
         if (!Array.isArray(point) || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) continue;
         if (point[5] === 1 && current.length) {
             lines.push(current);
             current = [];
         }
-        current.push([point[0], point[1]]);
+        if (includeElevation) {
+            current.push([point[0], point[1], communityElevationValue(point)]);
+        } else {
+            current.push([point[0], point[1]]);
+        }
     }
     if (current.length) lines.push(current);
     return lines.filter(line => line.length > 1);
+}
+
+function communityElevationValue(point) {
+    if (!Array.isArray(point) || point.length < 3 || point[2] == null || point[2] === '') return null;
+    const altitude = Number(point[2]);
+    return Number.isFinite(altitude) && altitude >= -500 && altitude <= 9000 ? altitude : null;
+}
+
+function communityElevationProfile(lines) {
+    const segments = [];
+    let distanceM = 0;
+    let ascentM = 0;
+
+    for (const line of lines || []) {
+        const tracker = MTBStatisticsEngine.createElevationTracker();
+        let previousPoint = null;
+        let segment = [];
+        const finishSegment = () => {
+            if (segment.length > 1) segments.push(segment);
+            segment = [];
+        };
+
+        for (const point of line || []) {
+            if (!Array.isArray(point) || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) {
+                tracker.add(null);
+                finishSegment();
+                previousPoint = null;
+                continue;
+            }
+            if (previousPoint) distanceM += communityDistance(previousPoint, point);
+            previousPoint = point;
+
+            const altitude = communityElevationValue(point);
+            const smoothedAltitude = altitude !== null
+                ? tracker.add(altitude)
+                : tracker.add(null);
+            if (smoothedAltitude === null) {
+                finishSegment();
+                continue;
+            }
+            segment.push({ distanceM, altitude: smoothedAltitude });
+        }
+        finishSegment();
+        ascentM += tracker.gain;
+    }
+
+    const samples = segments.flat();
+    if (!samples.length) return null;
+    return {
+        segments,
+        distanceM,
+        ascentM,
+        minAltitude: Math.min(...samples.map(point => point.altitude)),
+        maxAltitude: Math.max(...samples.map(point => point.altitude)),
+        sampleCount: samples.length
+    };
+}
+
+function renderCommunityElevationProfile(lines, record = null) {
+    const section = $('community-detail-elevation');
+    const empty = $('community-detail-elevation-empty');
+    const chart = $('community-detail-elevation-chart');
+    const area = $('community-detail-elevation-area');
+    const profileLine = $('community-detail-elevation-line');
+    const summary = $('community-detail-elevation-summary');
+    const profile = communityElevationProfile(lines);
+
+    section.hidden = false;
+    empty.hidden = Boolean(profile);
+    chart.hidden = !profile;
+    area.setAttribute('d', '');
+    profileLine.setAttribute('d', '');
+    summary.textContent = '';
+    if (!profile) return;
+
+    const formatMeters = value => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(value);
+    const recordedAscent = Number(record && record.elevationGain);
+    const ascentM = Number.isFinite(recordedAscent) && recordedAscent > 0
+        ? recordedAscent
+        : profile.ascentM;
+    summary.textContent = `${formatMeters(profile.minAltitude)}–${formatMeters(profile.maxAltitude)} m · +${formatMeters(ascentM)} m`;
+    const altitudeRange = Math.max(profile.maxAltitude - profile.minAltitude, 1);
+    let sampleIndex = 0;
+    const linePaths = [], areaPaths = [];
+    profile.segments.forEach(segment => {
+        const points = segment.map(point => {
+            const index = sampleIndex++;
+            const x = profile.distanceM > 0
+                ? 8 + point.distanceM / profile.distanceM * 344
+                : 8 + index / Math.max(profile.sampleCount - 1, 1) * 344;
+            const y = 84 - (point.altitude - profile.minAltitude) / altitudeRange * 68;
+            return { x, y };
+        });
+        const path = points.map((point, index) =>
+            `${index ? 'L' : 'M'}${point.x.toFixed(1)},${point.y.toFixed(1)}`
+        ).join(' ');
+        linePaths.push(path);
+        areaPaths.push(`${path} L${points[points.length - 1].x.toFixed(1)},92 L${points[0].x.toFixed(1)},92 Z`);
+    });
+    profileLine.setAttribute('d', linePaths.join(' '));
+    area.setAttribute('d', areaPaths.join(' '));
 }
 
 function communityTrimStart(lines, meters) {
@@ -474,33 +693,129 @@ function communityTrimStart(lines, meters) {
         const length = communityDistance(a, b) || 1;
         const fraction = Math.max(0, Math.min(1, (remaining - passed) / length));
         const cut = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
+        if (a.length > 2 || b.length > 2) {
+            const startAltitude = a[2] == null ? null : Number(a[2]);
+            const endAltitude = b[2] == null ? null : Number(b[2]);
+            cut.push(Number.isFinite(startAltitude) && Number.isFinite(endAltitude)
+                ? startAltitude + (endAltitude - startAltitude) * fraction
+                : null);
+        }
         result[0] = [cut].concat(line.slice(index));
         remaining = 0;
     }
     return result.filter(line => line.length > 1);
 }
 
-function communitySimplify(line, toleranceMeters) {
+function communityTrimEnds(lines, meters) {
+    const trimmed = communityTrimStart(lines, meters);
+    return communityTrimStart(
+        trimmed.slice().reverse().map(line => line.slice().reverse()),
+        meters
+    ).reverse().map(line => line.slice().reverse());
+}
+
+function communityElevationLines(record, lines) {
+    if (communityElevationProfile(lines)
+        || !record || record.owner !== Cloud.uid
+        || typeof savedRoutes === 'undefined' || !Array.isArray(savedRoutes)) return lines;
+
+    const localRoute = savedRoutes.find(route => route.communityRouteId === record.id
+        && route.kind !== 'community'
+        && Array.isArray(route.points)
+        && route.points.some(point => Array.isArray(point)
+            && Number.isFinite(point[2]) && point[2] >= -500 && point[2] <= 9000));
+    if (!localRoute) return lines;
+
+    const localLines = communityRawSegments(localRoute.points, true)
+        .map(line => communitySimplify(line, 8))
+        .filter(line => line.length > 1);
+    const publicLines = communityTrimEnds(localLines, COMMUNITY_TRIM_METERS);
+    return communityElevationProfile(publicLines) ? publicLines : lines;
+}
+
+function communitySimplify(
+    line,
+    toleranceMeters,
+    elevationToleranceMeters = COMMUNITY_ELEVATION_SIMPLIFY_TOLERANCE_M
+) {
     if (line.length <= 2) return line;
     const lat0 = line.reduce((sum, point) => sum + point[0], 0) / line.length;
     const xScale = Math.cos(lat0 * Math.PI / 180) * 111320;
     const project = point => [point[1] * xScale, point[0] * 110540];
     const sqTolerance = toleranceMeters * toleranceMeters;
     const keep = new Uint8Array(line.length);
+    const keepElevation = new Uint8Array(line.length);
+    const distanceFromStart = new Float64Array(line.length);
+    for (let index = 1; index < line.length; index++) {
+        distanceFromStart[index] = distanceFromStart[index - 1] + communityDistance(line[index - 1], line[index]);
+    }
     keep[0] = keep[line.length - 1] = 1;
-    const stack = [[0, line.length - 1]];
+    for (let index = 0; index < line.length;) {
+        if (communityElevationValue(line[index]) === null) {
+            keepElevation[index] = 1;
+            while (index < line.length && communityElevationValue(line[index]) === null) index++;
+            continue;
+        }
+        const start = index;
+        while (index < line.length && communityElevationValue(line[index]) !== null) index++;
+        const end = index - 1;
+        keepElevation[start] = keepElevation[end] = 1;
+        const elevationStack = [[start, end]];
+        while (elevationStack.length) {
+            const [first, last] = elevationStack.pop();
+            if (last - first < 2) continue;
+            const firstAltitude = communityElevationValue(line[first]);
+            const lastAltitude = communityElevationValue(line[last]);
+            const distanceSpan = distanceFromStart[last] - distanceFromStart[first];
+            let maxDeviation = elevationToleranceMeters;
+            let maxIndex = -1;
+            const midpoint = (first + last) / 2;
+            for (let sample = first + 1; sample < last; sample++) {
+                const fraction = distanceSpan > 0
+                    ? (distanceFromStart[sample] - distanceFromStart[first]) / distanceSpan
+                    : (sample - first) / (last - first);
+                const expectedAltitude = firstAltitude + (lastAltitude - firstAltitude) * fraction;
+                const deviation = Math.abs(communityElevationValue(line[sample]) - expectedAltitude);
+                if (deviation > maxDeviation || (maxIndex >= 0 && deviation === maxDeviation
+                    && Math.abs(sample - midpoint) < Math.abs(maxIndex - midpoint))) {
+                    maxDeviation = deviation;
+                    maxIndex = sample;
+                }
+            }
+            if (maxIndex >= 0) {
+                keepElevation[maxIndex] = 1;
+                elevationStack.push([first, maxIndex], [maxIndex, last]);
+            }
+        }
+    }
+    const anchors = [0];
+    for (let index = 1; index < line.length - 1; index++) {
+        if (keepElevation[index]) {
+            keep[index] = 1;
+            anchors.push(index);
+        }
+    }
+    anchors.push(line.length - 1);
+    const stack = [];
+    for (let index = anchors.length - 1; index > 0; index--) {
+        stack.push([anchors[index - 1], anchors[index]]);
+    }
     while (stack.length) {
         const pair = stack.pop(), first = pair[0], last = pair[1];
         const a = project(line[first]), b = project(line[last]);
         const dx = b[0] - a[0], dy = b[1] - a[1];
-        let max = sqTolerance, maxIndex = -1;
+        let maxDeviation = 1, maxIndex = -1;
         for (let i = first + 1; i < last; i++) {
             const p = project(line[i]);
             let t = dx || dy ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy) : 0;
             t = Math.max(0, Math.min(1, t));
             const ex = p[0] - (a[0] + t * dx), ey = p[1] - (a[1] + t * dy);
             const d2 = ex * ex + ey * ey;
-            if (d2 > max) { max = d2; maxIndex = i; }
+            const deviation = d2 / sqTolerance;
+            if (deviation > maxDeviation) {
+                maxDeviation = deviation;
+                maxIndex = i;
+            }
         }
         if (maxIndex >= 0) {
             keep[maxIndex] = 1;
@@ -512,12 +827,21 @@ function communitySimplify(line, toleranceMeters) {
 
 function communityUploadTrack(route) {
     // El servidor recorta los extremos antes de guardar; aquí solo reducimos tamaño.
-    const lines = communityRawSegments(route.points)
-        .map(line => communitySimplify(line, 8))
-        .filter(line => line.length > 1);
-    const count = lines.reduce((sum, line) => sum + line.length, 0);
+    const sourceLines = communityRawSegments(route.points, true);
+    let elevationTolerance = COMMUNITY_ELEVATION_SIMPLIFY_TOLERANCE_M;
+    let lines = [];
+    let count = 0;
+    for (let attempt = 0; attempt < 13; attempt++) {
+        lines = sourceLines.map(line => communitySimplify(line, 8, elevationTolerance))
+            .filter(line => line.length > 1);
+        count = lines.reduce((sum, line) => sum + line.length, 0);
+        if (count <= COMMUNITY_MAX_PUBLISHED_TRACK_POINTS) break;
+        elevationTolerance *= 2;
+    }
     if (count < 2) throw new Error('La ruta no tiene suficientes puntos para compartirla.');
-    if (count > 3000) throw new Error('No se pudo reducir el track a un tamaño seguro para publicarlo.');
+    if (count > COMMUNITY_MAX_PUBLISHED_TRACK_POINTS) {
+        throw new Error('No se pudo reducir el track a un tamaño seguro para publicarlo.');
+    }
     return lines;
 }
 
@@ -587,6 +911,7 @@ async function submitCommunityRoute() {
         if (!record || typeof record.id !== 'string' || !record.id) {
             throw new Error('El servidor no devolvió el identificador de la ruta publicada.');
         }
+        refreshCommunityPublishedCount();
         const previousCommunityRouteId = route.communityRouteId;
         const previousProvince = route.province;
         const previousPerformedAt = route.performedAt;
@@ -821,6 +1146,7 @@ async function deleteCommunityRoute(record) {
         communityVisibleLayers.delete(record.id);
         communityCatalogRoutes = communityCatalogRoutes.filter(route => route.id !== record.id);
         renderCommunityRoutes(communityCatalogRoutes);
+        await refreshCommunityPublishedCount();
         communitySetStatus('Ruta eliminada de la comunidad.');
         toast('Ruta eliminada de la comunidad.');
     } catch (error) {
@@ -886,13 +1212,12 @@ function toggleCommunityRoute(record, lines, button) {
 function renderCommunityRoutes(records) {
     const list = $('community-route-list');
     list.replaceChildren();
-    let visibleCount = 0;
     if (!records.length) {
         const empty = document.createElement('p');
         empty.className = 'community-empty';
         empty.textContent = 'No hay rutas publicadas con estos filtros.';
         list.append(empty);
-        updateCommunityRoutesCount(0);
+        updateCommunityRoutesCount();
         return;
     }
     const sortedRecords = records.slice().sort((a, b) => {
@@ -967,20 +1292,22 @@ function renderCommunityRoutes(records) {
         }
         card.append(heading, facts, actions);
         list.append(card);
-        visibleCount++;
     });
-    updateCommunityRoutesCount(visibleCount);
+    updateCommunityRoutesCount();
 }
 
 function escapeCommunityFilterValue(value) {
     return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-async function readCommunitySearchCache(activity, radiusKm, searchPosition, locality, author, difficulty, minAscent) {
+async function readCommunitySearchCache(
+    activity, radiusKm, searchPosition, community, author, difficulty, minAscent, server
+) {
     try {
         const cache = await DB.kvGet(COMMUNITY_SEARCH_CACHE_KEY);
-        if (!cache || cache.activity !== activity || cache.radiusKm !== radiusKm
-            || cache.locality !== locality || (cache.author || '') !== author
+        if (!cache || cache.server !== server || cache.activity !== activity || cache.radiusKm !== radiusKm
+            || (cache.community || '') !== community
+            || (cache.author || '') !== author
             || cache.difficulty !== difficulty || cache.minAscent !== minAscent
             || Date.now() - cache.savedAt > COMMUNITY_SEARCH_CACHE_MAX_AGE_MS
             || !Array.isArray(cache.routes)) return null;
@@ -1002,7 +1329,7 @@ async function readCommunitySearchCache(activity, radiusKm, searchPosition, loca
     }
 }
 
-async function communityFetchRouteMetadata(page, filter, includeBounds) {
+async function communityFetchRouteMetadata(page, filter, includeBounds, isCurrentSearch) {
     const baseFields = ['id', 'owner', 'title', 'province', 'locality', 'difficulty', 'activityType',
         'distanceKm', 'elevationGain', 'movingTimeSec'];
     const fields = includeBounds ? [...baseFields, 'minLat', 'maxLat', 'minLng', 'maxLng'] : baseFields;
@@ -1014,36 +1341,56 @@ async function communityFetchRouteMetadata(page, filter, includeBounds) {
             'activityType', 'distanceKm', 'elevationGain', 'movingTimeSec',
             ...(includeBounds ? ['minLat', 'maxLat', 'minLng', 'maxLng'] : [])]));
     } catch (error) {
-        if (error.status !== 400) throw error;
+        if (error.status !== 400 || !isCurrentSearch()) throw error;
         return cloudApi(url(fields));
     }
 }
 
 async function loadCommunityRoutes() {
     if (!requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) {
+        $('community-search').disabled = false;
         communityHandleAccountStateChange();
         return false;
     }
+    const requestId = ++communitySearchRequest;
+    const button = $('community-search');
+    const server = Cloud.server;
+    const uid = Cloud.uid;
+    const authGeneration = Cloud.authGeneration;
+    const isCurrentSearch = () => requestId === communitySearchRequest
+        && Cloud.loggedIn()
+        && Cloud.server === server
+        && Cloud.uid === uid
+        && Cloud.authGeneration === authGeneration;
+    refreshCommunityPublishedCount();
     const searchPosition = lastLat === null || lastLon === null ? null : [lastLat, lastLon];
-    const locality = $('community-locality-search').value.trim().slice(0, 80);
-    const author = $('community-author-search').value.trim().slice(0, 32);
+    const autonomousCommunity = $('community-autonomous-community-search').value;
+    const authorInput = $('community-author-search').value.trim().slice(0, 32);
+    const author = communityNicknameKey(authorInput);
     const difficulty = $('community-difficulty').value;
     const minAscent = Number($('community-ascent').value) || 0;
-    if (!searchPosition && !locality && !author) {
+    if (!searchPosition && !autonomousCommunity && !author) {
+        button.disabled = false;
         communitySearchActive = false;
         communityCatalogRoutes = [];
         renderCommunityRoutes(communityCatalogRoutes);
-        communitySetStatus('Activa el GPS o escribe una localidad, comunidad autónoma o usuario para buscar rutas.', true);
+        communitySetStatus('Activa el GPS, elige una comunidad autónoma o busca por usuario para encontrar rutas.', true);
         if (typeof requestCurrentGpsFix === 'function') requestCurrentGpsFix();
         return false;
     }
     communitySearchActive = true;
-    const button = $('community-search');
     const activity = $('community-activity').value;
     const radiusKm = Number($('community-radius').value) || 25;
-    const cached = await readCommunitySearchCache(activity, radiusKm, searchPosition, locality, author, difficulty, minAscent);
+    const cached = await readCommunitySearchCache(
+        activity, radiusKm, searchPosition, autonomousCommunity, author, difficulty, minAscent, server
+    );
     if (!Cloud.loggedIn()) {
+        if (requestId === communitySearchRequest) button.disabled = false;
         communityHandleAccountStateChange();
+        return false;
+    }
+    if (!isCurrentSearch()) {
+        if (requestId === communitySearchRequest) button.disabled = false;
         return false;
     }
     let displayedCache = false;
@@ -1060,6 +1407,7 @@ async function loadCommunityRoutes() {
             communityCatalogRoutes = [];
             renderCommunityRoutes(communityCatalogRoutes);
         }
+        if (isCurrentSearch()) button.disabled = false;
         return false;
     }
     button.disabled = true;
@@ -1077,11 +1425,8 @@ async function loadCommunityRoutes() {
                 `minLng <= ${east.toFixed(6)}`, `maxLng >= ${west.toFixed(6)}`);
         }
         if (activity) filters.push('activityType = "' + activity.replace(/"/g, '\\"') + '"');
-        if (locality) {
-            const escapedLocality = escapeCommunityFilterValue(locality);
-            filters.push(`(locality ~ "${escapedLocality}" || province ~ "${escapedLocality}")`);
-        }
-        if (author) filters.push(`owner.nickname ~ "${escapeCommunityFilterValue(author)}"`);
+        if (autonomousCommunity) filters.push(communityAutonomousCommunityFilter(autonomousCommunity));
+        if (author) filters.push(`owner.nicknameKey ~ "${escapeCommunityFilterValue(author)}"`);
         if (difficulty) filters.push(`difficulty = "${difficulty}"`);
         if (minAscent) filters.push(`elevationGain >= ${minAscent}`);
         const filter = filters.join(' && ');
@@ -1090,7 +1435,8 @@ async function loadCommunityRoutes() {
         let metadataWithoutBounds = false;
         try {
             do {
-                const result = await communityFetchRouteMetadata(page, filter, true);
+                const result = await communityFetchRouteMetadata(page, filter, true, isCurrentSearch);
+                if (!isCurrentSearch()) return false;
                 if (Array.isArray(result.items)) {
                     metadata.push(...result.items.slice(0, COMMUNITY_MAX_METADATA_CANDIDATES - metadata.length));
                 }
@@ -1100,7 +1446,7 @@ async function loadCommunityRoutes() {
         } catch (error) {
             // Esquemas de PocketBase antiguos pueden no tener los campos de índice geográfico.
             // Reintenta sin esos campos; la distancia exacta se valida luego contra el GPX.
-            if (error.status !== 400 || !searchPosition) throw error;
+            if (error.status !== 400 || !searchPosition || !isCurrentSearch()) throw error;
             metadata.length = 0;
             page = 1;
             totalPages = 1;
@@ -1108,7 +1454,8 @@ async function loadCommunityRoutes() {
             const compatibleFilters = filters.filter(item => !/^(minLat|maxLat|minLng|maxLng)\s*[<>=]/.test(item));
             const compatibleFilter = compatibleFilters.join(' && ');
             do {
-                const result = await communityFetchRouteMetadata(page, compatibleFilter, false);
+                const result = await communityFetchRouteMetadata(page, compatibleFilter, false, isCurrentSearch);
+                if (!isCurrentSearch()) return false;
                 if (Array.isArray(result.items)) {
                     metadata.push(...result.items.slice(0, COMMUNITY_MAX_METADATA_CANDIDATES - metadata.length));
                 }
@@ -1127,16 +1474,14 @@ async function loadCommunityRoutes() {
             legacyFilter.push('(minLat = null || maxLat = null || minLng = null || maxLng = null || (minLat = 0 && maxLat = 0 && minLng = 0 && maxLng = 0))');
         }
         if (activity) legacyFilter.push('activityType = "' + activity.replace(/"/g, '\\"') + '"');
-        if (locality) {
-            const escapedLocality = escapeCommunityFilterValue(locality);
-            legacyFilter.push(`(locality ~ "${escapedLocality}" || province ~ "${escapedLocality}")`);
-        }
-        if (author) legacyFilter.push(`owner.nickname ~ "${escapeCommunityFilterValue(author)}"`);
+        if (autonomousCommunity) legacyFilter.push(communityAutonomousCommunityFilter(autonomousCommunity));
+        if (author) legacyFilter.push(`owner.nicknameKey ~ "${escapeCommunityFilterValue(author)}"`);
         if (difficulty) legacyFilter.push(`difficulty = "${difficulty}"`);
         if (minAscent) legacyFilter.push(`elevationGain >= ${minAscent}`);
         const legacyResult = !searchPosition || metadataWithoutBounds
             ? { items: [], totalItems: 0 }
             : await cloudApi('/api/collections/community_routes/records?page=1&perPage=100&sort=-id&fields=id,owner,createdBy,title,province,locality,difficulty,activityType,distanceKm,elevationGain,movingTimeSec&filter=' + encodeURIComponent(legacyFilter.join(' && ')));
+        if (!isCurrentSearch()) return false;
         const legacyRoutes = (legacyResult.items || []).filter(record => !indexedIds.has(record.id));
         const legacyTruncated = Number(legacyResult.totalItems) > legacyRoutes.length;
 
@@ -1161,6 +1506,7 @@ async function loadCommunityRoutes() {
                 const proximityKm = communityDistanceToRoute(searchPosition, lines) / 1000;
                 return proximityKm <= radiusKm ? { ...fullRecord, proximityKm } : null;
             }));
+            if (!isCurrentSearch()) return false;
             checked += batch.length;
             results.forEach(result => {
                 if (result.status === 'fulfilled' && result.value) nearbyRoutes.push(result.value);
@@ -1183,15 +1529,17 @@ async function loadCommunityRoutes() {
             communityHandleAccountStateChange();
             return false;
         }
+        if (!isCurrentSearch()) return false;
         communityCatalogRoutes = nearbyRoutes.slice(0, COMMUNITY_MAX_RESULTS);
         renderCommunityRoutes(communityCatalogRoutes);
         DB.kvSet(COMMUNITY_SEARCH_CACHE_KEY, {
-            activity, radiusKm, position: searchPosition, locality, author, difficulty, minAscent, savedAt: Date.now(),
+            server, activity, radiusKm, position: searchPosition, community: autonomousCommunity,
+            author, difficulty, minAscent, savedAt: Date.now(),
             routes: communityCatalogRoutes
         }).catch(error => console.warn('No se pudo guardar la búsqueda comunitaria:', error));
         const searchContext = [
-            locality ? `en «${locality}»` : '',
-            author ? `por «${author}»` : ''
+            autonomousCommunity ? `en ${autonomousCommunity}` : '',
+            author ? `por «${authorInput}»` : ''
         ].filter(Boolean).join(' y ');
         communitySetStatus(searchLimited
             ? `${communityCatalogRoutes.length} rutas encontradas en una búsqueda limitada a ${checked} trazados. Reduce los filtros para afinar los resultados.`
@@ -1203,16 +1551,16 @@ async function loadCommunityRoutes() {
                 ? searchPosition
                     ? `${nearbyRoutes.length} rutas cercanas${searchContext ? ` ${searchContext}` : ''}. Puedes abrir el detalle, mostrarlas en el mapa, seguirlas o guardarlas.`
                     : `${nearbyRoutes.length} rutas encontradas${searchContext ? ` ${searchContext}` : ''}.`
-                : locality
-                    || author
-                    ? `No hay rutas publicadas${searchContext ? ` ${searchContext}` : ''} con estos filtros.`
-                    : 'No hay rutas publicadas dentro de ' + radiusKm + ' km con estos filtros.');
+                : searchPosition
+                    ? `No hay rutas publicadas dentro de ${radiusKm} km${searchContext ? ` ${searchContext}` : ''} con estos filtros.`
+                    : `No hay rutas publicadas${searchContext ? ` ${searchContext}` : ''} con estos filtros.`);
         return true;
     } catch (error) {
         if (!Cloud.loggedIn()) {
             communityHandleAccountStateChange();
             return false;
         }
+        if (!isCurrentSearch()) return false;
         console.warn('No se pudo cargar el catálogo comunitario:', error);
         communitySetStatus(error.status === 404
             ? 'El servidor aún no tiene la colección community_routes instalada.'
@@ -1223,13 +1571,15 @@ async function loadCommunityRoutes() {
         }
         return false;
     } finally {
-        button.disabled = false;
+        if (requestId === communitySearchRequest) button.disabled = false;
     }
 }
 function initCommunityRoutes() {
     communityFillActivities($('community-activity'));
     communityFillAutonomousCommunities($('community-share-autonomous-community'));
+    communityFillAutonomousCommunities($('community-autonomous-community-search'), 'Todas las comunidades');
     $('community-close').addEventListener('click', closeCommunityDialog);
+    $('community-dialog').addEventListener('click', communityHandleDetailTap, true);
     $('community-dialog').addEventListener('click', event => {
         if (event.target === $('community-dialog')) closeCommunityDialog();
     });

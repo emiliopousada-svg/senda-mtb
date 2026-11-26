@@ -96,9 +96,20 @@ function normalizeRemoteTrack(raw) {
     const points = [];
     const appendSegment = (segment, reverseCoordinates, startsNewSegment = false) => {
         if (!Array.isArray(segment) || !segment.length) return false;
-        const parsed = segment.map(item => pointFrom(item, reverseCoordinates));
-        if (parsed.some(point => !point)) return false;
-        if (startsNewSegment && points.length) parsed[0][5] = 1;
+        const parsed = [];
+        let breakBeforeNext = startsNewSegment && points.length > 0;
+        for (const item of segment) {
+            if (item === null) {
+                if (points.length || parsed.length) breakBeforeNext = true;
+                continue;
+            }
+            const point = pointFrom(item, reverseCoordinates);
+            if (!point) return false;
+            if (breakBeforeNext && (points.length || parsed.length)) point[5] = 1;
+            parsed.push(point);
+            breakBeforeNext = false;
+        }
+        if (!parsed.length) return false;
         points.push(...parsed);
         return true;
     };
@@ -132,6 +143,10 @@ function routeDataFromSync(trackData) {
     return {
         points,
         hasPrivateMetadata,
+        activityType: hasPrivateMetadata && typeof ACTIVITY_TYPES !== 'undefined'
+            && Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, trackData.activityType)
+            ? trackData.activityType
+            : null,
         description: hasPrivateMetadata ? String(trackData.description || '').slice(0, 500) : null,
         pois: hasPrivateMetadata ? routePoisFromSync(trackData.pois) : null
     };
@@ -145,8 +160,13 @@ async function routeForm(r) {
     }
     const points = Array.isArray(route.points) ? route.points : [];
     const pois = await routePoisForSync(Array.isArray(route.pois) ? route.pois : []);
+    const activityType = typeof ACTIVITY_TYPES !== 'undefined'
+        && Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, route.activityType)
+        ? route.activityType
+        : activityTypeFromName(route.name);
     const trackBlob = new Blob([JSON.stringify({
         format: 2,
+        activityType,
         points,
         description: String(route.description || '').slice(0, 500),
         pois
@@ -161,10 +181,6 @@ async function routeForm(r) {
     fd.append('name', String(route.name ?? 'Ruta sin nombre'));
     if (route.createdBy) fd.append('createdBy', String(route.createdBy).slice(0, ROUTE_NICKNAME_LIMIT));
     fd.append('kind', route.kind || 'recorded');
-    const activityType = typeof ACTIVITY_TYPES !== 'undefined'
-        && Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, route.activityType)
-        ? route.activityType
-        : activityTypeFromName(route.name);
     if (activityType) fd.append('activityType', activityType);
     fd.append('startedAt', route.startedAt || new Date().toISOString());
     fd.append('movingTimeSec', String(route.movingTimeSec || 0));
@@ -175,7 +191,10 @@ async function routeForm(r) {
     return fd;
 }
 
-async function flushPendingDeletes({ isCurrentSync, syncCloudApi, noteSyncFailure }) {
+async function flushPendingDeletes({
+    server, uid, isCurrentSync, syncCloudApi, noteSyncFailure,
+    noteSyncWarning = message => console.warn(message)
+}) {
     let pendingDeletes = [];
     try {
         pendingDeletes = (await DB.kvGet('pendingDeletes')) || [];
@@ -188,14 +207,37 @@ async function flushPendingDeletes({ isCurrentSync, syncCloudApi, noteSyncFailur
     }
 
     const remaining = [];
-    for (const remoteId of pendingDeletes) {
+    const activeDeleteIds = new Set();
+    const authorizedLocalDeleteIds = new Set();
+    let hasUnboundLegacyDelete = false;
+    for (const pendingDelete of pendingDeletes) {
         if (!isCurrentSync()) return null;
+        if (!pendingDelete || typeof pendingDelete !== 'object'
+            || typeof pendingDelete.remoteId !== 'string' || !pendingDelete.remoteId
+            || typeof pendingDelete.server !== 'string' || !pendingDelete.server
+            || typeof pendingDelete.ownerId !== 'string' || !pendingDelete.ownerId) {
+            remaining.push(pendingDelete);
+            hasUnboundLegacyDelete = true;
+            if (pendingDelete && typeof pendingDelete.remoteId === 'string' && pendingDelete.remoteId) {
+                activeDeleteIds.add(pendingDelete.remoteId);
+            } else if (typeof pendingDelete === 'string' && pendingDelete) {
+                activeDeleteIds.add(pendingDelete);
+            }
+            continue;
+        }
+        if (pendingDelete.server !== server || pendingDelete.ownerId !== uid) {
+            remaining.push(pendingDelete);
+            continue;
+        }
+        const remoteId = pendingDelete.remoteId;
+        activeDeleteIds.add(remoteId);
+        authorizedLocalDeleteIds.add(remoteId);
         try {
-            await syncCloudApi(`/api/collections/routes/records/${remoteId}`, 'DELETE');
+            await syncCloudApi(`/api/collections/routes/records/${encodeURIComponent(remoteId)}`, 'DELETE');
         } catch (error) {
             if (!isCurrentSync()) return null;
             if (error.status !== 404) {
-                remaining.push(remoteId);
+                remaining.push(pendingDelete);
                 noteSyncFailure(`No se pudo borrar una ruta del servidor: ${error.message}`, error);
                 console.warn(`No se pudo borrar la ruta remota ${remoteId}:`, error);
             }
@@ -203,16 +245,38 @@ async function flushPendingDeletes({ isCurrentSync, syncCloudApi, noteSyncFailur
         if (!isCurrentSync()) return null;
     }
 
+    if (hasUnboundLegacyDelete) {
+        noteSyncWarning('Hay eliminaciones pendientes antiguas sin servidor o cuenta de origen; se conservan sin enviarlas por seguridad.');
+    }
+
     if (!isCurrentSync()) return null;
     try {
-        await DB.kvSet('pendingDeletes', remaining);
+        const deletionKey = entry => entry && typeof entry.remoteId === 'string'
+            && typeof entry.server === 'string' && typeof entry.ownerId === 'string'
+            ? JSON.stringify([entry.remoteId, entry.server, entry.ownerId])
+            : null;
+        const originalKeys = new Set(pendingDeletes
+            .filter(entry => entry && entry.server === server && entry.ownerId === uid)
+            .map(deletionKey)
+            .filter(Boolean));
+        const remainingKeys = new Set(remaining.map(deletionKey).filter(Boolean));
+        await DB.kvUpdate('pendingDeletes', currentValue => {
+            const current = Array.isArray(currentValue) ? currentValue : [];
+            return current.filter(entry => {
+                const key = deletionKey(entry);
+                return !key || !originalKeys.has(key) || remainingKeys.has(key);
+            });
+        });
         if (!isCurrentSync()) return null;
     } catch (error) {
         if (!isCurrentSync()) return null;
         noteSyncFailure(`No se pudo guardar la cola de borrados: ${error.message}`);
         console.warn('No se pudo guardar la cola de borrados:', error);
     }
-    return new Set(pendingDeletes);
+    return {
+        skipRemoteIds: activeDeleteIds,
+        authorizedLocalDeleteIds
+    };
 }
 
 let syncing = false, syncQueued = false, syncQueuedManual = false;
@@ -257,6 +321,11 @@ async function syncRoutes(manual = false) {
     let retryableSyncFailure = false;
     let permanentSyncFailure = false;
     const syncFailureDetails = [];
+    const syncWarningDetails = [];
+    const noteSyncWarning = message => {
+        if (syncWarningDetails.length < 3 && message) syncWarningDetails.push(String(message).slice(0, 180));
+        console.warn(message);
+    };
     const markSyncError = error => {
         if (error && error.retryable === true) retryableSyncFailure = true;
         else if (error && Number.isFinite(error.status)) permanentSyncFailure = true;
@@ -355,18 +424,22 @@ async function syncRoutes(manual = false) {
         const nickname = String(Cloud.nickname || '').trim().slice(0, ROUTE_NICKNAME_LIMIT);
 
         // 2) borrados pendientes
-        const skip = await flushPendingDeletes({
+        const pendingDeleteState = await flushPendingDeletes({
+            server: retryServer,
+            uid: retryUid,
             isCurrentSync,
             syncCloudApi,
-            noteSyncFailure
+            noteSyncFailure,
+            noteSyncWarning
         });
         if (!isCurrentSync()) return;
-        if (!skip) {
+        if (!pendingDeleteState) {
             if (manual) {
                 toast(`⚠️ Sincronización interrumpida: ${syncFailureDetails.join(' · ') || 'No se pudo leer la cola de borrados.'}`, 10000);
             }
             return;
         }
+        const { skipRemoteIds, authorizedLocalDeleteIds } = pendingDeleteState;
 
         // 3) reconciliar lo remoto y subir cambios locales sin bloquear otras rutas
         const byClient = new Map(remote.map(x => [Number(x.clientId), x]));
@@ -441,12 +514,12 @@ async function syncRoutes(manual = false) {
         };
 
         const remoteDeletionCandidates = savedRoutes.filter(route => {
-            if (!route.remoteId || skip.has(route.remoteId)) return false;
+            if (!route.remoteId || skipRemoteIds.has(route.remoteId)) return false;
             const remoteRecord = (!route.remoteServer || route.remoteServer === retryServer)
                 ? byRemoteId.get(route.remoteId)
                 : null;
             const found = byClient.get(Number(route.id));
-            const matched = remoteRecord || (found && !skip.has(found.id) ? found : null)
+            const matched = remoteRecord || (found && !skipRemoteIds.has(found.id) ? found : null)
                 || (!fullAudit ? pendingRemoteByClient.get(Number(route.id)) : null);
             const belongsToCurrentServer = route.remoteServer === retryServer
                 || (!route.remoteServer && remoteRecord);
@@ -462,11 +535,14 @@ async function syncRoutes(manual = false) {
             const more = remoteDeletionCandidates.length > 3
                 ? ` y ${remoteDeletionCandidates.length - 3} más`
                 : '';
+            const gpxCandidates = remoteDeletionCandidates
+                .filter(route => Array.isArray(route.points) && route.points.some(point =>
+                    Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1])));
             const shouldPrompt = typeof document === 'undefined' || document.visibilityState !== 'hidden';
             const confirmed = shouldPrompt && typeof modal === 'function'
                 ? await modal({
                     title: 'Rutas ausentes del servidor',
-                    message: `${names}${more} ya no aparecen en este servidor. ¿Exportarlas juntas en un GPX y moverlas a la papelera local durante 30 días? Si lo pospones, se conservarán en este móvil y no se volverán a subir automáticamente.`,
+                    message: `${names}${more} ya no aparecen en este servidor. ¿Exportar en GPX las rutas con GPS y moverlas a la papelera local durante 30 días? Si lo pospones, se conservarán en este móvil y no se volverán a subir automáticamente.`,
                     ok: 'Exportar y mover a papelera',
                     cancel: 'Conservar por ahora'
                 })
@@ -475,11 +551,14 @@ async function syncRoutes(manual = false) {
             let canMoveToTrash = Boolean(confirmed);
             if (canMoveToTrash) {
                 try {
-                    if (typeof routesToGpx !== 'function' || typeof download !== 'function') {
+                    if (gpxCandidates.length
+                        && (typeof routesToGpx !== 'function' || typeof download !== 'function')) {
                         throw new Error('No está disponible la exportación GPX.');
                     }
-                    const date = new Date().toISOString().slice(0, 10);
-                    await download(`rutas-papelera-${date}.gpx`, routesToGpx(remoteDeletionCandidates), 'application/gpx+xml');
+                    if (gpxCandidates.length) {
+                        const date = new Date().toISOString().slice(0, 10);
+                        await download(`rutas-papelera-${date}.gpx`, routesToGpx(gpxCandidates), 'application/gpx+xml');
+                    }
                 } catch (error) {
                     canMoveToTrash = false;
                     noteSyncFailure(`No se pudieron exportar las rutas ausentes; se conservarán en este móvil: ${error.message}`, error);
@@ -507,7 +586,8 @@ async function syncRoutes(manual = false) {
                     const rankingDelete = rankingDeletionFor(route);
                     const moved = await DB.moveRouteToTrash(route.id, {
                         remoteId: route.remoteId,
-                        server: retryServer
+                        server: retryServer,
+                        ownerId: retryUid
                     }, rankingDelete);
                     if (moved === false) throw new Error('La ruta ya no está disponible en el almacenamiento local.');
                     savedRoutes = savedRoutes.filter(item => item.id !== route.id);
@@ -548,10 +628,10 @@ async function syncRoutes(manual = false) {
             r.createdBy = nickname;
             const found = byClient.get(r.id);
             const remoteRecord = r.remoteId && (!r.remoteServer || r.remoteServer === retryServer)
-                && !skip.has(r.remoteId)
+                && !skipRemoteIds.has(r.remoteId)
                 ? byRemoteId.get(r.remoteId)
                 : null;
-            const matched = remoteRecord || (found && !skip.has(found.id) ? found : null)
+            const matched = remoteRecord || (found && !skipRemoteIds.has(found.id) ? found : null)
                 || (!fullAudit ? pendingRemoteByClient.get(Number(r.id)) : null);
 
             // Una ruta borrada desde otro dispositivo ya no existe en el inventario remoto.
@@ -567,7 +647,7 @@ async function syncRoutes(manual = false) {
                 delete r.remoteDeletionPending;
                 pendingDeletionCleared = true;
             }
-            if (remoteIdOnCurrentServer && skip.has(r.remoteId)) {
+            if (remoteIdOnCurrentServer && authorizedLocalDeleteIds.has(r.remoteId)) {
                 try {
                     const rankingDelete = rankingDeletionFor(r);
                     if (!isCurrentSync()) return;
@@ -600,12 +680,17 @@ async function syncRoutes(manual = false) {
 
             if (matched && !r.dirty) {
                 const remoteIdChanged = r.remoteId !== matched.id;
+                const previousRemoteOwnerId = r.remoteOwnerId || '';
                 r.remoteId = matched.id;
                 r.remoteServer = retryServer;
+                r.remoteOwnerId = retryUid;
                 const remoteName = matched.name || r.name;
-                const remoteActivity = (Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, matched.activityType)
+                const localActivity = Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, r.activityType)
+                    ? r.activityType
+                    : null;
+                let remoteActivity = (Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, matched.activityType)
                     ? matched.activityType
-                    : null) || activityTypeFromName(remoteName) || r.activityType || 'mtb';
+                    : null) || activityTypeFromName(remoteName) || localActivity || 'mtb';
                 const remoteCreator = nickname;
                 let remoteTrackChanged = false;
                 let replacePhotos = false;
@@ -617,6 +702,10 @@ async function syncRoutes(manual = false) {
                         if (!isCurrentSync()) return;
                         if (!routeData) return;
                         r.points = routeData.points;
+                        if (!Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, matched.activityType)
+                            && Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, routeData.activityType)) {
+                            remoteActivity = routeData.activityType;
+                        }
                         if (routeData.hasPrivateMetadata) {
                             r.description = routeData.description;
                             r.pois = routeData.pois;
@@ -647,6 +736,7 @@ async function syncRoutes(manual = false) {
                     }
                 }
                 const changed = remoteIdChanged || previousRemoteServer !== retryServer
+                    || previousRemoteOwnerId !== retryUid
                     || r.name !== remoteName || r.activityType !== remoteActivity
                     || previousCreator !== remoteCreator || remoteTrackChanged || pendingDeletionCleared;
                 r.name = remoteName;
@@ -674,6 +764,7 @@ async function syncRoutes(manual = false) {
             if (matched) {
                 r.remoteId = matched.id;
                 r.remoteServer = retryServer;
+                r.remoteOwnerId = retryUid;
                 remoteIdOnCurrentServer = true;
             }
             if (remoteIdOnCurrentServer && !r.dirty) {
@@ -700,6 +791,7 @@ async function syncRoutes(manual = false) {
                 if (!isCurrentSync()) return;
                 r.remoteId = rec.id;
                 r.remoteServer = retryServer;
+                r.remoteOwnerId = retryUid;
                 r.remoteUpdated = String(rec.updated || rec.created || 'unknown');
                 r.dirty = false;
                 if (r.kind === 'recorded' && Cloud.groupCode) {
@@ -734,7 +826,7 @@ async function syncRoutes(manual = false) {
 
         // 4) bajar las que faltan en este móvil
         const localIds = new Set(savedRoutes.map(r => r.id));
-        const missing = remote.filter(x => !skip.has(x.id) && x.track && !localIds.has(Number(x.clientId)));
+        const missing = remote.filter(x => !skipRemoteIds.has(x.id) && x.track && !localIds.has(Number(x.clientId)));
         if (missing.length) {
             const downloadTrack = async rec => {
                 let retriedWithFreshToken = false;
@@ -776,13 +868,13 @@ async function syncRoutes(manual = false) {
                     const id = Number(rec.clientId);
                     if (!Number.isSafeInteger(id) || id < 0) throw new Error('El identificador de ruta no es válido');
                     const r = {
-                        id, remoteId: rec.id, remoteServer: retryServer, dirty: false,
+                        id, remoteId: rec.id, remoteServer: retryServer, remoteOwnerId: retryUid, dirty: false,
                         kind: rec.kind || 'recorded', name: rec.name, startedAt: rec.startedAt,
                         remoteUpdated: String(rec.updated || rec.created || 'unknown'),
                         createdBy: rec.createdBy || 'Usuario local',
                         activityType: Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, rec.activityType)
                             ? rec.activityType
-                            : activityTypeFromName(rec.name),
+                            : routeData.activityType || activityTypeFromName(rec.name) || 'mtb',
                         movingTimeSec: rec.movingTimeSec || 0, distanceKm: rec.distanceKm || 0,
                         elevationGain: rec.elevationGain || 0, hrAvg: rec.hrAvg || null,
                         description: routeData.description || '',
@@ -828,9 +920,15 @@ async function syncRoutes(manual = false) {
         }
         renderSavedRoutes();
         refreshStats();
-        if (manual) toast(syncFailures
-            ? `⚠️ Sincronización parcial: ${pushed} subidas, ${pulled} descargadas y ${syncFailures} pendiente(s). ${syncFailureDetails.join(' · ')}`
-            : `✅ Sincronizado: ${pushed} subidas, ${pulled} descargadas`, syncFailures ? 10000 : 3500);
+        if (manual) {
+            const resultMessage = syncFailures
+                ? `⚠️ Sincronización parcial: ${pushed} subidas, ${pulled} descargadas y ${syncFailures} pendiente(s). ${syncFailureDetails.join(' · ')}`
+                : `✅ Sincronizado: ${pushed} subidas, ${pulled} descargadas`;
+            const warningMessage = syncWarningDetails.length
+                ? ` Advertencia: ${syncWarningDetails.join(' · ')}`
+                : '';
+            toast(resultMessage + warningMessage, syncFailures || syncWarningDetails.length ? 10000 : 3500);
+        }
     } catch (e) {
         if (!isCurrentSync()) return;
         markSyncError(e);

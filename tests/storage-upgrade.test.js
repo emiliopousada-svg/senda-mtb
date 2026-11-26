@@ -58,8 +58,8 @@ function memoryDatabase(seed = {}) {
                 return {
                     get(key) { return schedule({}, () => records.get(key)); },
                     getAll() { return schedule({}, () => Array.from(records.values())); },
-                    put(value) {
-                        records.set(value.routeId ?? value.id, value);
+                    put(value, key) {
+                        records.set(key ?? value.routeId ?? value.id, value);
                         return {};
                     },
                     delete(key) {
@@ -144,17 +144,37 @@ test('route photo replacements clear stale blobs without affecting legacy writes
     ]);
 });
 
+test('key-value updates transform the latest value in one read-write transaction', async () => {
+    const { context } = storageContext();
+    const db = memoryDatabase({ kv: [] });
+    const initial = [{ remoteId: 'pending-route', server: 'https://server.example', ownerId: 'user-1' }];
+    db.records.get('kv').set('pendingDeletes', initial);
+    context.testDB.db = db;
+
+    const updated = await context.testDB.kvUpdate('pendingDeletes', current => [
+        ...current,
+        { remoteId: 'new-route', server: 'https://server.example', ownerId: 'user-1' }
+    ]);
+
+    assert.deepEqual(updated, [
+        ...initial,
+        { remoteId: 'new-route', server: 'https://server.example', ownerId: 'user-1' }
+    ]);
+    assert.deepEqual(db.records.get('kv').get('pendingDeletes'), updated);
+});
+
 test('remote-deleted routes remain recoverable with photos until restored or retention expires', async () => {
     const { context } = storageContext();
     const db = memoryDatabase({
-        routes: [{ id: 51, name: 'Ridge', remoteId: 'remote-51', remoteServer: 'https://server.example', points: [] }],
+        routes: [{ id: 51, name: 'Ridge', remoteId: 'remote-51', remoteServer: 'https://server.example', remoteOwnerId: 'user-1', points: [] }],
         routePhotos: [{ routeId: 51, photos: [{ index: 0, photo: 'photo-data' }] }]
     });
     context.testDB.db = db;
 
     assert.equal(await context.testDB.moveRouteToTrash(51, {
         remoteId: 'remote-51',
-        server: 'https://server.example'
+        server: 'https://server.example',
+        ownerId: 'user-1'
     }), true);
     assert.deepEqual(await context.testDB.all(), []);
     assert.equal((await context.testDB.allTrashedRoutes())[0].name, 'Ridge');
@@ -163,8 +183,106 @@ test('remote-deleted routes remain recoverable with photos until restored or ret
     const restored = await context.testDB.restoreTrashedRoute(51);
     assert.equal(restored.name, 'Ridge');
     assert.equal(restored.remoteId, null);
+    assert.equal(restored.remoteOwnerId, undefined);
+    assert.equal(restored.trashRemoteOwnerId, undefined);
     assert.deepEqual(await context.testDB.all(), [restored]);
     assert.ok(db.records.get('routePhotos').has(51));
+});
+
+test('manually deleted routes move to personal trash and queue remote deletion without losing photos', async () => {
+    const { context } = storageContext();
+    const db = memoryDatabase({
+        routes: [{ id: 52, name: 'Forest loop', remoteId: 'remote-52', remoteServer: 'https://server.example', remoteOwnerId: 'user-1', points: [] }],
+        routePhotos: [{ routeId: 52, photos: [{ index: 0, photo: 'photo-data' }] }],
+        kv: []
+    });
+    context.testDB.db = db;
+    db.records.get('kv').set('pendingDeletes', [{
+        remoteId: 'remote-52',
+        server: 'https://another-server.example',
+        ownerId: 'user-1'
+    }]);
+    const readKv = key => JSON.parse(JSON.stringify(Array.from(db.records.get('kv').get(key))));
+
+    assert.equal(await context.testDB.moveRouteToTrash(52, {
+        remoteId: 'remote-52',
+        server: 'https://server.example',
+        ownerId: 'user-1'
+    }, {
+        ownerId: 'user-1',
+        server: 'https://server.example',
+        clientId: 52
+    }, { reason: 'user-deleted', queueRemoteDelete: true }), true);
+    assert.deepEqual(await context.testDB.all(), []);
+    assert.equal((await context.testDB.allTrashedRoutes())[0].trashReason, 'user-deleted');
+    assert.deepEqual(readKv('pendingDeletes'), [
+        {
+            remoteId: 'remote-52',
+            server: 'https://another-server.example',
+            ownerId: 'user-1'
+        },
+        {
+            remoteId: 'remote-52',
+            server: 'https://server.example',
+            ownerId: 'user-1'
+        }
+    ]);
+    assert.deepEqual(readKv('pendingGroupRankingDeletes'), [{
+        ownerId: 'user-1',
+        server: 'https://server.example',
+        clientId: 52
+    }]);
+    assert.ok(db.records.get('routePhotos').has(52));
+
+    const restored = await context.testDB.restoreTrashedRoute(52);
+    assert.equal(restored.remoteId, null);
+    assert.equal(restored.remoteOwnerId, undefined);
+    assert.equal(restored.trashRemoteOwnerId, undefined);
+    assert.deepEqual(readKv('pendingDeletes'), [{
+        remoteId: 'remote-52',
+        server: 'https://another-server.example',
+        ownerId: 'user-1'
+    }]);
+    assert.ok(db.records.get('routePhotos').has(52));
+});
+
+test('remote route deletion rejects incomplete origin before removing local data', async () => {
+    const { context } = storageContext();
+    const db = memoryDatabase({
+        routes: [{ id: 53, name: 'River loop', remoteId: 'remote-53' }],
+        routePhotos: [],
+        kv: []
+    });
+    context.testDB.db = db;
+
+    await assert.rejects(
+        context.testDB.deleteRoute(53, 'remote-53', null),
+        /remote-delete-origin-required/
+    );
+
+    assert.equal(db.records.get('routes').has(53), true);
+    assert.equal(db.records.get('kv').has('pendingDeletes'), false);
+});
+
+test('moving a route to trash rejects an incomplete remote-delete origin', async () => {
+    const { context } = storageContext();
+    const db = memoryDatabase({
+        routes: [{ id: 54, name: 'Forest loop', remoteId: 'remote-54' }],
+        kv: []
+    });
+    context.testDB.db = db;
+
+    await assert.rejects(
+        context.testDB.moveRouteToTrash(54, {
+            remoteId: 'remote-54',
+            server: 'https://server.example',
+            ownerId: ''
+        }, null, { queueRemoteDelete: true }),
+        /remote-delete-metadata-missing/
+    );
+
+    assert.equal(db.records.get('routes').get(54).trashedAt, undefined);
+    assert.equal(db.records.get('kv').has('pendingDeletes'), false);
 });
 
 test('expired trash purging removes route photos but preserves newer and active routes', async () => {

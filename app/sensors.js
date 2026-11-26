@@ -10,11 +10,13 @@ function onHrChange(e) {
     const bpm = parseHeartRateMeasurement(e.target && e.target.value);
     if (bpm === null) {
         currentHr = null;
+        sensorStates.hr.lastReadingAt = 0;
         $('m-hr').textContent = '--';
         setHrConnectionState(true, true, 'Conectado · sin lectura válida, revisa el sensor');
         return;
     }
     currentHr = bpm;
+    sensorStates.hr.lastReadingAt = Date.now();
     $('m-hr').textContent = bpm;
     const hrStatus = $('sensor-hr-status');
     if (hrStatus && hrStatus.textContent.includes('sin lectura válida')) {
@@ -98,10 +100,12 @@ const SENSOR_LEGACY_HR_KEY = 'mtb_pro_hr_device';
 const SENSOR_TYPES = ['hr', 'cadence', 'power', 'speed'];
 const SENSOR_RECONNECT_MIN_MS = 5000;
 const SENSOR_RECONNECT_MAX_MS = 30000;
+const CSC_EVENT_TICKS_PER_WRAP = 65536;
+const CSC_EVENT_TICKS_PER_SECOND = 1024;
 let nativeBleLoading = null;
 const sensorStates = Object.fromEntries(SENSOR_TYPES.map(type => [type, {
     connected: false, connecting: false, generation: 0, deviceId: null, deviceName: '',
-    subscription: null, lastReadingAt: 0, previous: null, timer: null, attempt: 0, alerted: false,
+    subscription: null, lastReadingAt: 0, lastCadenceAt: 0, previous: null, previousReceivedAt: 0, timer: null, readingTimer: null, attempt: 0, alerted: false,
     connectingGeneration: null
 }]));
 const sensorConfigs = {
@@ -170,11 +174,59 @@ function setSensorStatus(type, connected, detail) {
 
 function clearSensorReading(type) {
     const state = sensorStates[type];
+    clearTimeout(state.readingTimer);
+    state.readingTimer = null;
+    state.lastReadingAt = 0;
+    if (type === 'cadence') state.lastCadenceAt = 0;
     state.previous = null;
+    state.previousReceivedAt = 0;
     if (type === 'hr') { currentHr = null; $('m-hr').textContent = '--'; }
     if (type === 'cadence') updateCadence(null);
     if (type === 'power') updatePower(null);
-    if (type === 'speed') { currentBleSpeed = null; currentBleSpeedAt = 0; }
+    if (type === 'speed') {
+        currentBleSpeed = null;
+        currentBleSpeedAt = 0;
+        if (typeof updateSpeedDisplay === 'function') updateSpeedDisplay();
+    }
+}
+
+function expireSensorReading(type, readingAt) {
+    const state = sensorStates[type];
+    if (type === 'cadence') {
+        if (state.lastCadenceAt !== readingAt || Date.now() - readingAt < 5000) return;
+        state.readingTimer = null;
+        if (state.connected) updateCadence(0);
+        return;
+    }
+    const currentReadingAt = type === 'speed' ? currentBleSpeedAt : state.lastReadingAt;
+    if (currentReadingAt !== readingAt || Date.now() - readingAt < 5000) return;
+    state.readingTimer = null;
+    if (type === 'speed' && state.connected && currentBleSpeed !== null
+        && Date.now() - currentBleSpeedAt >= 5000) {
+        currentBleSpeed = null;
+        currentBleSpeedAt = 0;
+        if (typeof updateSpeedDisplay === 'function') updateSpeedDisplay();
+    }
+}
+
+function scheduleSensorReadingExpiry(type) {
+    const state = sensorStates[type];
+    clearTimeout(state.readingTimer);
+    const readingAt = type === 'cadence' ? state.lastCadenceAt
+        : type === 'speed' ? currentBleSpeedAt
+            : state.lastReadingAt;
+    if (!readingAt) return;
+    const remainingMs = Math.max(0, readingAt + 5000 - Date.now());
+    state.readingTimer = setTimeout(() => expireSensorReading(type, readingAt), remainingMs + 1);
+}
+
+function resetSensorRecordingBaselines() {
+    SENSOR_TYPES.forEach(type => {
+        sensorStates[type].previous = null;
+        sensorStates[type].previousReceivedAt = 0;
+    });
+    sensorStates.cadence.lastCadenceAt = 0;
+    if (sensorStates.cadence.connected) updateCadence(0);
 }
 
 function onSensorValue(type, value) {
@@ -195,6 +247,7 @@ function onSensorValue(type, value) {
     }
     else if (type === 'power') updatePower(value);
     else applyCscReading(type, value);
+    if (type === 'speed') scheduleSensorReadingExpiry(type);
 }
 
 function clearSensorTimer(type) {
@@ -253,6 +306,7 @@ async function connectSensorDevice(type, device, generation) {
     state.deviceName = device.name || sensorLabel(type);
     state.lastReadingAt = Date.now();
     state.previous = null;
+    state.previousReceivedAt = 0;
     state.attempt = 0;
     state.alerted = false;
     sensorRegistry[type] = { id: deviceId, name: device.name || (sensorRegistry[type] && sensorRegistry[type].name) || '', enabled: true };
@@ -474,22 +528,39 @@ function applyCscReading(type, reading) {
         if (state.previous && Number.isInteger(state.previous.crankRevolutions) && Number.isInteger(state.previous.crankEventTime)) {
             const revolutions = (reading.crankRevolutions - state.previous.crankRevolutions + 65536) % 65536;
             const ticks = (reading.crankEventTime - state.previous.crankEventTime + 65536) % 65536;
-            if (ticks > 0) updateCadence(revolutions * 60 * 1024 / ticks);
+            if (ticks > 0) {
+                state.lastCadenceAt = now;
+                updateCadence(revolutions * 60 * 1024 / ticks);
+                scheduleSensorReadingExpiry(type);
+            }
         }
     }
     if (type === 'speed' && Number.isInteger(reading.wheelRevolutions) && Number.isInteger(reading.wheelEventTime)) {
         if (state.previous && Number.isInteger(state.previous.wheelRevolutions) && Number.isInteger(state.previous.wheelEventTime)) {
             const revolutions = (reading.wheelRevolutions - state.previous.wheelRevolutions) >>> 0;
-            const ticks = (reading.wheelEventTime - state.previous.wheelEventTime + 65536) % 65536;
+            let ticks = (reading.wheelEventTime - state.previous.wheelEventTime
+                + CSC_EVENT_TICKS_PER_WRAP) % CSC_EVENT_TICKS_PER_WRAP;
+            const receivedTicks = state.previousReceivedAt > 0 && now >= state.previousReceivedAt
+                ? (now - state.previousReceivedAt) * CSC_EVENT_TICKS_PER_SECOND / 1000
+                : null;
+            if (receivedTicks !== null) {
+                const wraps = Math.max(0, Math.round((receivedTicks - ticks) / CSC_EVENT_TICKS_PER_WRAP));
+                ticks += wraps * CSC_EVENT_TICKS_PER_WRAP;
+            }
             const circumference = Number($('sensor-wheel-circumference').value);
             if (ticks > 0 && Number.isFinite(circumference) && circumference >= 500 && circumference <= 3000) {
-                currentBleSpeed = revolutions * circumference * 1024 * 3.6 / (ticks * 1000);
-                currentBleSpeedAt = now;
-                $('sensor-speed-status').textContent = `${currentBleSpeed.toFixed(1)} km/h`;
+                const speedKmh = revolutions * circumference * CSC_EVENT_TICKS_PER_SECOND * 3.6 / (ticks * 1000);
+                if (Number.isFinite(speedKmh) && speedKmh >= 0 && speedKmh <= 90) {
+                    currentBleSpeed = speedKmh;
+                    currentBleSpeedAt = now;
+                    $('sensor-speed-status').textContent = `${currentBleSpeed.toFixed(1)} km/h`;
+                    if (typeof updateSpeedDisplay === 'function') updateSpeedDisplay();
+                }
             }
         }
     }
     state.previous = reading;
+    state.previousReceivedAt = now;
 }
 
 

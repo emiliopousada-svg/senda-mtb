@@ -61,9 +61,10 @@ function sensorsContext({ storage = {}, available = true } = {}) {
         setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
         clearTimeout: () => {},
         currentHr: null, currentCadence: null, currentPower: null, currentBleSpeed: null, currentBleSpeedAt: 0,
-        isRecording: false
+        isRecording: false, isPaused: false, recordingActivityType: 'mtb', totalDistance: 0
     });
     vm.runInContext(source, context);
+    vm.runInContext('globalThis.sensorStatesForTest = sensorStates;', context);
     const runTimers = async () => {
         const pending = timers.splice(0);
         for (const timer of pending) await timer.fn();
@@ -131,6 +132,89 @@ test('turning a sensor off stops reconnection and forgetting removes it', async 
     assert.equal(JSON.parse(ctx.values.get('mtb_pro_ble_sensors_v1')).hr.enabled, false);
     await ctx.context.disableSensor('hr', { forget: true });
     assert.deepEqual(JSON.parse(ctx.values.get('mtb_pro_ble_sensors_v1')), {});
+});
+
+test('cadence expires to zero while the sensor remains connected', () => {
+    const { context, elements } = sensorsContext();
+    const state = context.sensorStatesForTest.cadence;
+    state.connected = true;
+    state.lastCadenceAt = Date.now() - 6000;
+    context.currentCadence = 86;
+
+    context.expireSensorReading('cadence', state.lastCadenceAt);
+
+    assert.equal(context.currentCadence, 0);
+    assert.equal(elements.get('m-cadence').textContent, '0');
+});
+
+test('BLE speed expires based on the timestamp of its last valid wheel reading', () => {
+    const { context } = sensorsContext();
+    const state = context.sensorStatesForTest.speed;
+    const readingAt = Date.now() - 6000;
+    state.connected = true;
+    context.currentBleSpeed = 18;
+    context.currentBleSpeedAt = readingAt;
+    let displayUpdates = 0;
+    context.updateSpeedDisplay = () => { displayUpdates++; };
+
+    context.expireSensorReading('speed', readingAt);
+
+    assert.equal(context.currentBleSpeed, null);
+    assert.equal(context.currentBleSpeedAt, 0);
+    assert.equal(displayUpdates, 1);
+});
+
+test('BLE speed expiry timer uses the remaining five-second reading lifetime', () => {
+    const { context, timers } = sensorsContext();
+    const readingAt = Date.now() - 4900;
+    context.currentBleSpeed = 18;
+    context.currentBleSpeedAt = readingAt;
+
+    context.scheduleSensorReadingExpiry('speed');
+
+    assert.ok(timers[0].ms > 0);
+    assert.ok(timers[0].ms <= 200);
+});
+
+test('BLE wheel readings update speed without changing GPS route distance', () => {
+    let displayUpdates = 0;
+    const ctx = sensorsContext();
+    ctx.context.isRecording = true;
+    ctx.context.updateSpeedDisplay = () => { displayUpdates++; };
+    const state = ctx.context.sensorStatesForTest.speed;
+    state.connected = true;
+    state.previous = { wheelRevolutions: 100, wheelEventTime: 1000 };
+
+    ctx.context.applyCscReading('speed', { wheelRevolutions: 103, wheelEventTime: 4072 });
+
+    assert.ok(Math.abs(ctx.context.currentBleSpeed - 7.56) < 0.01);
+    assert.equal(ctx.context.totalDistance, 0);
+    assert.equal(displayUpdates, 1);
+});
+
+test('BLE wheel readings reconstruct a 64-second event-time wrap after a long notification gap', () => {
+    const ctx = sensorsContext();
+    const state = ctx.context.sensorStatesForTest.speed;
+    state.previous = { wheelRevolutions: 100, wheelEventTime: 1000 };
+    state.previousReceivedAt = Date.now() - 65000;
+
+    ctx.context.applyCscReading('speed', { wheelRevolutions: 400, wheelEventTime: 2024 });
+
+    assert.ok(Math.abs(ctx.context.currentBleSpeed - 34.86) < 0.1);
+    assert.equal(ctx.context.totalDistance, 0);
+});
+
+test('BLE wheel readings outside the valid speed range do not update speed or distance', () => {
+    const ctx = sensorsContext();
+    const state = ctx.context.sensorStatesForTest.speed;
+    state.previous = { wheelRevolutions: 100, wheelEventTime: 1000 };
+    state.previousReceivedAt = Date.now() - 65000;
+
+    ctx.context.applyCscReading('speed', { wheelRevolutions: 1300, wheelEventTime: 2024 });
+
+    assert.equal(ctx.context.currentBleSpeed, null);
+    assert.equal(ctx.context.totalDistance, 0);
+    assert.equal(ctx.context.$('sensor-speed-status').textContent, '');
 });
 
 test('a manual connection supersedes an automatic attempt and closes its stale subscription', async () => {

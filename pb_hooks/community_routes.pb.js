@@ -81,6 +81,13 @@ function indexCommunityRouteBounds(e) {
             const length = communityRouteDistance(a, b) || 1;
             const fraction = Math.max(0, Math.min(1, (remaining - passed) / length));
             const cut = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
+            if (a.length > 2 || b.length > 2) {
+                const startAltitude = a[2] == null ? null : Number(a[2]);
+                const endAltitude = b[2] == null ? null : Number(b[2]);
+                cut.push(Number.isFinite(startAltitude) && Number.isFinite(endAltitude)
+                    ? startAltitude + (endAltitude - startAltitude) * fraction
+                    : null);
+            }
             result[0] = [cut].concat(line.slice(index));
             remaining = 0;
         }

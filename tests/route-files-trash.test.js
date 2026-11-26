@@ -33,3 +33,17 @@ test('multi-route GPX export contains every route as a separate escaped track', 
     assert.equal((gpx.match(/<gpx\b/g) || []).length, 1);
     assert.equal((gpx.match(/<\/gpx>/g) || []).length, 1);
 });
+
+test('GPX export skips invalid coordinates', () => {
+    const context = vm.createContext({
+        xmlEsc: String
+    });
+    vm.runInContext(routeFilesSource.slice(start, end), context);
+
+    const gpx = context.routeToGpx({
+        name: 'GPS route',
+        points: [[40, -3, 100, null, null, null], null, [41, -4, 200, null, null, null]]
+    });
+    assert.doesNotMatch(gpx, /lat="null"|lon="null"/);
+    assert.equal((gpx.match(/<trkseg>/g) || []).length, 2);
+});

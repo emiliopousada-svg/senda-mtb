@@ -5,6 +5,24 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.59] - 2026-11-26
+
+### Añadido
+* **Rutas comunitarias:** perfil de elevación basado en las altitudes disponibles y búsqueda por comunidad autónoma o usuario.
+
+### Mejorado
+* **Rutas realizadas:** «Mis rutas» permite cambiar el nombre o tipo de actividad; los borrados pasan a una papelera local de 30 días con confirmación clara.
+* **Rutas comunitarias:** el contador muestra el total publicado, la búsqueda limita sus resultados a 20 y las favoritas no se recortan por ese límite.
+* **Rendimiento MTB:** seleccionar una actividad actualiza los indicadores, gráficos y métricas de sensores; estos bloques quedan dentro de la sección.
+* **Sensores:** la velocidad prioriza el velocímetro Bluetooth y las lecturas caducan según su última muestra válida.
+
+### Corregido
+* **Perfil comunitario:** la simplificación conserva los cambios de elevación y maneja eficientemente tracks sin datos de altitud.
+* **Estadísticas:** se elimina la comparación de rutas de la sección Evolución.
+
+### Eliminado
+* **Entreno virtual:** se retira esta actividad y la grabación basada únicamente en sensores Bluetooth.
+
 ## [0.2.57] - 2026-11-26
 
 ### Añadido

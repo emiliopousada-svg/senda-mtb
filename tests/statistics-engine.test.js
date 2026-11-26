@@ -142,6 +142,24 @@ test('uses stored metrics when legacy activity tracks lack usable GPS or altitud
     assert.equal(result.descentM, 0);
 });
 
+test('heart-rate samples above 250 bpm do not contribute to GPS route zones', () => {
+    const route = {
+        startedAt: new Date(timestamp).toISOString(),
+        points: [
+            trackPoint(0, 0, 100, 0, [200]),
+            trackPoint(0, 0.001, 100, 10, [260]),
+            trackPoint(0, 0.002, 100, 20, [200])
+        ]
+    };
+
+    const result = engine.analyzeRoute(route, { heartRateMax: 220 });
+
+    assert.equal(result.averageHr, 200);
+    assert.equal(result.maxHr, 200);
+    assert.equal(result.zoneMeasuredSeconds, 0);
+    assert.deepEqual(result.zoneSeconds, Array(result.zoneSeconds.length).fill(0));
+});
+
 test('preserves stored full-track metrics for imported routes with reduced points', () => {
     const result = engine.analyzeRoute({
         kind: 'imported',

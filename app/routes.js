@@ -163,7 +163,7 @@ function createRouteCardMap(route) {
 
 function showRouteCardMap(container, route) {
     if (typeof L === 'undefined' || typeof communityRawSegments !== 'function') return;
-    const lines = communityRawSegments(route.points);
+    const lines = communityRawSegments(route.points, true);
     if (!lines.length) return;
     let previewMap = null;
     try {
@@ -361,15 +361,41 @@ function routeHasElevationData(route) {
     return false;
 }
 
-function routeSaveEditedMetadata(route) {
-    if (route.remoteId) route.dirty = true;
-    return DB.put(route).then(() => {
+const routeMetadataSaveQueues = new WeakMap();
+
+function routeSaveEditedMetadata(route, changes) {
+    const save = async () => {
+        const previous = new Map(Object.keys(changes).map(key => [
+            key,
+            { exists: Object.prototype.hasOwnProperty.call(route, key), value: route[key] }
+        ]));
+        const hadDirty = Object.prototype.hasOwnProperty.call(route, 'dirty');
+        const previousDirty = route.dirty;
+        Object.assign(route, changes);
+        if (route.remoteId) route.dirty = true;
+        try {
+            await DB.put(route);
+        } catch (error) {
+            previous.forEach((value, key) => {
+                if (value.exists) route[key] = value.value;
+                else delete route[key];
+            });
+            if (hadDirty) route.dirty = previousDirty;
+            else delete route.dirty;
+            console.warn('No se pudieron guardar los detalles de la ruta:', error);
+            toast('No se pudieron guardar los detalles de la ruta.');
+            return false;
+        }
+        if (typeof statsInvalidateRouteAnalysis === 'function') statsInvalidateRouteAnalysis(route);
         renderSavedRoutes();
+        if (typeof refreshStats === 'function') refreshStats();
         syncRoutes();
-    }).catch(error => {
-        console.warn('No se pudieron guardar los detalles de la ruta:', error);
-        toast('No se pudieron guardar los detalles de la ruta.');
-    });
+        return true;
+    };
+    const previousSave = routeMetadataSaveQueues.get(route) || Promise.resolve();
+    const pendingSave = previousSave.then(save, save);
+    routeMetadataSaveQueues.set(route, pendingSave);
+    return pendingSave;
 }
 
 async function editRouteDetails(route) {
@@ -379,8 +405,89 @@ async function editRouteDetails(route) {
         ok: 'Guardar'
     });
     if (description === null) return;
-    route.description = String(description).trim().slice(0, 500);
-    await routeSaveEditedMetadata(route);
+    await routeSaveEditedMetadata(route, {
+        description: String(description).trim().slice(0, 500)
+    });
+}
+
+function openRouteEditDialog(route) {
+    const dialog = $('route-edit-dialog');
+    const form = $('route-edit-form');
+    const nameInput = $('route-edit-name');
+    const activitySelect = $('route-edit-activity-type');
+    const closeButton = $('route-edit-close');
+    const cancelButton = $('route-edit-cancel');
+    if (!dialog || typeof dialog.showModal !== 'function' || !form || !nameInput
+        || !activitySelect || !closeButton || !cancelButton) {
+        console.error('No se puede cambiar la actividad: falta el formulario de edición.');
+        toast('No se puede abrir el formulario para cambiar la actividad.');
+        return Promise.resolve(null);
+    }
+
+    nameInput.value = routeNameWithoutActivity(route);
+    nameInput.setCustomValidity('');
+    const currentType = activityTypeForRoute(route);
+    activitySelect.replaceChildren(...Object.entries(ACTIVITY_TYPES).map(([type, activity]) => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = `${activity.icon} ${activity.label}`;
+        return option;
+    }));
+    activitySelect.setCustomValidity('');
+    activitySelect.value = Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, currentType)
+        ? currentType
+        : 'mtb';
+    dialog.returnValue = '';
+
+    return new Promise(resolve => {
+        const onNameInput = () => nameInput.setCustomValidity('');
+        const cleanup = () => {
+            form.removeEventListener('submit', onSubmit);
+            nameInput.removeEventListener('input', onNameInput);
+            closeButton.removeEventListener('click', onCancel);
+            cancelButton.removeEventListener('click', onCancel);
+            dialog.removeEventListener('close', onClose);
+        };
+        const onClose = () => {
+            cleanup();
+            resolve(dialog.returnValue === 'save'
+                ? { name: nameInput.value.trim().slice(0, 80), activityType: activitySelect.value }
+                : null);
+        };
+        const onSubmit = event => {
+            event.preventDefault();
+            if (!nameInput.value.trim()) {
+                nameInput.setCustomValidity('El nombre de la actividad es obligatorio.');
+                nameInput.reportValidity();
+                return;
+            }
+            nameInput.setCustomValidity('');
+            if (!Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, activitySelect.value)) {
+                activitySelect.setCustomValidity('Selecciona un tipo de actividad válido.');
+                activitySelect.reportValidity();
+                return;
+            }
+            activitySelect.setCustomValidity('');
+            dialog.close('save');
+        };
+        const onCancel = () => dialog.close('cancel');
+
+        form.addEventListener('submit', onSubmit);
+        nameInput.addEventListener('input', onNameInput);
+        closeButton.addEventListener('click', onCancel);
+        cancelButton.addEventListener('click', onCancel);
+        dialog.addEventListener('close', onClose, { once: true });
+        dialog.showModal();
+    });
+}
+
+async function editSavedRoute(route) {
+    const changes = await openRouteEditDialog(route);
+    if (!changes) return;
+    await routeSaveEditedMetadata(route, {
+        activityType: changes.activityType,
+        name: `${routeActivityPrefix(changes.activityType)}${changes.name}`
+    });
 }
 
 async function shareSavedRoute(route) {
@@ -433,7 +540,7 @@ function setRoutesTab(tab) {
         : tab === 'pending'
             ? 'Tracks importados y rutas de la comunidad guardadas en el móvil. Se ordenan por importación o por distancia, tiempo y desnivel.'
             : tab === 'trash'
-                ? 'Rutas ausentes del servidor conservadas localmente durante 30 días. Puedes exportarlas, restaurarlas o eliminarlas definitivamente.'
+                ? 'Rutas eliminadas o ausentes del servidor conservadas localmente durante 30 días. Puedes exportarlas, restaurarlas o eliminarlas definitivamente.'
                 : 'Explora rutas publicadas por la comunidad.';
     renderSavedRoutes();
     if (communityTab && typeof loadCommunityRoutes === 'function') loadCommunityRoutes();
@@ -604,10 +711,10 @@ function createRouteCard(route, options = {}) {
     const showFullActions = routesShowAll || routesTab === 'pending';
     const canPublishCommunity = routeCanPublishCommunity(route);
     const canShareGroupRanking = route.kind === 'recorded';
-    if (trashed || showFullActions || (routesTab === 'done' && (canPublishCommunity || canShareGroupRanking))) {
+    if (trashed || showFullActions || routesTab === 'done') {
         const actions = document.createElement('div');
         actions.className = 'route-actions';
-        const routeActions = trashed ? [
+        let routeActions = trashed ? [
             ['trash-export', '⬇️ GPX', 'secondary'],
             ['trash-restore', '↩️ Restaurar', ''],
             ['trash-delete', 'Eliminar definitivamente', 'danger']
@@ -615,9 +722,13 @@ function createRouteCard(route, options = {}) {
             ['follow', 'Seguir', ''],
             ['edit-details', 'Descripción', 'secondary'],
             ['share', 'Compartir', 'secondary'],
-            ['rename', '✏️', 'secondary'],
+            ['edit-route', '✏️ Cambiar', 'secondary'],
             ['gpx', '⬇️ GPX', 'secondary'],
             ['del', '🗑️', 'danger']
+        ] : routesTab === 'done' ? [
+            ['edit-route', '✏️ Cambiar', 'secondary'],
+            ['edit-details', 'Descripción', 'secondary'],
+            ['del', '🗑️ Eliminar', 'danger']
         ] : [];
         if (!trashed && canPublishCommunity) routeActions.splice(showFullActions ? 1 : 0, 0, ['community', '🌍 Publicar', 'secondary']);
         if (!trashed && canShareGroupRanking) routeActions.push(['group-ranking', '🏆 Grupo', 'secondary']);
@@ -651,7 +762,7 @@ async function openSavedRouteDetail(route, options = {}) {
     catch (error) { console.warn('No se pudieron cargar las fotos de la ruta:', error); }
     if (route.communityRouteId
         && !requireSignedIn('Inicia sesión o crea una cuenta para ver rutas comunitarias.')) return;
-    const lines = communityRawSegments(route.points);
+    const lines = communityRawSegments(route.points, true);
     if (!lines.length) {
         toast('Esta ruta no contiene un trazado que se pueda mostrar.');
         return;
@@ -662,6 +773,7 @@ async function openSavedRouteDetail(route, options = {}) {
     const distanceKm = routeDistanceKm(route);
     const performedAt = routePerformedAt(route);
     const imported = route.kind === 'imported';
+    const viewOnly = options.viewOnly === true;
     const distanceFromPositionKm = imported
         && typeof lastLat === 'number' && Number.isFinite(lastLat)
         && typeof lastLon === 'number' && Number.isFinite(lastLon)
@@ -693,7 +805,9 @@ async function openSavedRouteDetail(route, options = {}) {
         ['Fecha de realización', performedAt ? fmtDate(performedAt) : 'No disponible']
     ];
     if (route.description) values.push(['Descripción', route.description]);
-    openCommunityDetail({ title: route.name }, lines, {
+    openCommunityDetail({ title: route.name, elevationGain: route.elevationGain }, lines, {
+        viewOnly,
+        returnOnTap: !viewOnly,
         backLabel: options.backLabel || 'Volver a mis rutas',
         onBack: options.onBack || (() => {
             closeCommunityDialog();
@@ -706,14 +820,8 @@ async function openSavedRouteDetail(route, options = {}) {
             followRoute(route);
         },
         values,
-        actions: [
-            ['Compartir', () => shareSavedRoute(route)],
-            ['Exportar GPX', () => {
-                if (route.communityRouteId
-                    && !requireSignedIn('Inicia sesión o crea una cuenta para descargar rutas comunitarias.')) return;
-                download(`${String(route.name || 'ruta').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_')}.gpx`,
-                    routeToGpx(route), 'application/gpx+xml');
-            }]
+        actions: viewOnly ? [] : [
+            ['Compartir', () => shareSavedRoute(route)]
         ]
     });
 }
@@ -815,16 +923,8 @@ $('saved-routes-list').addEventListener('click', async e => {
         await editRouteDetails(r);
     } else if (btn.dataset.act === 'share') {
         await shareSavedRoute(r);
-    } else if (btn.dataset.act === 'rename') {
-        const name = await promptRequiredRouteName(routeNameWithoutActivity(r));
-        if (name === null) return;
-        const activityType = activityTypeForRoute(r);
-        if (activityType) r.activityType = activityType;
-        r.name = (activityType ? routeActivityPrefix(activityType) : '') + name;
-        if (r.remoteId) r.dirty = true;
-        try { await DB.put(r); } catch (err) { toast('No se pudo guardar el cambio'); }
-        renderSavedRoutes();
-        syncRoutes();
+    } else if (btn.dataset.act === 'edit-route') {
+        await editSavedRoute(r);
     } else if (btn.dataset.act === 'gpx') {
         const safe = r.name.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, '_').trim() || 'ruta';
         download(`${safe}.gpx`, routeToGpx(r), 'application/gpx+xml');
@@ -835,7 +935,15 @@ $('saved-routes-list').addEventListener('click', async e => {
     } else if (btn.dataset.act === 'group-ranking') {
         await shareRouteToGroupRanking(r, btn);
     } else if (btn.dataset.act === 'del') {
-        const ok = await modal({ message: `¿Eliminar «${r.name}»? No se puede deshacer.`, ok: 'Eliminar' });
+        const trashUntil = new Date(Date.now() + ROUTE_TRASH_RETENTION_MS).toLocaleDateString('es-ES');
+        const remoteDeleteNotice = r.remoteId
+            ? ' Si está sincronizada, también se solicitará borrar la copia del servidor al sincronizar.'
+            : '';
+        const ok = await modal({
+            title: 'Mover a la papelera',
+            message: `«${r.name}» se conservará en la papelera durante 30 días, hasta el ${trashUntil}. Podrás restaurarla desde la pestaña Papelera. Después se eliminarán definitivamente la ruta y sus fotos de este dispositivo.${remoteDeleteNotice}`,
+            ok: 'Mover a papelera'
+        });
         if (!ok) return;
         const ownerId = r.kind === 'recorded' ? (r.groupRankingOwnerId || Cloud.uid) : '';
         const rankingServer = r.groupRankingServer || Cloud.server;
@@ -843,17 +951,36 @@ $('saved-routes-list').addEventListener('click', async e => {
         const rankingDelete = ownerId && rankingServer && Number.isSafeInteger(clientId) && clientId > 0
             ? { ownerId, server: rankingServer, clientId }
             : null;
-        try { await DB.deleteRoute(id, r.remoteId, rankingDelete); }
-        catch (err) { toast('No se pudo eliminar la ruta ni programar su borrado'); return; }
+        try {
+            const remoteServer = r.remoteServer || Cloud.server;
+            const moved = await DB.moveRouteToTrash(id, {
+                remoteId: r.remoteId,
+                server: remoteServer,
+                ownerId: r.remoteOwnerId || (remoteServer === Cloud.server ? Cloud.uid : '')
+            }, rankingDelete, { reason: 'user-deleted', queueRemoteDelete: Boolean(r.remoteId) });
+            if (moved === false) throw new Error('La ruta ya no está disponible en el almacenamiento local.');
+        } catch (err) {
+            toast(err && err.message === 'remote-delete-metadata-missing'
+                ? 'No se puede mover esta ruta a la papelera porque faltan el servidor o la cuenta de origen del borrado remoto.'
+                : 'No se pudo mover la ruta a la papelera ni programar su borrado');
+            return;
+        }
         savedRoutes = savedRoutes.filter(x => x.id !== id);
+        let deleteNotice = 'Ruta movida a la papelera. Puedes restaurarla durante 30 días.';
+        try { await refreshRouteTrash(); }
+        catch (err) {
+            console.warn('La ruta se movió a la papelera, pero no se pudo actualizar su contador:', err);
+            deleteNotice = 'La ruta se movió a la papelera, pero no se pudo actualizar su contador.';
+        }
         if (typeof garageRoutesChanged === 'function' && !garageRoutesChanged(savedRoutes)) {
-            toast('La ruta se eliminó, pero no se pudo actualizar el mantenimiento preventivo.', 6000);
+            deleteNotice += ' No se pudo actualizar el mantenimiento preventivo.';
         }
         if (followedRoute && followedRoute.id === id) unfollowRoute();
         renderSavedRoutes();
         refreshStats();
         if (rankingDelete) await syncPendingGroupRankingDeletes();
         syncRoutes();
+        toast(deleteNotice, 6000);
     }
 });
 
