@@ -217,36 +217,6 @@ function dashboardTerrainRouteSegments(route) {
     return segments;
 }
 
-function dashboardLastRidePreviewPath(route) {
-    const segments = dashboardTerrainRouteSegments(route);
-    const coordinates = segments.flat();
-    if (coordinates.length < 2) return '';
-
-    const centerLatitude = coordinates.reduce((sum, point) => sum + point[1], 0) / coordinates.length;
-    const longitudeScale = Math.max(0.01, Math.cos(centerLatitude * Math.PI / 180));
-    const projected = segments.map(segment =>
-        segment.map(([longitude, latitude]) => [longitude * longitudeScale, latitude])
-    );
-    const allPoints = projected.flat();
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (let i = 0; i < allPoints.length; i++) {
-        const x = allPoints[i][0], y = allPoints[i][1];
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-    }
-    const rangeX = maxX - minX;
-    const rangeY = maxY - minY;
-    const scale = Math.min(60 / Math.max(rangeX, 0.000001), 56 / Math.max(rangeY, 0.000001));
-    const offsetX = (76 - rangeX * scale) / 2;
-    const offsetY = (72 - rangeY * scale) / 2;
-
-    return projected.map(segment => segment.map(([x, y], index) =>
-        `${index ? 'L' : 'M'}${(offsetX + (x - minX) * scale).toFixed(1)},${(72 - offsetY - (y - minY) * scale).toFixed(1)}`
-    ).join(' ')).join(' ');
-}
-
 function dashboardCreateTerrainMap(route, container, routeKey) {
     if (!window.maplibregl || !navigator.onLine) return false;
     const segments = dashboardTerrainRouteSegments(route);
@@ -451,34 +421,64 @@ function dashboardUpdateLastRide(latest = dashboardLatestRecordedRoute()) {
     line.replaceChildren(...parts);
 }
 
+function dashboardUpdateLatestRouteMetrics(route) {
+    const metrics = $('home-latest-route-metrics');
+    if (!metrics) return;
+    metrics.hidden = !route;
+    if (!route) return;
+
+    const analysis = typeof statsAnalyzeRoute === 'function' ? statsAnalyzeRoute(route) : null;
+    const movingTimeSec = analysis && Number.isFinite(analysis.movingTimeSec)
+        ? analysis.movingTimeSec
+        : Number(route.movingTimeSec) || 0;
+    const distanceKm = analysis && Number.isFinite(analysis.distanceKm)
+        ? analysis.distanceKm
+        : Number(route.distanceKm) || 0;
+    const averageSpeed = analysis && Number.isFinite(analysis.averageSpeed)
+        ? analysis.averageSpeed
+        : movingTimeSec > 0 ? distanceKm / (movingTimeSec / 3600) : null;
+    const hasAscent = analysis
+        ? analysis.ascentAvailable && Number.isFinite(analysis.ascentM)
+        : route.elevationGain != null && Number.isFinite(Number(route.elevationGain));
+    const ascent = hasAscent ? (analysis ? analysis.ascentM : Number(route.elevationGain)) : null;
+    const recordedHeartRate = Number(route.hrAvg);
+    const averageHeartRate = analysis && Number.isFinite(analysis.averageHr)
+        ? analysis.averageHr
+        : route.hrAvg != null && Number.isFinite(recordedHeartRate) && recordedHeartRate > 0
+            ? recordedHeartRate
+            : null;
+    const update = (id, value) => {
+        const element = $(id);
+        if (element) element.textContent = value;
+    };
+
+    update('home-latest-route-speed', Number.isFinite(averageSpeed)
+        ? `${averageSpeed.toFixed(1)} km/h`
+        : '— km/h');
+    update('home-latest-route-ascent', Number.isFinite(ascent)
+        ? `+${Math.round(ascent)} m`
+        : '— m');
+    update('home-latest-route-heart-rate', Number.isFinite(averageHeartRate)
+        ? `${Math.round(averageHeartRate)} ppm`
+        : '— ppm');
+    update('home-latest-route-time', movingTimeSec > 0 ? fmtDur(movingTimeSec) : '—');
+
+    const timeLabel = $('home-latest-route-time-label');
+    if (timeLabel) {
+        const estimated = Boolean(analysis && analysis.movingTimeEstimated && movingTimeSec > 0);
+        timeLabel.textContent = estimated ? 'Tiempo (est.)' : 'Tiempo';
+        timeLabel.title = estimated ? 'Tiempo en movimiento estimado' : 'Tiempo en movimiento';
+    }
+}
+
 function dashboardRender() {
     dashboardUpdateGreeting();
     const latest = dashboardLatestRecordedRoute();
     dashboardUpdateLastRide(latest);
-    const lastRoutePath = $('home-last-route-path');
-    if (lastRoutePath) lastRoutePath.setAttribute('d', dashboardLastRidePreviewPath(latest));
+    dashboardUpdateLatestRouteMetrics(latest);
     const routeCount = Array.isArray(savedRoutes) ? savedRoutes.length : 0;
     const count = $('home-routes-count');
     if (count) count.textContent = `${routeCount} ${routeCount === 1 ? 'ruta guardada' : 'rutas guardadas'}`;
-    const latestName = $('home-last-route-name');
-    const latestDate = $('home-last-route-date');
-    const latestDistance = $('home-last-route-distance');
-    const latestAscent = $('home-last-route-ascent');
-    if (latest) {
-        if (latestName) latestName.textContent = routeNameWithoutActivity(latest) || 'Ruta MTB';
-        if (latestDate) latestDate.textContent = latest.startedAt
-            ? new Date(latest.startedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-            : 'Salida guardada';
-        if (latestDistance) latestDistance.textContent = `${Number(latest.distanceKm || 0).toFixed(1)} km`;
-        if (latestAscent) latestAscent.textContent = Number.isFinite(Number(latest.elevationGain))
-            ? `${Math.round(Number(latest.elevationGain))} m+`
-            : '— m+';
-    } else {
-        if (latestName) latestName.textContent = 'Aún no hay salidas';
-        if (latestDate) latestDate.textContent = 'Tu primera ruta te espera';
-        if (latestDistance) latestDistance.textContent = '— km';
-        if (latestAscent) latestAscent.textContent = '— m+';
-    }
     const mapLabel = $('home-map-label');
     const openRouteButton = $('home-open-route');
     if (openRouteButton) openRouteButton.hidden = !latest;
@@ -486,10 +486,6 @@ function dashboardRender() {
         ? `Última ruta · ${routeNameWithoutActivity(latest) || 'MTB'}`
         : 'Sin recorridos realizados';
     dashboardRenderMapPreview(latest);
-    const prompt = $('home-route-prompt');
-    if (prompt) prompt.textContent = routeCount
-        ? `${routeCount} rutas listas para consultar, seguir o exportar.`
-        : 'Importa un GPX y prepara tu próxima salida de montaña.';
     dashboardUpdateGpsStatus();
     dashboardUpdateNetworkStatus();
 }

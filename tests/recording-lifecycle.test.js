@@ -28,7 +28,12 @@ const {
 const gpsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'gps.js'), 'utf8');
 const recordingSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'recording.js'), 'utf8');
 
-function recordingFinishContext({ failingEffect, failDatabasePut = false, failSafetyCleanup = false } = {}) {
+function recordingFinishContext({
+    activityType = 'mtb',
+    failingEffect,
+    failDatabasePut = false,
+    failSafetyCleanup = false
+} = {}) {
     const calls = [];
     const savedRoutes = [];
     const context = vm.createContext({
@@ -53,12 +58,18 @@ function recordingFinishContext({ failingEffect, failDatabasePut = false, failSa
         startedAt: '2026-11-24T10:00:00Z',
         isRecording: true,
         isPaused: false,
-        recordingActivityType: 'mtb',
+        recordingActivityType: activityType,
         elev: { gain: 10 },
         getRouteNickname: () => 'Rider',
         followedRoute: null,
         recordingPois: [],
-        routeActivityPrefix: () => '',
+        routeActivityPrefix: type => ({
+            mtb: '🚵 MTB · ',
+            hiking: '🥾 Senderismo · ',
+            road: '🚴 Carretera · ',
+            horse: '🐎 Caballo · ',
+            running: '🏃 Correr · '
+        })[type] || '',
         fmtDur: () => '1 min',
         savedRoutes,
         toast: message => calls.push(['toast', message]),
@@ -668,6 +679,85 @@ function recordingHoldContext() {
     return { button, timers, activations };
 }
 
+function activitySelectionContext(accountReady = true, lastActivityType = null) {
+    class Element {
+        constructor() {
+            this.children = [];
+            this.dataset = {};
+            this.attributes = {};
+            this.listeners = new Map();
+            this.open = false;
+        }
+        addEventListener(type, handler) {
+            const handlers = this.listeners.get(type) || [];
+            handlers.push(handler);
+            this.listeners.set(type, handlers);
+        }
+        async trigger(type, event = {}) {
+            return Promise.all((this.listeners.get(type) || []).map(handler => handler.call(this, event)));
+        }
+        append(...children) { this.children.push(...children); }
+        replaceChildren(...children) { this.children = children; }
+        setAttribute(name, value) { this.attributes[name] = String(value); }
+        querySelectorAll() { return this.children.filter(child => child.dataset.activityType); }
+        contains(element) { return this.children.includes(element); }
+        closest(selector) { return selector === 'button[data-activity-type]' && this.dataset.activityType ? this : null; }
+        showModal() { this.open = true; }
+        close() { this.open = false; }
+    }
+
+    const elements = Object.fromEntries([
+        'activity-type-options',
+        'activity-type-dialog',
+        'activity-type-close',
+        'activity-type-cancel',
+        'activity-type-start',
+        'btn-start'
+    ].map(id => [id, new Element()]));
+    const calls = [];
+    const storageCalls = [];
+    const context = vm.createContext({
+        ACTIVITY_TYPES: {
+            mtb: { label: 'MTB', icon: '🚵' },
+            hiking: { label: 'Senderismo', icon: '🥾' },
+            road: { label: 'Carretera', icon: '🚴' },
+            horse: { label: 'Caballo', icon: '🐎' },
+            running: { label: 'Correr', icon: '🏃' }
+        },
+        btnStart: elements['btn-start'],
+        bindMapRecordingHold() {},
+        ensureRideAccount: async () => {
+            calls.push(['ensureRideAccount']);
+            return accountReady;
+        },
+        startRecording: activityType => calls.push(['startRecording', activityType]),
+        pauseRecording: () => calls.push(['pauseRecording']),
+        resumeRecording: () => calls.push(['resumeRecording']),
+        isRecording: false,
+        isPaused: false,
+        $: id => elements[id],
+        document: { createElement: () => new Element() },
+        localStorage: {
+            getItem(key) {
+                storageCalls.push(['getItem', key]);
+                return key === 'mtb_pro_last_activity_type' ? lastActivityType : null;
+            },
+            setItem(key, value) { storageCalls.push(['setItem', key, value]); }
+        },
+        console: { error() {} }
+    });
+    const start = recordingSource.indexOf('const LAST_RECORDING_ACTIVITY_TYPE_KEY =');
+    const end = recordingSource.indexOf('\nif (typeof btnStop', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext([
+        recordingSource.slice(start, end),
+        'globalThis.testReadLastRecordingActivityType = readLastRecordingActivityType;',
+        'globalThis.testRememberLastRecordingActivityType = rememberLastRecordingActivityType;'
+    ].join('\n'), context);
+    return { context, elements, calls, storageCalls };
+}
+
 for (const failingEffect of ['renderSavedRoutes', 'refreshStats', 'syncRoutes']) {
     test(`finishing a saved route still clears recording state if ${failingEffect} fails`, async () => {
         const { context, calls, savedRoutes } = recordingFinishContext({ failingEffect });
@@ -707,6 +797,26 @@ test('a storage failure preserves the paused recording and draft for retry', asy
     assert.equal(context.isPaused, true);
     assert.ok(calls.some(([name]) => name === 'saveDraft'));
     assert.equal(calls.some(([name]) => name === 'clearDraft'), false);
+});
+
+test('saved routes keep the selected activity type and matching name prefix', async () => {
+    const activities = [
+        ['mtb', '🚵 MTB · '],
+        ['hiking', '🥾 Senderismo · '],
+        ['road', '🚴 Carretera · '],
+        ['horse', '🐎 Caballo · '],
+        ['running', '🏃 Correr · ']
+    ];
+
+    for (const [activityType, prefix] of activities) {
+        const { context, calls, savedRoutes } = recordingFinishContext({ activityType });
+        await context.finishRecording();
+
+        const persistedRoute = calls.find(([name]) => name === 'put')[1];
+        assert.equal(persistedRoute.activityType, activityType);
+        assert.equal(persistedRoute.name, `${prefix}Test route`);
+        assert.equal(savedRoutes[0].activityType, activityType);
+    }
 });
 
 test('isDraftRecoverable validates raw draft objects before user recovery prompt', () => {
@@ -873,6 +983,117 @@ test('map recording hold supports keyboard input and leaves programmatic clicks 
 
     assert.equal(activations.count, 2);
     assert.equal(keyboardClick.defaultPrevented, true);
+});
+
+test('activity choice shows the supported types and starts only the confirmed selection', async () => {
+    const { elements, calls } = activitySelectionContext();
+    const options = elements['activity-type-options'];
+    const dialog = elements['activity-type-dialog'];
+
+    await elements['btn-start'].trigger('click');
+
+    assert.equal(dialog.open, true);
+    assert.deepEqual(options.children.map(option => option.dataset.activityType), ['mtb', 'hiking', 'road', 'horse', 'running']);
+    const mountainBike = options.children[0];
+    assert.equal(mountainBike.attributes['aria-pressed'], 'true');
+    assert.deepEqual(calls, []);
+
+    const road = options.children.find(option => option.dataset.activityType === 'road');
+    await options.trigger('click', { target: road });
+    assert.equal(road.attributes['aria-pressed'], 'true');
+    assert.equal(mountainBike.attributes['aria-pressed'], 'false');
+    assert.deepEqual(calls, []);
+
+    await elements['activity-type-start'].trigger('click');
+
+    assert.equal(dialog.open, false);
+    assert.deepEqual(calls, [['ensureRideAccount'], ['startRecording', 'road']]);
+});
+
+test('canceling activity choice does not start or authenticate', async () => {
+    const { elements, calls } = activitySelectionContext();
+    const dialog = elements['activity-type-dialog'];
+
+    await elements['btn-start'].trigger('click');
+    await elements['activity-type-cancel'].trigger('click');
+
+    assert.equal(dialog.open, false);
+    assert.deepEqual(calls, []);
+});
+
+test('activity choice still requires a ride account before recording', async () => {
+    const { elements, calls } = activitySelectionContext(false);
+    const dialog = elements['activity-type-dialog'];
+
+    await elements['btn-start'].trigger('click');
+    await elements['activity-type-start'].trigger('click');
+
+    assert.equal(dialog.open, false);
+    assert.deepEqual(calls, [['ensureRideAccount']]);
+});
+
+test('activity chooser defaults to the last saved activity and falls back for unknown values', async () => {
+    const { elements, storageCalls } = activitySelectionContext(true, 'horse');
+
+    await elements['btn-start'].trigger('click');
+
+    const horse = elements['activity-type-options'].children.find(option => option.dataset.activityType === 'horse');
+    assert.equal(horse.attributes['aria-pressed'], 'true');
+    assert.deepEqual(storageCalls, [['getItem', 'mtb_pro_last_activity_type']]);
+
+    const unknown = activitySelectionContext(true, 'unsupported');
+    await unknown.elements['btn-start'].trigger('click');
+    const mountainBike = unknown.elements['activity-type-options'].children[0];
+    assert.equal(mountainBike.attributes['aria-pressed'], 'true');
+});
+
+test('last activity preference only stores supported activity types', () => {
+    const { context, storageCalls } = activitySelectionContext();
+
+    context.testRememberLastRecordingActivityType('running');
+    context.testRememberLastRecordingActivityType('unsupported');
+
+    assert.deepEqual(storageCalls, [['setItem', 'mtb_pro_last_activity_type', 'running']]);
+});
+
+test('starting a route remembers its normalized activity type', () => {
+    const calls = [];
+    const context = vm.createContext({
+        appExitInProgress: false,
+        unlockOffRouteSound() {},
+        navigator: { vibrate: null },
+        localStorage: { getItem: () => '0' },
+        resetRecordingState() {},
+        batteryWarnings: { clear() {} },
+        batteryPollAt: 0,
+        $: () => ({ textContent: '' }),
+        ACTIVITY_TYPES: { mtb: {}, horse: {} },
+        recordingActivityType: 'mtb',
+        isRecording: false,
+        isPaused: true,
+        rememberLastRecordingActivityType: activityType => calls.push(['remember', activityType]),
+        refreshGpsMode() {},
+        clearRoutePolylines() {},
+        clearLastRideMapPreview() {},
+        setBtnState() {},
+        startTimers() {},
+        startAutoPauseMonitor() {},
+        startRideAdvisories() {},
+        following: false,
+        updateCenterBtn() {},
+        publishMyLocation() {},
+        beginTracking() { calls.push(['tracking']); }
+    });
+    const start = recordingSource.indexOf('function startRecording(activityType) {');
+    const end = recordingSource.indexOf('\nfunction pauseRecording(', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(recordingSource.slice(start, end), context);
+
+    context.startRecording('horse');
+
+    assert.equal(context.recordingActivityType, 'horse');
+    assert.deepEqual(calls, [['remember', 'horse'], ['tracking']]);
 });
 
 test('buildSegments splits multi-segment tracks on pause breaks without cross-gap connection', () => {

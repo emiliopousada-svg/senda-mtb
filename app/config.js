@@ -67,7 +67,11 @@ const ELEV_STEP = 3;         // metros mínimos para contar una subida
 const OFFROUTE_M = 60;       // aviso de desvío
 const BACKONROUTE_M = 30;    // se considera que has vuelto a la ruta
 const ACTIVITY_TYPES = {
-    mtb: { label: 'MTB', icon: '🚵' }
+    mtb: { label: 'MTB', icon: '🚵' },
+    hiking: { label: 'Senderismo', icon: '🥾' },
+    road: { label: 'Carretera', icon: '🚴' },
+    horse: { label: 'Caballo', icon: '🐎' },
+    running: { label: 'Correr', icon: '🏃' }
 };
 
 // ============================================================

@@ -444,6 +444,19 @@ function routeCreatorName(route) {
     return String(Cloud.nickname || route.createdBy || 'Usuario local').trim();
 }
 
+function routesFillActivityFilter(select) {
+    const selectedValue = select.value;
+    const options = [
+        new Option('Todas las rutas', 'all'),
+        ...Object.entries(ACTIVITY_TYPES).map(([type, activity]) =>
+            new Option(`${activity.icon} ${activity.label}`, type)),
+        new Option('📍 Sin clasificar', 'other')
+    ];
+    const availableValues = new Set(options.map(option => option.value));
+    select.replaceChildren(...options);
+    select.value = availableValues.has(selectedValue) ? selectedValue : 'all';
+}
+
 function renderSavedRoutes() {
     const c = $('saved-routes-list');
     clearRouteCardMaps();
@@ -705,6 +718,7 @@ async function openSavedRouteDetail(route, options = {}) {
     });
 }
 
+routesFillActivityFilter($('route-activity-filter'));
 $('route-activity-filter').addEventListener('change', renderSavedRoutes);
 $('route-user-filter').addEventListener('change', renderSavedRoutes);
 $('route-sort-filter').addEventListener('change', () => {
