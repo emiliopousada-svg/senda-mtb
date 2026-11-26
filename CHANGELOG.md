@@ -1,84 +1,88 @@
-ï»¿# Changelog
+# Changelog
 
 Todas las novedades y cambios relevantes de **senda-mtb** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
-## [Unreleased]
+## [0.2.54] - 2026-11-26
 
-### DocumentaciÃ³n
-* **Seguridad de sesiones web:** se documentan el almacenamiento del token en `localStorage`, los lÃ­mites de las mitigaciones cliente y los requisitos de backend para cookies HttpOnly o revocaciÃ³n global.
+### Documentación
+
+* **Actualización de dependencias y build:** se prepara la release v0.2.54 con 10 archivos modificados (846 inserciones, 123 eliminaciones)
+* **Seguridad de sesiones web:** se documentan el almacenamiento del token en `localStorage`, los límites de las mitigaciones cliente y los requisitos de backend para cookies HttpOnly o revocación global.
 
 ### Seguridad
-* **Cuenta:** se aÃ±ade el borrado autenticado con contraseÃ±a de la cuenta y los datos sincronizados asociados. Las rutas y estadÃ­sticas locales se conservan; las cuentas que administran grupos deben transferir o eliminar esos grupos primero.
+* **Cuenta:** se añade el borrado autenticado con contraseña de la cuenta y los datos sincronizados asociados. Las rutas y estadísticas locales se conservan; las cuentas que administran grupos deben transferir o eliminar esos grupos primero.
 
 ### Corregido
-* **SincronizaciÃ³n de rutas:** una ruta que falta en una auditorÃ­a remota ya no se borra sin confirmaciÃ³n. Se puede exportar el lote a GPX y conservarlo 30 dÃ­as en una papelera local, con opciÃ³n de restaurar o eliminar definitivamente.
+* **Sincronización de rutas:** una ruta que falta en una auditoría remota ya no se borra sin confirmación. Se puede exportar el lote a GPX y conservarlo 30 días en una papelera local, con opción de restaurar o eliminar definitivamente.
 
 ## [0.2.43] - 2026-11-24
 
-### DocumentaciÃ³n
-* **Arquitectura y datos:** se alinean `ARCHITECTURE.md` y `DATA_MODEL.md` con los lÃ­mites reales de la aplicaciÃ³n, los stores de IndexedDB y las colecciones de PocketBase.
+### Documentación
+
+* **Actualización de dependencias y build:** se prepara la release v0.2.54 con 10 archivos modificados (846 inserciones, 123 eliminaciones)
+* **Arquitectura y datos:** se alinean `ARCHITECTURE.md` y `DATA_MODEL.md` con los límites reales de la aplicación, los stores de IndexedDB y las colecciones de PocketBase.
 
 ## [0.2.42] - 2026-11-24
 
 ### Mejorado
-* **Cockpit:** se amplÃ­an los indicadores de estado en mÃ³vil manteniendo la fila ordenada.
+* **Cockpit:** se amplían los indicadores de estado en móvil manteniendo la fila ordenada.
 
 ### Corregido
-* **Estado de conexiÃ³n:** Inicio refleja la conexiÃ³n a internet; el Perfil comprueba PocketBase y se actualiza tambiÃ©n al recibir respuestas de sincronizaciÃ³n.
+* **Estado de conexión:** Inicio refleja la conexión a internet; el Perfil comprueba PocketBase y se actualiza también al recibir respuestas de sincronización.
 
 ## [0.2.41] - 2026-11-24
 
 ### Seguridad
-* **Rutas comunitarias:** se exige iniciar sesiÃ³n para explorar, guardar o descargar rutas; PocketBase protege tambiÃ©n los registros y datos relacionados.
-* **Acceso a funciones:** se exige iniciar sesiÃ³n para descargar mapas offline e importar tracks. Las copias comunitarias locales se ocultan al cerrar sesiÃ³n y no se sincronizan sin una sesiÃ³n activa.
+* **Rutas comunitarias:** se exige iniciar sesión para explorar, guardar o descargar rutas; PocketBase protege también los registros y datos relacionados.
+* **Acceso a funciones:** se exige iniciar sesión para descargar mapas offline e importar tracks. Las copias comunitarias locales se ocultan al cerrar sesión y no se sincronizan sin una sesión activa.
 
 ## [0.2.40] - 2026-11-24
 
-### AÃ±adido
-* **POI del mapa:** lÃ­mite de 500 puntos por propietario, protegido tambiÃ©n por un trigger atÃ³mico de PocketBase frente a creaciones concurrentes.
+### Añadido
+* **POI del mapa:** límite de 500 puntos por propietario, protegido también por un trigger atómico de PocketBase frente a creaciones concurrentes.
 
 ### Mejorado
-* **SincronizaciÃ³n de rutas:** sincronizaciÃ³n de tracks privados y sus metadatos, incluidos descripciÃ³n, POI y fotos; se valida el tamaÃ±o de los tracks y se renuevan los tokens de descarga cuando hace falta.
-* **GrabaciÃ³n:** los borradores se guardan en bloques y se validan al recuperar, mejorando la fiabilidad de recuperaciÃ³n y del guardado al salir.
-* **Seguimiento y estabilidad:** mejoras en el control de pantalla activa, las estadÃ­sticas y el almacenamiento local.
+* **Sincronización de rutas:** sincronización de tracks privados y sus metadatos, incluidos descripción, POI y fotos; se valida el tamaño de los tracks y se renuevan los tokens de descarga cuando hace falta.
+* **Grabación:** los borradores se guardan en bloques y se validan al recuperar, mejorando la fiabilidad de recuperación y del guardado al salir.
+* **Seguimiento y estabilidad:** mejoras en el control de pantalla activa, las estadísticas y el almacenamiento local.
 
 ## [0.2.37] - 2026-11-23
 
-### AÃ±adido
-* **Inicio:** la tarjeta Â«Ãšltima salidaÂ» dibuja una miniatura del trazado real de la ruta.
+### Añadido
+* **Inicio:** la tarjeta «Última salida» dibuja una miniatura del trazado real de la ruta.
 
 ### Cambiado
-* **Mapa:** al plegar el panel inferior, las mÃ©tricas de la salida permanecen visibles; se elimina el perfil de elevaciÃ³n en directo.
-* **Cockpit:** se simplifica la pantalla, se integra el modo OLED en la fila de estado y el indicador GPS refleja la calidad de seÃ±al por color.
+* **Mapa:** al plegar el panel inferior, las métricas de la salida permanecen visibles; se elimina el perfil de elevación en directo.
+* **Cockpit:** se simplifica la pantalla, se integra el modo OLED en la fila de estado y el indicador GPS refleja la calidad de señal por color.
 
 ## [0.2.36] - 2026-11-23
 
 ### Cambiado
-* **Grupos:** al revocar el acceso desde la sesiÃ³n o detectar el cambio de membresÃ­a, la interfaz desconecta inmediatamente el estado del grupo y muestra el flujo para volver a unirse.
-* **Grupos:** la desconexiÃ³n se conserva aunque falle la recarga posterior del grupo.
+* **Grupos:** al revocar el acceso desde la sesión o detectar el cambio de membresía, la interfaz desconecta inmediatamente el estado del grupo y muestra el flujo para volver a unirse.
+* **Grupos:** la desconexión se conserva aunque falle la recarga posterior del grupo.
 
 ## [0.2.34] - 2026-03-26
 
-### AÃ±adido
-* **Comunidad Â· Segmentos MTB:** catÃ¡logo cercano con la ruta asociada, podio de tres tiempos y mejor marca personal.
-* **RÃ©cords de segmentos:** detecciÃ³n automÃ¡tica en las salidas guardadas no importadas; solo se publica el apodo y el tiempo, y el rÃ©cord histÃ³rico no puede empeorar.
+### Añadido
+* **Comunidad · Segmentos MTB:** catálogo cercano con la ruta asociada, podio de tres tiempos y mejor marca personal.
+* **Récords de segmentos:** detección automática en las salidas guardadas no importadas; solo se publica el apodo y el tiempo, y el récord histórico no puede empeorar.
 
 ### Cambiado
-* **Mapa:** el indicador GPS distingue estados de seÃ±al y los indicadores de mÃ©tricas amplÃ­an su visualizaciÃ³n al pulsarlos.
-* **Perfil:** los controles de servidor y sincronizaciÃ³n se apilan para no tapar el apodo.
+* **Mapa:** el indicador GPS distingue estados de señal y los indicadores de métricas amplían su visualización al pulsarlos.
+* **Perfil:** los controles de servidor y sincronización se apilan para no tapar el apodo.
 
 ## [0.2.33] - 2026-11-22
 
-### AÃ±adido
+### Añadido
 * **Perfil:** avatar opcional durante el registro; si no se sube una foto, se usa el icono de senda-mtb.
-* **SincronizaciÃ³n:** acceso manual desde el encabezado del perfil, con estado azul en reposo y naranja durante la sincronizaciÃ³n.
+* **Sincronización:** acceso manual desde el encabezado del perfil, con estado azul en reposo y naranja durante la sincronización.
 
 ### Cambiado
-* **Perfil:** el editor de datos fÃ­sicos deja de incluir la carga del avatar y se elimina el aviso de rutas locales sin sesiÃ³n.
-* **Rutas comunitarias:** se retiran la clasificaciÃ³n y la publicaciÃ³n de marcas en las fichas de rutas; las funciones de segmentos se conservan.
+* **Perfil:** el editor de datos físicos deja de incluir la carga del avatar y se elimina el aviso de rutas locales sin sesión.
+* **Rutas comunitarias:** se retiran la clasificación y la publicación de marcas en las fichas de rutas; las funciones de segmentos se conservan.
 
 ## [0.2.32] - 2026-11-22
 
@@ -87,84 +91,84 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [0.2.31] - 2026-11-22
 
-### AÃ±adido
-* **DesafÃ­os del grupo:** al finalizar, los miembros que alcanzaron la meta reciben una medalla en el palmarÃ©s; el desafÃ­o queda archivado.
+### Añadido
+* **Desafíos del grupo:** al finalizar, los miembros que alcanzaron la meta reciben una medalla en el palmarés; el desafío queda archivado.
 
 ### Cambiado
-* **Perfil:** la localidad se integra en Â«Cuenta y sincronizaciÃ³nÂ» y el editor abre esa secciÃ³n cuando hace falta.
-* **DesafÃ­os del grupo:** las metas ahora van de 10 a 20.000.
+* **Perfil:** la localidad se integra en «Cuenta y sincronización» y el editor abre esa sección cuando hace falta.
+* **Desafíos del grupo:** las metas ahora van de 10 a 20.000.
 * **Mapa:** los controles laterales y el panel inferior se compactan en horizontal; los indicadores se distribuyen a ambos lados de los botones centrados.
 
 ## [0.2.30] - 2026-11-22
 
 ### Cambiado
-* **Perfil:** Cuenta y sincronizaciÃ³n agrupa los datos de sesiÃ³n y perfil; el indicador del servidor queda junto al avatar y la secciÃ³n Social muestra iconos de muestra.
-* **Mapa:** los controles laterales reaparecen al tocar el mapa despuÃ©s de ocultarse, sin un botÃ³n lateral.
-* **Entrenamiento:** se elimina el acceso Â«Configurar en StatsÂ» de la tarjeta de perfil.
+* **Perfil:** Cuenta y sincronización agrupa los datos de sesión y perfil; el indicador del servidor queda junto al avatar y la sección Social muestra iconos de muestra.
+* **Mapa:** los controles laterales reaparecen al tocar el mapa después de ocultarse, sin un botón lateral.
+* **Entrenamiento:** se elimina el acceso «Configurar en Stats» de la tarjeta de perfil.
 
 ## [0.2.29] - 2026-11-20
 
 ### Cambiado
 * **Mapa:** Distancia pasa al banner superior y Cadencia se incorpora al panel inferior.
-* **Centro de control:** el panel de grabaciÃ³n permite ordenar y mostrar u ocultar Cadencia; las preferencias anteriores migran al nuevo conjunto de mÃ©tricas.
+* **Centro de control:** el panel de grabación permite ordenar y mostrar u ocultar Cadencia; las preferencias anteriores migran al nuevo conjunto de métricas.
 
 ---
 
 ## [0.2.28] - 2026-11-20
 
-### AÃ±adido
-* **Mapa:** banner de actividad en directo y panel inferior rediseÃ±ado con mÃ©tricas, perfil de altitud y controles de grabaciÃ³n.
+### Añadido
+* **Mapa:** banner de actividad en directo y panel inferior rediseñado con métricas, perfil de altitud y controles de grabación.
 * **Seguimiento:** las rutas guardadas y comunitarias vuelven al mapa al seleccionarlas; las fotos de POI se cargan en segundo plano.
 * **Rutas comunitarias:** el importador conserva las firmas de los ficheros en PocketBase para detectar cambios entre ejecuciones.
 
 ### Cambiado
-* **Mapa:** al grabar sin seguir una ruta, el perfil de altitud aparece dentro del panel inferior y permanece visible al plegarlo. El panel y los controles laterales vuelven a plegarse 20 segundos despuÃ©s de desplegarlos durante una actividad.
-* **NavegaciÃ³n:** las transiciones entre pÃ¡ginas usan un deslizamiento horizontal de 320 ms con desaceleraciÃ³n suave.
-* **SincronizaciÃ³n de cuenta:** las subidas de avatar y las actualizaciones de datos fÃ­sicos conservan los cambios locales recientes y permiten borrar esos datos del perfil.
-* **Recursos web:** se aÃ±aden verificaciones de integridad a dependencias externas y se ajusta la cachÃ© del service worker.
+* **Mapa:** al grabar sin seguir una ruta, el perfil de altitud aparece dentro del panel inferior y permanece visible al plegarlo. El panel y los controles laterales vuelven a plegarse 20 segundos después de desplegarlos durante una actividad.
+* **Navegación:** las transiciones entre páginas usan un deslizamiento horizontal de 320 ms con desaceleración suave.
+* **Sincronización de cuenta:** las subidas de avatar y las actualizaciones de datos físicos conservan los cambios locales recientes y permiten borrar esos datos del perfil.
+* **Recursos web:** se añaden verificaciones de integridad a dependencias externas y se ajusta la caché del service worker.
 
 ---
 
 ## [0.2.27] - 2026-11-20
 
-### AÃ±adido
-* **Perfil fÃ­sico:** campo de altura sincronizado con PocketBase y guardado localmente para futuras estimaciones.
+### Añadido
+* **Perfil físico:** campo de altura sincronizado con PocketBase y guardado localmente para futuras estimaciones.
 
 ### Cambiado
-* **Inicio:** las estadÃ­sticas se refrescan tras cargar las rutas locales y recuperar un borrador de grabaciÃ³n.
-* **Perfil:** la sincronizaciÃ³n actualiza los campos sin cambios locales y conserva ediciones y snapshots mÃ¡s recientes pendientes de subida.
+* **Inicio:** las estadísticas se refrescan tras cargar las rutas locales y recuperar un borrador de grabación.
+* **Perfil:** la sincronización actualiza los campos sin cambios locales y conserva ediciones y snapshots más recientes pendientes de subida.
 * **Rutas comunitarias:** el importador de Galicia comprueba metadatos cada cinco minutos e importa solo ficheros nuevos o modificados.
-* **CachÃ© sin conexiÃ³n:** cada versiÃ³n del service worker usa una cachÃ© identificada por el hash del propio worker; el build falla si deja marcadores sin sustituir.
+* **Caché sin conexión:** cada versión del service worker usa una caché identificada por el hash del propio worker; el build falla si deja marcadores sin sustituir.
 
 ## [0.2.24] - 2026-11-19
 
-### AÃ±adido
+### Añadido
 * **Centro de control:** iconos de Facebook, Instagram y TikTok en Social, sin enlaces ni conexiones externas.
 
 ### Cambiado
-* **Rutas comunitarias:** se retira el catÃ¡logo oficial de Galicia y se conserva el acceso a las rutas favoritas.
-* **PocketBase:** la app recupera la configuraciÃ³n cuando el servidor guardado no es vÃ¡lido.
+* **Rutas comunitarias:** se retira el catálogo oficial de Galicia y se conserva el acceso a las rutas favoritas.
+* **PocketBase:** la app recupera la configuración cuando el servidor guardado no es válido.
 
 ### Eliminado
-* **Strava:** se retiran la integraciÃ³n, sus hooks y la dependencia del cliente. Se conserva la migraciÃ³n existente y los datos de PocketBase.
+* **Strava:** se retiran la integración, sus hooks y la dependencia del cliente. Se conserva la migración existente y los datos de PocketBase.
 
 ## [0.2.14] - 2026-11-18
 
 ### Cambiado
-* **Inicio:** la cabecera del saludo se reorganiza: marca y estados de red/GPS arriba, avatar junto al saludo con un resumen de la Ãºltima salida y accesos a Centro de control y Cockpit con el mismo ancho.
-* **NavegaciÃ³n:** el botÃ³n AtrÃ¡s Android cierra primero las ventanas abiertas del Centro de control y los diÃ¡logos antes de navegar hacia atrÃ¡s.
-* **Salida:** al volver a Inicio se pide confirmaciÃ³n antes de cerrar la app y se informa claramente si hay una grabaciÃ³n activa.
+* **Inicio:** la cabecera del saludo se reorganiza: marca y estados de red/GPS arriba, avatar junto al saludo con un resumen de la última salida y accesos a Centro de control y Cockpit con el mismo ancho.
+* **Navegación:** el botón Atrás Android cierra primero las ventanas abiertas del Centro de control y los diálogos antes de navegar hacia atrás.
+* **Salida:** al volver a Inicio se pide confirmación antes de cerrar la app y se informa claramente si hay una grabación activa.
 
 ## [0.2.13] - 2026-11-18
 
-### AÃ±adido
-* **Strava:** conexiÃ³n OAuth desde herramientas sociales, almacenamiento cifrado de credenciales en PocketBase y subida de salidas grabadas como GPX.
-* **Rutas comunitarias de Galicia:** importaciÃ³n automÃ¡tica desde carpetas del servidor, incluyendo subcarpetas; se amplÃ­a la lectura de tracks y archivos GPX grandes.
-* **Inicio:** vista de la Ãºltima ruta sobre terreno satÃ©lite con relieve 3D.
+### Añadido
+* **Strava:** conexión OAuth desde herramientas sociales, almacenamiento cifrado de credenciales en PocketBase y subida de salidas grabadas como GPX.
+* **Rutas comunitarias de Galicia:** importación automática desde carpetas del servidor, incluyendo subcarpetas; se amplía la lectura de tracks y archivos GPX grandes.
+* **Inicio:** vista de la última ruta sobre terreno satélite con relieve 3D.
 
 ### Cambiado
-* **Rutas:** las fichas se adaptan al ancho de la pantalla mÃ³vil.
-* **ImportaciÃ³n:** el escaneo de rutas de Galicia se ejecuta desde una tarea programada y muestra diagnÃ³sticos en el registro.
+* **Rutas:** las fichas se adaptan al ancho de la pantalla móvil.
+* **Importación:** el escaneo de rutas de Galicia se ejecuta desde una tarea programada y muestra diagnósticos en el registro.
 
 ### Corregido
 * **Strava:** se valida correctamente la ausencia de la clave de cifrado y se escapa el mensaje del callback antes de mostrarlo en HTML.
@@ -172,188 +176,188 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ## [0.2.9] - 2026-11-17
 
 ### Cambiado
-* **Repositorio:** se actualizan el enlace de soporte de la app y la documentaciÃ³n a `emiliopousada-svg/senda-mtb`.
+* **Repositorio:** se actualizan el enlace de soporte de la app y la documentación a `emiliopousada-svg/senda-mtb`.
 
 ## [0.2.8] - 2026-11-17
 
 ### Cambiado
-* **Icono de la app:** se adopta el emblema de montaÃ±a, sendero y rueda en Android, iOS, la PWA y el acceso de la barra lateral. Se aÃ±ade una variante con margen seguro para mÃ¡scaras adaptables y se renueva la cachÃ© web.
+* **Icono de la app:** se adopta el emblema de montaña, sendero y rueda en Android, iOS, la PWA y el acceso de la barra lateral. Se añade una variante con margen seguro para máscaras adaptables y se renueva la caché web.
 
 ## [0.2.7] - 2026-11-17
 
 ### Cambiado
-* **Consumo y sincronizaciÃ³n:** las ubicaciones de grupo se consultan cuando se abre el mapa o la comunidad; los puntos compartidos se sondean periÃ³dicamente solo con el mapa visible y se elimina el refresco global de Seguridad.
-* **GPS:** tras descartar un salto imposible se reinicia el punto de referencia para recuperar una velocidad vÃ¡lida en la siguiente lectura.
+* **Consumo y sincronización:** las ubicaciones de grupo se consultan cuando se abre el mapa o la comunidad; los puntos compartidos se sondean periódicamente solo con el mapa visible y se elimina el refresco global de Seguridad.
+* **GPS:** tras descartar un salto imposible se reinicia el punto de referencia para recuperar una velocidad válida en la siguiente lectura.
 
 ## [0.2.6] - 2026-11-17
 
-### AÃ±adido
-* **Calendario:** vista mensual y creaciÃ³n local de eventos para rutas, quedadas y mantenimiento.
-* **Perfil deportivo:** actividad histÃ³rica, bicicleta del Garaje, logros verificables, datos de rendimiento y localidad guardada en el dispositivo.
-* **Centro de control:** espacio Social para futuras integraciones y acceso unificado a grabaciÃ³n, sensores, cartografÃ­a, mapas sin conexiÃ³n y ajustes.
+### Añadido
+* **Calendario:** vista mensual y creación local de eventos para rutas, quedadas y mantenimiento.
+* **Perfil deportivo:** actividad histórica, bicicleta del Garaje, logros verificables, datos de rendimiento y localidad guardada en el dispositivo.
+* **Centro de control:** espacio Social para futuras integraciones y acceso unificado a grabación, sensores, cartografía, mapas sin conexión y ajustes.
 
 ### Cambiado
-* **Seguridad:** los contactos se gestionan desde un formulario plegable y el primero guardado queda preseleccionado para preparar el SOS; la ubicaciÃ³n en directo se configura en Ajustes varios.
-* **NavegaciÃ³n y comunidad:** se ajusta el carrusel entre pantallas y se muestran avatares con nombre para compaÃ±eros conectados.
+* **Seguridad:** los contactos se gestionan desde un formulario plegable y el primero guardado queda preseleccionado para preparar el SOS; la ubicación en directo se configura en Ajustes varios.
+* **Navegación y comunidad:** se ajusta el carrusel entre pantallas y se muestran avatares con nombre para compañeros conectados.
 
 ## [0.2.5] - 2026-11-17
 
-### AÃ±adido
-* **Cockpit:** el velocÃ­metro cambia de color segÃºn la velocidad (azul, verde, amarillo, naranja y rojo), con transiciones suaves; los iconos de pulso, cadencia y potencia se iluminan al conectar sus sensores.
-* **CompaÃ±eros cerca:** avatares con nombre; al pulsar uno, el mapa centra y abre la posiciÃ³n de ese compaÃ±ero.
+### Añadido
+* **Cockpit:** el velocímetro cambia de color según la velocidad (azul, verde, amarillo, naranja y rojo), con transiciones suaves; los iconos de pulso, cadencia y potencia se iluminan al conectar sus sensores.
+* **Compañeros cerca:** avatares con nombre; al pulsar uno, el mapa centra y abre la posición de ese compañero.
 
 ### Cambiado
-* **Cockpit:** encabezado rediseÃ±ado, estado de grabaciÃ³n visible en verde y controles de Inicio alineados con los indicadores.
-* **Mapa:** panel de mÃ©tricas y perfil de altitud en directo mÃ¡s compactos; la atribuciÃ³n cartogrÃ¡fica permanece visible.
-* **NavegaciÃ³n:** Inicio aparece primero al abrir la app y el orden del carrusel sigue el menÃº inferior.
+* **Cockpit:** encabezado rediseñado, estado de grabación visible en verde y controles de Inicio alineados con los indicadores.
+* **Mapa:** panel de métricas y perfil de altitud en directo más compactos; la atribución cartográfica permanece visible.
+* **Navegación:** Inicio aparece primero al abrir la app y el orden del carrusel sigue el menú inferior.
 
 ## [0.2.4] - 2026-11-17
 
-### AÃ±adido
-* **Garaje:** en MÃ¡s herramientas, con la foto de tu bici arriba y su nombre. Registra revisiones y mantenimiento (revisiÃ³n general, cadena, frenos, neumÃ¡ticos, suspensiÃ³n, transmisiÃ³n, lÃ­quido tubeless, lavado y engrase u otro) con fecha, coste y notas. Cuenta los kilÃ³metros desde la Ãºltima revisiÃ³n general con las salidas grabadas, avisa cuando toca segÃºn el intervalo que elijas (1000 km por defecto) y muestra los kilÃ³metros desde el Ãºltimo cambio de cada pieza. Los datos se guardan en el mÃ³vil.
-* **Relieve 3D en "Tu mapa":** la pantalla de inicio muestra la Ãºltima ruta como un relieve en 3D que se puede girar; si la ruta no tiene altitud, se mantiene el trazado en 2D.
+### Añadido
+* **Garaje:** en Más herramientas, con la foto de tu bici arriba y su nombre. Registra revisiones y mantenimiento (revisión general, cadena, frenos, neumáticos, suspensión, transmisión, líquido tubeless, lavado y engrase u otro) con fecha, coste y notas. Cuenta los kilómetros desde la última revisión general con las salidas grabadas, avisa cuando toca según el intervalo que elijas (1000 km por defecto) y muestra los kilómetros desde el último cambio de cada pieza. Los datos se guardan en el móvil.
+* **Relieve 3D en "Tu mapa":** la pantalla de inicio muestra la última ruta como un relieve en 3D que se puede girar; si la ruta no tiene altitud, se mantiene el trazado en 2D.
 * Pruebas `tests/garage.test.js`, `tests/route-relief.test.js`, `tests/status-bar.test.js` y `tests/dashboard-greeting.test.js`.
 
 ### Cambiado
-* **Barra de estado:** una franja negra bajo la barra del telÃ©fono deja siempre visibles la hora, la cobertura y la baterÃ­a. El mapa y las pÃ¡ginas empiezan debajo, y en Android los iconos de la barra son siempre claros (SystemBars `DARK`).
-* **CachÃ© sin conexiÃ³n:** el service worker incluye tambiÃ©n `recording-panel.js`, `cockpit.js`, `safety.js`, `route-relief.js`, `garage.js` y `tools.js`.
-* **Cuenta:** el formulario de acceso funciona con Intro, evita envÃ­os dobles y tiene etiquetas y autocompletado.
-* Se aÃ±ade el icono `icon-192.png` y `icon-512.png` pasa a medir 512 px.
+* **Barra de estado:** una franja negra bajo la barra del teléfono deja siempre visibles la hora, la cobertura y la batería. El mapa y las páginas empiezan debajo, y en Android los iconos de la barra son siempre claros (SystemBars `DARK`).
+* **Caché sin conexión:** el service worker incluye también `recording-panel.js`, `cockpit.js`, `safety.js`, `route-relief.js`, `garage.js` y `tools.js`.
+* **Cuenta:** el formulario de acceso funciona con Intro, evita envíos dobles y tiene etiquetas y autocompletado.
+* Se añade el icono `icon-192.png` y `icon-512.png` pasa a medir 512 px.
 
 ### Eliminado
-* **Senda AI:** se quitan la tarjeta y el panel de ejemplo de MÃ¡s herramientas.
+* **Senda AI:** se quitan la tarjeta y el panel de ejemplo de Más herramientas.
 * **Sitios de comida en el mapa:** ya no se pueden marcar. Los que ya estaban guardados se siguen viendo y se pueden borrar.
 
 ### Corregido
-* **Saludo de inicio:** al arrancar la app ya no aparece el error Â«Cloud is not definedÂ». Mientras carga la sesiÃ³n, el saludo y la foto de perfil usan el apodo y la foto guardados. El error tambiÃ©n impedÃ­a activar el indicador de conexiÃ³n, que vuelve a funcionar.
+* **Saludo de inicio:** al arrancar la app ya no aparece el error «Cloud is not defined». Mientras carga la sesión, el saludo y la foto de perfil usan el apodo y la foto guardados. El error también impedía activar el indicador de conexión, que vuelve a funcionar.
 
 ## [0.2.3] - 2026-11-17
 
-### AÃ±adido
-* **ConfiguraciÃ³n por entorno:** `app/config.js` define los entornos `production`, `staging` y `development` (servidor PocketBase, uso de http local y modo depuraciÃ³n). `scripts/prepare-web.js` elige el entorno con `MTB_APP_ENV` y, opcionalmente, el servidor con `MTB_CLOUD_SERVER`; por defecto compila para producciÃ³n. Ver la secciÃ³n Entornos del README.
-* La compilaciÃ³n rechaza entornos desconocidos, URLs no vÃ¡lidas y releases (`vX.Y.Z`) que no sean de producciÃ³n.
-* Ajustes muestra el entorno junto a la versiÃ³n cuando no es producciÃ³n.
+### Añadido
+* **Configuración por entorno:** `app/config.js` define los entornos `production`, `staging` y `development` (servidor PocketBase, uso de http local y modo depuración). `scripts/prepare-web.js` elige el entorno con `MTB_APP_ENV` y, opcionalmente, el servidor con `MTB_CLOUD_SERVER`; por defecto compila para producción. Ver la sección Entornos del README.
+* La compilación rechaza entornos desconocidos, URLs no válidas y releases (`vX.Y.Z`) que no sean de producción.
+* Ajustes muestra el entorno junto a la versión cuando no es producción.
 * Pruebas `tests/app-config.test.js`.
-* **Sensores Bluetooth registrados:** pulsÃ³metro, cadencia, potenciÃ³metro y velocÃ­metro recuerdan el Ãºltimo dispositivo conectado. Mientras estÃ©n activados se conectan solos al abrir la app, al volver a ella, al empezar a grabar y tras perder la conexiÃ³n (reintentos cada 5-30 s, sin abrir el selector ni gastar baterÃ­a con la app en segundo plano sin grabar). Ajustes > Sensores muestra los registrados con la opciÃ³n Olvidar para elegir otro. El pulsÃ³metro guardado por versiones anteriores se conserva.
+* **Sensores Bluetooth registrados:** pulsómetro, cadencia, potenciómetro y velocímetro recuerdan el último dispositivo conectado. Mientras estén activados se conectan solos al abrir la app, al volver a ella, al empezar a grabar y tras perder la conexión (reintentos cada 5-30 s, sin abrir el selector ni gastar batería con la app en segundo plano sin grabar). Ajustes > Sensores muestra los registrados con la opción Olvidar para elegir otro. El pulsómetro guardado por versiones anteriores se conserva.
 * Pruebas `tests/sensors.test.js`.
 
 ### Cambiado
-* **Mapa: panel inferior Ãºnico.** Las mÃ©tricas (km/h, distancia, desnivel, pulso, tiempo en movimientoâ€¦) pasan de la parte superior a un panel abajo, encima de la navegaciÃ³n, que incluye tambiÃ©n Comenzar/Pausar ruta, Dejar de seguir ruta y Finalizar. En horizontal, mÃ©tricas y botones van en una sola fila.
-* Hasta 5 mÃ©tricas se muestran en una fila; con mÃ¡s, en dos filas equilibradas.
-* Los grÃ¡ficos de desnivel (perfil de la ruta seguida y perfil en directo) van justo encima del panel; los botones laterales y el zoom quedan arriba. La atribuciÃ³n del mapa se coloca siempre encima de todo lo apilado abajo.
-* **Contactos de emergencia en la cuenta:** se guardan en tus preferencias privadas de PocketBase y se recuperan al iniciar sesiÃ³n en otro mÃ³vil. Los que ya tenÃ­as en el mÃ³vil se suben la primera vez; al cambiar de cuenta no se heredan los de otro usuario.
-* El interruptor "Compartir ubicaciÃ³n en directo con mi grupo" pasa a la tarjeta "Durante la salida".
-* **Grabar exige cuenta:** para comenzar una ruta hay que tener la sesiÃ³n iniciada y el apodo elegido; si falta, se ofrece ir directamente a Ajustes > Cuenta.
-* En horizontal las columnas de iconos se compactan para no quedar bajo la barra de navegaciÃ³n.
+* **Mapa: panel inferior único.** Las métricas (km/h, distancia, desnivel, pulso, tiempo en movimiento…) pasan de la parte superior a un panel abajo, encima de la navegación, que incluye también Comenzar/Pausar ruta, Dejar de seguir ruta y Finalizar. En horizontal, métricas y botones van en una sola fila.
+* Hasta 5 métricas se muestran en una fila; con más, en dos filas equilibradas.
+* Los gráficos de desnivel (perfil de la ruta seguida y perfil en directo) van justo encima del panel; los botones laterales y el zoom quedan arriba. La atribución del mapa se coloca siempre encima de todo lo apilado abajo.
+* **Contactos de emergencia en la cuenta:** se guardan en tus preferencias privadas de PocketBase y se recuperan al iniciar sesión en otro móvil. Los que ya tenías en el móvil se suben la primera vez; al cambiar de cuenta no se heredan los de otro usuario.
+* El interruptor "Compartir ubicación en directo con mi grupo" pasa a la tarjeta "Durante la salida".
+* **Grabar exige cuenta:** para comenzar una ruta hay que tener la sesión iniciada y el apodo elegido; si falta, se ofrece ir directamente a Ajustes > Cuenta.
+* En horizontal las columnas de iconos se compactan para no quedar bajo la barra de navegación.
 
 ### Eliminado
-* **Aviso de salida (Seguridad):** se quitan la duraciÃ³n prevista, el margen de retraso, el temporizador, el aviso local programado y la casilla de detecciÃ³n de caÃ­das (no disponible). Una protecciÃ³n pendiente de versiones anteriores se cancela sola.
+* **Aviso de salida (Seguridad):** se quitan la duración prevista, el margen de retraso, el temporizador, el aviso local programado y la casilla de detección de caídas (no disponible). Una protección pendiente de versiones anteriores se cancela sola.
 * **Botones de seguridad y SOS del mapa:** ya no aparecen al grabar. La seguridad de ruta sigue disponible en Herramientas.
-* **Tiempo total en el mapa:** ya no se muestra ni se puede elegir en las mÃ©tricas del mapa (las preferencias guardadas con Ã©l se limpian solas). El Cockpit y las estadÃ­sticas siguen mostrando el tiempo total.
+* **Tiempo total en el mapa:** ya no se muestra ni se puede elegir en las métricas del mapa (las preferencias guardadas con él se limpian solas). El Cockpit y las estadísticas siguen mostrando el tiempo total.
 
 ### Corregido
-* **Rutas duplicadas en la comunidad:** una ruta ya publicada no se puede volver a publicar; la app actualiza la publicaciÃ³n existente y el hook `community_routes.pb.js` rechaza duplicados del mismo autor (mismo trazado, o misma distancia y tiempo en movimiento).
-* **Inicio en mÃ³vil:** la tarjeta de bienvenida quedaba detrÃ¡s de la barra de estado del telÃ©fono (hora, baterÃ­a, notch). Ahora deja libre la altura real de la barra en cada dispositivo, usando `env(safe-area-inset-top)` y la variable `--safe-area-inset-top` que inyecta Capacitor.
+* **Rutas duplicadas en la comunidad:** una ruta ya publicada no se puede volver a publicar; la app actualiza la publicación existente y el hook `community_routes.pb.js` rechaza duplicados del mismo autor (mismo trazado, o misma distancia y tiempo en movimiento).
+* **Inicio en móvil:** la tarjeta de bienvenida quedaba detrás de la barra de estado del teléfono (hora, batería, notch). Ahora deja libre la altura real de la barra en cada dispositivo, usando `env(safe-area-inset-top)` y la variable `--safe-area-inset-top` que inyecta Capacitor.
 
 ---
 
 ## [0.2.2] - 2026-11-17
 
-### AÃ±adido
-* **Comunidad operativa:** las pestaÃ±as DesafÃ­os, Logros y Actividad ya funcionan con datos del servidor.
-  * **DesafÃ­os de grupo:** cualquier miembro crea retos de distancia, desnivel, salidas o tiempo con fecha de fin; se muestra el progreso de cada miembro. El creador o el administrador del grupo pueden borrarlos.
-  * **Temporada activa:** clasificaciÃ³n de la temporada de cuatro semanas con barra de progreso y dÃ­as restantes.
-  * **TÃ­tulos y palmarÃ©s:** campeÃ³n, King of the Mountain, Fastest Rider, Climbing Beast y Most Consistent, historial de las Ãºltimas 12 temporadas y medallero.
-  * **Actividad del grupo:** salidas compartidas, rÃ©cords del grupo y desafÃ­os creados o completados.
-  * **Ranking de segmentos:** la categorÃ­a de segmentos muestra cuÃ¡ntos segmentos lidera cada miembro.
-* Hook `pb_hooks/group_league.pb.js` y migraciÃ³n `1794836000_create_group_challenges.js` (ver POCKETBASE.md).
+### Añadido
+* **Comunidad operativa:** las pestañas Desafíos, Logros y Actividad ya funcionan con datos del servidor.
+  * **Desafíos de grupo:** cualquier miembro crea retos de distancia, desnivel, salidas o tiempo con fecha de fin; se muestra el progreso de cada miembro. El creador o el administrador del grupo pueden borrarlos.
+  * **Temporada activa:** clasificación de la temporada de cuatro semanas con barra de progreso y días restantes.
+  * **Títulos y palmarés:** campeón, King of the Mountain, Fastest Rider, Climbing Beast y Most Consistent, historial de las últimas 12 temporadas y medallero.
+  * **Actividad del grupo:** salidas compartidas, récords del grupo y desafíos creados o completados.
+  * **Ranking de segmentos:** la categoría de segmentos muestra cuántos segmentos lidera cada miembro.
+* Hook `pb_hooks/group_league.pb.js` y migración `1794836000_create_group_challenges.js` (ver POCKETBASE.md).
 
 ### Cambiado
-* **Nombre senda-mtb en Android:** nombre de la app bajo el icono y tÃ­tulo de la actividad (`strings.xml`), diÃ¡logo de salida (`MainActivity.java`), notificaciones de grabaciÃ³n en segundo plano, baterÃ­a, SOS y aviso de ruta, encabezado de estadÃ­sticas, aviso de actualizaciÃ³n, creador de los GPX exportados y comentario del service worker.
-* **Nombre senda-mtb en iOS:** nombre visible de la app (`CFBundleDisplayName`) y textos de los permisos de ubicaciÃ³n, ubicaciÃ³n en segundo plano y Bluetooth en `Info.plist`.
+* **Nombre senda-mtb en Android:** nombre de la app bajo el icono y título de la actividad (`strings.xml`), diálogo de salida (`MainActivity.java`), notificaciones de grabación en segundo plano, batería, SOS y aviso de ruta, encabezado de estadísticas, aviso de actualización, creador de los GPX exportados y comentario del service worker.
+* **Nombre senda-mtb en iOS:** nombre visible de la app (`CFBundleDisplayName`) y textos de los permisos de ubicación, ubicación en segundo plano y Bluetooth en `Info.plist`.
 
 ### Corregido
-* El ranking de temporada salÃ­a siempre a cero porque `mtb_group_ranking_entries` no tenÃ­a fecha de creaciÃ³n; ahora se usa la fecha de la salida.
+* El ranking de temporada salía siempre a cero porque `mtb_group_ranking_entries` no tenía fecha de creación; ahora se usa la fecha de la salida.
 * Crear un grupo sin icono fallaba en el servidor ("request Content-Type isn't multipart/form-data").
-* `app/community-hub.js` no estaba en la cachÃ© offline del service worker.
-* `POCKETBASE.md` indicaba que las colecciones de temporadas y desafÃ­os seguÃ­an pendientes de despliegue; ya estÃ¡n en producciÃ³n.
+* `app/community-hub.js` no estaba en la caché offline del service worker.
+* `POCKETBASE.md` indicaba que las colecciones de temporadas y desafíos seguían pendientes de despliegue; ya están en producción.
 
 ### Eliminado
-* MigraciÃ³n pendiente `PENDING_1794836000_create_competition_collections.js`, sustituida por la nueva.
+* Migración pendiente `PENDING_1794836000_create_competition_collections.js`, sustituida por la nueva.
 
 ---
 
 ## [0.2.1] - 2026-11-17
 
-Primera release publicada de la serie 0.2. Incluye todos los cambios de 0.2.0; la compilaciÃ³n de la etiqueta `v0.2.0` fallÃ³ en las pruebas por la codificaciÃ³n rota de `index.html` y el BOM de `package.json`, ya corregidos.
+Primera release publicada de la serie 0.2. Incluye todos los cambios de 0.2.0; la compilación de la etiqueta `v0.2.0` falló en las pruebas por la codificación rota de `index.html` y el BOM de `package.json`, ya corregidos.
 
 ---
 
 ## [0.2.0] - 2026-11-17
 
 ### Cambiado
-* **Renombrado de la app:** `senda-brava` / `MTBPro` â†’ **`senda-mtb`** en todos los archivos del proyecto (HTML, JS, CSS, JSON, Markdown, workflows de CI/CD).
-* **AI renombrada:** `Camboya AI` â†’ `Senda AI` en interfaz, documentaciÃ³n y casos de prueba.
-* **Workflows de GitHub Actions actualizados:** `mtbpro-checks.yml` renombrado a `senda-mtb-checks.yml`; artefactos y tÃ­tulos de release actualizados al nuevo nombre.
-* **Identificador de la app:** `com.emiliopousada.mtbcamboyapro` â†’ `com.emiliopousada.sendamtb` en `android/app/build.gradle` (`namespace` y `applicationId`), `capacitor.config.json`, `strings.xml`, paquete Java y bundle id de iOS. Android la trata como una app nueva: no actualiza la instalada con el identificador anterior ni conserva sus datos locales.
+* **Renombrado de la app:** `senda-brava` / `MTBPro` ? **`senda-mtb`** en todos los archivos del proyecto (HTML, JS, CSS, JSON, Markdown, workflows de CI/CD).
+* **AI renombrada:** `Camboya AI` ? `Senda AI` en interfaz, documentación y casos de prueba.
+* **Workflows de GitHub Actions actualizados:** `mtbpro-checks.yml` renombrado a `senda-mtb-checks.yml`; artefactos y títulos de release actualizados al nuevo nombre.
+* **Identificador de la app:** `com.emiliopousada.mtbcamboyapro` ? `com.emiliopousada.sendamtb` en `android/app/build.gradle` (`namespace` y `applicationId`), `capacitor.config.json`, `strings.xml`, paquete Java y bundle id de iOS. Android la trata como una app nueva: no actualiza la instalada con el identificador anterior ni conserva sus datos locales.
 
-### AÃ±adido
-* **Banner de servidor caÃ­do:** Al arrancar, la app comprueba la disponibilidad del servidor PocketBase (`/api/health`) y muestra un aviso rojo persistente si no hay conexiÃ³n, con reintento automÃ¡tico cada 30 s.
-* **Mensajes de error mejorados en grupos:** Cuando los hooks de PocketBase (`/api/mtb/groups/*`) no estÃ¡n cargados (error 404), se muestra un mensaje claro pidiendo reiniciar PocketBase con `pb_hooks/` activos.
-* **MigraciÃ³n esqueleto para retos/temporadas:** `pb_migrations/PENDING_1794836000_create_competition_collections.js` â€” colecciones `mtb_group_competitions`, `mtb_group_competition_entries`, `mtb_group_seasons` y `mtb_group_season_awards` listas para activar cuando el mÃ³dulo estÃ© implementado.
+### Añadido
+* **Banner de servidor caído:** Al arrancar, la app comprueba la disponibilidad del servidor PocketBase (`/api/health`) y muestra un aviso rojo persistente si no hay conexión, con reintento automático cada 30 s.
+* **Mensajes de error mejorados en grupos:** Cuando los hooks de PocketBase (`/api/mtb/groups/*`) no están cargados (error 404), se muestra un mensaje claro pidiendo reiniciar PocketBase con `pb_hooks/` activos.
+* **Migración esqueleto para retos/temporadas:** `pb_migrations/PENDING_1794836000_create_competition_collections.js` — colecciones `mtb_group_competitions`, `mtb_group_competition_entries`, `mtb_group_seasons` y `mtb_group_season_awards` listas para activar cuando el módulo esté implementado.
 
 ### Corregido
-* **CodificaciÃ³n de `index.html`:** el renombrado guardÃ³ el archivo con doble codificaciÃ³n (textos como `Ã‚Â¡Hola`, `prÃƒÂ³xima` e iconos rotos); se restaura UTF-8 correcto.
-* **Logo del menÃº lateral:** muestra `senda-mtb` en lugar de `senda-brava`.
-* **Avatar en Inicio:** pasa a la esquina superior derecha de la tarjeta principal y crece de 64 a 84 px en mÃ³vil y de 68 a 96 px en pantallas grandes.
-* **CI con la suite completa:** `senda-mtb checks` ejecuta `npm test` en cada push y PR, incluida la prueba de consistencia de versiÃ³n.
-* **VersiÃ³n unificada en 0.2.0:** README, `app/config.js` y `package-lock.json` coinciden con `package.json`; se elimina el BOM de `package.json` que hacÃ­a fallar la prueba de consistencia de versiÃ³n.
-* **SincronizaciÃ³n de preferencias:** El error cuando falta la colecciÃ³n `mtb_user_preferences` ya muestra un toast especÃ­fico en lugar de fallar silenciosamente.
-* **Hooks de grupos:** Crear grupo, unirse, renovar cÃ³digo y eliminar grupo muestran mensajes de error claros y accionables ante cualquier fallo de red o de hooks del servidor.
+* **Codificación de `index.html`:** el renombrado guardó el archivo con doble codificación (textos como `Â¡Hola`, `prÃ³xima` e iconos rotos); se restaura UTF-8 correcto.
+* **Logo del menú lateral:** muestra `senda-mtb` en lugar de `senda-brava`.
+* **Avatar en Inicio:** pasa a la esquina superior derecha de la tarjeta principal y crece de 64 a 84 px en móvil y de 68 a 96 px en pantallas grandes.
+* **CI con la suite completa:** `senda-mtb checks` ejecuta `npm test` en cada push y PR, incluida la prueba de consistencia de versión.
+* **Versión unificada en 0.2.0:** README, `app/config.js` y `package-lock.json` coinciden con `package.json`; se elimina el BOM de `package.json` que hacía fallar la prueba de consistencia de versión.
+* **Sincronización de preferencias:** El error cuando falta la colección `mtb_user_preferences` ya muestra un toast específico en lugar de fallar silenciosamente.
+* **Hooks de grupos:** Crear grupo, unirse, renovar código y eliminar grupo muestran mensajes de error claros y accionables ante cualquier fallo de red o de hooks del servidor.
 
 ---
 
 ## [0.1.0] - 2026-11-16
 
-### AÃ±adido
+### Añadido
 * **Aislamiento Total de Proyecto:**
-  * CreaciÃ³n del scaffold independiente para senda-mtb bajo el paquete Android `com.emiliopousada.sendamtb`.
+  * Creación del scaffold independiente para senda-mtb bajo el paquete Android `com.emiliopousada.sendamtb`.
   * Base de datos local aislada en IndexedDB (`mtb_camboya_pro_db`, esquema v2) y claves de almacenamiento con prefijo exclusivo `mtb_pro_*`.
-  * ConfiguraciÃ³n de backend dedicada en `https://mtbpro.ddns.net` con hooks de PocketBase en `pb_hooks/`.
+  * Configuración de backend dedicada en `https://mtbpro.ddns.net` con hooks de PocketBase en `pb_hooks/`.
 * **Identidad Visual Premium:**
-  * Paleta oficial de colores: Fondo Negro grafito (`#101318`), Panel oscuro (`#202630`), Naranja deportivo (`#FF7417`) y Azul elÃ©ctrico (`#00B8FF`).
-* **CanalizaciÃ³n de Build y Empaquetado:**
-  * Script `scripts/prepare-web.js` para generaciÃ³n de `www/` con dependencias 100% locales (Leaflet, Leaflet-Rotate, Chart.js) para funcionamiento offline sin depender de CDNs externas.
-  * CompilaciÃ³n con **esbuild** de mÃ³dulos ES (`src/ble.js`, `src/fit-parser.mjs`, `src/native-app.mjs`) a formato IIFE autÃ³nomo.
-* **Motor MatemÃ¡tico y EstadÃ­stico (`app/statistics-engine.js`):**
-  * CÃ¡lculo geodÃ©sico de distancias con la fÃ³rmula de Haversine.
-  * Algoritmos de filtrado de ruido GPS (> 90 km/h) y suavizado altimÃ©trico con umbral mÃ­nimo de 3 metros.
-  * CÃ¡lculo de VAM (Velocidad Ascensional Media en m/h) y clasificaciÃ³n automÃ¡tica de subidas y descensos.
-  * DistribuciÃ³n del tiempo en 5 zonas de frecuencia cardÃ­aca y 7 zonas de potencia Coggan.
+  * Paleta oficial de colores: Fondo Negro grafito (`#101318`), Panel oscuro (`#202630`), Naranja deportivo (`#FF7417`) y Azul eléctrico (`#00B8FF`).
+* **Canalización de Build y Empaquetado:**
+  * Script `scripts/prepare-web.js` para generación de `www/` con dependencias 100% locales (Leaflet, Leaflet-Rotate, Chart.js) para funcionamiento offline sin depender de CDNs externas.
+  * Compilación con **esbuild** de módulos ES (`src/ble.js`, `src/fit-parser.mjs`, `src/native-app.mjs`) a formato IIFE autónomo.
+* **Motor Matemático y Estadístico (`app/statistics-engine.js`):**
+  * Cálculo geodésico de distancias con la fórmula de Haversine.
+  * Algoritmos de filtrado de ruido GPS (> 90 km/h) y suavizado altimétrico con umbral mínimo de 3 metros.
+  * Cálculo de VAM (Velocidad Ascensional Media en m/h) y clasificación automática de subidas y descensos.
+  * Distribución del tiempo en 5 zonas de frecuencia cardíaca y 7 zonas de potencia Coggan.
 * **Parser Binario de Ficheros FIT (`src/fit-parser.mjs`):**
-  * Soporte de importaciÃ³n de salidas grabadas con ciclocomputadores Garmin, Wahoo y Bryton.
-* **TelemetrÃ­a Bluetooth Low Energy (`src/ble.js` y `app/sensors.js`):**
-  * Soporte nativo multiplexado en Android/Capacitor para PulsÃ³metro (HRM `0x180D`), Sensores de Cadencia y Velocidad (CSC `0x1816`) y PotenciÃ³metros (Cycling Power `0x1818`).
-* **GrabaciÃ³n GPS, Background y Resiliencia de Ciclo de Vida (Fase 2):**
-  * Servicio en primer plano (*Foreground Service*) de tipo `location` en Android mediante `@capacitor-community/background-geolocation` para grabaciÃ³n continua con pantalla apagada.
-  * Persistencia inmediata de borrador en IndexedDB en eventos `visibilitychange: hidden` y `pagehide` para evitar pÃ©rdida de datos ante cierres forzados por el sistema operativo o falta de baterÃ­a.
-  * ReconstrucciÃ³n limpia de tramos de ruta (`buildSegments`) y marcado de salto (`resumeBreak`) al recuperar grabaciones interrumpidas sin dibujar lÃ­neas artificiales a travÃ©s del vacÃ­o.
-  * Filtrado geodÃ©sico de precisiÃ³n GPS (`MAX_ACC_M = 30`), descarte de rebotes en parada (`MIN_STEP_M = 4`) y rechazo de velocidades imposibles (`MAX_SPEED_MS = 25`).
-  * Filtrado baromÃ©trico y de altitud vertical (`isUsableAltitude`) con descarte de variaciones verticales anÃ³malas (> 5 m/s).
-* **ConsolidaciÃ³n de Mapas Offline y Control de Cuotas (Fase 3):**
-  * CatÃ¡logo unificado de 18 regiones con coordenadas geogrÃ¡ficas verificadas en `REGION_BOUNDS` (todas las CC.AA. de EspaÃ±a, Baleares, Canarias y Portugal continental).
-  * FunciÃ³n de estimaciÃ³n previa de teselas y tamaÃ±o (`estimateRegionTileCount`) con aviso en la interfaz en tiempo real antes de descargar.
-  * ProtecciÃ³n proactiva contra desbordamiento de cuota: bloqueo preventivo del botÃ³n de descarga si una combinaciÃ³n regiÃ³n/zoom supera las 25.000 teselas (`MAX_TILES_PER_DOWNLOAD`).
-  * AplicaciÃ³n estricta de las polÃ­ticas de uso de proveedores (`ONLINE_TILE_OFFLINE_CACHE_ENABLED = false` para salvaguardar las directrices de la OpenStreetMap Foundation).
-  * Control transaccional atÃ³mico de presupuesto en IndexedDB (256 MiB mÃ¡ximos con reserva de 128 MiB para el dispositivo).
+  * Soporte de importación de salidas grabadas con ciclocomputadores Garmin, Wahoo y Bryton.
+* **Telemetría Bluetooth Low Energy (`src/ble.js` y `app/sensors.js`):**
+  * Soporte nativo multiplexado en Android/Capacitor para Pulsómetro (HRM `0x180D`), Sensores de Cadencia y Velocidad (CSC `0x1816`) y Potenciómetros (Cycling Power `0x1818`).
+* **Grabación GPS, Background y Resiliencia de Ciclo de Vida (Fase 2):**
+  * Servicio en primer plano (*Foreground Service*) de tipo `location` en Android mediante `@capacitor-community/background-geolocation` para grabación continua con pantalla apagada.
+  * Persistencia inmediata de borrador en IndexedDB en eventos `visibilitychange: hidden` y `pagehide` para evitar pérdida de datos ante cierres forzados por el sistema operativo o falta de batería.
+  * Reconstrucción limpia de tramos de ruta (`buildSegments`) y marcado de salto (`resumeBreak`) al recuperar grabaciones interrumpidas sin dibujar líneas artificiales a través del vacío.
+  * Filtrado geodésico de precisión GPS (`MAX_ACC_M = 30`), descarte de rebotes en parada (`MIN_STEP_M = 4`) y rechazo de velocidades imposibles (`MAX_SPEED_MS = 25`).
+  * Filtrado barométrico y de altitud vertical (`isUsableAltitude`) con descarte de variaciones verticales anómalas (> 5 m/s).
+* **Consolidación de Mapas Offline y Control de Cuotas (Fase 3):**
+  * Catálogo unificado de 18 regiones con coordenadas geográficas verificadas en `REGION_BOUNDS` (todas las CC.AA. de España, Baleares, Canarias y Portugal continental).
+  * Función de estimación previa de teselas y tamaño (`estimateRegionTileCount`) con aviso en la interfaz en tiempo real antes de descargar.
+  * Protección proactiva contra desbordamiento de cuota: bloqueo preventivo del botón de descarga si una combinación región/zoom supera las 25.000 teselas (`MAX_TILES_PER_DOWNLOAD`).
+  * Aplicación estricta de las políticas de uso de proveedores (`ONLINE_TILE_OFFLINE_CACHE_ENABLED = false` para salvaguardar las directrices de la OpenStreetMap Foundation).
+  * Control transaccional atómico de presupuesto en IndexedDB (256 MiB máximos con reserva de 128 MiB para el dispositivo).
 * **Suite de Pruebas Automatizadas:**
-  * 50 tests unitarios integrados con `node --test` verificando ciclo de vida GPS, telemetrÃ­a, mapas offline, importaciÃ³n de archivos, resistencia a cierres en IndexedDB y cachÃ© del Service Worker.
-* **DocumentaciÃ³n Maestra del Proyecto:**
-  * `PRODUCT_SPEC.md`: EspecificaciÃ³n funcional completa, pantallas y pilares del producto.
-  * `ARCHITECTURE.md`: Capas del sistema, flujos unidireccionales y mÃ³dulos de dominio.
+  * 50 tests unitarios integrados con `node --test` verificando ciclo de vida GPS, telemetría, mapas offline, importación de archivos, resistencia a cierres en IndexedDB y caché del Service Worker.
+* **Documentación Maestra del Proyecto:**
+  * `PRODUCT_SPEC.md`: Especificación funcional completa, pantallas y pilares del producto.
+  * `ARCHITECTURE.md`: Capas del sistema, flujos unidireccionales y módulos de dominio.
   * `DATA_MODEL.md`: Esquemas de persistencia local en IndexedDB y colecciones remotas en PocketBase.
-  * `MAP_PROVIDERS.md`: CatÃ¡logo de capas cartogrÃ¡ficas, atribuciones y polÃ­ticas de uso offline.
-  * `SECURITY_AND_PRIVACY.md`: PolÃ­tica de seguridad, permisos de Android y Guardian Mode.
-  * `TEST_PLAN.md`: Matriz de pruebas por fases del roadmap y criterios de aceptaciÃ³n.
+  * `MAP_PROVIDERS.md`: Catálogo de capas cartográficas, atribuciones y políticas de uso offline.
+  * `SECURITY_AND_PRIVACY.md`: Política de seguridad, permisos de Android y Guardian Mode.
+  * `TEST_PLAN.md`: Matriz de pruebas por fases del roadmap y criterios de aceptación.
   * `CHANGELOG.md`: Historial de versiones y cambios.
 
