@@ -2,7 +2,6 @@ package com.emiliopousada.sendamtb;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
-import android.os.Process;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -78,19 +77,17 @@ public class MainActivity extends BridgeActivity {
                 .create();
         exitButton.setOnClickListener(view -> {
             dialog.dismiss();
-            finishAndRemoveTask();
+            if (getBridge() == null || getBridge().getWebView() == null) {
+                finishAndRemoveTask();
+                return;
+            }
+            getBridge().getWebView().evaluateJavascript(
+                    "(function(){if(typeof window.mtbRequestAppExit!=='function')return false;window.mtbRequestAppExit(true);return true;})()",
+                    result -> {
+                        if (!"true".equals(result)) finishAndRemoveTask();
+                    });
         });
         cancelButton.setOnClickListener(view -> dialog.dismiss());
         dialog.show();
     }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        // Al salir se mata el proceso para que el siguiente arranque sea limpio (splash y WebView nuevos).
-        if (isFinishing()) {
-            Process.killProcess(Process.myPid());
-        }
-    }
-
 }

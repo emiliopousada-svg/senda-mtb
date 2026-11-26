@@ -5,6 +5,7 @@
 let groupJoined = false, groupSyncAvailable = false, friendsTimer = null, restoreGroupPending = false;
 let restoreGroupQueuedContext = null;
 let friendsRefreshPending = false, lastLivePush = 0, lastFriendsRefreshAt = 0, livePushPending = false;
+let livePushPromise = null;
 let friendsRefreshQueued = false, friendsRefreshContext = '';
 let lastGroupAuthRefreshAt = 0, lastGroupMembershipCheckAt = 0;
 let pendingLiveLocation = null, pendingLiveLocationLoaded = false;
@@ -849,13 +850,23 @@ async function retryPendingLiveLocation() {
     await sendPendingLiveLocation(snapshot);
 }
 
-async function sendPendingLiveLocation(snapshot) {
+function sendPendingLiveLocation(snapshot) {
+    if (livePushPending || !snapshot) return Promise.resolve();
+    livePushPending = true;
+    const sending = sendPendingLiveLocationNow(snapshot);
+    const trackedSending = sending.finally(() => {
+        livePushPending = false;
+        if (livePushPromise === trackedSending) livePushPromise = null;
+    });
+    livePushPromise = trackedSending;
+    return trackedSending;
+}
+
+async function sendPendingLiveLocationNow(snapshot) {
     if (!groupLocationSharingEnabled()) {
         await removeMyLiveLocation();
         return;
     }
-    if (livePushPending || !snapshot) return;
-    livePushPending = true;
     try {
         try { await persistPendingLiveLocation(); }
         catch (error) { reportPendingLiveLocationStorageError(error); }
@@ -930,10 +941,14 @@ async function sendPendingLiveLocation(snapshot) {
                 liveLocationRetryBlockedStatus = e.status || 0;
             }
         }
-    } finally { livePushPending = false; }
+    }
 }
 
-async function removeMyLiveLocation() {
+async function removeMyLiveLocation({ waitForPendingPush = false } = {}) {
+    if (waitForPendingPush && livePushPromise) {
+        try { await livePushPromise; }
+        catch (error) { console.warn('No se pudo completar el envío de ubicación pendiente:', error); }
+    }
     const server = Cloud.server;
     const ownerId = Cloud.uid;
     const activeGroup = groupJoined ? groupName() : '';

@@ -66,7 +66,13 @@ function navigationContext(offsets, widths) {
     return { context, swiper, elements, queryResults, queryOneResults };
 }
 
-function requestExitContext({ recording = true, confirmed = true, saveDraft = async () => true } = {}) {
+function requestExitContext({
+    recording = true,
+    confirmed = true,
+    prepareAppExit = async () => {},
+    cancelExit = () => {},
+    exitError
+} = {}) {
     const calls = [];
     const toasts = [];
     const start = backButtonSource.indexOf('let exitPromptOpen = false;');
@@ -79,13 +85,17 @@ function requestExitContext({ recording = true, confirmed = true, saveDraft = as
             calls.push('confirm');
             return confirmed;
         },
-        saveDraft() {
-            calls.push('save');
-            return saveDraft();
+        prepareAppExit() {
+            calls.push('prepare');
+            return prepareAppExit();
         },
+        cancelAppExitPreparation: cancelExit,
         window: {
             MTBNativeApp: {
-                async exitApp() { calls.push('exit'); }
+                async exitApp() {
+                    calls.push('exit');
+                    if (exitError) throw exitError;
+                }
             }
         },
         toast: message => toasts.push(message),
@@ -98,38 +108,60 @@ function requestExitContext({ recording = true, confirmed = true, saveDraft = as
     return { context, calls, toasts };
 }
 
-test('exiting during a recording waits for the draft write before native exit', async () => {
-    let resolveSave;
+test('exiting during a recording waits for safe shutdown before native exit', async () => {
+    let resolvePreparation;
     const { context, calls } = requestExitContext({
-        saveDraft: () => new Promise(resolve => { resolveSave = resolve; })
+        prepareAppExit: () => new Promise(resolve => { resolvePreparation = resolve; })
     });
 
     const exiting = context.requestAppExit();
     await new Promise(resolve => setImmediate(resolve));
-    assert.deepEqual(calls, ['confirm', 'save']);
+    assert.deepEqual(calls, ['confirm', 'prepare']);
 
-    resolveSave(true);
+    resolvePreparation();
     await exiting;
-    assert.deepEqual(calls, ['confirm', 'save', 'exit']);
+    assert.deepEqual(calls, ['confirm', 'prepare', 'exit']);
 });
 
-test('exiting during a recording stays open if saving the draft fails', async () => {
-    for (const saveDraft of [async () => false, async () => { throw new Error('storage failed'); }]) {
-        const { context, calls, toasts } = requestExitContext({ saveDraft });
+test('exiting stays open when safe shutdown fails', async () => {
+    const { context, calls, toasts } = requestExitContext({
+        prepareAppExit: async () => { throw new Error('GPS stop failed'); }
+    });
 
-        await context.requestAppExit();
+    await context.requestAppExit();
 
-        assert.deepEqual(calls, ['confirm', 'save']);
-        assert.match(toasts[toasts.length - 1], /seguirá abierta/);
-    }
+    assert.deepEqual(calls, ['confirm', 'prepare']);
+    assert.match(toasts[toasts.length - 1], /seguirá abierta/);
 });
 
-test('exiting while idle does not attempt to save a recording draft', async () => {
+test('exiting while idle also prepares native services before exit', async () => {
     const { context, calls } = requestExitContext({ recording: false });
 
     await context.requestAppExit();
 
-    assert.deepEqual(calls, ['confirm', 'exit']);
+    assert.deepEqual(calls, ['confirm', 'prepare', 'exit']);
+});
+
+test('native exit confirmation skips the duplicate in-app prompt', async () => {
+    const { context, calls } = requestExitContext({ recording: false, confirmed: false });
+
+    await context.requestAppExit(true);
+
+    assert.deepEqual(calls, ['prepare', 'exit']);
+});
+
+test('a native exit failure releases the recording shutdown gate', async () => {
+    let cancellations = 0;
+    const { context, calls } = requestExitContext({
+        recording: false,
+        exitError: new Error('native exit failed'),
+        cancelExit() { cancellations++; }
+    });
+
+    await context.requestAppExit();
+
+    assert.deepEqual(calls, ['confirm', 'prepare', 'exit']);
+    assert.equal(cancellations, 1);
 });
 
 test('page navigation translates to each page actual offset', () => {

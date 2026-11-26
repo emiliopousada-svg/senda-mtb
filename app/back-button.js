@@ -107,16 +107,16 @@ function handleAppBack() {
 
 let exitPromptOpen = false;
 
-async function requestAppExit() {
+async function requestAppExit(alreadyConfirmed = false) {
     if (exitPromptOpen) return;
     exitPromptOpen = true;
     const recording = isRecording;
     try {
-        const confirmed = await modal({
+        const confirmed = alreadyConfirmed || await modal({
             eyebrow: recording ? '● GRABACIÓN ACTIVA' : 'senda-mtb  •  CENTRO DE ACTIVIDAD',
             title: recording ? '¿Seguro que quieres salir?' : '¿Quieres salir de senda-mtb?',
             message: recording
-                ? 'La ruta quedará sin finalizar. Se intentará guardar un borrador para que puedas recuperarla al volver.'
+                ? 'La ruta quedará sin finalizar. Se guardará un borrador para que puedas recuperarla al volver.'
                 : 'Puedes volver cuando quieras.',
             ok: recording ? 'Guardar borrador y salir' : 'Salir',
             cancel: recording ? 'Seguir grabando' : 'Seguir aquí',
@@ -124,28 +124,17 @@ async function requestAppExit() {
             state: recording ? 'recording' : 'idle'
         });
         if (!confirmed) return;
-        if (recording && isRecording) {
-            toast('Guardando borrador antes de salir…', 10000);
-            let saved;
-            try {
-                saved = await saveDraft();
-            } catch (error) {
-                console.warn('No se pudo guardar el borrador antes de salir:', error);
-                toast('No se pudo guardar el borrador. La aplicación seguirá abierta para proteger la grabación. Libera espacio y vuelve a intentarlo.', 7000);
-                return;
-            }
-            if (!saved) {
-                toast('No se pudo guardar el borrador. La aplicación seguirá abierta para proteger la grabación. Libera espacio y vuelve a intentarlo.', 7000);
-                return;
-            }
-        }
+        if (typeof prepareAppExit !== 'function') throw new Error('No está disponible la preparación del cierre seguro.');
+        if (recording) toast('Guardando el borrador y deteniendo el GPS antes de salir…', 10000);
+        await prepareAppExit();
         if (!window.MTBNativeApp || typeof window.MTBNativeApp.exitApp !== 'function') {
             throw new Error('No está disponible el cierre de la aplicación.');
         }
         await window.MTBNativeApp.exitApp();
     } catch (error) {
-        console.warn('No se pudo cerrar la aplicación:', error);
-        toast('No se pudo cerrar la aplicación.', 4000);
+        if (typeof cancelAppExitPreparation === 'function') cancelAppExitPreparation();
+        console.warn('No se pudo preparar o cerrar la aplicación:', error);
+        toast('No se pudo completar el cierre seguro. La aplicación seguirá abierta; revisa el borrador, el GPS y la retirada de la ubicación compartida antes de reintentar.', 7000);
     } finally {
         exitPromptOpen = false;
     }

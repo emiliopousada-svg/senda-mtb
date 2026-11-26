@@ -286,6 +286,65 @@ test('explicit live-location opt-in publishes only the active group location', a
     assert.equal(writes[0].payload.lon, -3);
 });
 
+test('removing live location waits for an in-flight publish before deleting the final record', async () => {
+    const { context } = groupsContext();
+    let finishPost;
+    let serverHasLocation = false;
+    let deleteCount = 0;
+    context.safetyGroupTrackingEnabled = () => true;
+    context.MAX_ACC_M = 100;
+    context.isRecording = true;
+    context.isPaused = false;
+    context.lastLat = 40;
+    context.lastLon = -3;
+    context.lastPositionAt = Date.now();
+    context.lastAccuracy = 5;
+    context.DB = {
+        async kvGet() { return null; },
+        async kvDel() {},
+        async kvSet() {}
+    };
+    context.refreshFriends = () => {};
+    context.cloudApi = async (url, method = 'GET') => {
+        if (method === 'GET' && url.includes('/api/collections/live_locations/records?')) {
+            return { items: serverHasLocation ? [{ id: 'location-1' }] : [] };
+        }
+        if (method === 'POST') {
+            return new Promise(resolve => {
+                finishPost = () => {
+                    serverHasLocation = true;
+                    resolve({ id: 'location-1' });
+                };
+            });
+        }
+        if (method === 'DELETE') {
+            deleteCount++;
+            serverHasLocation = false;
+            return {};
+        }
+        throw new Error(`Unexpected request: ${method} ${url}`);
+    };
+
+    const publishing = context.publishMyLocation(true);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(typeof finishPost, 'function');
+
+    context.isPaused = true;
+    let removed = false;
+    const removing = context.removeMyLiveLocation({ waitForPendingPush: true })
+        .then(result => { removed = result; });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(removed, false);
+    assert.equal(deleteCount, 0);
+
+    finishPost();
+    await Promise.all([publishing, removing]);
+
+    assert.equal(removed, true);
+    assert.equal(deleteCount, 1);
+    assert.equal(serverHasLocation, false);
+});
+
 test('stopping location sharing finds and removes a server record after app restart', async () => {
     const { context } = groupsContext();
     const requests = [];

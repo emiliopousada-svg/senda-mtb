@@ -267,7 +267,11 @@ function dashboardCreateTerrainMap(route, container, routeKey) {
     mapElement.setAttribute('role', 'img');
     mapElement.setAttribute('aria-label', `Vista satélite 3D de la ruta ${routeNameWithoutActivity(route) || 'reciente'}`);
     mapElement.routeReliefKey = routeKey;
+    const routeFallback = typeof createRouteRelief3D === 'function'
+        ? createRouteRelief3D(route)
+        : null;
     container.replaceChildren(mapElement);
+    if (routeFallback) container.appendChild(routeFallback);
 
     const style = {
         version: 8,
@@ -359,6 +363,7 @@ function dashboardCreateTerrainMap(route, container, routeKey) {
             { padding: { top: 36, right: 32, bottom: 38, left: 32 }, maxZoom: 16.5, pitch: 64, duration: 0 }
         );
         map.resize();
+        if (routeFallback) routeFallback.remove();
     });
     map.on('error', event => {
         if (event && event.error) console.warn('[Última ruta] error de mapa 3D:', event.error.message || event.error);

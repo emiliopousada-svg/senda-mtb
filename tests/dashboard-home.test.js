@@ -346,3 +346,76 @@ test('latest ride thumbnail sketches route segments without connecting broken tr
     assert.equal((path.match(/L/g) || []).length, 2);
     assert.equal(context.dashboardLastRidePreviewPath({ points: [] }), '');
 });
+
+test('home keeps the 3D route visible while the satellite map loads', () => {
+    const { context } = dashboardContext('TrailRider');
+    const makeElement = () => ({
+        attributes: {},
+        children: [],
+        isConnected: true,
+        setAttribute(name, value) { this.attributes[name] = value; },
+        appendChild(child) {
+            child.parent = this;
+            this.children.push(child);
+            return child;
+        },
+        remove() {
+            if (!this.parent) return;
+            this.parent.children = this.parent.children.filter(child => child !== this);
+            this.isConnected = false;
+        }
+    });
+    const container = {
+        children: [],
+        replaceChildren(...children) {
+            this.children.forEach(child => { child.isConnected = false; });
+            this.children = [];
+            children.forEach(child => this.appendChild(child));
+        },
+        appendChild(child) {
+            child.parent = this;
+            this.children.push(child);
+            return child;
+        },
+    };
+    const fallback = makeElement();
+    const mapElement = makeElement();
+    let mapLoad;
+    let routeSource;
+    const map = {
+        once(event, listener) { if (event === 'load') mapLoad = listener; },
+        on() {},
+        getContainer() { return mapElement; },
+        addSource(id, source) { if (id === 'latest-route') routeSource = source; },
+        addLayer() {},
+        fitBounds() {},
+        resize() {},
+        remove() {}
+    };
+    context.$ = id => id === 'home-map' ? container : null;
+    context.document.createElement = () => mapElement;
+    context.routeNameWithoutActivity = () => 'Ruta de prueba';
+    context.createRouteRelief3D = () => fallback;
+    context.window.maplibregl = {
+        Map: function () { return map; },
+        LngLatBounds: function () {}
+    };
+
+    const route = {
+        id: 1,
+        points: [
+            [40, -3],
+            [40.001, -3.001]
+        ]
+    };
+    assert.equal(context.dashboardCreateTerrainMap(route, container, 'route-1'), true);
+    assert.ok(container.children.includes(fallback), 'el recorrido local debe seguir visible mientras carga el mapa');
+
+    mapLoad();
+
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(routeSource.data.geometry.coordinates)),
+        [[-3, 40], [-3.001, 40.001]]
+    );
+    assert.ok(!container.children.includes(fallback), 'la vista local se retira cuando el mapa ya muestra el recorrido');
+});

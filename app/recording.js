@@ -78,11 +78,30 @@ function releaseWake() {
 
 // ---- GPS en segundo plano (solo dentro del APK) ----
 let bgWatcherId = null, bgToken = 0, bgDeniedShown = false, bgStarting = false;
+let bgStartPromise = null;
+const bgStartPromises = new Set(), bgWatcherRemovals = new Set(), bgWatcherCleanupIds = new Set();
+let appExitInProgress = false;
 
 function bgPlugin() {
     const cap = window.Capacitor;
     if (!(cap && cap.isNativePlatform && cap.isNativePlatform())) return null;
     return (cap.Plugins && cap.Plugins.BackgroundGeolocation) || null;
+}
+
+function removeBgWatcher(bg, id) {
+    const removal = Promise.resolve().then(() => bg.removeWatcher({ id }));
+    bgWatcherRemovals.add(removal);
+    removal.then(
+        () => {
+            bgWatcherRemovals.delete(removal);
+            bgWatcherCleanupIds.delete(id);
+        },
+        () => {
+            bgWatcherRemovals.delete(removal);
+            bgWatcherCleanupIds.add(id);
+        }
+    );
+    return removal;
 }
 
 async function ensureNotifPermission() { // Android 13+: para mostrar el aviso "Grabando tu ruta"
@@ -250,7 +269,7 @@ function handleBgWatcherError(my, bg, error) {
     bgActive = false;
     bgWatcherId = null;
     if (id != null) {
-        bg.removeWatcher({ id }).catch(removeError => {
+        removeBgWatcher(bg, id).catch(removeError => {
             console.warn('No se pudo detener el watcher GPS en segundo plano:', removeError);
         });
     }
@@ -260,86 +279,189 @@ function handleBgWatcherError(my, bg, error) {
 }
 
 async function startBgWatcher() {
+    if (appExitInProgress) return false;
     const bg = bgPlugin();
     if (!bg) return false;
-    if (bgActive || bgStarting) return true;
+    if (bgActive) return true;
+    if (bgStarting) return bgStartPromise || true;
     const my = ++bgToken;
     bgStarting = true;
-    try {
-        await ensureNotifPermission();
-        const id = await bg.addWatcher({
-            backgroundTitle: 'senda-mtb',
-            backgroundMessage: 'Grabando tu ruta…',
-            requestPermissions: true,
-            stale: false,
-            // A modestly wider filter reduces native location callbacks and GPS work
-            // while keeping track spacing close to the existing 4 m recording gate.
-            distanceFilter: 6
-        }, (loc, err) => {
-            if (my !== bgToken) return;
-            if (err) {
-                handleBgWatcherError(my, bg, err);
-                return;
+    const starting = (async () => {
+        try {
+            if (bgWatcherRemovals.size) {
+                const pendingRemovals = Array.from(bgWatcherRemovals);
+                await Promise.all(pendingRemovals.map(removal =>
+                    removal.then(() => null, () => null)
+                ));
             }
-            if (!loc) return;
-            const position = {
-                coords: {
-                    latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy,
-                    altitude: loc.altitude, altitudeAccuracy: loc.altitudeAccuracy,
-                    speed: loc.speed, heading: loc.heading ?? loc.bearing
-                },
-                timestamp: loc.time
-            };
-            const usableFix = Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)
-                && Number.isFinite(loc.accuracy) && loc.accuracy >= 0 && loc.accuracy <= MAX_ACC_M
-                && Number.isFinite(loc.time);
-            if (usableFix) {
-                bgActive = true;
+            if (my !== bgToken) return false;
+            const staleIds = new Set(bgWatcherCleanupIds);
+            if (bgWatcherId !== null) {
+                staleIds.add(bgWatcherId);
+                bgWatcherId = null;
+            }
+            for (const staleId of staleIds) {
+                await removeBgWatcher(bg, staleId);
+                if (my !== bgToken) return false;
+            }
+            await ensureNotifPermission();
+            if (my !== bgToken) return false;
+            const id = await bg.addWatcher({
+                backgroundTitle: 'senda-mtb',
+                backgroundMessage: 'Grabando tu ruta…',
+                requestPermissions: true,
+                stale: false,
+                // A modestly wider filter reduces native location callbacks and GPS work
+                // while keeping track spacing close to the existing 4 m recording gate.
+                distanceFilter: 6
+            }, (loc, err) => {
+                if (my !== bgToken) return;
+                if (err) {
+                    handleBgWatcherError(my, bg, err);
+                    return;
+                }
+                if (!loc) return;
+                const position = {
+                    coords: {
+                        latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy,
+                        altitude: loc.altitude, altitudeAccuracy: loc.altitudeAccuracy,
+                        speed: loc.speed, heading: loc.heading ?? loc.bearing
+                    },
+                    timestamp: loc.time
+                };
+                const usableFix = Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)
+                    && Number.isFinite(loc.accuracy) && loc.accuracy >= 0 && loc.accuracy <= MAX_ACC_M
+                    && Number.isFinite(loc.time);
+                if (usableFix) {
+                    bgActive = true;
+                    bgStarting = false;
+                    clearGpsWatch();
+                }
+                onPos(position);
+            });
+            if (my !== bgToken) {
+                await removeBgWatcher(bg, id);
+                return false;
+            }
+            if (typeof id !== 'string' || !id) throw new Error('El plugin no devolvió el ID del watcher.');
+            bgWatcherId = id;
+            if (bgActive) clearGpsWatch();
+            return true;
+        } catch (error) {
+            console.warn('No se pudo iniciar el GPS en segundo plano:', error);
+            if (my === bgToken) {
+                bgToken++;
                 bgStarting = false;
-                clearGpsWatch();
+                bgActive = false;
+                return false;
             }
-            onPos(position);
-        });
-        if (my !== bgToken) { // se pausó o terminó mientras se activaba
-            try { await bg.removeWatcher({ id }); }
-            catch (error) { console.warn('No se pudo detener el watcher GPS en segundo plano:', error); }
-            return false;
+            throw error;
         }
-        if (typeof id !== 'string' || !id) throw new Error('El plugin no devolvió el ID del watcher.');
-        bgWatcherId = id;
-        if (bgActive) clearGpsWatch();
-        return true;
-    } catch (e) {
-        console.warn('No se pudo iniciar el GPS en segundo plano:', e);
-        if (my === bgToken) {
-            bgToken++;
-            bgWatcherId = null;
-            bgStarting = false;
-            bgActive = false;
-        }
-        return false;
-    }
+    })();
+    bgStartPromise = starting;
+    bgStartPromises.add(starting);
+    const clearStarting = () => {
+        bgStartPromises.delete(starting);
+        if (bgStartPromise === starting) bgStartPromise = null;
+    };
+    starting.then(clearStarting, clearStarting);
+    try { return await starting; }
+    finally { clearStarting(); }
 }
 
-function stopBgWatcher() {
+async function stopBgWatcher({ resumeForegroundGps = true, throwOnError = false } = {}) {
     const bg = bgPlugin();
-    const id = bgWatcherId;
+    const pendingStarts = Array.from(bgStartPromises);
+    if (bgWatcherId !== null) bgWatcherCleanupIds.add(bgWatcherId);
+    bgWatcherId = null;
     bgToken++;
     bgActive = false;
     bgStarting = false;
-    bgWatcherId = null;
-    if (bg && id != null) {
-        bg.removeWatcher({ id }).catch(error => {
-            console.warn('No se pudo detener el watcher GPS en segundo plano:', error);
-        });
+    const errors = [];
+    for (const pendingStart of pendingStarts) {
+        try { await pendingStart; }
+        catch (error) { errors.push(error); }
     }
-    if (document.visibilityState === 'visible') startGps();
+    while (bgWatcherRemovals.size) {
+        const removals = Array.from(bgWatcherRemovals);
+        const results = await Promise.all(removals.map(removal =>
+            removal.then(() => null, error => error)
+        ));
+        results.forEach(error => { if (error) errors.push(error); });
+    }
+    for (const id of Array.from(bgWatcherCleanupIds)) {
+        if (!bg) {
+            errors.push(new Error('El GPS en segundo plano no está disponible para detenerse.'));
+            continue;
+        }
+        try { await removeBgWatcher(bg, id); }
+        catch (error) { errors.push(error); }
+    }
+    while (bgWatcherRemovals.size) {
+        const removals = Array.from(bgWatcherRemovals);
+        const results = await Promise.all(removals.map(removal =>
+            removal.then(() => null, error => error)
+        ));
+        results.forEach(error => { if (error) errors.push(error); });
+    }
+    if (resumeForegroundGps && document.visibilityState === 'visible') startGps();
+    errors.forEach(error => console.warn('No se pudo detener el watcher GPS en segundo plano:', error));
+    if (throwOnError && errors.length) throw errors[0];
+}
+
+function cancelAppExitPreparation() {
+    if (!appExitInProgress) return;
+    appExitInProgress = false;
+    if (typeof resumeGpsAfterAppExitFailure === 'function') resumeGpsAfterAppExitFailure();
+}
+
+async function prepareAppExit() {
+    if (appExitInProgress) throw new Error('El cierre seguro ya está en curso.');
+    appExitInProgress = true;
+    try {
+        if (typeof stopGpsForAppExit === 'function') stopGpsForAppExit();
+        if (isRecording) {
+            if (!isPaused && segStart !== null) {
+                movingMs += Math.max(0, Date.now() - segStart);
+                segStart = null;
+            }
+            isPaused = true;
+            autoPaused = false;
+            resetAutoPauseState();
+            stopTimers();
+            stopRideAdvisories();
+            setBtnState('paused');
+            $('m-speed').textContent = '0.0';
+            try { await releaseWake(); }
+            catch (error) { console.warn('No se pudo liberar el bloqueo de pantalla al salir:', error); }
+            let liveLocationRemovalFailed = false;
+            if (typeof removeMyLiveLocation === 'function') {
+                try {
+                    liveLocationRemovalFailed = await removeMyLiveLocation({ waitForPendingPush: true }) === false;
+                } catch (error) {
+                    console.warn('No se pudo retirar la ubicación en directo antes de salir:', error);
+                    liveLocationRemovalFailed = true;
+                }
+            }
+            if (!await saveDraft()) throw new Error('No se pudo guardar el borrador de la ruta.');
+            if (liveLocationRemovalFailed) {
+                throw new Error('No se pudo retirar la ubicación en directo del grupo.');
+            }
+        }
+        await stopBgWatcher({ resumeForegroundGps: false, throwOnError: true });
+    } catch (error) {
+        cancelAppExitPreparation();
+        throw error;
+    }
 }
 
 // Empieza a recibir posiciones: en segundo plano si se puede; si no, pantalla encendida
 async function beginTracking(showToast) {
+    if (appExitInProgress) return false;
     await acquireWake();
-    const ok = await startBgWatcher();
+    let ok = false;
+    try { ok = await startBgWatcher(); }
+    catch (error) { console.warn('No se pudo completar el inicio del GPS en segundo plano:', error); }
     if (ok) {
         if (showToast) {
             toast(bgActive
@@ -552,6 +674,7 @@ if (typeof $ === 'function') {
 }
 
 function startRecording(activityType) {
+    if (appExitInProgress) return false;
     unlockOffRouteSound();
     if (navigator.vibrate && localStorage.getItem('mtb_pro_recording_haptics') !== '0') navigator.vibrate([45, 35, 65]);
     resetRecordingState();
@@ -615,6 +738,7 @@ function pauseRecording(automatic = false) {
 }
 
 function resumeRecording(automatic = false, position = null) {
+    if (appExitInProgress) return false;
     unlockOffRouteSound();
     isPaused = false;
     autoPaused = false;

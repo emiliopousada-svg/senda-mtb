@@ -23,6 +23,7 @@ let gpsWatchId = null, gpsRetryTimer = null, gpsRetryDelay = 2000;
 let gpsHighAccuracyMode = null;
 let gpsPermissionDenied = false, gpsPermissionNoticeShown = false;
 let gpsOneShotPending = false, gpsResumeCheckPending = false;
+let gpsCallbackToken = 0, gpsAppExitPrepared = false;
 let gpsRecenterPending = true;
 let lastGpsSpeedFix = null;
 let lastElevationFix = null;
@@ -186,13 +187,28 @@ function renderGpsVisualUpdate(state) {
 }
 
 function clearGpsWatch() {
+    gpsCallbackToken++;
+    gpsOneShotPending = false;
     if (gpsWatchId === null || !navigator.geolocation) return;
     try { navigator.geolocation.clearWatch(gpsWatchId); } catch (e) {}
     gpsWatchId = null;
 }
 
+function stopGpsForAppExit() {
+    gpsAppExitPrepared = true;
+    clearGpsWatch();
+    clearTimeout(gpsRetryTimer);
+    gpsRetryTimer = null;
+}
+
+function resumeGpsAfterAppExitFailure() {
+    gpsAppExitPrepared = false;
+    try { refreshGpsMode(); }
+    catch (error) { console.warn('No se pudo reanudar el GPS tras cancelar el cierre:', error); }
+}
+
 function scheduleGpsRetry() {
-    if (gpsRetryTimer || gpsPermissionDenied) return;
+    if (gpsAppExitPrepared || gpsRetryTimer || gpsPermissionDenied) return;
     const delay = gpsRetryDelay;
     gpsRetryDelay = Math.min(15000, Math.round(gpsRetryDelay * 1.7));
     gpsRetryTimer = setTimeout(() => {
@@ -203,6 +219,7 @@ function scheduleGpsRetry() {
 }
 
 function handleGpsError(error) {
+    if (gpsAppExitPrepared) return;
     console.warn('GPS error:', error);
     if (error.code === 1) {
         gpsPermissionDenied = true;
@@ -219,19 +236,23 @@ function handleGpsError(error) {
 }
 
 function requestCurrentGpsFix() {
-    if (!navigator.geolocation || gpsOneShotPending || bgActive) return;
+    if (gpsAppExitPrepared || !navigator.geolocation || gpsOneShotPending || bgActive) return;
+    const callbackToken = gpsCallbackToken;
     gpsOneShotPending = true;
     navigator.geolocation.getCurrentPosition(pos => {
+        if (callbackToken !== gpsCallbackToken || gpsAppExitPrepared) return;
         gpsOneShotPending = false;
         gpsRetryDelay = 2000;
         if (!bgActive) onPos(pos);
     }, error => {
+        if (callbackToken !== gpsCallbackToken || gpsAppExitPrepared) return;
         gpsOneShotPending = false;
         handleGpsError(error);
     }, { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 });
 }
 
 function startGps(force = false) {
+    if (gpsAppExitPrepared) return;
     if (!navigator.geolocation) { toast('Este dispositivo no tiene geolocalización'); return; }
     if (bgActive) {
         clearGpsWatch();
@@ -245,14 +266,19 @@ function startGps(force = false) {
     gpsRetryTimer = null;
     clearGpsWatch();
     gpsHighAccuracyMode = highAccuracy;
+    const callbackToken = gpsCallbackToken;
     const options = isRecording && (!isPaused || autoPaused)
         ? GPS_ACTIVE_OPTIONS
         : followedRoute ? GPS_FOLLOW_OPTIONS : GPS_LOW_POWER_OPTIONS;
     gpsWatchId = navigator.geolocation.watchPosition(pos => {
+        if (callbackToken !== gpsCallbackToken || gpsAppExitPrepared) return;
         gpsRetryDelay = 2000;
         gpsPermissionDenied = false;
         if (!bgActive) onPos(pos);
-    }, handleGpsError, options);
+    }, error => {
+        if (callbackToken !== gpsCallbackToken || gpsAppExitPrepared) return;
+        handleGpsError(error);
+    }, options);
     if (force || !firstFix || gpsRecenterPending) requestCurrentGpsFix();
 }
 
@@ -265,17 +291,18 @@ function refreshGpsMode() {
 }
 
 async function resumeGpsAfterForeground() {
-    if (document.visibilityState === 'hidden' || gpsResumeCheckPending) return;
+    if (gpsAppExitPrepared || document.visibilityState === 'hidden' || gpsResumeCheckPending) return;
     gpsResumeCheckPending = true;
     gpsRecenterPending = true;
     try {
         if (navigator.permissions && navigator.permissions.query) {
             const permission = await navigator.permissions.query({ name: 'geolocation' });
+            if (gpsAppExitPrepared) return;
             if (permission.state === 'denied') {
                 gpsPermissionDenied = true;
                 return;
             }
-        } else if (gpsPermissionDenied) {
+        } else if (gpsAppExitPrepared || gpsPermissionDenied) {
             return;
         }
         gpsPermissionDenied = false;

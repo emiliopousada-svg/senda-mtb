@@ -25,6 +25,7 @@ const {
     rideAccountRequirement
 } = require('../app/recording.js');
 
+const gpsSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'gps.js'), 'utf8');
 const recordingSource = fs.readFileSync(path.join(__dirname, '..', 'app', 'recording.js'), 'utf8');
 
 function recordingFinishContext({ failingEffect, failDatabasePut = false, failSafetyCleanup = false } = {}) {
@@ -104,6 +105,407 @@ function recordingFinishContext({ failingEffect, failDatabasePut = false, failSa
     vm.runInContext(recordingSource.slice(start, end), context);
     return { context, calls, savedRoutes };
 }
+
+function appExitPreparationContext({
+    recording = true,
+    paused = false,
+    saveResult = true,
+    liveLocationResult = true,
+    stopError
+} = {}) {
+    const calls = [];
+    const context = vm.createContext({
+        appExitInProgress: false,
+        isRecording: recording,
+        isPaused: paused,
+        autoPaused: false,
+        segStart: 1000,
+        movingMs: 2000,
+        resetAutoPauseState() { calls.push('resetAutoPauseState'); },
+        stopTimers() { calls.push('stopTimers'); },
+        stopRideAdvisories() { calls.push('stopRideAdvisories'); },
+        setBtnState(state) { calls.push(['setBtnState', state]); },
+        $: () => ({ textContent: '' }),
+        async releaseWake() { calls.push('releaseWake'); },
+        async saveDraft() {
+            calls.push('saveDraft');
+            return saveResult;
+        },
+        async removeMyLiveLocation(options) {
+            calls.push(['removeMyLiveLocation', options.waitForPendingPush]);
+            return liveLocationResult;
+        },
+        stopGpsForAppExit() { calls.push('stopGpsForAppExit'); },
+        async stopBgWatcher(options) {
+            calls.push(['stopBgWatcher', options.resumeForegroundGps, options.throwOnError]);
+            if (stopError) throw stopError;
+        },
+        console: { warn() {} }
+    });
+    const start = recordingSource.indexOf('async function prepareAppExit() {');
+    const end = recordingSource.indexOf('\n// Empieza a recibir posiciones', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${recordingSource.slice(start, end)}\nglobalThis.prepareAppExit = prepareAppExit;`,
+        context
+    );
+    context.cancelAppExitPreparation = () => { context.appExitInProgress = false; };
+    return { context, calls };
+}
+
+function bgWatcherContext(backgroundGeolocation) {
+    const calls = [];
+    const context = vm.createContext({
+        appExitInProgress: false,
+        bgWatcherId: null,
+        bgToken: 0,
+        bgDeniedShown: false,
+        bgStarting: false,
+        bgStartPromise: null,
+        bgActive: false,
+        bgWatcherRemovals: new Set(),
+        window: {
+            Capacitor: {
+                isNativePlatform: () => true,
+                Plugins: { BackgroundGeolocation: backgroundGeolocation }
+            }
+        },
+        document: { visibilityState: 'hidden' },
+        MAX_ACC_M: 30,
+        async ensureNotifPermission() {},
+        clearGpsWatch() {},
+        onPos() {},
+        startGps() {},
+        console: { warn() {} }
+    });
+    const pluginStart = recordingSource.indexOf('function bgPlugin() {');
+    const pluginEnd = recordingSource.indexOf('\nfunction removeBgWatcher', pluginStart);
+    const removalStart = recordingSource.indexOf('function removeBgWatcher(bg, id) {');
+    const removalEnd = recordingSource.indexOf('\nasync function ensureNotifPermission', removalStart);
+    const start = recordingSource.indexOf('async function startBgWatcher() {');
+    const stop = recordingSource.indexOf('\nasync function stopBgWatcher(', start);
+    const stopEnd = recordingSource.indexOf('\nasync function prepareAppExit()', stop);
+    assert.notEqual(pluginStart, -1);
+    assert.notEqual(pluginEnd, -1);
+    assert.notEqual(removalStart, -1);
+    assert.notEqual(removalEnd, -1);
+    assert.notEqual(start, -1);
+    assert.notEqual(stop, -1);
+    assert.notEqual(stopEnd, -1);
+    vm.runInContext([
+        recordingSource.slice(pluginStart, pluginEnd),
+        recordingSource.slice(removalStart, removalEnd),
+        recordingSource.slice(start, stop),
+        recordingSource.slice(stop + 1, stopEnd),
+        'globalThis.startBgWatcher = startBgWatcher; globalThis.stopBgWatcher = stopBgWatcher;'
+    ].join('\n'), context);
+    return { context, calls };
+}
+
+test('preparing app exit pauses and saves a recording before stopping both GPS watchers', async () => {
+    const { context, calls } = appExitPreparationContext();
+
+    await context.prepareAppExit();
+
+    assert.equal(context.isPaused, true);
+    assert.equal(context.segStart, null);
+    assert.ok(context.movingMs >= 2000);
+    assert.deepEqual(calls.map(call => Array.isArray(call) ? call[0] : call), [
+        'stopGpsForAppExit',
+        'resetAutoPauseState',
+        'stopTimers',
+        'stopRideAdvisories',
+        'setBtnState',
+        'releaseWake',
+        'removeMyLiveLocation',
+        'saveDraft',
+        'stopBgWatcher'
+    ]);
+    assert.deepEqual(calls[4], ['setBtnState', 'paused']);
+    assert.deepEqual(calls[6], ['removeMyLiveLocation', true]);
+    assert.deepEqual(calls[8], ['stopBgWatcher', false, true]);
+    assert.equal(context.appExitInProgress, true);
+});
+
+test('app exit does not stop GPS or close with an unsaved recording draft', async () => {
+    const { context, calls } = appExitPreparationContext({ saveResult: false });
+
+    await assert.rejects(context.prepareAppExit(), /borrador/);
+
+    assert.ok(calls.includes('saveDraft'));
+    assert.ok(calls.includes('stopGpsForAppExit'));
+    assert.equal(calls.some(call => Array.isArray(call) && call[0] === 'stopBgWatcher'), false);
+    assert.equal(context.appExitInProgress, false);
+});
+
+test('a live-location removal failure saves the draft but keeps the app open', async () => {
+    const { context, calls } = appExitPreparationContext({ liveLocationResult: false });
+
+    await assert.rejects(context.prepareAppExit(), /ubicación en directo/);
+
+    assert.ok(calls.includes('saveDraft'));
+    assert.equal(calls.some(call => Array.isArray(call) && call[0] === 'stopBgWatcher'), false);
+    assert.equal(context.appExitInProgress, false);
+});
+
+test('app exit stops stale GPS services even when no recording is active', async () => {
+    const { context, calls } = appExitPreparationContext({ recording: false });
+
+    await context.prepareAppExit();
+
+    assert.equal(calls.includes('saveDraft'), false);
+    assert.deepEqual(calls, [
+        'stopGpsForAppExit',
+        ['stopBgWatcher', false, true]
+    ]);
+});
+
+test('a failed background shutdown releases the exit gate', async () => {
+    const { context } = appExitPreparationContext({ stopError: new Error('native removal failed') });
+
+    await assert.rejects(context.prepareAppExit(), /native removal failed/);
+
+    assert.equal(context.appExitInProgress, false);
+});
+
+test('recording cannot start or resume while app exit is in progress', async () => {
+    const context = vm.createContext({
+        appExitInProgress: true,
+        isRecording: false,
+        isPaused: true
+    });
+    const beginStart = recordingSource.indexOf('async function beginTracking(showToast) {');
+    const beginEnd = recordingSource.indexOf('\nfunction elapsedSec()', beginStart);
+    const startStart = recordingSource.indexOf('function startRecording(activityType) {');
+    const startEnd = recordingSource.indexOf('\nfunction pauseRecording(', startStart);
+    const resumeStart = recordingSource.indexOf('function resumeRecording(', startEnd);
+    const resumeEnd = recordingSource.indexOf('\n// Grabar una ruta exige', resumeStart);
+    assert.notEqual(beginStart, -1);
+    assert.notEqual(beginEnd, -1);
+    assert.notEqual(startStart, -1);
+    assert.notEqual(startEnd, -1);
+    assert.notEqual(resumeStart, -1);
+    assert.notEqual(resumeEnd, -1);
+    vm.runInContext([
+        recordingSource.slice(beginStart, beginEnd),
+        recordingSource.slice(startStart, startEnd),
+        recordingSource.slice(resumeStart, resumeEnd)
+    ].join('\n'), context);
+
+    assert.equal(await context.beginTracking(false), false);
+    assert.equal(context.startRecording('mtb'), false);
+    assert.equal(context.resumeRecording(), false);
+    assert.equal(context.isRecording, false);
+    assert.equal(context.isPaused, true);
+});
+
+test('failed background watcher removal prevents app exit and retains its ID for retry', async () => {
+    const { context } = bgWatcherContext({
+        removeWatcher: async () => { throw new Error('native removal failed'); }
+    });
+    vm.runInContext('bgWatcherId = "watcher-1"; bgActive = true;', context);
+
+    await assert.rejects(context.stopBgWatcher({
+        resumeForegroundGps: false,
+        throwOnError: true
+    }), /native removal failed/);
+
+    assert.equal(vm.runInContext('bgWatcherId', context), 'watcher-1');
+});
+
+test('background watcher startup is blocked while app exit is in progress', async () => {
+    const calls = [];
+    const { context } = bgWatcherContext({
+        addWatcher() { calls.push('addWatcher'); }
+    });
+    context.appExitInProgress = true;
+
+    assert.equal(await context.startBgWatcher(), false);
+    assert.deepEqual(calls, []);
+});
+
+test('resuming waits for a paused watcher removal and retains the ID after a delayed failure', async () => {
+    let rejectFirstRemoval;
+    let removeAttempts = 0;
+    let addAttempts = 0;
+    const calls = [];
+    const { context } = bgWatcherContext({
+        addWatcher() {
+            addAttempts++;
+            return Promise.resolve('watcher-2');
+        },
+        removeWatcher({ id }) {
+            calls.push(['removeWatcher', id]);
+            removeAttempts++;
+            if (removeAttempts === 1) {
+                return new Promise((resolve, reject) => { rejectFirstRemoval = reject; });
+            }
+            return Promise.resolve();
+        }
+    });
+    vm.runInContext('bgWatcherId = "watcher-1"; bgActive = true;', context);
+
+    const stopping = context.stopBgWatcher({ resumeForegroundGps: false });
+    await new Promise(resolve => setImmediate(resolve));
+    const starting = context.startBgWatcher();
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.deepEqual(calls, [['removeWatcher', 'watcher-1']]);
+    assert.equal(addAttempts, 0);
+
+    rejectFirstRemoval(new Error('delayed removal failure'));
+    assert.equal(await starting, false);
+    await stopping;
+    assert.equal(vm.runInContext('bgWatcherId', context), 'watcher-1');
+
+    await context.stopBgWatcher({ resumeForegroundGps: false, throwOnError: true });
+
+    assert.deepEqual(calls, [
+        ['removeWatcher', 'watcher-1'],
+        ['removeWatcher', 'watcher-1']
+    ]);
+    assert.equal(addAttempts, 0);
+    assert.equal(vm.runInContext('bgWatcherId', context), null);
+});
+
+test('stopping an active background watcher waits for native removal', async () => {
+    let resolveRemoval;
+    const calls = [];
+    const { context } = bgWatcherContext({
+        removeWatcher({ id }) {
+            calls.push(['removeWatcher', id]);
+            return new Promise(resolve => { resolveRemoval = resolve; });
+        }
+    });
+    vm.runInContext('bgWatcherId = "watcher-1"; bgActive = true;', context);
+
+    let stopped = false;
+    const stopping = context.stopBgWatcher({
+        resumeForegroundGps: false,
+        throwOnError: true
+    }).then(() => { stopped = true; });
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.deepEqual(calls, [['removeWatcher', 'watcher-1']]);
+    assert.equal(stopped, false);
+
+    resolveRemoval();
+    await stopping;
+    assert.equal(stopped, true);
+});
+
+test('app exit clears foreground GPS watch and retry timer', () => {
+    const calls = [];
+    const context = vm.createContext({
+        gpsCallbackToken: 0,
+        gpsAppExitPrepared: false,
+        gpsWatchId: 7,
+        gpsRetryTimer: 9,
+        navigator: {
+            geolocation: {
+                clearWatch(id) { calls.push(['clearWatch', id]); }
+            }
+        },
+        clearTimeout(id) { calls.push(['clearTimeout', id]); }
+    });
+    const start = gpsSource.indexOf('function clearGpsWatch() {');
+    const end = gpsSource.indexOf('\nfunction scheduleGpsRetry()', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${gpsSource.slice(start, end)}\nglobalThis.stopGpsForAppExit = stopGpsForAppExit;`,
+        context
+    );
+
+    context.stopGpsForAppExit();
+
+    assert.deepEqual(calls, [['clearWatch', 7], ['clearTimeout', 9]]);
+    assert.equal(vm.runInContext('gpsWatchId', context), null);
+    assert.equal(vm.runInContext('gpsRetryTimer', context), null);
+});
+
+test('app exit invalidates pending one-shot GPS callbacks before they can retry', () => {
+    const callbacks = {};
+    let retryCount = 0;
+    const context = vm.createContext({
+        gpsCallbackToken: 0,
+        gpsAppExitPrepared: false,
+        gpsWatchId: null,
+        gpsOneShotPending: false,
+        gpsRetryTimer: null,
+        gpsRetryDelay: 2000,
+        gpsPermissionDenied: false,
+        gpsPermissionNoticeShown: false,
+        bgActive: false,
+        navigator: {
+            geolocation: {
+                getCurrentPosition(success, error) {
+                    callbacks.success = success;
+                    callbacks.error = error;
+                }
+            }
+        },
+        clearTimeout() {},
+        setTimeout() { retryCount++; return 1; },
+        onPos() {},
+        toast() {},
+        console: { warn() {} }
+    });
+    const start = gpsSource.indexOf('function clearGpsWatch() {');
+    const end = gpsSource.indexOf('\nfunction startGps(', start);
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+    vm.runInContext(
+        `${gpsSource.slice(start, end)}\nglobalThis.requestCurrentGpsFix = requestCurrentGpsFix; globalThis.stopGpsForAppExit = stopGpsForAppExit;`,
+        context
+    );
+
+    context.requestCurrentGpsFix();
+    assert.equal(context.gpsOneShotPending, true);
+    context.stopGpsForAppExit();
+    callbacks.error({ code: 2 });
+
+    assert.equal(context.gpsOneShotPending, false);
+    assert.equal(retryCount, 0);
+    assert.equal(context.gpsAppExitPrepared, true);
+});
+
+test('stopping during watcher startup waits until the newly added watcher is removed', async () => {
+    let resolveAdd;
+    let resolveRemoval;
+    const calls = [];
+    const { context } = bgWatcherContext({
+        addWatcher() {
+            calls.push('addWatcher');
+            return new Promise(resolve => { resolveAdd = resolve; });
+        },
+        removeWatcher({ id }) {
+            calls.push(['removeWatcher', id]);
+            return new Promise(resolve => { resolveRemoval = resolve; });
+        }
+    });
+
+    const starting = context.startBgWatcher();
+    await new Promise(resolve => setImmediate(resolve));
+    const stopping = context.stopBgWatcher({
+        resumeForegroundGps: false,
+        throwOnError: true
+    });
+    resolveAdd('watcher-2');
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.deepEqual(calls, ['addWatcher', ['removeWatcher', 'watcher-2']]);
+    let stopped = false;
+    stopping.then(() => { stopped = true; });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(stopped, false);
+
+    resolveRemoval();
+    assert.equal(await starting, false);
+    await stopping;
+    assert.equal(stopped, true);
+});
 
 function draftRestoreContext(draft, chunks = []) {
     const calls = [];
