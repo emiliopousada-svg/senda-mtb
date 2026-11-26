@@ -290,9 +290,11 @@ async function startBgWatcher() {
         try {
             if (bgWatcherRemovals.size) {
                 const pendingRemovals = Array.from(bgWatcherRemovals);
-                await Promise.all(pendingRemovals.map(removal =>
-                    removal.then(() => null, () => null)
+                const removalResults = await Promise.all(pendingRemovals.map(removal =>
+                    removal.then(() => null, error => error)
                 ));
+                const removalError = removalResults.find(Boolean);
+                if (removalError) throw removalError;
             }
             if (my !== bgToken) return false;
             const staleIds = new Set(bgWatcherCleanupIds);
@@ -403,6 +405,9 @@ async function stopBgWatcher({ resumeForegroundGps = true, throwOnError = false 
             removal.then(() => null, error => error)
         ));
         results.forEach(error => { if (error) errors.push(error); });
+    }
+    if (bgWatcherCleanupIds.size) {
+        bgWatcherId = Array.from(bgWatcherCleanupIds)[0];
     }
     if (resumeForegroundGps && document.visibilityState === 'visible') startGps();
     errors.forEach(error => console.warn('No se pudo detener el watcher GPS en segundo plano:', error));

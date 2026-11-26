@@ -163,8 +163,10 @@ function bgWatcherContext(backgroundGeolocation) {
         bgDeniedShown: false,
         bgStarting: false,
         bgStartPromise: null,
+        bgStartPromises: new Set(),
         bgActive: false,
         bgWatcherRemovals: new Set(),
+        bgWatcherCleanupIds: new Set(),
         window: {
             Capacitor: {
                 isNativePlatform: () => true,

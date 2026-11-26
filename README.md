@@ -2,7 +2,7 @@
 
 App de ciclismo de montaña con GPS, registro de actividades, mapas offline, rutas GPX/KML/GeoJSON, estadísticas, sensores Bluetooth y funciones sociales.
 
-Versión indicada en el proyecto: **0.2.53**
+Versión indicada en el proyecto: **0.2.54**
 
 ## Identidad y alcance
 
