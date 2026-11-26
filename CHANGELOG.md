@@ -5,6 +5,17 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.56] - 2026-11-26
+
+### Seguridad
+* **Sesiones PocketBase:** cerrar sesión revoca los tokens de todos los dispositivos de la cuenta.
+* **Rutas comunitarias:** el servidor rechaza publicaciones anónimas y de cuentas no verificadas.
+* **Borrado de cuenta:** los errores internos se registran en servidor y se responden sin detalles al cliente.
+
+### Mejorado
+* **Splash Android:** la ilustración de inicio se ajusta a la pantalla sin recortarse.
+* **Grabación:** mantener pulsado un segundo permite iniciar, pausar, reanudar o finalizar la actividad.
+
 ## [0.2.55] - 2026-11-26
 
 ### Mejorado
