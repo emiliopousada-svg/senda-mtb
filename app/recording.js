@@ -687,6 +687,7 @@ function startRecording(activityType) {
     batteryPollAt = 0;
     $('ride-battery').textContent = '🔋 --';
     recordingActivityType = Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, activityType) ? activityType : 'mtb';
+    rememberLastRecordingActivityType(recordingActivityType);
     isRecording = true;
     isPaused = false;
     refreshGpsMode();
@@ -872,7 +873,105 @@ function bindMapRecordingHold(button) {
     }, true);
 }
 
+const LAST_RECORDING_ACTIVITY_TYPE_KEY = 'mtb_pro_last_activity_type';
+
+function readLastRecordingActivityType() {
+    try {
+        const activityType = localStorage.getItem(LAST_RECORDING_ACTIVITY_TYPE_KEY);
+        return Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, activityType) ? activityType : 'mtb';
+    } catch (error) {
+        console.warn('No se pudo recuperar la última actividad:', error);
+        return 'mtb';
+    }
+}
+
+function rememberLastRecordingActivityType(activityType) {
+    if (!Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, activityType)) return;
+    try {
+        localStorage.setItem(LAST_RECORDING_ACTIVITY_TYPE_KEY, activityType);
+    } catch (error) {
+        console.warn('No se pudo guardar la última actividad:', error);
+    }
+}
+
+let selectedRecordingActivityType = 'mtb';
+
+function renderActivityTypeOptions() {
+    const options = $('activity-type-options');
+    if (!options) return false;
+    options.replaceChildren(...Object.entries(ACTIVITY_TYPES).map(([type, activity]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'activity-type-option';
+        button.dataset.activityType = type;
+        button.setAttribute('aria-pressed', String(type === selectedRecordingActivityType));
+
+        const icon = document.createElement('span');
+        icon.className = 'activity-type-option-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = activity.icon;
+        const label = document.createElement('span');
+        label.className = 'activity-type-option-label';
+        label.textContent = activity.label;
+        button.append(icon, label);
+        return button;
+    }));
+    return true;
+}
+
+function openActivityTypeDialog() {
+    const dialog = $('activity-type-dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') {
+        console.error('No se puede seleccionar la actividad: falta el diálogo de actividades.');
+        return;
+    }
+    selectedRecordingActivityType = readLastRecordingActivityType();
+    if (!renderActivityTypeOptions()) {
+        console.error('No se puede seleccionar la actividad: falta la lista de actividades.');
+        return;
+    }
+    dialog.showModal();
+}
+
 let recordingActionPending = false;
+const activityTypeOptions = typeof $ === 'function' ? $('activity-type-options') : null;
+if (activityTypeOptions) {
+    activityTypeOptions.addEventListener('click', event => {
+        const option = event.target.closest('button[data-activity-type]');
+        if (!option || !activityTypeOptions.contains(option)
+            || !Object.prototype.hasOwnProperty.call(ACTIVITY_TYPES, option.dataset.activityType)) return;
+        selectedRecordingActivityType = option.dataset.activityType;
+        activityTypeOptions.querySelectorAll('button[data-activity-type]').forEach(button => {
+            button.setAttribute('aria-pressed', String(button === option));
+        });
+    });
+}
+
+const activityTypeDialog = typeof $ === 'function' ? $('activity-type-dialog') : null;
+const activityTypeClose = typeof $ === 'function' ? $('activity-type-close') : null;
+const activityTypeCancel = typeof $ === 'function' ? $('activity-type-cancel') : null;
+if (activityTypeDialog) {
+    [activityTypeClose, activityTypeCancel].forEach(button => {
+        if (button) button.addEventListener('click', () => activityTypeDialog.close());
+    });
+}
+
+const activityTypeStart = typeof $ === 'function' ? $('activity-type-start') : null;
+if (activityTypeStart && activityTypeDialog) {
+    activityTypeStart.addEventListener('click', async () => {
+        if (recordingActionPending) return;
+        recordingActionPending = true;
+        try {
+            const activityType = selectedRecordingActivityType;
+            activityTypeDialog.close();
+            if (!(await ensureRideAccount())) return;
+            startRecording(activityType);
+        } finally {
+            recordingActionPending = false;
+        }
+    });
+}
+
 if (typeof btnStart !== 'undefined' && btnStart) {
     bindMapRecordingHold(btnStart);
     btnStart.addEventListener('click', async () => {
@@ -880,8 +979,7 @@ if (typeof btnStart !== 'undefined' && btnStart) {
         recordingActionPending = true;
         try {
             if (!isRecording) {
-                if (!(await ensureRideAccount())) return;
-                startRecording('mtb');
+                openActivityTypeDialog();
             }
             else if (!isPaused) pauseRecording();
             else resumeRecording();

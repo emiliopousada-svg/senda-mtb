@@ -5,6 +5,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.57] - 2026-11-26
+
+### Añadido
+* **Actividades:** selector para MTB, senderismo, carretera, caballo y correr; recuerda la última actividad y clasifica las rutas para filtrarlas y sincronizarlas.
+
+### Mejorado
+* **Inicio:** indicadores semanales, métricas de la última ruta y selector de rendimiento semanal o mensual con un gráfico renovado.
+* **Inicio:** se eliminan los accesos duplicados a rutas y la tarjeta de actividad reciente.
+
 ## [0.2.56] - 2026-11-26
 
 ### Seguridad

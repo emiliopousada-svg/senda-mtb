@@ -147,15 +147,72 @@ test('home omits the recording CTA and adventure tagline but keeps its shortcuts
     assert.doesNotMatch(actions[1], /hero-connectivity-status/);
     assert.match(html, /class="hero-topline"[\s\S]*class="eyebrow"[\s\S]*class="hero-connectivity-status"[\s\S]*id="dashboard-network-status"[\s\S]*id="dashboard-gps-status"[\s\S]*class="dashboard-greeting"/);
     assert.match(html, /id="home-greeting"[\s\S]*id="home-last-ride"/);
-    const latestRidePanel = html.match(/<article class="dashboard-panel latest-ride-panel"[\s\S]*?<\/article>/);
-    assert.ok(latestRidePanel);
-    assert.match(latestRidePanel[0], /id="home-last-route-path"/);
-    assert.doesNotMatch(latestRidePanel[0], /panel-symbol orange-symbol|<span>MTB<\/span>/);
+    const latestRoutePanel = html.match(/<article class="dashboard-panel dashboard-map-panel"[\s\S]*?<\/article>/);
+    assert.ok(latestRoutePanel);
+    assert.match(latestRoutePanel[0], /id="home-latest-route-metrics"[\s\S]*id="home-latest-route-speed"[\s\S]*id="home-latest-route-ascent"[\s\S]*id="home-latest-route-heart-rate"[\s\S]*id="home-latest-route-time"[\s\S]*id="home-map"/);
+    assert.match(latestRoutePanel[0], /id="home-map" role="region" aria-label="Relieve 3D de tu última ruta"/);
+    assert.doesNotMatch(home, /latest-ride-panel|dashboard-latest-panel|home-last-route-path|home-last-route-name|ACTIVIDAD RECIENTE|dashboard-explore-panel|explore-panel|home-route-prompt|Explora tus rutas|Ver mis rutas/);
+    const performancePanel = html.match(/<article class="dashboard-panel dashboard-performance-panel"[\s\S]*?<\/article>/);
+    assert.ok(performancePanel);
+    assert.match(performancePanel[0], /id="home-performance-title">Rendimiento semanal/);
+    assert.match(performancePanel[0], /data-dashboard-period="weekly" aria-pressed="true">Semanal/);
+    assert.match(performancePanel[0], /data-dashboard-period="monthly" aria-pressed="false">Mensual/);
+    assert.match(performancePanel[0], /id="home-performance-foot-label">Salidas esta semana/);
+    assert.doesNotMatch(performancePanel[0], /Tu rendimiento|period-pill|7 días/);
     assert.match(html, /id="home-avatar" class="dashboard-avatar" type="button"[^>]*aria-haspopup="dialog"/);
     assert.match(html, /<dialog id="home-avatar-dialog"[\s\S]*id="home-avatar-dialog-image"/);
     assert.doesNotMatch(html, /class="hero-status"/);
     assert.doesNotMatch(html, /dashboard-arrange-toggle|screen-fullscreen-toggle|fullscreen-exit/);
     assert.doesNotMatch(dashboardSource, /dashboardInitCardArrangement|dashboard-arrange-toggle/);
+});
+
+test('latest route metrics use route analysis and hide when no route exists', () => {
+    const { context } = dashboardContext('TrailRider');
+    const elements = {
+        'home-latest-route-metrics': { hidden: true },
+        'home-latest-route-speed': { textContent: '' },
+        'home-latest-route-ascent': { textContent: '' },
+        'home-latest-route-heart-rate': { textContent: '' },
+        'home-latest-route-time': { textContent: '' },
+        'home-latest-route-time-label': { textContent: '', title: '' }
+    };
+    context.$ = id => elements[id] || null;
+    context.statsAnalyzeRoute = () => ({
+        averageSpeed: 18.6,
+        movingTimeSec: 5100,
+        movingTimeEstimated: true,
+        ascentAvailable: true,
+        ascentM: 640,
+        averageHr: 152
+    });
+    context.fmtDur = seconds => `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+
+    context.dashboardUpdateLatestRouteMetrics({ distanceKm: 26.4 });
+
+    assert.equal(elements['home-latest-route-metrics'].hidden, false);
+    assert.equal(elements['home-latest-route-speed'].textContent, '18.6 km/h');
+    assert.equal(elements['home-latest-route-ascent'].textContent, '+640 m');
+    assert.equal(elements['home-latest-route-heart-rate'].textContent, '152 ppm');
+    assert.equal(elements['home-latest-route-time'].textContent, '1h 25m');
+    assert.equal(elements['home-latest-route-time-label'].textContent, 'Tiempo (est.)');
+    assert.equal(elements['home-latest-route-time-label'].title, 'Tiempo en movimiento estimado');
+
+    context.statsAnalyzeRoute = () => ({
+        averageSpeed: null,
+        movingTimeSec: 0,
+        movingTimeEstimated: false,
+        ascentAvailable: false,
+        ascentM: 0,
+        averageHr: null
+    });
+    context.dashboardUpdateLatestRouteMetrics({ distanceKm: 0 });
+    assert.equal(elements['home-latest-route-speed'].textContent, '— km/h');
+    assert.equal(elements['home-latest-route-ascent'].textContent, '— m');
+    assert.equal(elements['home-latest-route-heart-rate'].textContent, '— ppm');
+    assert.equal(elements['home-latest-route-time'].textContent, '—');
+
+    context.dashboardUpdateLatestRouteMetrics(null);
+    assert.equal(elements['home-latest-route-metrics'].hidden, true);
 });
 
 test('home GPS status shows signal quality as up to four bars', () => {
@@ -330,21 +387,6 @@ test('home hero summarizes how long ago the latest ride was', () => {
     assert.equal(context.dashboardLastRideAgo(daysAgo(3)), 'Última salida hace 3 días');
     assert.match(context.dashboardLastRideAgo(daysAgo(45)), /^Última salida el /);
     assert.equal(context.dashboardLastRideAgo(null), 'Última salida');
-});
-
-test('latest ride thumbnail sketches route segments without connecting broken tracks', () => {
-    const { context } = dashboardContext('TrailRider');
-    const path = context.dashboardLastRidePreviewPath({
-        points: [
-            [40, -3],
-            [40.001, -3.001],
-            [40.002, -3.002, null, null, null, 1],
-            [40.003, -3.003]
-        ]
-    });
-    assert.equal((path.match(/M/g) || []).length, 2);
-    assert.equal((path.match(/L/g) || []).length, 2);
-    assert.equal(context.dashboardLastRidePreviewPath({ points: [] }), '');
 });
 
 test('home keeps the 3D route visible while the satellite map loads', () => {

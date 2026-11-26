@@ -19,7 +19,7 @@ function functionSource(startMarker, endMarker) {
 
 function routeFormContext(maxBytes = 26214400) {
     return vm.createContext({
-        ACTIVITY_TYPES: { mtb: {} },
+        ACTIVITY_TYPES: { mtb: {}, hiking: {}, road: {}, horse: {}, running: {} },
         Blob,
         Cloud: { uid: 'user-a' },
         DB: { async loadRoutePhotos(route) { return route; } },
@@ -54,6 +54,24 @@ test('private route sync carries description, photo POIs, activity type, and poi
     assert.equal(track.description, 'Sunrise ride');
     assert.equal(track.pois[0].caption, 'Photo');
     assert.deepEqual(Array.from(track.points[0]), [1, 2, 100]);
+});
+
+test('private route sync transmits every supported activity type', async () => {
+    const context = routeFormContext();
+    vm.runInContext(
+        `${functionSource('async function routeForm(', '\nasync function flushPendingDeletes')}\nglobalThis.testRouteForm = routeForm;`,
+        context
+    );
+
+    for (const activityType of ['mtb', 'hiking', 'road', 'horse', 'running']) {
+        const form = await context.testRouteForm({
+            id: 21,
+            name: 'Activity test',
+            activityType,
+            points: []
+        });
+        assert.equal(form.get('activityType'), activityType);
+    }
 });
 
 test('remote track normalization preserves imported cumulative elevation values', () => {

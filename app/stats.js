@@ -8,6 +8,7 @@ let statsAscentChart = null;
 let statsSpeedChart = null;
 let statsActivityChart = null;
 let statsDashboardChart = null;
+let statsDashboardPeriod = 'weekly';
 let statsRouteComparisonChart = null;
 let statsMtbSpeedChart = null;
 let statsGradeChart = null;
@@ -28,7 +29,7 @@ const STATS_PERIOD_LABELS = {
     yearly: 'este año',
     all: 'todo el historial'
 };
-const STATS_MET_VALUES = { mtb: 6.8 };
+const STATS_MET_VALUES = { mtb: 6.8, hiking: 5.3, road: 8, horse: 4, running: 8.3 };
 const STATS_HR_ZONES = [
     { label: 'Z1', min: 0.50, max: 0.60 },
     { label: 'Z2', min: 0.60, max: 0.70 },
@@ -565,9 +566,15 @@ function statsRenderOverviewCharts(analyses) {
 }
 
 function statsRenderDashboard() {
-    const rides = statsRangeRides('weekly');
-    const analyses = rides.map(statsAnalyzeRoute);
-    const summary = statsAggregate(analyses);
+    const weeklyRides = statsRangeRides('weekly');
+    const weeklyAnalyses = weeklyRides.map(statsAnalyzeRoute);
+    const summary = statsAggregate(weeklyAnalyses);
+    const performanceRides = statsDashboardPeriod === 'weekly'
+        ? weeklyRides
+        : statsRangeRides('monthly');
+    const performanceAnalyses = statsDashboardPeriod === 'weekly'
+        ? weeklyAnalyses
+        : performanceRides.map(statsAnalyzeRoute);
     const distance = $('home-week-distance');
     const ascent = $('home-week-ascent');
     const moving = $('home-week-time');
@@ -594,13 +601,40 @@ function statsRenderDashboard() {
     if (count) count.textContent = String(summary.rideCount);
     if (ring) ring.textContent = String(summary.rideCount);
     if (activityKm) activityKm.textContent = `${summary.distanceKm.toFixed(1)} km`;
+    const isMonthly = statsDashboardPeriod === 'monthly';
+    statsSetText('home-performance-title', `Rendimiento ${isMonthly ? 'mensual' : 'semanal'}`);
+    statsSetText('home-performance-foot-label', `Salidas ${isMonthly ? 'este mes' : 'esta semana'}`);
+    const dashboardCanvas = $('home-distance-chart');
+    if (dashboardCanvas) {
+        dashboardCanvas.setAttribute('aria-label', isMonthly
+            ? 'Distancia recorrida por semana este mes'
+            : 'Distancia recorrida por día esta semana');
+    }
+    document.querySelectorAll('[data-dashboard-period]').forEach(button => {
+        const active = button.dataset.dashboardPeriod === statsDashboardPeriod;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
     if (statsDashboardChart) {
-        const { labels, buckets } = statsPeriodBuckets('weekly', analyses);
-        statsDashboardChart.data.labels = labels.map(label => ({ L: 'Lun', M: 'Mar', X: 'Mié', J: 'Jue', V: 'Vie', S: 'Sáb', D: 'Dom' })[label] || label);
+        const { labels, buckets } = statsPeriodBuckets(statsDashboardPeriod, performanceAnalyses);
+        statsDashboardChart.data.labels = labels.map(label => statsDashboardPeriod === 'weekly'
+            ? ({ L: 'Lun', M: 'Mar', X: 'Mié', J: 'Jue', V: 'Vie', S: 'Sáb', D: 'Dom' })[label] || label
+            : label);
         statsDashboardChart.data.datasets[0].data = statsPeriodChartData(buckets, 'distanceKm');
         statsDashboardChart.update('none');
     }
     if (typeof dashboardRender === 'function') dashboardRender();
+}
+
+function statsSetDashboardPeriod(period) {
+    if (period !== 'weekly' && period !== 'monthly') return;
+    statsDashboardPeriod = period;
+    document.querySelectorAll('[data-dashboard-period]').forEach(button => {
+        const active = button.dataset.dashboardPeriod === period;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    statsRenderDashboard();
 }
 
 function statsMetricSummary(analyses) {
@@ -1030,22 +1064,56 @@ function statsInitCharts() {
     const dashboardCanvas = $('home-distance-chart');
     if (dashboardCanvas) {
         const context = dashboardCanvas.getContext('2d');
-        const gradient = context.createLinearGradient(0, 0, 0, 250);
-        gradient.addColorStop(0, 'rgba(255,118,31,.34)');
-        gradient.addColorStop(1, 'rgba(255,118,31,0)');
+        const areaGradient = context.createLinearGradient(0, 0, 0, 250);
+        areaGradient.addColorStop(0, 'rgba(255,145,67,.34)');
+        areaGradient.addColorStop(.58, 'rgba(255,118,31,.12)');
+        areaGradient.addColorStop(1, 'rgba(255,118,31,0)');
+        const lineGradient = context.createLinearGradient(0, 0, 0, 250);
+        lineGradient.addColorStop(0, '#ffb66d');
+        lineGradient.addColorStop(1, '#ff6a1f');
         statsDashboardChart = new Chart(context, {
             type: 'line',
             data: { labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], datasets: [{
-                label: 'Kilómetros', data: [], borderColor: '#ff761f', backgroundColor: gradient,
-                fill: true, tension: .38, borderWidth: 3, pointRadius: 3, pointHoverRadius: 5,
-                pointBackgroundColor: '#ff8a3d', pointBorderColor: '#11161e', pointBorderWidth: 2
+                label: 'Kilómetros', data: [], borderColor: lineGradient, backgroundColor: areaGradient,
+                fill: true, tension: .4, borderWidth: 3, borderCapStyle: 'round', borderJoinStyle: 'round',
+                pointRadius: item => Number(item.raw) > 0 ? 3 : 0,
+                pointHoverRadius: item => Number(item.raw) > 0 ? 6 : 3,
+                pointHitRadius: 12, pointBackgroundColor: '#fff0df', pointBorderColor: '#ff812f',
+                pointBorderWidth: 2, pointHoverBackgroundColor: '#ffffff', pointHoverBorderColor: '#ff9b50',
+                pointHoverBorderWidth: 3
             }] },
             options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: item => `${Number(item.raw || 0).toFixed(1)} km` } } },
+                responsive: true, maintainAspectRatio: false, animation: { duration: 520, easing: 'easeOutQuart' },
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 8, right: 5, bottom: 0, left: 3 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        displayColors: false, backgroundColor: 'rgba(15,20,28,.96)',
+                        titleColor: '#f2f5f8', bodyColor: '#ffbd7d',
+                        borderColor: 'rgba(255,138,61,.38)', borderWidth: 1,
+                        cornerRadius: 10, padding: 10,
+                        callbacks: {
+                            title: items => items.length
+                                ? `${items[0].label} · ${statsDashboardPeriod === 'monthly' ? 'mes actual' : 'semana actual'}`
+                                : '',
+                            label: item => `${Number(item.raw || 0).toFixed(1)} km recorridos`
+                        }
+                    }
+                },
                 scales: {
-                    x: { grid: { display: false }, ticks: { color: '#96a2b2', font: { size: 10 } } },
-                    y: { beginAtZero: true, border: { display: false }, grid: { color: 'rgba(145,163,184,.12)' }, ticks: { color: '#8895a6', font: { size: 9 }, maxTicksLimit: 4 } }
+                    x: {
+                        border: { display: false }, grid: { display: false },
+                        ticks: { color: '#9aa7b7', font: { size: 10, weight: '600' }, padding: 8, maxRotation: 0 }
+                    },
+                    y: {
+                        beginAtZero: true, border: { display: false },
+                        grid: { color: 'rgba(145,163,184,.1)', borderDash: [3, 5], drawTicks: false },
+                        ticks: {
+                            color: '#7f8b9b', font: { size: 9 }, maxTicksLimit: 4, padding: 8,
+                            callback: value => `${value} km`
+                        }
+                    }
                 }
             }
         });
@@ -1175,6 +1243,8 @@ function statsInitCharts() {
 function initCharts() {
     statsLoadPreferences();
     statsInitCharts();
+    document.querySelectorAll('[data-dashboard-period]').forEach(button =>
+        button.addEventListener('click', () => statsSetDashboardPeriod(button.dataset.dashboardPeriod)));
     document.querySelectorAll('[data-stats-period]').forEach(button =>
         button.addEventListener('click', () => setStatsPeriod(button.dataset.statsPeriod)));
     document.querySelectorAll('[data-stats-slide]').forEach(button =>

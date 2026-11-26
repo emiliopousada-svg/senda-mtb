@@ -631,10 +631,8 @@
                     <div class="routes-filters">
                         <div>
                             <label for="route-activity-filter" class="hint">Tipo de ruta</label>
-                            <select id="route-activity-filter" aria-label="Filtrar rutas MTB">
+                            <select id="route-activity-filter" aria-label="Filtrar rutas por actividad">
                                 <option value="all">Todas las rutas</option>
-                                <option value="mtb">🚵 MTB</option>
-                                <option value="other">📍 Sin clasificar</option>
                             </select>
                         </div>
                         <div>
@@ -916,12 +914,12 @@
                     </article>
                     <article class="dashboard-kpi kpi-green" id="dashboard-time-kpi">
                         <div class="kpi-icon">◷</div><span class="kpi-label">TIEMPO EN MOVIMIENTO</span>
-                        <strong id="home-week-time">0 h</strong><span class="kpi-foot">Tiempo sobre la bici</span>
+                        <strong id="home-week-time">0 h</strong><span class="kpi-foot">Acumulado semanal</span>
                         <span class="kpi-spark spark-green" aria-hidden="true"></span>
                     </article>
                     <article class="dashboard-kpi kpi-violet" id="dashboard-speed-kpi">
                         <div class="kpi-icon">⌁</div><span class="kpi-label">VELOCIDAD MEDIA</span>
-                        <strong id="home-week-speed">— km/h</strong><span class="kpi-foot">En tus rutas grabadas</span>
+                        <strong id="home-week-speed">— km/h</strong><span class="kpi-foot">Promedio semanal</span>
                         <span class="kpi-spark spark-violet" aria-hidden="true"></span>
                     </article>
                 </section>
@@ -934,41 +932,33 @@
                                 <button id="home-open-route" class="text-link" type="button" hidden>Ver ficha <span>↗</span></button>
                             </div>
                         </div>
+                        <div class="latest-route-metrics" id="home-latest-route-metrics" role="group" aria-label="Métricas de la última ruta" hidden>
+                            <div class="latest-route-metric"><strong id="home-latest-route-speed">— km/h</strong><span>Velocidad media</span></div>
+                            <div class="latest-route-metric"><strong id="home-latest-route-ascent">— m</strong><span>Desnivel</span></div>
+                            <div class="latest-route-metric"><strong id="home-latest-route-heart-rate">— ppm</strong><span>Pulso medio</span></div>
+                            <div class="latest-route-metric"><strong id="home-latest-route-time">—</strong><span id="home-latest-route-time-label" title="Tiempo en movimiento">Tiempo</span></div>
+                        </div>
                         <div id="home-map" role="region" aria-label="Relieve 3D de tu última ruta"></div>
                         <div class="map-preview-footer"><span><i></i><span id="home-map-label">Sin recorridos realizados</span></span><span id="home-routes-count">0 rutas guardadas</span></div>
                     </article>
                     <article class="dashboard-panel dashboard-performance-panel" id="dashboard-performance-panel">
                         <div class="panel-heading">
-                            <div><span class="eyebrow">ANÁLISIS MTB</span><h2>Tu rendimiento</h2></div>
-                            <span class="period-pill">7 días</span>
+                            <div><span class="eyebrow">ANÁLISIS MTB</span><h2 id="home-performance-title">Rendimiento semanal</h2></div>
+                            <div class="performance-periods" role="group" aria-label="Periodo de rendimiento">
+                                <button class="performance-period-button active" type="button" data-dashboard-period="weekly" aria-pressed="true">Semanal</button>
+                                <button class="performance-period-button" type="button" data-dashboard-period="monthly" aria-pressed="false">Mensual</button>
+                            </div>
                         </div>
                         <div class="dashboard-chart-wrap"><canvas id="home-distance-chart" aria-label="Distancia recorrida por día esta semana"></canvas></div>
-                        <div class="performance-foot"><span>Salidas esta semana</span><strong id="home-week-rides">0</strong></div>
+                        <div class="performance-foot"><span id="home-performance-foot-label">Salidas esta semana</span><strong id="home-week-rides">0</strong></div>
                     </article>
                 </section>
 
-                <section class="dashboard-lower-grid" aria-label="Actividad y rutas">
-                    <article class="dashboard-panel latest-ride-panel" id="dashboard-latest-panel">
-                        <div class="panel-heading"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Última salida</h2></div></div>
-                        <div class="latest-ride-content">
-                            <div class="ride-thumb" aria-hidden="true">
-                                <svg viewBox="0 0 76 72" preserveAspectRatio="none">
-                                    <path id="home-last-route-path"></path>
-                                </svg>
-                            </div>
-                            <div class="ride-copy"><strong id="home-last-route-name">Aún no hay salidas</strong><span id="home-last-route-date">Tu primera ruta te espera</span><div><span id="home-last-route-distance">— km</span><span id="home-last-route-ascent">— m+</span></div></div>
-                            <button class="round-arrow" type="button" data-page="3" aria-label="Ver rutas">›</button>
-                        </div>
-                    </article>
+                <section class="dashboard-lower-grid" aria-label="Actividad semanal">
                     <article class="dashboard-panel weekly-panel" id="dashboard-weekly-panel">
                         <div class="panel-heading"><div><span class="eyebrow">CONSTANCIA</span><h2>Tu actividad</h2></div><span class="panel-symbol blue-symbol">◉</span></div>
                         <div class="weekly-summary"><div class="weekly-ring"><span id="home-week-ride-count">0</span><small>salidas</small></div><div><strong id="home-week-activity-km">0 km</strong><span>recorridos esta semana</span><button class="text-link" type="button" data-page="1">Ver estadísticas <span>↗</span></button></div></div>
                         <div class="weekly-goal"><label for="home-week-goal-input">Objetivo semanal <span>km</span></label><input id="home-week-goal-input" type="number" min="5" max="1000" step="5" inputmode="numeric" aria-label="Objetivo semanal en kilómetros"><progress id="home-week-goal-progress" max="100" value="0" aria-label="Progreso del objetivo semanal"></progress><small id="home-week-goal-caption">0 de 100 km completados</small></div>
-                    </article>
-                    <article class="dashboard-panel explore-panel" id="dashboard-explore-panel">
-                        <div class="panel-heading"><div><span class="eyebrow">SIGUIENTE AVENTURA</span><h2>Explora tus rutas</h2></div><span class="panel-symbol orange-symbol">⌖</span></div>
-                        <p id="home-route-prompt">Importa un GPX o descubre una ruta de la comunidad.</p>
-                        <button class="explore-button" type="button" data-page="3">Ver mis rutas <span>→</span></button>
                     </article>
                 </section>
 
@@ -1359,6 +1349,24 @@
         </div>
 
     </div>
+
+    <dialog id="activity-type-dialog" class="activity-type-dialog" aria-labelledby="activity-type-title" aria-describedby="activity-type-description">
+        <div class="activity-type-dialog-content">
+            <header class="activity-type-dialog-header">
+                <div>
+                    <span class="activity-type-dialog-kicker">NUEVA ACTIVIDAD</span>
+                    <h2 id="activity-type-title">¿Qué vas a hacer?</h2>
+                </div>
+                <button id="activity-type-close" class="activity-type-dialog-close" type="button" aria-label="Cerrar">×</button>
+            </header>
+            <p id="activity-type-description" class="activity-type-dialog-description">Elige el tipo de actividad para empezar a grabar.</p>
+            <div id="activity-type-options" class="activity-type-options" role="group" aria-label="Tipo de actividad"></div>
+            <footer class="activity-type-dialog-actions">
+                <button id="activity-type-cancel" class="activity-type-cancel" type="button">Cancelar</button>
+                <button id="activity-type-start" class="activity-type-start" type="button">Iniciar actividad</button>
+            </footer>
+        </div>
+    </dialog>
 
     <dialog id="home-avatar-dialog" class="dashboard-avatar-dialog" aria-label="Foto de perfil ampliada">
         <button id="home-avatar-dialog-close" class="dashboard-avatar-dialog-close" type="button" aria-label="Cerrar foto ampliada">×</button>
