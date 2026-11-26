@@ -22,7 +22,8 @@ class MockRecord {
 function accountHookEnvironment({
     ownedGroup = false,
     failUserDelete = false,
-    failUserSave = false
+    failUserSave = false,
+    passwordAttempts = []
 } = {}) {
     const errorLogs = [];
     const savedRecords = [];
@@ -32,7 +33,15 @@ function accountHookEnvironment({
             ? [['group-1', new MockRecord('mtb_groups', 'group-1', { owner: 'user-1' })]]
             : [])],
         ['mtb_group_members', new Map([['membership-1', new MockRecord('mtb_group_members', 'membership-1', { user: 'user-1' })]])],
-        ['live_locations', new Map([['location-1', new MockRecord('live_locations', 'location-1', { owner: 'user-1' })]])]
+        ['live_locations', new Map([['location-1', new MockRecord('live_locations', 'location-1', { owner: 'user-1' })]])],
+        ['mtb_community_write_quota_events', new Map(passwordAttempts.map((createdAt, index) => [
+            `delete-attempt-${index + 1}`,
+            new MockRecord('mtb_community_write_quota_events', `delete-attempt-${index + 1}`, {
+                owner: 'user-1',
+                quota: 'account_delete_password',
+                created_at: createdAt
+            })
+        ]))]
     ]);
 
     function cloneState(source) {
@@ -57,6 +66,48 @@ function accountHookEnvironment({
                 if (params.owner) records = records.filter(record => record.getString('owner') === params.owner);
                 if (params.user) records = records.filter(record => record.getString('user') === params.user);
                 return records.slice(offset, offset + limit);
+            },
+            db() {
+                return {
+                    newQuery(query) {
+                        let bindings = {};
+                        const normalizedQuery = query.replace(/\s+/g, ' ').trim();
+                        return {
+                            bind(values) {
+                                bindings = values;
+                                return this;
+                            },
+                            one(result) {
+                                assert.match(normalizedQuery, /^SELECT COUNT\(\*\) AS total FROM mtb_community_write_quota_events/);
+                                const cutoff = Math.floor(Date.now() / 1000) - bindings.windowSeconds;
+                                result.total = Array.from(getState().get('mtb_community_write_quota_events').values())
+                                    .filter(record => record.getString('owner') === bindings.owner
+                                        && record.getString('quota') === bindings.quota
+                                        && Number(record.values.created_at) >= cutoff)
+                                    .length;
+                            },
+                            execute() {
+                                const events = getState().get('mtb_community_write_quota_events');
+                                if (normalizedQuery.startsWith('INSERT INTO mtb_community_write_quota_events')) {
+                                    const id = `delete-attempt-${events.size + 1}`;
+                                    events.set(id, new MockRecord('mtb_community_write_quota_events', id, {
+                                        owner: bindings.owner,
+                                        quota: bindings.quota,
+                                        created_at: Math.floor(Date.now() / 1000)
+                                    }));
+                                    return;
+                                }
+                                assert.match(normalizedQuery, /^DELETE FROM mtb_community_write_quota_events/);
+                                for (const [id, record] of events) {
+                                    if (record.getString('owner') === bindings.owner
+                                        && record.getString('quota') === bindings.quota) {
+                                        events.delete(id);
+                                    }
+                                }
+                            }
+                        };
+                    }
+                };
             },
             delete(record) {
                 if (failUserDelete && record.collection.name === 'users') {
@@ -145,12 +196,30 @@ test('account deletion requires an authenticated user route and a correct passwo
     assert.equal(route.method, 'POST');
     assert.equal(route.auth.collection, 'users');
     assert.equal(route.handler(request('incorrect')).status, 403);
+    assert.equal(records('mtb_community_write_quota_events').length, 1);
     assert.equal(records('users').length, 1);
     assert.equal(route.handler(request()).status, 400);
 });
 
+test('account deletion rejects attempts after five incorrect passwords in fifteen minutes', () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { routes, records } = accountHookEnvironment({
+        passwordAttempts: [now - 60, now - 50, now - 40, now - 30, now - 20]
+    });
+
+    const response = routes.get('/api/mtb/account/delete').handler(request('correct horse'));
+
+    assert.equal(response.status, 429);
+    assert.match(response.body.message, /límite de intentos/);
+    assert.equal(records('users').length, 1);
+    assert.equal(records('mtb_community_write_quota_events').length, 5);
+});
+
 test('account deletion refuses to remove a group owned by the account', () => {
-    const { routes, records } = accountHookEnvironment({ ownedGroup: true });
+    const { routes, records } = accountHookEnvironment({
+        ownedGroup: true,
+        passwordAttempts: [Math.floor(Date.now() / 1000) - 60]
+    });
 
     const response = routes.get('/api/mtb/account/delete').handler(request('correct horse'));
 
@@ -160,6 +229,7 @@ test('account deletion refuses to remove a group owned by the account', () => {
     assert.equal(records('mtb_groups').length, 1);
     assert.equal(records('mtb_group_members').length, 1);
     assert.equal(records('live_locations').length, 1);
+    assert.equal(records('mtb_community_write_quota_events').length, 0);
 });
 
 test('account deletion removes live location and membership in the same transaction', () => {

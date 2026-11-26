@@ -2,9 +2,7 @@
 // Evita que el último punto de alguien (con la app cerrada o sin cobertura) quede guardado y consultable.
 // Se ejecuta cada minuto.
 cronAdd("limpiar_live_locations", "* * * * *", () => {
-  const limite = new Date(Date.now() - 5 * 60 * 1000).toISOString().replace("T", " ");
   $app.db()
-    .newQuery("DELETE FROM live_locations WHERE updated < {:limite}")
-    .bind({ limite: limite })
+    .newQuery("DELETE FROM live_locations WHERE datetime(updated) < datetime('now', '-5 minutes')")
     .execute();
 });

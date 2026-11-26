@@ -5,6 +5,14 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ---
 
+## [0.2.60] - 2026-11-26
+
+### Seguridad
+* **Borrado de cuenta:** se limitan a cinco los intentos fallidos de contraseña por cuenta en una ventana de 15 minutos.
+
+### Corregido
+* **Ubicaciones en vivo:** la limpieza compara el campo `updated` con fechas normalizadas por SQLite.
+
 ## [0.2.59] - 2026-11-26
 
 ### Añadido
