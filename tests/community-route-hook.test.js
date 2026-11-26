@@ -14,7 +14,10 @@ test('community route create hook trims the track and calculates its bounds', ()
             findRecordById(collection, id) {
                 assert.equal(collection, 'users');
                 assert.equal(id, 'user123');
-                return { getString: name => name === 'nickname' ? 'Rider' : '' };
+                return {
+                    getString: name => name === 'nickname' ? 'Rider' : '',
+                    getBool: name => name === 'verified'
+                };
             },
             findRecordsByFilter() { return []; }
         },
@@ -69,13 +72,25 @@ test('community route create hook trims the track and calculates its bounds', ()
     assert.equal(Number.isFinite(values.maxLng), true);
 });
 
-function communityRouteHookWith(findRecordsByFilter, uploadedFiles = [], nickname = 'Rider', enforceQuota = () => {}) {
+function communityRouteHookWith(
+    findRecordsByFilter,
+    uploadedFiles = [],
+    nickname = 'Rider',
+    enforceQuota = () => {},
+    auth = { id: 'user123' },
+    verified = true
+) {
     let createHandler;
     let updateHandler;
     const context = vm.createContext({
         BadRequestError: class BadRequestError extends Error {},
         $app: {
-            findRecordById() { return { getString: name => name === 'nickname' ? nickname : '' }; },
+            findRecordById() {
+                return {
+                    getString: name => name === 'nickname' ? nickname : '',
+                    getBool: name => name === 'verified' && verified
+                };
+            },
             findRecordsByFilter
         },
         onRecordCreateRequest(handler, name) {
@@ -95,7 +110,7 @@ function communityRouteHookWith(findRecordsByFilter, uploadedFiles = [], nicknam
         let nextCalled = false;
         handler({
             hasSuperuserAuth: () => false,
-            auth: { id: 'user123' },
+            auth,
             record: {
                 id: '',
                 isNew: () => isNew,
@@ -164,6 +179,18 @@ test('community route hook accepts a route that is not yet published', () => {
     assert.ok(values.distanceKm > 78 && values.distanceKm < 79);
     assert.equal(values.elevationGain, 0);
     assert.equal(values.movingTimeSec, 0);
+});
+
+test('community route hook rejects unauthenticated writes independently of collection rules', () => {
+    const create = communityRouteHookWith(() => [], [], 'Rider', () => {}, null);
+
+    assert.throws(() => create(duplicateRouteValues()), /Inicia sesión/);
+});
+
+test('community route hook rejects unverified users independently of collection rules', () => {
+    const create = communityRouteHookWith(() => [], [], 'Rider', () => {}, { id: 'user123' }, false);
+
+    assert.throws(() => create(duplicateRouteValues()), /Verifica tu correo/);
 });
 
 test('community route hook rejects a publication when the owner quota is exhausted', () => {

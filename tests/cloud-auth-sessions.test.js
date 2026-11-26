@@ -1409,6 +1409,54 @@ test('logout clears local session state when the server already returned 401', a
     assert.equal(context.Cloud.uid, '');
 });
 
+test('logout revokes the server session before clearing local credentials', async () => {
+    const calls = [];
+    const { context } = cloudContext(async (...args) => {
+        calls.push(args);
+        return { ok: true };
+    });
+    context.Cloud.setSession({ id: 'user-1' });
+    context.stopGroup = async () => {};
+    context.renderFriends = () => {};
+    context.renderAccount = () => {};
+    context.toast = () => {};
+    vm.runInContext(
+        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nfunction initSettings(')}`,
+        context
+    );
+
+    await context.logoutCloudAccount();
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][0], '/api/mtb/account/logout');
+    assert.equal(calls[0][1], 'POST');
+    assert.equal(calls[0][3].server, 'https://server.example');
+    assert.equal(context.Cloud.loggedIn(), false);
+});
+
+test('logout keeps local credentials when server revocation fails', async () => {
+    const { context } = cloudContext(async () => {
+        throw new Error('network unavailable');
+    });
+    const toasts = [];
+    context.Cloud.setSession({ id: 'user-1' });
+    context.stopGroup = async () => {};
+    context.renderFriends = () => {};
+    context.renderAccount = () => {};
+    context.toast = message => toasts.push(message);
+    context.console = { error() {} };
+    vm.runInContext(
+        `let logoutInFlight = false;\n${sourceBetween('async function logoutCloudAccount()', '\nfunction initSettings(')}`,
+        context
+    );
+
+    await context.logoutCloudAccount();
+
+    assert.equal(context.Cloud.loggedIn(), true);
+    assert.equal(context.Cloud.uid, 'user-1');
+    assert.match(toasts[0], /Sigues conectado en este dispositivo/);
+});
+
 test('a late group stop does not clear a session created on another server', async () => {
     let resolveStop;
     const groupStopStarted = new Promise(resolve => { resolveStop = resolve; });

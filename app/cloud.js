@@ -634,6 +634,16 @@ async function logoutCloudAccount() {
     try {
         await stopGroup();
         if (!sameAuthContext()) return;
+        try {
+            await cloudApi('/api/mtb/account/logout', 'POST', null, { server });
+        } catch (error) {
+            if (error.status !== 401) {
+                console.error('No se pudo revocar la sesión en PocketBase:', error);
+                toast('No se pudo cerrar sesión en el servidor. Sigues conectado en este dispositivo.', 6000);
+                return;
+            }
+        }
+        if (!sameAuthContext()) return;
         try { await Cloud.clearSession(); }
         catch (error) {
             console.error('No se pudo borrar la sesión segura al cerrar sesión:', error);
@@ -642,7 +652,7 @@ async function logoutCloudAccount() {
         }
         renderFriends();
         renderAccount();
-        toast('Sesión cerrada. Tus rutas siguen en este móvil.');
+        toast('Sesión cerrada en todos tus dispositivos. Vuelve a iniciar sesión en los demás.');
     } finally {
         logoutInFlight = false;
         Cloud.logoutInProgress = false;
