@@ -41,7 +41,11 @@ function communityRouteTrimStart(lines, meters) {
         const b = line[index];
         const length = communityRouteDistance(a, b) || 1;
         const fraction = Math.max(0, Math.min(1, (remaining - passed) / length));
-        const cut = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
+        const longitudeDelta = ((b[1] - a[1] + 540) % 360) - 180;
+        let longitude = a[1] + longitudeDelta * fraction;
+        if (longitude > 180) longitude -= 360;
+        else if (longitude < -180) longitude += 360;
+        const cut = [a[0] + (b[0] - a[0]) * fraction, longitude];
         if (a.length > 2 || b.length > 2) {
             const startAltitude = a[2] == null ? null : Number(a[2]);
             const endAltitude = b[2] == null ? null : Number(b[2]);

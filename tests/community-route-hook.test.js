@@ -9,6 +9,7 @@ const communityRouteUtils = require('../pb_hooks/community_routes_utils.js');
 
 test('community route create hook trims the track and calculates its bounds', () => {
     let createHandler;
+    let handlerInvoked = false;
     const context = vm.createContext({
         BadRequestError: class BadRequestError extends Error {},
         $app: {
@@ -28,7 +29,10 @@ test('community route create hook trims the track and calculates its bounds', ()
         onRecordUpdateRequest() {},
         __hooks: 'hooks',
         require(name) {
-            if (name === 'hooks/community_routes_utils.js') return communityRouteUtils;
+            if (name === 'hooks/community_routes_utils.js') {
+                assert.equal(handlerInvoked, true);
+                return communityRouteUtils;
+            }
             assert.equal(name, 'hooks/community_quota_utils.js');
             return { enforceCommunityWriteQuota() {} };
         }
@@ -47,6 +51,7 @@ test('community route create hook trims the track and calculates its bounds', ()
         published: true
     };
     let nextCalled = false;
+    handlerInvoked = true;
     createHandler({
         hasSuperuserAuth: () => false,
         auth: { id: 'user123' },
@@ -106,6 +111,7 @@ function communityRouteHookWith(
 ) {
     let createHandler;
     let updateHandler;
+    let handlerInvoked = false;
     const context = vm.createContext({
         BadRequestError: class BadRequestError extends Error {},
         $app: {
@@ -125,7 +131,10 @@ function communityRouteHookWith(
         },
         __hooks: 'hooks',
         require(name) {
-            if (name === 'hooks/community_routes_utils.js') return communityRouteUtils;
+            if (name === 'hooks/community_routes_utils.js') {
+                assert.equal(handlerInvoked, true);
+                return communityRouteUtils;
+            }
             assert.equal(name, 'hooks/community_quota_utils.js');
             return { enforceCommunityWriteQuota: enforceQuota };
         }
@@ -133,6 +142,7 @@ function communityRouteHookWith(
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'pb_hooks', 'community_routes.pb.js'), 'utf8'), context);
     const invoke = (handler, values, isNew, originalValues) => {
         let nextCalled = false;
+        handlerInvoked = true;
         handler({
             hasSuperuserAuth: () => false,
             auth,

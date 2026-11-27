@@ -42,6 +42,18 @@ test('community route trimming interpolates endpoint altitude without mutating i
     ]]);
 });
 
+test('community route trimming follows the short arc across the antimeridian', () => {
+    const lines = [[[0, 179.99], [0, -179.99]]];
+    const originalDistance = communityRouteDistanceMeters(lines);
+    const trimmed = communityRouteTrimEnds(lines, 150);
+    const [line] = trimmed;
+
+    assert.equal(line.length, 2);
+    assert.ok(Math.abs(line[0][1]) > 179.98);
+    assert.ok(Math.abs(line[1][1]) > 179.98);
+    assert.ok(Math.abs(communityRouteDistanceMeters(trimmed) - (originalDistance - 300)) < 1);
+});
+
 test('community route bounds report extents and invalid geometry without PocketBase errors', () => {
     assert.deepEqual(communityRouteBounds([
         [[42, -8], [43, -7]],

@@ -1,12 +1,11 @@
-const {
-    communityRouteBounds,
-    communityRouteDistance,
-    communityRouteDistanceMeters,
-    communityRouteTrimEnds
-} = require(`${__hooks}/community_routes_utils.js`);
-
 // Calcula en PocketBase la caja geográfica que usa el catálogo para filtrar candidatos.
 function indexCommunityRouteBounds(e) {
+    const {
+        communityRouteBounds,
+        communityRouteDistance,
+        communityRouteDistanceMeters,
+        communityRouteTrimEnds
+    } = require(`${__hooks}/community_routes_utils.js`);
     const isSuperuser = e.hasSuperuserAuth();
     if (!isSuperuser && !e.auth) {
         throw new BadRequestError("Inicia sesión para publicar rutas.");
