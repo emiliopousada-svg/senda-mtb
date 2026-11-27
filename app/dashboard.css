@@ -1551,3 +1551,293 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
 .sensor-registered li { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.04); color:#c9d3df; font-size:.85rem; }
 .sensor-registered li span { min-width:0; overflow-wrap:anywhere; }
 .sensor-forget { flex:0 0 auto; border:0; background:none; color:#ff9e80; font-weight:700; padding:6px 4px; cursor:pointer; }
+
+
+/* ============================================================
+   SENDA MTB · PREMIUM DARK
+   Capa exclusivamente visual. No altera estructura, estados,
+   eventos, navegación ni comportamiento de los componentes.
+   ============================================================ */
+:root {
+    color-scheme: dark;
+    --primary: #b7f34a;
+    --accent: #c9ff63;
+    --bg: #111815;
+    --surface: #19221d;
+    --surface-card: #202a24;
+    --text: #edf3ee;
+    --text-secondary: #a4b1a7;
+    --danger: #ff6b78;
+    --mtb-graphite: #111815;
+    --mtb-panel: #19221d;
+    --mtb-panel-light: #243129;
+    --mtb-muted: #a4b1a7;
+    --mtb-orange: #b7f34a;
+    --mtb-blue: #b7f34a;
+}
+
+html, body, .page, .dashboard-page {
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+body > nav {
+    border-top-color: rgba(183, 243, 74, .14);
+    background: rgba(17, 24, 21, .97);
+    box-shadow: 0 -8px 26px rgba(0, 0, 0, .32);
+}
+
+.nav-btn { color: #a4b1a7; }
+.nav-btn.active {
+    color: var(--primary);
+    text-shadow: 0 0 18px rgba(183, 243, 74, .15);
+}
+.nav-btn.active .icon { filter: drop-shadow(0 0 7px rgba(183, 243, 74, .25)); }
+
+.card, .profile-hero, .profile-bike-card, .profile-panel,
+.profile-editor, .profile-account-details {
+    border-color: rgba(220, 239, 222, .08);
+    background: linear-gradient(145deg, #202a24, #19221d);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
+}
+.card h2, .stats-header h2, .stats-slide .card h3,
+.community-header h2, .route-group-title, .community-route-title {
+    color: var(--primary);
+}
+.profile-hero {
+    background:
+        radial-gradient(ellipse at 92% 4%, rgba(183, 243, 74, .11), transparent 42%),
+        linear-gradient(145deg, #202a24, #19221d);
+}
+.profile-avatar {
+    border-color: rgba(183, 243, 74, .48);
+    background: linear-gradient(145deg, #34452b, #19221d);
+}
+.profile-stat-icon, .profile-link-button {
+    border-color: rgba(183, 243, 74, .2);
+    background: rgba(183, 243, 74, .1);
+    color: #c9ff78;
+}
+.profile-stat-ascent .profile-stat-icon {
+    background: rgba(183, 243, 74, .12);
+    color: #c9ff78;
+}
+.profile-stat-time .profile-stat-icon {
+    background: rgba(183, 243, 74, .1);
+    color: #c9ff78;
+}
+.profile-count-badge {
+    border-color: rgba(183, 243, 74, .24);
+    background: rgba(183, 243, 74, .1);
+    color: #d3ff91;
+}
+.profile-badge-icon { background: rgba(183, 243, 74, .1); }
+
+.btn, .btn-main-action, .controls-overlay .btn-main-action {
+    border-color: rgba(183, 243, 74, .32);
+    background: linear-gradient(135deg, #b7f34a, #d0ff79);
+    color: #172014;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .28), 0 0 18px rgba(183, 243, 74, .08);
+}
+.btn:active, .btn-main-action:active,
+.controls-overlay .btn-main-action:active { filter: brightness(.96); }
+.btn.secondary, .btn-small.secondary {
+    border-color: rgba(220, 239, 222, .12);
+    background: #29352d;
+    color: #dce8dd;
+}
+.btn-small {
+    border-color: rgba(183, 243, 74, .22);
+    background: rgba(183, 243, 74, .1);
+    color: #c9ff78;
+}
+.btn-main-action.recording,
+.controls-overlay .btn-main-action.recording {
+    border-color: rgba(255, 107, 120, .4);
+    background: linear-gradient(135deg, #ff7b83, #ff9a83);
+    color: #271517;
+}
+.btn-icon-only, .map-zoom-btn, #map-battery {
+    border-color: rgba(220, 239, 222, .16);
+    background-color: rgba(25, 34, 29, .94);
+    color: #edf3ee;
+}
+.btn-icon-only.active, .map-zoom-btn.orient.route,
+.map-zoom-btn:active {
+    border-color: rgba(183, 243, 74, .65);
+    background: rgba(183, 243, 74, .18);
+    color: #d3ff91;
+}
+.controls-overlay .btn-main-action {
+    background: linear-gradient(135deg, #b7f34a, #d0ff79);
+    color: #172014;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 20px rgba(183, 243, 74, .12);
+}
+
+.stats-header {
+    background: var(--bg);
+    border-bottom-color: rgba(220, 239, 222, .1);
+}
+.stats-period-btn, .stats-tab, .seg-tab {
+    border-color: rgba(220, 239, 222, .12);
+    background: #19221d;
+    color: #b7c4b9;
+}
+.stats-period-btn.active, .stats-tab.active,
+.seg-tab[aria-pressed="true"] {
+    border-color: rgba(183, 243, 74, .58);
+    background: rgba(183, 243, 74, .14);
+    color: #d3ff91;
+    box-shadow: inset 0 0 0 1px rgba(183, 243, 74, .08);
+}
+.stats-evolution-period-summary, .stats-profile-point,
+.stats-unavailable, .stats-comparison, .stats-record,
+.stat-box, .stats-profile-point, .stats-unavailable {
+    border-color: rgba(220, 239, 222, .08);
+    background: #19221d;
+}
+.stats-zone progress, input[type="checkbox"], input[type="radio"] {
+    accent-color: var(--primary);
+}
+
+input[type="file"], input[type="text"], input[type="password"],
+input[type="number"], input[type="email"], input[type="url"],
+select, textarea, .profile-editor input {
+    border-color: rgba(220, 239, 222, .16);
+    background: #151d18;
+    color: #edf3ee;
+}
+input::placeholder, textarea::placeholder { color: #819087; }
+input:focus-visible, select:focus-visible, textarea:focus-visible,
+button:focus-visible {
+    outline-color: rgba(183, 243, 74, .78);
+}
+
+.route-item, .friend-row, .group-admin-panel,
+.community-route-card, .community-detail-stat,
+.community-segment-item, .community-ranking-item,
+.community-effort-entry {
+    border-color: rgba(220, 239, 222, .09);
+    background: #19221d;
+}
+.route-detail-trigger, .route-detail-trigger:hover,
+.route-detail-trigger:focus-visible,
+.community-route-title:hover, .community-route-title:focus-visible {
+    color: #d3ff91;
+}
+.group-admin-panel { border-color: rgba(183, 243, 74, .16); }
+.group-invite-code, .community-ranking-place { color: #d3ff91; }
+.group-led {
+    background: #b7f34a;
+    box-shadow: 0 0 9px rgba(183, 243, 74, .45);
+}
+.friends-group-status.connected {
+    border-color: rgba(183, 243, 74, .24);
+    background: rgba(183, 243, 74, .1);
+    color: #d3ff91;
+}
+
+.profile-edit-button, .community-close {
+    border-color: rgba(220, 239, 222, .12);
+    background: #243129;
+    color: #edf3ee;
+}
+.profile-bike-content, .profile-badge,
+.profile-performance-grid > div {
+    border-color: rgba(220, 239, 222, .07);
+    background: rgba(10, 16, 12, .32);
+}
+.profile-bike-copy b { color: #c9ff78; }
+
+#page-map { background: #111815; }
+#map { background-color: #202a24; }
+.map-live-banner, .map-bottom-panel {
+    border-color: rgba(220, 239, 222, .12);
+    background: rgba(17, 24, 21, .92);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .3);
+    backdrop-filter: blur(16px) saturate(125%);
+}
+.map-live-indicator { background: #b7f34a; }
+.map-live-gps { color: #c9ff78; }
+.map-live-gps i { background: #b7f34a; }
+.map-live-metric strong, .map-live-stat .m-val { color: #f0f5ef; }
+.map-live-icon, .map-live-stat-icon { color: #c9ff78; }
+.map-live-stat { border-color: rgba(220, 239, 222, .08); }
+.map-live-stat .m-lbl, .map-live-metric > span:last-child { color: #a4b1a7; }
+.metrics-bar, #map-route-profile {
+    border-color: rgba(220, 239, 222, .14);
+    background: rgba(17, 24, 21, .9);
+}
+.m-box.active { background: rgba(183, 243, 74, .14); }
+#map-route-name { color: #edf3ee; }
+#map-route-alt { color: #a4b1a7; }
+#map-route-area { fill: rgba(183, 243, 74, .18); }
+#map-route-line { stroke: #b7f34a; }
+#map-route-cursor { stroke: #b7f34a; }
+#big-metric {
+    background: radial-gradient(circle at center, #202a24, #111815 68%);
+}
+#big-gauge path:first-child { stroke: #344139; }
+#gauge-arc { stroke: #b7f34a; }
+#toast {
+    border-color: rgba(220, 239, 222, .14);
+    background: rgba(25, 34, 29, .98);
+    color: #edf3ee;
+}
+.modal-box, .community-panel, #offline-panel {
+    border-color: rgba(220, 239, 222, .12);
+    background: linear-gradient(145deg, #243129, #19221d);
+}
+#offline-panel p { color: #b7c4b9; }
+#offline-progress { background: #111815; }
+#offline-progress-fill { background: linear-gradient(90deg, #b7f34a, #d0ff79); }
+#offline-progress-text { color: #b7c4b9; }
+.setting-toggle, .group-members-list, #group-members-list > * {
+    border-color: rgba(220, 239, 222, .1);
+}
+.community-segment-editor {
+    border-color: rgba(183, 243, 74, .2);
+    background: rgba(183, 243, 74, .05);
+}
+.community-ranking-time { color: #d3ff91; }
+.account-server-status.profile-manual-sync.is-syncing {
+    border-color: rgba(183, 243, 74, .42);
+    background: rgba(183, 243, 74, .1);
+    color: #d3ff91;
+}
+.account-server-status.profile-manual-sync.is-syncing > i {
+    background: #b7f34a;
+    box-shadow: 0 0 0 4px rgba(183, 243, 74, .14), 0 0 12px rgba(183, 243, 74, .55);
+}
+
+@media (max-width: 600px) {
+    .metrics-bar, #map-route-profile {
+        border-color: rgba(220, 239, 222, .1);
+        background: rgba(17, 24, 21, .92);
+    }
+    #map-route-line { stroke: #b7f34a; }
+    #map-route-area { fill: rgba(183, 243, 74, .16); }
+    .map-zoom-btn, .side-controls .btn-icon-only {
+        border-color: rgba(220, 239, 222, .13);
+        background: rgba(25, 34, 29, .94);
+    }
+    .map-zoom-btn.orient.route, .side-controls .btn-icon-only.active {
+        border-color: rgba(183, 243, 74, .55);
+        background: rgba(183, 243, 74, .18);
+        color: #d3ff91;
+        box-shadow: 0 5px 18px rgba(183, 243, 74, .12);
+    }
+    .controls-overlay .btn-main-action {
+        border-color: rgba(183, 243, 74, .32);
+        background: linear-gradient(135deg, #b7f34a, #d0ff79);
+        color: #172014;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 18px rgba(183, 243, 74, .12);
+    }
+    .controls-overlay .btn-main-action:active {
+        box-shadow: 0 5px 16px rgba(183, 243, 74, .16);
+    }
+    .controls-overlay #btn-stop {
+        border-color: rgba(220, 239, 222, .13);
+        background: rgba(25, 34, 29, .96);
+    }
+}
