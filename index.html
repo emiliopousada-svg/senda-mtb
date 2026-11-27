@@ -168,7 +168,7 @@
         <!-- PÁGINA 2: ESTADÍSTICAS -->
         <div class="page stats-page" id="page-stats">
             <header class="stats-header">
-                <h2>📊 Estadísticas</h2>
+                <h2>Estadísticas</h2>
                 <div class="stats-periods" role="group" aria-label="Periodo de estadísticas">
                     <button class="stats-period-btn" data-stats-period="today" aria-pressed="false">Hoy</button>
                     <button class="stats-period-btn active" data-stats-period="weekly" aria-pressed="true">Semana</button>
@@ -178,7 +178,7 @@
                 </div>
                 <nav class="stats-tabs" aria-label="Secciones de estadísticas">
                     <button class="stats-tab active" type="button" data-stats-slide="0" aria-current="page">Resumen</button>
-                    <button class="stats-tab" type="button" data-stats-slide="1">Rendimiento MTB</button>
+                    <button class="stats-tab" type="button" data-stats-slide="1">Rendimiento</button>
                     <button class="stats-tab" type="button" data-stats-slide="2">Evolución</button>
                     <button class="stats-tab" type="button" data-stats-slide="3">Récords</button>
                 </nav>
@@ -224,7 +224,7 @@
                         </div>
                     </section>
 
-                    <section class="stats-slide" aria-label="Rendimiento MTB">
+                    <section class="stats-slide" aria-label="Rendimiento">
                         <div class="card">
                             <h3>Perfil de elevación</h3>
                             <label for="stats-profile-route">Actividad</label>
@@ -536,12 +536,12 @@
 
         <!-- PÁGINA 4: RUTAS REALIZADAS Y TRACKS -->
         <div class="page content-panel" id="page-routes">
-            <header class="page-intro">
-                <span class="eyebrow"><i></i> senda-mtb · EXPLORACIÓN</span>
-                <h1>Tu biblioteca MTB</h1>
-                <p>Organiza tus recorridos, importa tracks y prepara la próxima aventura.</p>
-            </header>
-            <div class="card">
+            <div class="routes-sticky-block">
+                <header class="page-intro">
+                    <span class="eyebrow"><i></i> senda-mtb · EXPLORACIÓN</span>
+                    <h1>Tu biblioteca MTB</h1>
+                    <p>Organiza tus recorridos, importa tracks y prepara la próxima aventura.</p>
+                </header>
                 <header class="routes-header">
                     <h2>Mis rutas</h2>
                     <button class="routes-add-button" id="btn-routes-add" type="button" aria-label="Empezar a grabar una ruta">+</button>
@@ -560,6 +560,8 @@
                         <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m3 3v7m6-7v7"></path></svg></span><span class="route-summary-label">Papelera</span><strong id="routes-count-trash">0</strong>
                     </button>
                 </div>
+            </div>
+            <div class="card">
                 <section id="community-tab" class="community-panel community-tab-panel" hidden aria-labelledby="community-tab-title">
                     <h3 id="community-tab-title">Rutas de la comunidad</h3>
                     <p id="community-status" class="community-status" role="status" aria-live="polite"></p>

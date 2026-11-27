@@ -1638,7 +1638,23 @@ body {
     line-height: 1;
     cursor: pointer;
 }
-#page-routes .seg-tabs.big-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 10px 0 14px; }
+#page-routes .routes-sticky-block {
+    position: sticky;
+    top: 0;
+    z-index: 1100;
+    width: min(100%, 1040px);
+    margin-inline: auto;
+    padding: 12px 10px 10px;
+    border: 1px solid rgba(143, 166, 199, .16);
+    border-radius: 15px;
+    background: linear-gradient(145deg, #182339, #111b2e);
+    box-shadow: 0 10px 18px rgba(0, 0, 0, .35);
+}
+#page-routes .seg-tabs.big-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 8px 0 0;
+    background: transparent;
+}
 #page-routes .route-summary-card {
     display: flex;
     min-width: 0;

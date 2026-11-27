@@ -1,18 +1,14 @@
 package com.emiliopousada.sendamtb;
 
 import android.app.AlertDialog;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Gravity;
-import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -27,12 +23,11 @@ public class MainActivity extends BridgeActivity {
     private static final long MAX_SPLASH_DURATION_MS = 15000;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final Runnable splashTimeout = this::removeStartupSplash;
-    private final Runnable splashMinimumElapsed = this::removeStartupSplash;
+    private final Runnable splashTimeout = this::finishStartupSplash;
+    private final Runnable splashMinimumElapsed = this::finishStartupSplash;
     private boolean backCheckPending = false;
     private boolean systemSplashCanExit = false;
     private long splashStartedAt;
-    private View startupSplashView;
     private WebViewListener startupWebViewListener;
 
     @Override
@@ -46,13 +41,11 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ScreenControlPlugin.class);
         super.onCreate(savedInstanceState);
 
-        showStartupSplash();
-        systemSplashCanExit = true;
         mainHandler.postDelayed(splashTimeout, MAX_SPLASH_DURATION_MS);
 
         Bridge bridge = getBridge();
         if (bridge == null || bridge.getWebView() == null) {
-            scheduleStartupSplashRemoval();
+            finishStartupSplash();
             return;
         }
 
@@ -60,44 +53,26 @@ public class MainActivity extends BridgeActivity {
         startupWebViewListener = new WebViewListener() {
             @Override
             public void onPageLoaded(WebView view) {
-                scheduleStartupSplashRemoval();
+                scheduleStartupSplashExit();
             }
         };
         bridge.addWebViewListener(startupWebViewListener);
         if (webView.getProgress() >= 100 && webView.getUrl() != null) {
-            scheduleStartupSplashRemoval();
+            scheduleStartupSplashExit();
         }
     }
 
-    private void showStartupSplash() {
-        View content = findViewById(android.R.id.content);
-        if (!(content instanceof ViewGroup)) return;
-
-        ImageView image = new ImageView(this);
-        image.setImageResource(R.drawable.splash);
-        image.setBackgroundColor(Color.BLACK);
-        image.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        image.setContentDescription(getString(R.string.app_name));
-        ((ViewGroup) content).addView(image, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        startupSplashView = image;
-    }
-
-    private void scheduleStartupSplashRemoval() {
+    private void scheduleStartupSplashExit() {
         long elapsed = SystemClock.elapsedRealtime() - splashStartedAt;
         long delay = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed);
         mainHandler.removeCallbacks(splashMinimumElapsed);
         mainHandler.postDelayed(splashMinimumElapsed, delay);
     }
 
-    private void removeStartupSplash() {
+    private void finishStartupSplash() {
         mainHandler.removeCallbacks(splashTimeout);
         mainHandler.removeCallbacks(splashMinimumElapsed);
-        if (startupSplashView != null && startupSplashView.getParent() instanceof ViewGroup) {
-            ((ViewGroup) startupSplashView.getParent()).removeView(startupSplashView);
-        }
-        startupSplashView = null;
+        systemSplashCanExit = true;
         Bridge bridge = getBridge();
         if (bridge != null && startupWebViewListener != null) {
             bridge.removeWebViewListener(startupWebViewListener);
@@ -107,7 +82,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onDestroy() {
-        removeStartupSplash();
+        finishStartupSplash();
         super.onDestroy();
     }
 
