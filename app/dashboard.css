@@ -1562,16 +1562,16 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
     color-scheme: dark;
     --primary: #ff761f;
     --accent: #ff8a3d;
-    --bg: #111815;
-    --surface: #19221d;
-    --surface-card: #202a24;
-    --text: #edf3ee;
-    --text-secondary: #a4b1a7;
+    --bg: #111315;
+    --surface: #1b1f23;
+    --surface-card: #24292e;
+    --text: #f1f3f5;
+    --text-secondary: #aab2ba;
     --danger: #ff6b78;
-    --mtb-graphite: #111815;
-    --mtb-panel: #19221d;
-    --mtb-panel-light: #243129;
-    --mtb-muted: #a4b1a7;
+    --mtb-graphite: #111315;
+    --mtb-panel: #1b1f23;
+    --mtb-panel-light: #2b3137;
+    --mtb-muted: #aab2ba;
     --mtb-orange: #ff761f;
     --mtb-blue: #4da3ff;
 }
@@ -1583,11 +1583,11 @@ html, body, .page, .dashboard-page {
 
 body > nav {
     border-top-color: rgba(255, 118, 31, .14);
-    background: rgba(17, 24, 21, .97);
+    background: rgba(17, 19, 21, .97);
     box-shadow: 0 -8px 26px rgba(0, 0, 0, .32);
 }
 
-.nav-btn { color: #a4b1a7; }
+.nav-btn { color: #aab2ba; }
 .nav-btn.active {
     color: var(--primary);
     text-shadow: 0 0 18px rgba(255, 118, 31, .15);
@@ -1596,8 +1596,8 @@ body > nav {
 
 .card, .profile-hero, .profile-bike-card, .profile-panel,
 .profile-editor, .profile-account-details {
-    border-color: rgba(220, 239, 222, .08);
-    background: linear-gradient(145deg, #202a24, #19221d);
+    border-color: rgba(230, 235, 240, .08);
+    background: linear-gradient(145deg, #24292e, #1b1f23);
     box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
 }
 .card h2, .stats-header h2, .stats-slide .card h3,
@@ -1607,11 +1607,11 @@ body > nav {
 .profile-hero {
     background:
         radial-gradient(ellipse at 92% 4%, rgba(255, 118, 31, .11), transparent 42%),
-        linear-gradient(145deg, #202a24, #19221d);
+        linear-gradient(145deg, #24292e, #1b1f23);
 }
 .profile-avatar {
     border-color: rgba(255, 118, 31, .48);
-    background: linear-gradient(145deg, #34452b, #19221d);
+    background: linear-gradient(145deg, #4a2a19, #1b1f23);
 }
 .profile-stat-icon, .profile-link-button {
     border-color: rgba(255, 118, 31, .2);
@@ -1642,8 +1642,8 @@ body > nav {
 .btn:active, .btn-main-action:active,
 .controls-overlay .btn-main-action:active { filter: brightness(.96); }
 .btn.secondary, .btn-small.secondary {
-    border-color: rgba(220, 239, 222, .12);
-    background: #29352d;
+    border-color: rgba(230, 235, 240, .12);
+    background: #2b3137;
     color: #dce8dd;
 }
 .btn-small {
@@ -1658,9 +1658,9 @@ body > nav {
     color: #271517;
 }
 .btn-icon-only, .map-zoom-btn, #map-battery {
-    border-color: rgba(220, 239, 222, .16);
-    background-color: rgba(25, 34, 29, .94);
-    color: #edf3ee;
+    border-color: rgba(230, 235, 240, .16);
+    background-color: rgba(27, 31, 35, .94);
+    color: #f1f3f5;
 }
 .btn-icon-only.active, .map-zoom-btn.orient.route,
 .map-zoom-btn:active {
@@ -1676,12 +1676,12 @@ body > nav {
 
 .stats-header {
     background: var(--bg);
-    border-bottom-color: rgba(220, 239, 222, .1);
+    border-bottom-color: rgba(230, 235, 240, .1);
 }
 .stats-period-btn, .stats-tab, .seg-tab {
-    border-color: rgba(220, 239, 222, .12);
-    background: #19221d;
-    color: #b7c4b9;
+    border-color: rgba(230, 235, 240, .12);
+    background: #1b1f23;
+    color: #c0c7ce;
 }
 .stats-period-btn.active, .stats-tab.active,
 .seg-tab[aria-pressed="true"] {
@@ -1693,8 +1693,8 @@ body > nav {
 .stats-evolution-period-summary, .stats-profile-point,
 .stats-unavailable, .stats-comparison, .stats-record,
 .stat-box, .stats-profile-point, .stats-unavailable {
-    border-color: rgba(220, 239, 222, .08);
-    background: #19221d;
+    border-color: rgba(230, 235, 240, .08);
+    background: #1b1f23;
 }
 .stats-zone progress, input[type="checkbox"], input[type="radio"] {
     accent-color: var(--primary);
@@ -1703,11 +1703,11 @@ body > nav {
 input[type="file"], input[type="text"], input[type="password"],
 input[type="number"], input[type="email"], input[type="url"],
 select, textarea, .profile-editor input {
-    border-color: rgba(220, 239, 222, .16);
-    background: #151d18;
-    color: #edf3ee;
+    border-color: rgba(230, 235, 240, .16);
+    background: #171b1f;
+    color: #f1f3f5;
 }
-input::placeholder, textarea::placeholder { color: #819087; }
+input::placeholder, textarea::placeholder { color: #89939b; }
 input:focus-visible, select:focus-visible, textarea:focus-visible,
 button:focus-visible {
     outline-color: rgba(255, 118, 31, .78);
@@ -1717,8 +1717,8 @@ button:focus-visible {
 .community-route-card, .community-detail-stat,
 .community-segment-item, .community-ranking-item,
 .community-effort-entry {
-    border-color: rgba(220, 239, 222, .09);
-    background: #19221d;
+    border-color: rgba(230, 235, 240, .09);
+    background: #1b1f23;
 }
 .route-detail-trigger, .route-detail-trigger:hover,
 .route-detail-trigger:focus-visible,
@@ -1728,72 +1728,72 @@ button:focus-visible {
 .group-admin-panel { border-color: rgba(255, 118, 31, .16); }
 .group-invite-code, .community-ranking-place { color: #ffc08a; }
 .group-led {
-    background: #ff761f;
-    box-shadow: 0 0 9px rgba(255, 118, 31, .45);
+    background: #4ade80;
+    box-shadow: 0 0 9px rgba(74, 222, 128, .45);
 }
 .friends-group-status.connected {
-    border-color: rgba(255, 118, 31, .24);
-    background: rgba(255, 118, 31, .1);
-    color: #ffc08a;
+    border-color: rgba(74, 222, 128, .24);
+    background: rgba(74, 222, 128, .1);
+    color: #86efac;
 }
 
 .profile-edit-button, .community-close {
-    border-color: rgba(220, 239, 222, .12);
-    background: #243129;
-    color: #edf3ee;
+    border-color: rgba(230, 235, 240, .12);
+    background: #2b3137;
+    color: #f1f3f5;
 }
 .profile-bike-content, .profile-badge,
 .profile-performance-grid > div {
-    border-color: rgba(220, 239, 222, .07);
-    background: rgba(10, 16, 12, .32);
+    border-color: rgba(230, 235, 240, .07);
+    background: rgba(0, 0, 0, .32);
 }
 .profile-bike-copy b { color: #ffad70; }
 
-#page-map { background: #111815; }
-#map { background-color: #202a24; }
+#page-map { background: #111315; }
+#map { background-color: #24292e; }
 .map-live-banner, .map-bottom-panel {
-    border-color: rgba(220, 239, 222, .12);
-    background: rgba(17, 24, 21, .92);
+    border-color: rgba(230, 235, 240, .12);
+    background: rgba(17, 19, 21, .92);
     box-shadow: 0 10px 28px rgba(0, 0, 0, .3);
     backdrop-filter: blur(16px) saturate(125%);
 }
-.map-live-indicator { background: #ff761f; }
-.map-live-gps { color: #ffad70; }
-.map-live-gps i { background: #ff761f; }
-.map-live-metric strong, .map-live-stat .m-val { color: #f0f5ef; }
+.map-live-indicator { background: #4ade80; }
+.map-live-gps { color: #86efac; }
+.map-live-gps i { background: #4ade80; }
+.map-live-metric strong, .map-live-stat .m-val { color: #f1f3f5; }
 .map-live-icon, .map-live-stat-icon { color: #ffad70; }
-.map-live-stat { border-color: rgba(220, 239, 222, .08); }
-.map-live-stat .m-lbl, .map-live-metric > span:last-child { color: #a4b1a7; }
+.map-live-stat { border-color: rgba(230, 235, 240, .08); }
+.map-live-stat .m-lbl, .map-live-metric > span:last-child { color: #aab2ba; }
 .metrics-bar, #map-route-profile {
-    border-color: rgba(220, 239, 222, .14);
-    background: rgba(17, 24, 21, .9);
+    border-color: rgba(230, 235, 240, .14);
+    background: rgba(17, 19, 21, .9);
 }
 .m-box.active { background: rgba(255, 118, 31, .14); }
-#map-route-name { color: #edf3ee; }
-#map-route-alt { color: #a4b1a7; }
+#map-route-name { color: #f1f3f5; }
+#map-route-alt { color: #aab2ba; }
 #map-route-area { fill: rgba(255, 118, 31, .18); }
 #map-route-line { stroke: #ff761f; }
 #map-route-cursor { stroke: #ff761f; }
 #big-metric {
-    background: radial-gradient(circle at center, #202a24, #111815 68%);
+    background: radial-gradient(circle at center, #24292e, #111315 68%);
 }
-#big-gauge path:first-child { stroke: #344139; }
+#big-gauge path:first-child { stroke: #3b4148; }
 #gauge-arc { stroke: #ff761f; }
 #toast {
-    border-color: rgba(220, 239, 222, .14);
-    background: rgba(25, 34, 29, .98);
-    color: #edf3ee;
+    border-color: rgba(230, 235, 240, .14);
+    background: rgba(27, 31, 35, .98);
+    color: #f1f3f5;
 }
 .modal-box, .community-panel, #offline-panel {
-    border-color: rgba(220, 239, 222, .12);
-    background: linear-gradient(145deg, #243129, #19221d);
+    border-color: rgba(230, 235, 240, .12);
+    background: linear-gradient(145deg, #2b3137, #1b1f23);
 }
-#offline-panel p { color: #b7c4b9; }
-#offline-progress { background: #111815; }
+#offline-panel p { color: #c0c7ce; }
+#offline-progress { background: #111315; }
 #offline-progress-fill { background: linear-gradient(90deg, #ff761f, #ff9a4a); }
-#offline-progress-text { color: #b7c4b9; }
+#offline-progress-text { color: #c0c7ce; }
 .setting-toggle, .group-members-list, #group-members-list > * {
-    border-color: rgba(220, 239, 222, .1);
+    border-color: rgba(230, 235, 240, .1);
 }
 .community-segment-editor {
     border-color: rgba(255, 118, 31, .2);
@@ -1812,14 +1812,14 @@ button:focus-visible {
 
 @media (max-width: 600px) {
     .metrics-bar, #map-route-profile {
-        border-color: rgba(220, 239, 222, .1);
-        background: rgba(17, 24, 21, .92);
+        border-color: rgba(230, 235, 240, .1);
+        background: rgba(17, 19, 21, .92);
     }
     #map-route-line { stroke: #ff761f; }
     #map-route-area { fill: rgba(255, 118, 31, .16); }
     .map-zoom-btn, .side-controls .btn-icon-only {
-        border-color: rgba(220, 239, 222, .13);
-        background: rgba(25, 34, 29, .94);
+        border-color: rgba(230, 235, 240, .13);
+        background: rgba(27, 31, 35, .94);
     }
     .map-zoom-btn.orient.route, .side-controls .btn-icon-only.active {
         border-color: rgba(255, 118, 31, .55);
@@ -1837,7 +1837,7 @@ button:focus-visible {
         box-shadow: 0 5px 16px rgba(255, 118, 31, .16);
     }
     .controls-overlay #btn-stop {
-        border-color: rgba(220, 239, 222, .13);
-        background: rgba(25, 34, 29, .96);
+        border-color: rgba(230, 235, 240, .13);
+        background: rgba(27, 31, 35, .96);
     }
 }
