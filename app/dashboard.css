@@ -1560,8 +1560,8 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
    ============================================================ */
 :root {
     color-scheme: dark;
-    --primary: #b7f34a;
-    --accent: #c9ff63;
+    --primary: #ff761f;
+    --accent: #ff8a3d;
     --bg: #111815;
     --surface: #19221d;
     --surface-card: #202a24;
@@ -1572,8 +1572,8 @@ body.cockpit-oled-saver .mobile-nav { display:none; }
     --mtb-panel: #19221d;
     --mtb-panel-light: #243129;
     --mtb-muted: #a4b1a7;
-    --mtb-orange: #b7f34a;
-    --mtb-blue: #b7f34a;
+    --mtb-orange: #ff761f;
+    --mtb-blue: #4da3ff;
 }
 
 html, body, .page, .dashboard-page {
@@ -1582,7 +1582,7 @@ html, body, .page, .dashboard-page {
 }
 
 body > nav {
-    border-top-color: rgba(183, 243, 74, .14);
+    border-top-color: rgba(255, 118, 31, .14);
     background: rgba(17, 24, 21, .97);
     box-shadow: 0 -8px 26px rgba(0, 0, 0, .32);
 }
@@ -1590,9 +1590,9 @@ body > nav {
 .nav-btn { color: #a4b1a7; }
 .nav-btn.active {
     color: var(--primary);
-    text-shadow: 0 0 18px rgba(183, 243, 74, .15);
+    text-shadow: 0 0 18px rgba(255, 118, 31, .15);
 }
-.nav-btn.active .icon { filter: drop-shadow(0 0 7px rgba(183, 243, 74, .25)); }
+.nav-btn.active .icon { filter: drop-shadow(0 0 7px rgba(255, 118, 31, .25)); }
 
 .card, .profile-hero, .profile-bike-card, .profile-panel,
 .profile-editor, .profile-account-details {
@@ -1606,38 +1606,38 @@ body > nav {
 }
 .profile-hero {
     background:
-        radial-gradient(ellipse at 92% 4%, rgba(183, 243, 74, .11), transparent 42%),
+        radial-gradient(ellipse at 92% 4%, rgba(255, 118, 31, .11), transparent 42%),
         linear-gradient(145deg, #202a24, #19221d);
 }
 .profile-avatar {
-    border-color: rgba(183, 243, 74, .48);
+    border-color: rgba(255, 118, 31, .48);
     background: linear-gradient(145deg, #34452b, #19221d);
 }
 .profile-stat-icon, .profile-link-button {
-    border-color: rgba(183, 243, 74, .2);
-    background: rgba(183, 243, 74, .1);
-    color: #c9ff78;
+    border-color: rgba(255, 118, 31, .2);
+    background: rgba(255, 118, 31, .1);
+    color: #ffad70;
 }
 .profile-stat-ascent .profile-stat-icon {
-    background: rgba(183, 243, 74, .12);
-    color: #c9ff78;
+    background: rgba(255, 118, 31, .12);
+    color: #ffad70;
 }
 .profile-stat-time .profile-stat-icon {
-    background: rgba(183, 243, 74, .1);
-    color: #c9ff78;
+    background: rgba(255, 118, 31, .1);
+    color: #ffad70;
 }
 .profile-count-badge {
-    border-color: rgba(183, 243, 74, .24);
-    background: rgba(183, 243, 74, .1);
-    color: #d3ff91;
+    border-color: rgba(255, 118, 31, .24);
+    background: rgba(255, 118, 31, .1);
+    color: #ffc08a;
 }
-.profile-badge-icon { background: rgba(183, 243, 74, .1); }
+.profile-badge-icon { background: rgba(255, 118, 31, .1); }
 
 .btn, .btn-main-action, .controls-overlay .btn-main-action {
-    border-color: rgba(183, 243, 74, .32);
-    background: linear-gradient(135deg, #b7f34a, #d0ff79);
-    color: #172014;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .28), 0 0 18px rgba(183, 243, 74, .08);
+    border-color: rgba(255, 118, 31, .32);
+    background: linear-gradient(135deg, #ff761f, #ff9a4a);
+    color: #24150c;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .28), 0 0 18px rgba(255, 118, 31, .08);
 }
 .btn:active, .btn-main-action:active,
 .controls-overlay .btn-main-action:active { filter: brightness(.96); }
@@ -1647,9 +1647,9 @@ body > nav {
     color: #dce8dd;
 }
 .btn-small {
-    border-color: rgba(183, 243, 74, .22);
-    background: rgba(183, 243, 74, .1);
-    color: #c9ff78;
+    border-color: rgba(255, 118, 31, .22);
+    background: rgba(255, 118, 31, .1);
+    color: #ffad70;
 }
 .btn-main-action.recording,
 .controls-overlay .btn-main-action.recording {
@@ -1664,14 +1664,14 @@ body > nav {
 }
 .btn-icon-only.active, .map-zoom-btn.orient.route,
 .map-zoom-btn:active {
-    border-color: rgba(183, 243, 74, .65);
-    background: rgba(183, 243, 74, .18);
-    color: #d3ff91;
+    border-color: rgba(255, 118, 31, .65);
+    background: rgba(255, 118, 31, .18);
+    color: #ffc08a;
 }
 .controls-overlay .btn-main-action {
-    background: linear-gradient(135deg, #b7f34a, #d0ff79);
-    color: #172014;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 20px rgba(183, 243, 74, .12);
+    background: linear-gradient(135deg, #ff761f, #ff9a4a);
+    color: #24150c;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 20px rgba(255, 118, 31, .12);
 }
 
 .stats-header {
@@ -1685,10 +1685,10 @@ body > nav {
 }
 .stats-period-btn.active, .stats-tab.active,
 .seg-tab[aria-pressed="true"] {
-    border-color: rgba(183, 243, 74, .58);
-    background: rgba(183, 243, 74, .14);
-    color: #d3ff91;
-    box-shadow: inset 0 0 0 1px rgba(183, 243, 74, .08);
+    border-color: rgba(255, 118, 31, .58);
+    background: rgba(255, 118, 31, .14);
+    color: #ffc08a;
+    box-shadow: inset 0 0 0 1px rgba(255, 118, 31, .08);
 }
 .stats-evolution-period-summary, .stats-profile-point,
 .stats-unavailable, .stats-comparison, .stats-record,
@@ -1710,7 +1710,7 @@ select, textarea, .profile-editor input {
 input::placeholder, textarea::placeholder { color: #819087; }
 input:focus-visible, select:focus-visible, textarea:focus-visible,
 button:focus-visible {
-    outline-color: rgba(183, 243, 74, .78);
+    outline-color: rgba(255, 118, 31, .78);
 }
 
 .route-item, .friend-row, .group-admin-panel,
@@ -1723,18 +1723,18 @@ button:focus-visible {
 .route-detail-trigger, .route-detail-trigger:hover,
 .route-detail-trigger:focus-visible,
 .community-route-title:hover, .community-route-title:focus-visible {
-    color: #d3ff91;
+    color: #ffc08a;
 }
-.group-admin-panel { border-color: rgba(183, 243, 74, .16); }
-.group-invite-code, .community-ranking-place { color: #d3ff91; }
+.group-admin-panel { border-color: rgba(255, 118, 31, .16); }
+.group-invite-code, .community-ranking-place { color: #ffc08a; }
 .group-led {
-    background: #b7f34a;
-    box-shadow: 0 0 9px rgba(183, 243, 74, .45);
+    background: #ff761f;
+    box-shadow: 0 0 9px rgba(255, 118, 31, .45);
 }
 .friends-group-status.connected {
-    border-color: rgba(183, 243, 74, .24);
-    background: rgba(183, 243, 74, .1);
-    color: #d3ff91;
+    border-color: rgba(255, 118, 31, .24);
+    background: rgba(255, 118, 31, .1);
+    color: #ffc08a;
 }
 
 .profile-edit-button, .community-close {
@@ -1747,7 +1747,7 @@ button:focus-visible {
     border-color: rgba(220, 239, 222, .07);
     background: rgba(10, 16, 12, .32);
 }
-.profile-bike-copy b { color: #c9ff78; }
+.profile-bike-copy b { color: #ffad70; }
 
 #page-map { background: #111815; }
 #map { background-color: #202a24; }
@@ -1757,28 +1757,28 @@ button:focus-visible {
     box-shadow: 0 10px 28px rgba(0, 0, 0, .3);
     backdrop-filter: blur(16px) saturate(125%);
 }
-.map-live-indicator { background: #b7f34a; }
-.map-live-gps { color: #c9ff78; }
-.map-live-gps i { background: #b7f34a; }
+.map-live-indicator { background: #ff761f; }
+.map-live-gps { color: #ffad70; }
+.map-live-gps i { background: #ff761f; }
 .map-live-metric strong, .map-live-stat .m-val { color: #f0f5ef; }
-.map-live-icon, .map-live-stat-icon { color: #c9ff78; }
+.map-live-icon, .map-live-stat-icon { color: #ffad70; }
 .map-live-stat { border-color: rgba(220, 239, 222, .08); }
 .map-live-stat .m-lbl, .map-live-metric > span:last-child { color: #a4b1a7; }
 .metrics-bar, #map-route-profile {
     border-color: rgba(220, 239, 222, .14);
     background: rgba(17, 24, 21, .9);
 }
-.m-box.active { background: rgba(183, 243, 74, .14); }
+.m-box.active { background: rgba(255, 118, 31, .14); }
 #map-route-name { color: #edf3ee; }
 #map-route-alt { color: #a4b1a7; }
-#map-route-area { fill: rgba(183, 243, 74, .18); }
-#map-route-line { stroke: #b7f34a; }
-#map-route-cursor { stroke: #b7f34a; }
+#map-route-area { fill: rgba(255, 118, 31, .18); }
+#map-route-line { stroke: #ff761f; }
+#map-route-cursor { stroke: #ff761f; }
 #big-metric {
     background: radial-gradient(circle at center, #202a24, #111815 68%);
 }
 #big-gauge path:first-child { stroke: #344139; }
-#gauge-arc { stroke: #b7f34a; }
+#gauge-arc { stroke: #ff761f; }
 #toast {
     border-color: rgba(220, 239, 222, .14);
     background: rgba(25, 34, 29, .98);
@@ -1790,24 +1790,24 @@ button:focus-visible {
 }
 #offline-panel p { color: #b7c4b9; }
 #offline-progress { background: #111815; }
-#offline-progress-fill { background: linear-gradient(90deg, #b7f34a, #d0ff79); }
+#offline-progress-fill { background: linear-gradient(90deg, #ff761f, #ff9a4a); }
 #offline-progress-text { color: #b7c4b9; }
 .setting-toggle, .group-members-list, #group-members-list > * {
     border-color: rgba(220, 239, 222, .1);
 }
 .community-segment-editor {
-    border-color: rgba(183, 243, 74, .2);
-    background: rgba(183, 243, 74, .05);
+    border-color: rgba(255, 118, 31, .2);
+    background: rgba(255, 118, 31, .05);
 }
-.community-ranking-time { color: #d3ff91; }
+.community-ranking-time { color: #ffc08a; }
 .account-server-status.profile-manual-sync.is-syncing {
-    border-color: rgba(183, 243, 74, .42);
-    background: rgba(183, 243, 74, .1);
-    color: #d3ff91;
+    border-color: rgba(255, 118, 31, .42);
+    background: rgba(255, 118, 31, .1);
+    color: #ffc08a;
 }
 .account-server-status.profile-manual-sync.is-syncing > i {
-    background: #b7f34a;
-    box-shadow: 0 0 0 4px rgba(183, 243, 74, .14), 0 0 12px rgba(183, 243, 74, .55);
+    background: #ff761f;
+    box-shadow: 0 0 0 4px rgba(255, 118, 31, .14), 0 0 12px rgba(255, 118, 31, .55);
 }
 
 @media (max-width: 600px) {
@@ -1815,26 +1815,26 @@ button:focus-visible {
         border-color: rgba(220, 239, 222, .1);
         background: rgba(17, 24, 21, .92);
     }
-    #map-route-line { stroke: #b7f34a; }
-    #map-route-area { fill: rgba(183, 243, 74, .16); }
+    #map-route-line { stroke: #ff761f; }
+    #map-route-area { fill: rgba(255, 118, 31, .16); }
     .map-zoom-btn, .side-controls .btn-icon-only {
         border-color: rgba(220, 239, 222, .13);
         background: rgba(25, 34, 29, .94);
     }
     .map-zoom-btn.orient.route, .side-controls .btn-icon-only.active {
-        border-color: rgba(183, 243, 74, .55);
-        background: rgba(183, 243, 74, .18);
-        color: #d3ff91;
-        box-shadow: 0 5px 18px rgba(183, 243, 74, .12);
+        border-color: rgba(255, 118, 31, .55);
+        background: rgba(255, 118, 31, .18);
+        color: #ffc08a;
+        box-shadow: 0 5px 18px rgba(255, 118, 31, .12);
     }
     .controls-overlay .btn-main-action {
-        border-color: rgba(183, 243, 74, .32);
-        background: linear-gradient(135deg, #b7f34a, #d0ff79);
-        color: #172014;
-        box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 18px rgba(183, 243, 74, .12);
+        border-color: rgba(255, 118, 31, .32);
+        background: linear-gradient(135deg, #ff761f, #ff9a4a);
+        color: #24150c;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 18px rgba(255, 118, 31, .12);
     }
     .controls-overlay .btn-main-action:active {
-        box-shadow: 0 5px 16px rgba(183, 243, 74, .16);
+        box-shadow: 0 5px 16px rgba(255, 118, 31, .16);
     }
     .controls-overlay #btn-stop {
         border-color: rgba(220, 239, 222, .13);
