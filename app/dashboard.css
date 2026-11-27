@@ -1759,7 +1759,7 @@ button:focus-visible {
 }
 .map-live-indicator { background: #4ade80; }
 .map-live-gps { color: #86efac; }
-.map-live-gps i { background: #4ade80; }
+.map-live-gps i { background: currentColor; }
 .map-live-metric strong, .map-live-stat .m-val { color: #f1f3f5; }
 .map-live-icon, .map-live-stat-icon { color: #ffad70; }
 .map-live-stat { border-color: rgba(230, 235, 240, .08); }
