@@ -46,7 +46,7 @@ test('route analysis cache can be invalidated after activity metadata changes', 
 test('sensor statistics are part of MTB performance and the sensor tab is removed', () => {
     const tabsStart = indexSource.indexOf('<nav class="stats-tabs"');
     const tabsEnd = indexSource.indexOf('</nav>', tabsStart);
-    const performanceStart = indexSource.indexOf('<section class="stats-slide" aria-label="Rendimiento MTB">');
+    const performanceStart = indexSource.indexOf('<section class="stats-slide" aria-label="Rendimiento">');
     const nextSlide = indexSource.indexOf('<section class="stats-slide"', performanceStart + 1);
     assert.notEqual(tabsStart, -1);
     assert.notEqual(tabsEnd, -1);

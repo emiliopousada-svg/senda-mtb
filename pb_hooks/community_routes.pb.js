@@ -1,5 +1,11 @@
 // Calcula en PocketBase la caja geográfica que usa el catálogo para filtrar candidatos.
 function indexCommunityRouteBounds(e) {
+    const {
+        communityRouteBounds,
+        communityRouteDistance,
+        communityRouteDistanceMeters,
+        communityRouteTrimEnds
+    } = require(`${__hooks}/community_routes_utils.js`);
     const isSuperuser = e.hasSuperuserAuth();
     if (!isSuperuser && !e.auth) {
         throw new BadRequestError("Inicia sesión para publicar rutas.");
@@ -36,72 +42,6 @@ function indexCommunityRouteBounds(e) {
     e.record.set("trackLocked", trackLocked || e.record.getBool("published"));
     const communityRouteTrimMeters = 150;
     const communityRouteMaxPhotoBytes = 614400;
-
-    function communityRouteDistance(a, b) {
-        const rad = Math.PI / 180;
-        const dLat = (b[0] - a[0]) * rad;
-        const dLng = (b[1] - a[1]) * rad;
-        const sinLat = Math.sin(dLat / 2);
-        const sinLng = Math.sin(dLng / 2);
-        const h = sinLat * sinLat + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * sinLng * sinLng;
-        return 12742000 * Math.asin(Math.min(1, Math.sqrt(h)));
-    }
-
-    function communityRouteDistanceMeters(lines) {
-        let distanceMeters = 0;
-        for (const line of lines) {
-            for (let i = 1; i < line.length; i++) {
-                distanceMeters += communityRouteDistance(line[i - 1], line[i]);
-            }
-        }
-        return distanceMeters;
-    }
-
-    function communityRouteTrimStart(lines, meters) {
-        const result = lines.map(line => line.map(point => point.slice()));
-        let remaining = meters;
-        while (result.length && remaining > 0) {
-            const line = result[0];
-            if (line.length < 2) { result.shift(); continue; }
-            let passed = 0;
-            let index = 1;
-            while (index < line.length) {
-                const length = communityRouteDistance(line[index - 1], line[index]);
-                if (passed + length >= remaining) break;
-                passed += length;
-                index++;
-            }
-            if (index >= line.length) {
-                remaining -= passed;
-                result.shift();
-                continue;
-            }
-            const a = line[index - 1];
-            const b = line[index];
-            const length = communityRouteDistance(a, b) || 1;
-            const fraction = Math.max(0, Math.min(1, (remaining - passed) / length));
-            const cut = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
-            if (a.length > 2 || b.length > 2) {
-                const startAltitude = a[2] == null ? null : Number(a[2]);
-                const endAltitude = b[2] == null ? null : Number(b[2]);
-                cut.push(Number.isFinite(startAltitude) && Number.isFinite(endAltitude)
-                    ? startAltitude + (endAltitude - startAltitude) * fraction
-                    : null);
-            }
-            result[0] = [cut].concat(line.slice(index));
-            remaining = 0;
-        }
-        return result.filter(line => line.length > 1);
-    }
-
-    function communityRouteTrimEnds(lines) {
-        let result = communityRouteTrimStart(lines, communityRouteTrimMeters);
-        result = communityRouteTrimStart(
-            result.slice().reverse().map(line => line.slice().reverse()),
-            communityRouteTrimMeters
-        ).reverse().map(line => line.slice().reverse());
-        return result;
-    }
 
     function communityRoutePhotoBytes(file) {
         const size = Number(file.size);
@@ -247,7 +187,7 @@ function indexCommunityRouteBounds(e) {
     }
 
     if (shouldTrimTrack) {
-        lines = communityRouteTrimEnds(lines);
+        lines = communityRouteTrimEnds(lines, communityRouteTrimMeters);
         if (!lines.length || lines.reduce((total, line) => total + line.length, 0) < 2) {
             throw new BadRequestError("La ruta es demasiado corta para publicarse después de ocultar sus extremos.");
         }
@@ -271,29 +211,16 @@ function indexCommunityRouteBounds(e) {
     }
     e.record.set("elevationGain", elevationGain);
 
-    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-    let count = 0;
-    for (const line of lines) {
-        if (!Array.isArray(line)) throw new BadRequestError("El trazado de la ruta no es válido.");
-        for (const point of line) {
-            if (!Array.isArray(point) || point.length < 2) throw new BadRequestError("El trazado contiene una coordenada no válida.");
-            const lat = Number(point[0]), lng = Number(point[1]);
-            if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
-                throw new BadRequestError("El trazado contiene una coordenada fuera de rango.");
-            }
-            minLat = Math.min(minLat, lat);
-            maxLat = Math.max(maxLat, lat);
-            minLng = Math.min(minLng, lng);
-            maxLng = Math.max(maxLng, lng);
-            count++;
-        }
-    }
-    if (count < 2) throw new BadRequestError("El trazado debe tener al menos dos puntos.");
+    const bounds = communityRouteBounds(lines);
+    if (bounds.error === "invalid-line") throw new BadRequestError("El trazado de la ruta no es válido.");
+    if (bounds.error === "invalid-point") throw new BadRequestError("El trazado contiene una coordenada no válida.");
+    if (bounds.error === "out-of-range") throw new BadRequestError("El trazado contiene una coordenada fuera de rango.");
+    if (bounds.count < 2) throw new BadRequestError("El trazado debe tener al menos dos puntos.");
 
-    e.record.set("minLat", minLat);
-    e.record.set("maxLat", maxLat);
-    e.record.set("minLng", minLng);
-    e.record.set("maxLng", maxLng);
+    e.record.set("minLat", bounds.minLat);
+    e.record.set("maxLat", bounds.maxLat);
+    e.record.set("minLng", bounds.minLng);
+    e.record.set("maxLng", bounds.maxLng);
 
     const isNewPublication = e.record.getBool("published")
         && (!originalRecord || !originalRecord.getBool("published"));
