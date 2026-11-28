@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "dataset": "PNOA-MDT05-ETRS89 / REGCAN95 · 1ª cobertura · 5 m · COG",
+  "attribution": "© Instituto Geográfico Nacional (IGN), España",
+  "license": "CC BY 4.0",
+  "source": "https://centrodedescargas.cnig.es/CentroDescargas/modelos-digitales-elevaciones",
+  "notes": "Plantilla vacía. Añadir URL HTTPS directa, tamaño exacto, SHA-256 verificado y todas las comunidades autónomas intersectadas por cada hoja.",
+  "files": []
+}
