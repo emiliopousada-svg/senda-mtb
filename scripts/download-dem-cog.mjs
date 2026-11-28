@@ -83,10 +83,18 @@ async function main() {
     catch (error) { failures++; console.error('ERROR', item.filename, '-', error.message); }
   }
   if (failures) throw new Error(failures + ' archivo(s) pendientes; puede volver a ejecutar el comando.');
+  // Mantener en el índice todas las regiones ya instaladas, aunque esta ejecución descargue solo una.
+  const installed = [];
+  for (const item of manifest.files) {
+    try {
+      const info = await stat(path.join(filesDir, item.filename));
+      if (info.size === item.bytes && (await sha256(path.join(filesDir, item.filename))).toLowerCase() === item.sha256.toLowerCase()) installed.push(item);
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   const publicManifest = {
     schemaVersion: 1, dataset: manifest.dataset, attribution: manifest.attribution, license: manifest.license,
     generatedAt: new Date().toISOString(),
-    regions: Object.fromEntries([...REGIONS].map(region => [region, selected.filter(f => f.regions.includes(region)).map(f => ({
+    regions: Object.fromEntries([...REGIONS].map(region => [region, installed.filter(f => f.regions.includes(region)).map(f => ({
       id: f.id, filename: f.filename, url: 'files/' + encodeURIComponent(f.filename), bytes: f.bytes, sha256: f.sha256, bounds: f.bounds || null
     }))]).filter(([, files]) => files.length))
   };
