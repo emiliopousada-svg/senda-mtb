@@ -23,8 +23,9 @@ public class MainActivity extends BridgeActivity {
     private static final long MAX_SPLASH_DURATION_MS = 15000;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final Runnable splashTimeout = this::finishStartupSplash;
-    private final Runnable splashMinimumElapsed = this::finishStartupSplash;
+    private final Runnable splashTimeout = this::removeStartupSplash;
+    private final Runnable splashMinimumElapsed = this::removeStartupSplash;
+
     private boolean backCheckPending = false;
     private boolean systemSplashCanExit = false;
     private long splashStartedAt;
@@ -34,76 +35,93 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         splashStartedAt = SystemClock.elapsedRealtime();
+
         splashScreen.setKeepOnScreenCondition(
                 () -> !systemSplashCanExit
-                        && SystemClock.elapsedRealtime() - splashStartedAt < MAX_SPLASH_DURATION_MS);
+                        && SystemClock.elapsedRealtime() - splashStartedAt
+                        < MAX_SPLASH_DURATION_MS);
+
         registerPlugin(BatteryInfoPlugin.class);
         registerPlugin(ScreenControlPlugin.class);
+
         super.onCreate(savedInstanceState);
 
         mainHandler.postDelayed(splashTimeout, MAX_SPLASH_DURATION_MS);
 
         Bridge bridge = getBridge();
         if (bridge == null || bridge.getWebView() == null) {
-            finishStartupSplash();
+            scheduleStartupSplashRemoval();
             return;
         }
 
         WebView webView = bridge.getWebView();
+
         startupWebViewListener = new WebViewListener() {
             @Override
             public void onPageLoaded(WebView view) {
-                scheduleStartupSplashExit();
+                scheduleStartupSplashRemoval();
             }
         };
+
         bridge.addWebViewListener(startupWebViewListener);
+
         if (webView.getProgress() >= 100 && webView.getUrl() != null) {
-            scheduleStartupSplashExit();
+            scheduleStartupSplashRemoval();
         }
     }
 
-    private void scheduleStartupSplashExit() {
+    private void scheduleStartupSplashRemoval() {
         long elapsed = SystemClock.elapsedRealtime() - splashStartedAt;
         long delay = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed);
+
         mainHandler.removeCallbacks(splashMinimumElapsed);
         mainHandler.postDelayed(splashMinimumElapsed, delay);
     }
 
-    private void finishStartupSplash() {
+    private void removeStartupSplash() {
         mainHandler.removeCallbacks(splashTimeout);
         mainHandler.removeCallbacks(splashMinimumElapsed);
+
         systemSplashCanExit = true;
+
         Bridge bridge = getBridge();
+
         if (bridge != null && startupWebViewListener != null) {
             bridge.removeWebViewListener(startupWebViewListener);
         }
+
         startupWebViewListener = null;
     }
 
     @Override
     public void onDestroy() {
-        finishStartupSplash();
+        removeStartupSplash();
         super.onDestroy();
     }
 
     @Override
     public void onBackPressed() {
         if (backCheckPending) return;
+
         if (getBridge() != null && getBridge().getWebView() != null) {
             backCheckPending = true;
+
             getBridge().getWebView().evaluateJavascript(
                     "(function(){return !!(window.mtbHandleHardwareBack && window.mtbHandleHardwareBack());})()",
                     result -> {
                         backCheckPending = false;
                         if (!"true".equals(result)) showExitDialog();
                     });
+
             return;
         }
+
         showExitDialog();
     }
 
     private void showExitDialog() {
         int padding = (int) (24 * getResources().getDisplayMetrics().density);
+
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(padding, padding, padding, 0);
@@ -112,6 +130,7 @@ public class MainActivity extends BridgeActivity {
         message.setText("¿Quieres salir de senda-mtb?");
         message.setTextSize(18);
         message.setGravity(Gravity.CENTER);
+
         content.addView(message, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -123,12 +142,14 @@ public class MainActivity extends BridgeActivity {
         Button exitButton = new Button(this);
         exitButton.setText("✅\nSí, salir");
         exitButton.setContentDescription("Sí, salir de la aplicación");
+
         actions.addView(exitButton, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
 
         Button cancelButton = new Button(this);
         cancelButton.setText("❌\nNo, cancelar");
         cancelButton.setContentDescription("No, cancelar y volver a la aplicación");
+
         actions.addView(cancelButton, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
 
@@ -139,19 +160,24 @@ public class MainActivity extends BridgeActivity {
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(content)
                 .create();
+
         exitButton.setOnClickListener(view -> {
             dialog.dismiss();
+
             if (getBridge() == null || getBridge().getWebView() == null) {
                 finishAndRemoveTask();
                 return;
             }
+
             getBridge().getWebView().evaluateJavascript(
                     "(function(){if(typeof window.mtbRequestAppExit!=='function')return false;window.mtbRequestAppExit(true);return true;})()",
                     result -> {
                         if (!"true".equals(result)) finishAndRemoveTask();
                     });
         });
+
         cancelButton.setOnClickListener(view -> dialog.dismiss());
+
         dialog.show();
     }
 }
